@@ -242,6 +242,11 @@ function now(){return new Date().toISOString()}
 function fts(iso){var d=new Date(iso);return d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+d.toTimeString().slice(0,8)}
 function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
 function el(id){return document.getElementById(id)}
+function autoResizeTextarea(ta){
+  if(!ta) return;
+  ta.style.height='auto';
+  ta.style.height=Math.min(ta.scrollHeight, 200)+'px';
+}
 
 // ── EXIF DATE EXTRACTION ───────────────────────────────────────────────────
 function readExifDate(arrayBuffer){
@@ -730,7 +735,7 @@ function renderMainApp(){
         +'<button class="btn-sm" id="btnPh">&#128247; Photo</button>'
         +'<input type="file" id="fileIn" accept="image/*,video/*" multiple style="display:none">'
         +'</div></div>'
-        +'<input type="text" id="notesIn" placeholder="General notes..." style="font-size:12px;padding:5px 9px">'
+        +'<textarea id="notesIn" placeholder="General notes..." rows="1" style="font-size:12px;padding:5px 9px;resize:vertical;min-height:30px;line-height:1.4"></textarea>'
         +'</div>'
       :'<div class="closed-bar"><span id="closedTxt"></span>'
         +'<div class="exp-menu-wrap"><button class="btn-sm" id="btnExpClosed">&#8595; Report &#9662;</button>'
@@ -849,13 +854,16 @@ function renderMainApp(){
 
   // Input bar events
   if(active.status==='open'){
-    el('notesIn').value=active.notes||'';
+    var notesEl = el('notesIn');
+    notesEl.value = active.notes||'';
+    autoResizeTextarea(notesEl);
     rThumbs();
     el('btnAdd').addEventListener('click',addEntry);
     el('entIn').addEventListener('keydown',function(e){
       if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();addEntry();}
     });
-    el('notesIn').addEventListener('input',function(e){
+    notesEl.addEventListener('input',function(e){
+      autoResizeTextarea(e.target);
       sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{notes:e.target.value}):s;});
       scheduleSave();
     });

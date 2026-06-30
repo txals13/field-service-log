@@ -225,11 +225,16 @@ button:disabled{opacity:.4;cursor:not-allowed}
 'use strict';
 
 // ── CONFIG ─────────────────────────────────────────────────────────────────
-// Google OAuth2 Client ID (ja configurat)
+// Google OAuth2 Client ID (already configured)
 var CLIENT_ID = '514772123815-ncjsebgvc01t8arftqp8bo43jr4fgneb.apps.googleusercontent.com';
+// Google Picker API key and App ID (project number), used only for the
+// folder-picker dialog, not for authentication.
+var PICKER_API_KEY = 'AIzaSyBQwgZQYFJMwlA3ipZrqYjfZYUI9c813O4';
+var PICKER_APP_ID  = '514772123815';
 var LOCAL_KEY  = 'fsl_pwa_v4';
 var TOKEN_KEY  = 'fsl_goog_token';
 var GDRIVE_FILE_NAME = 'field_service_log_data.json';
+var ROOT_FOLDER_KEY = 'fsl_root_folder'; // localStorage key caching the "Field Service Log" root folder ID
 
 // ── CONSTANTS ──────────────────────────────────────────────────────────────
 var TM={
@@ -455,6 +460,25 @@ function loadGisScript(){
   });
 }
 
+// Loads the Google API loader script (apis.google.com/js/api.js) and then
+// the "picker" library specifically, needed to show the folder selection
+// dialog. Separate from the GIS auth script above.
+var pickerLibLoaded = null;
+function loadPickerLib(){
+  if(pickerLibLoaded) return pickerLibLoaded;
+  pickerLibLoaded = new Promise(function(resolve){
+    if(window.google && window.google.picker){ resolve(); return; }
+    var s=document.createElement('script');
+    s.src='https://apis.google.com/js/api.js';
+    s.onload=function(){
+      gapi.load('picker', {callback:resolve});
+    };
+    s.onerror=function(){ pickerLibLoaded=null; resolve(); };
+    document.head.appendChild(s);
+  });
+  return pickerLibLoaded;
+}
+
 async function googleLogin(){
   await loadGisScript();
   if(!window.google||!window.google.accounts){
@@ -515,64 +539,124 @@ async function findOrCreateDriveFile(token){
 // ── GOOGLE DRIVE MEDIA STORAGE ──────────────────────────────────────────────
 // Photos and videos are no longer embedded as base64 inside the sessions
 // JSON. Instead, each file is uploaded to Drive under a per-session folder
-// structure, and we keep only lightweight references (driveId, etc.) plus a
-// small JPEG thumbnail for offline/instant preview. This avoids bloating the
-// synced JSON and prevents mobile browsers from running out of memory when
-// handling large video files.
+// that the user explicitly picks (or creates) once, the first time they
+// attach media to that session. We keep only lightweight references
+// (driveId, folder paths) plus a small JPEG thumbnail for offline/instant
+// preview. This avoids bloating the synced JSON and prevents mobile
+// browsers from running out of memory when handling large video files.
 //
-// Folder layout in Drive:
+// Folder layout in Drive (user-controlled, app only creates subfolders
+// inside the session folder the user picks):
 //   Field Service Log/
-//     {Client}_{Machine}_{Technician}/
-//       photos/
-//       videos/
-
-var driveFolderCache = {}; // path string -> folder ID, to avoid repeat lookups within a session
+//     field_service_log_data.json   (JSON backup)
+//     Outputs/
+//       {whatever folder the user picks or creates for a session}/
+//         photos/
+//         videos/
 
 function sanitizeDriveName(s){
   return (s||'untitled').toString().trim().replace(/[\\/:*?"<>|]/g,'_').replace(/\s+/g,'_').slice(0,80) || 'untitled';
 }
 
-async function findOrCreateFolder(token, name, parentId){
-  var cacheKey = (parentId||'root')+'/'+name;
-  if(driveFolderCache[cacheKey]) return driveFolderCache[cacheKey];
+// Finds (without creating) a folder by name under a given parent. Returns
+// the folder ID, or null if not found.
+async function findFolder(token, name, parentId){
   var q = "name='"+name.replace(/'/g,"\\'")+"' and trashed=false and mimeType='application/vnd.google-apps.folder'"
     + (parentId ? " and '"+parentId+"' in parents" : " and 'root' in parents");
   var resp = await fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+'&fields=files(id,name)',{
     headers:{Authorization:'Bearer '+token}
   });
-  if(resp.ok){
-    var data = await resp.json();
-    if(data.files && data.files.length>0){
-      driveFolderCache[cacheKey] = data.files[0].id;
-      return data.files[0].id;
-    }
-  }
-  // Not found: create it
+  if(!resp.ok) return null;
+  var data = await resp.json();
+  return (data.files && data.files.length>0) ? data.files[0].id : null;
+}
+
+async function createFolder(token, name, parentId){
   var metadata = {name:name, mimeType:'application/vnd.google-apps.folder'};
   if(parentId) metadata.parents = [parentId];
-  var createResp = await fetch('https://www.googleapis.com/drive/v3/files',{
+  var resp = await fetch('https://www.googleapis.com/drive/v3/files',{
     method:'POST',
     headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
     body: JSON.stringify(metadata)
   });
-  if(createResp.ok){
-    var created = await createResp.json();
-    driveFolderCache[cacheKey] = created.id;
-    return created.id;
-  }
-  return null;
+  if(!resp.ok) return null;
+  var created = await resp.json();
+  return created.id;
 }
 
-// Builds (creating if needed) the folder chain for a session media:
-// "Field Service Log" / "{Client}_{Machine}_{Technician}" / "photos|videos"
-async function getSessionMediaFolder(token, session, kind){
+async function findOrCreateFolder(token, name, parentId){
+  var existing = await findFolder(token, name, parentId);
+  if(existing) return existing;
+  return await createFolder(token, name, parentId);
+}
+
+// Returns the "Field Service Log" root folder ID, creating it once if it
+// does not exist yet, and caching the ID locally so we never have to ask
+// again. This is the only folder the app creates automatically without
+// asking the user — everything below "Outputs/" is user-chosen.
+var cachedRootFolderId = null;
+async function getRootFolder(token){
+  if(cachedRootFolderId) return cachedRootFolderId;
+  try{
+    var stored = localStorage.getItem(ROOT_FOLDER_KEY);
+    if(stored){ cachedRootFolderId = stored; return stored; }
+  }catch(e){}
   var rootId = await findOrCreateFolder(token, 'Field Service Log', null);
+  if(rootId){
+    cachedRootFolderId = rootId;
+    try{ localStorage.setItem(ROOT_FOLDER_KEY, rootId); }catch(e){}
+  }
+  return rootId;
+}
+
+// Returns (creating if needed) the "Outputs" folder directly under the
+// "Field Service Log" root. This is purely an organizational folder the
+// user asked for; sessions folders live inside it.
+async function getOutputsFolder(token){
+  var rootId = await getRootFolder(token);
   if(!rootId) return null;
-  var sessionFolderName = sanitizeDriveName(session.client)+'_'+sanitizeDriveName(session.machine)+'_'+sanitizeDriveName(session.tech);
-  var sessionId = await findOrCreateFolder(token, sessionFolderName, rootId);
-  if(!sessionId) return null;
-  var kindId = await findOrCreateFolder(token, kind, sessionId);
-  return kindId;
+  return await findOrCreateFolder(token, 'Outputs', rootId);
+}
+
+// Opens the Google Picker so the user can choose an existing folder, or
+// create a new one, to act as a given session media folder. Returns
+// {id, name} of the chosen folder, or null if the user cancelled.
+async function pickSessionFolder(token){
+  await loadPickerLib();
+  if(!window.google || !window.google.picker) return null;
+  var outputsId = await getOutputsFolder(token);
+  return new Promise(function(resolve){
+    try{
+      var view = new google.picker.DocsView(google.picker.ViewId.FOLDERS)
+        .setIncludeFolders(true)
+        .setSelectFolderEnabled(true)
+        .setMimeTypes('application/vnd.google-apps.folder');
+      if(outputsId) view.setParent(outputsId);
+      var picker = new google.picker.PickerBuilder()
+        .setOAuthToken(token)
+        .setDeveloperKey(PICKER_API_KEY)
+        .setAppId(PICKER_APP_ID)
+        .addView(view)
+        .setTitle('Select or create a folder for this service visit')
+        .setCallback(function(data){
+          if(data.action === google.picker.Action.PICKED){
+            var doc = data.docs && data.docs[0];
+            if(doc){ resolve({id:doc.id, name:doc.name}); return; }
+          }
+          if(data.action === google.picker.Action.CANCEL){ resolve(null); }
+        })
+        .build();
+      picker.setVisible(true);
+    }catch(e){ resolve(null); }
+  });
+}
+
+// Builds (creating if needed) the photos/videos subfolders inside a
+// session chosen Drive folder. The session folder itself must already
+// be picked (session.driveFolderId set) before this is called.
+async function getSessionMediaFolder(token, session, kind){
+  if(!session.driveFolderId) return null;
+  return await findOrCreateFolder(token, kind, session.driveFolderId);
 }
 
 // Uploads a File/Blob to Drive inside the given session photos/videos
@@ -951,7 +1035,12 @@ function renderMainApp(){
     +(active.location?'<span>&#128205; '+esc(active.location)+'</span>':'')
     +(active.tech?'<span>&#128100; '+esc(active.tech)+'</span>':'')
     +'<span>&#128336; '+fts(active.createdAt)+'</span>'
-    +'</div>';
+    +'</div>'
+    +(isLoggedIn?('<div class="shdr-meta" style="margin-top:3px">'
+      +(active.driveFolderId
+        ? '<span title="Photos/videos are saved here">&#128193; '+esc(active.driveFolderName||'Drive folder')+'</span><button class="btn-g" id="btnChangeFolder" style="padding:1px 6px;font-size:11px">Change</button>'
+        : '<button class="btn-sm" id="btnPickFolder">&#128193; Choose Drive folder for photos/videos</button>')
+      +'</div>'):'');
 
   // Attach header events
   var btnCH=el('btnCloseHdr');
@@ -972,6 +1061,33 @@ function renderMainApp(){
   });
   var btnSN=el('btnSyncNow');
   if(btnSN) btnSN.addEventListener('click',function(){loadFromDrive().then(function(){renderAll();});});
+
+  var btnPF = el('btnPickFolder');
+  if(btnPF) btnPF.addEventListener('click', async function(){
+    var token = await ensureToken();
+    if(!token) return;
+    var folder = await pickSessionFolder(token);
+    if(folder){
+      sessions = sessions.map(function(x){
+        return x.id===aid ? Object.assign({}, x, {driveFolderId:folder.id, driveFolderName:folder.name}) : x;
+      });
+      scheduleSave();
+      renderAll();
+    }
+  });
+  var btnCF = el('btnChangeFolder');
+  if(btnCF) btnCF.addEventListener('click', async function(){
+    var token = await ensureToken();
+    if(!token) return;
+    var folder = await pickSessionFolder(token);
+    if(folder){
+      sessions = sessions.map(function(x){
+        return x.id===aid ? Object.assign({}, x, {driveFolderId:folder.id, driveFolderName:folder.name}) : x;
+      });
+      scheduleSave();
+      renderAll();
+    }
+  });
 
   // Render log entries
   var log=el('logArea');
@@ -1104,7 +1220,7 @@ function renderMainApp(){
             rThumbs();
           });
 
-          if(activeSession && isLoggedIn){
+          if(activeSession && isLoggedIn && activeSession.driveFolderId){
             pendingExifReads++;
             uploadMediaToDrive(activeSession, file, 'videos').then(function(result){
               if(result){
@@ -1126,7 +1242,7 @@ function renderMainApp(){
             // we deliberately do not fall back to embedding it as base64
             // (that is exactly what causes mobile crashes). Mark it so the
             // UI can warn the user.
-            img.uploadStatus = 'no-drive';
+            img.uploadStatus = (isLoggedIn ? 'no-folder' : 'no-drive');
           }
           return;
         }
@@ -1145,7 +1261,7 @@ function renderMainApp(){
             pendingExifReads--;
             rThumbs();
           });
-          if(activeSession && isLoggedIn){
+          if(activeSession && isLoggedIn && activeSession.driveFolderId){
             uploadMediaToDrive(activeSession, file, 'photos').then(function(result){
               if(result){ img.driveId=result.driveId; img.name=result.name; }
             });
@@ -1172,6 +1288,7 @@ function rThumbs(){
       if(img.uploadStatus==='uploading') statusBadge='<div class="thumb-status uploading">&#8635;</div>';
       else if(img.uploadStatus==='error') statusBadge='<div class="thumb-status error" title="Upload failed">&#9888;</div>';
       else if(img.uploadStatus==='no-drive') statusBadge='<div class="thumb-status error" title="Sign in to Google Drive to attach videos">&#9888;</div>';
+      else if(img.uploadStatus==='no-folder') statusBadge='<div class="thumb-status error" title="Pick a Drive folder for this session first">&#9888;</div>';
     }
     d.innerHTML=(thumbSrc?'<img src="'+thumbSrc+'" alt="Pending">':'<div class="thumb-placeholder">&#127909;</div>')
       +(isVideo?'<div class="thumb-vid-badge">&#9654;</div>':'')
@@ -1260,6 +1377,7 @@ function rEThumbs(){
       if(img.uploadStatus==='uploading') statusBadge='<div class="thumb-status uploading">&#8635;</div>';
       else if(img.uploadStatus==='error') statusBadge='<div class="thumb-status error" title="Upload failed">&#9888;</div>';
       else if(img.uploadStatus==='no-drive') statusBadge='<div class="thumb-status error" title="Sign in to Google Drive to attach videos">&#9888;</div>';
+      else if(img.uploadStatus==='no-folder') statusBadge='<div class="thumb-status error" title="Pick a Drive folder for this session first">&#9888;</div>';
     }
     d.innerHTML=(thumbSrc?'<img src="'+thumbSrc+'" alt="Attachment">':'<div class="thumb-placeholder">&#127909;</div>')
       +(isVideo?'<div class="thumb-vid-badge">&#9654;</div>':'')
@@ -1330,7 +1448,7 @@ el('eFileIn').addEventListener('change',function(e){
         rEThumbs();
       });
 
-      if(activeSession && isLoggedIn){
+      if(activeSession && isLoggedIn && activeSession.driveFolderId){
         pendingExifReadsEdit++;
         uploadMediaToDrive(activeSession, file, 'videos').then(function(result){
           if(result){
@@ -1347,7 +1465,7 @@ el('eFileIn').addEventListener('change',function(e){
           scheduleSave();
         });
       } else {
-        img.uploadStatus = 'no-drive';
+        img.uploadStatus = (isLoggedIn ? 'no-folder' : 'no-drive');
       }
       return;
     }
@@ -1363,7 +1481,7 @@ el('eFileIn').addEventListener('change',function(e){
         pendingExifReadsEdit--;
         rEThumbs();
       });
-      if(activeSession && isLoggedIn){
+      if(activeSession && isLoggedIn && activeSession.driveFolderId){
         uploadMediaToDrive(activeSession, file, 'photos').then(function(result){
           if(result){ img.driveId=result.driveId; img.name=result.name; }
         });
@@ -1437,14 +1555,33 @@ function closeM(){el('mBack').style.display='none';}
 el('btnNew').addEventListener('click',openM);
 el('mCancel').addEventListener('click',closeM);
 el('mBack').addEventListener('click',function(e){if(e.target===el('mBack'))closeM();});
-el('mSave').addEventListener('click',function(){
+el('mSave').addEventListener('click', async function(){
   var c=el('mCli').value.trim(),m=el('mMac').value.trim();
   if(!c||!m){alert('Client and machine are required.');return;}
-  var s={id:uid(),client:c,machine:m,location:el('mLoc').value.trim(),tech:el('mTec').value.trim(),type:el('mTyp').value,status:'open',createdAt:now(),entries:[],notes:''};
+  var s={id:uid(),client:c,machine:m,location:el('mLoc').value.trim(),tech:el('mTec').value.trim(),type:el('mTyp').value,status:'open',createdAt:now(),entries:[],notes:'',driveFolderId:null,driveFolderName:null};
   sessions=[s].concat(sessions);aid=s.id;
   closeM();
   ['mCli','mMac','mLoc','mTec'].forEach(function(id){el(id).value='';});
   scheduleSave();renderAll();
+
+  // If connected to Google Drive, immediately prompt the user to pick or
+  // create the folder where this session photos/videos will be stored.
+  // This happens once per session; uploads later reuse session.driveFolderId
+  // without asking again. If the user cancels, the session is still usable
+  // -- they can pick a folder later from the session header.
+  if(isLoggedIn){
+    var token = await ensureToken();
+    if(token){
+      var folder = await pickSessionFolder(token);
+      if(folder){
+        sessions = sessions.map(function(x){
+          return x.id===s.id ? Object.assign({}, x, {driveFolderId:folder.id, driveFolderName:folder.name}) : x;
+        });
+        scheduleSave();
+        renderAll();
+      }
+    }
+  }
 });
 
 // ── MEDIA VIEWER (images + video playback) ─────────────────────────────────

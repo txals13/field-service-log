@@ -540,17 +540,30 @@ function logout(){
 
 // ── GOOGLE DRIVE SYNC ──────────────────────────────────────────────────────
 async function findOrCreateDriveFile(token){
-  // Search for existing file
-  var q = encodeURIComponent("name='"+GDRIVE_FILE_NAME+"' and trashed=false and mimeType='application/json'");
-  var resp = await fetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id,name)',{
+  // Search for existing data file — first try within the root folder for precision,
+  // then fall back to a global search (handles files created before folder structure existed).
+  var rootId = await getRootFolder(token);
+  var q = rootId
+    ? "name='"+GDRIVE_FILE_NAME+"' and trashed=false and mimeType='application/json' and '"+rootId+"' in parents"
+    : "name='"+GDRIVE_FILE_NAME+"' and trashed=false and mimeType='application/json'";
+  var resp = await fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+'&fields=files(id,name)',{
     headers:{Authorization:'Bearer '+token}
   });
   if(!resp.ok) return null;
   var data = await resp.json();
-  if(data.files && data.files.length > 0){
-    return data.files[0].id;
+  if(data.files && data.files.length > 0) return data.files[0].id;
+  // Fallback: search globally (file may exist from before folder structure)
+  if(rootId){
+    var q2 = "name='"+GDRIVE_FILE_NAME+"' and trashed=false and mimeType='application/json'";
+    var resp2 = await fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q2)+'&fields=files(id,name)',{
+      headers:{Authorization:'Bearer '+token}
+    });
+    if(resp2.ok){
+      var data2 = await resp2.json();
+      if(data2.files && data2.files.length > 0) return data2.files[0].id;
+    }
   }
-  return null; // will be created on first save
+  return null; // will be created on first save inside Field Service Log/
 }
 
 // ── GOOGLE DRIVE MEDIA STORAGE ──────────────────────────────────────────────
@@ -779,15 +792,18 @@ async function saveToDrive(){
     var body = JSON.stringify(sessions);
     var resp;
     if(gdriveFileId){
-      // Update existing file
+      // Update existing file (no folder change needed)
       resp = await fetch('https://www.googleapis.com/upload/drive/v3/files/'+gdriveFileId+'?uploadType=media',{
         method:'PATCH',
         headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
         body: body
       });
     } else {
-      // Create new file with metadata
-      var meta = JSON.stringify({name:GDRIVE_FILE_NAME, mimeType:'application/json'});
+      // Create new file inside "Field Service Log/" root folder
+      var rootId = await getRootFolder(token);
+      var fileMeta = {name:GDRIVE_FILE_NAME, mimeType:'application/json'};
+      if(rootId) fileMeta.parents = [rootId];
+      var meta = JSON.stringify(fileMeta);
       var boundary = 'fsl_boundary_'+Date.now();
       var multipart = '--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+meta
         +'\r\n--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+body+'\r\n--'+boundary+'--';

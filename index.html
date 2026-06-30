@@ -1690,7 +1690,7 @@ function buildReportHtml(s, forPrint){
     +'</div>'
     +'<table><thead><tr><th>Timestamp</th><th>Severity</th><th>Tag</th><th>Description</th><th>Attachments</th></tr></thead><tbody>'+rows+'</tbody></table>'
     +(s.notes?'<div style="margin-top:18px;padding:12px;background:#f9fafb;border-radius:6px;border-left:3px solid #f5a623"><strong>General notes:</strong><br>'+esc(s.notes)+'</div>':'')
-    +'<div class="sig"><div><div class="sl">Signatura del Technician<br><strong>'+esc(s.tech||'_________________')+'</strong></div></div>'
+    +'<div class="sig"><div><div class="sl">Technician signature<br><strong>'+esc(s.tech||'_________________')+'</strong></div></div>'
     +'<div><div class="sl">Client / Recipient signature</div></div></div>'
     +'<div class="ft"><span>ID: '+s.id+'</span><span>Field Service Log</span></div>'
     +'</body></html>';
@@ -1710,7 +1710,7 @@ function exportRep(s, fmt){
   var base = (s.client||'sessio').replace(/\s+/g,'_')+'_'+s.createdAt.slice(0,10);
 
   if(fmt==='html'){
-    downloadBlob(new Blob([buildReportHtml(s)],{type:'text/html;charset=utf-8'}), 'informe_'+base+'.html');
+    downloadBlob(new Blob([buildReportHtml(s)],{type:'text/html;charset=utf-8'}), 'report_'+base+'.html');
 
   } else if(fmt==='pdf'){
     // PDF via print: open report in a new window and trigger print dialog.
@@ -1893,7 +1893,7 @@ function exportDocx(s, base){
   }
 
   // Signatures
-  children.push(new D.Paragraph({spacing:{before:800, after:40}, border:{top:{style:D.BorderStyle.SINGLE, size:2, color:'CCCCCC', space:1}}, children:[new D.TextRun({text:'Signatura del Technician: '+(s.tech||'_________________'), size:20, font:'Arial'})]}));
+  children.push(new D.Paragraph({spacing:{before:800, after:40}, border:{top:{style:D.BorderStyle.SINGLE, size:2, color:'CCCCCC', space:1}}, children:[new D.TextRun({text:'Technician signature: '+(s.tech||'_________________'), size:20, font:'Arial'})]}));
   children.push(new D.Paragraph({spacing:{before:600, after:40}, border:{top:{style:D.BorderStyle.SINGLE, size:2, color:'CCCCCC', space:1}}, children:[new D.TextRun({text:'Client / Recipient signature: _________________', size:20, font:'Arial'})]}));
   children.push(new D.Paragraph({spacing:{before:200}, children:[new D.TextRun({text:'ID: '+s.id, size:16, font:'Arial', color:'9CA3AF'})]}));
 
@@ -1906,7 +1906,7 @@ function exportDocx(s, base){
   });
 
   D.Packer.toBlob(doc).then(function(blob){
-    downloadBlob(blob, 'informe_'+base+'.docx');
+    downloadBlob(blob, 'report_'+base+'.docx');
   }).catch(function(err){
     alert('Error generating DOCX: '+err.message);
   });

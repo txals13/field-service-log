@@ -1701,7 +1701,7 @@ function buildReportHtml(s, forPrint){
     +'@media print{body{margin:0;padding:16px}}</style></head><body>'
     +'<div style="border-bottom:3px solid #f5a623;padding-bottom:14px;margin-bottom:16px">'
     +'<span style="background:'+tm.bg+';color:'+tm.tx+';border-radius:4px;padding:3px 12px;font-size:11px;font-weight:700;letter-spacing:1px">'+tm.label.toUpperCase()+'</span>'
-    +'<h1>Informe d&#39;Assistencia Techniciana</h1>'
+    +'<h1>Field Service Report</h1>'
     +'<div style="color:#6b7280;font-size:13px">Generated on '+fts(new Date().toISOString())+'</div></div>'
     +'<div class="meta">'
     +'<div><div class="ml">Client</div><div class="mv">'+esc(s.client||'—')+'</div></div>'
@@ -1736,7 +1736,7 @@ function downloadBlob(blob, filename){
 function exportRep(s, fmt){
   if(!s) return;
   fmt = fmt || 'html';
-  var base = (s.client||'sessio').replace(/\s+/g,'_')+'_'+s.createdAt.slice(0,10);
+  var base = (s.client||'session').replace(/\s+/g,'_')+'_'+s.createdAt.slice(0,10);
 
   if(fmt==='html'){
     downloadBlob(new Blob([buildReportHtml(s)],{type:'text/html;charset=utf-8'}), 'report_'+base+'.html');
@@ -1874,7 +1874,7 @@ function exportDocx(s, base){
     new D.Paragraph({
       spacing:{after:80},
       border:{bottom:{style:D.BorderStyle.SINGLE, size:6, color:'F5A623', space:1}},
-      children:[new D.TextRun({text:'Informe d\'Assistencia Techniciana', bold:true, size:40, font:'Arial', color:'111827'})]
+      children:[new D.TextRun({text:'Field Service Report', bold:true, size:40, font:'Arial', color:'111827'})]
     }),
     new D.Paragraph({spacing:{after:40}, children:[new D.TextRun({text:'Type: '+tm.label, size:20, font:'Arial', color:'6B7280'})]}),
     new D.Paragraph({spacing:{after:200}, children:[new D.TextRun({text:'Generated on '+fts(new Date().toISOString()), size:18, font:'Arial', color:'9CA3AF'})]}),

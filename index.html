@@ -71,6 +71,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
 .log-text{font-size:13px;color:var(--tx1);line-height:1.4;word-break:break-word}
 .thumbs{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .thumb{width:64px;height:64px;border-radius:6px;overflow:hidden;border:1px solid var(--br);cursor:pointer;flex-shrink:0;position:relative}
+.thumb-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--bg2);font-size:22px}
+.thumb-vid-badge{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35);color:#fff;font-size:18px;pointer-events:none}
+.media-filename{position:absolute;bottom:16px;left:0;right:0;text-align:center;color:#fff;font-size:12px;font-family:monospace;background:rgba(0,0,0,.5);padding:4px 10px;width:fit-content;margin:0 auto;border-radius:4px}
 .thumb img{width:100%;height:100%;object-fit:cover}
 .thumb-del{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);border:none;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
 .input-bar{border-top:1px solid var(--br);padding:8px 12px;background:var(--bg1);flex-shrink:0;display:flex;flex-direction:column;gap:6px}
@@ -202,7 +205,9 @@ button:disabled{opacity:.4;cursor:not-allowed}
   </div>
   <div class="img-modal" id="imgM" style="display:none">
     <button class="img-close" id="imgX">&#10005;</button>
-    <img id="imgMI" src="" alt="Enlarged image">
+    <img id="imgMI" src="" alt="Enlarged image" style="display:none">
+    <video id="imgMV" controls playsinline style="display:none;max-width:95vw;max-height:90vh;border-radius:6px"></video>
+    <div id="imgMName" class="media-filename" style="display:none"></div>
   </div>
 </div>
 <script>
@@ -333,6 +338,55 @@ function readMp4CreationDate(arrayBuffer){
   }catch(e){}
   return null;
 }
+// ── VIDEO THUMBNAIL GENERATION ─────────────────────────────────────────────
+// Captures a frame from a video file (via an offscreen <video>+<canvas>) and
+// returns it as a JPEG data URL. Used for thumbnails in the app, and as the
+// representative image in PDF/DOCX exports where playback is not possible.
+function generateVideoThumbnail(file){
+  return new Promise(function(resolve){
+    try{
+      var url = URL.createObjectURL(file);
+      var videoEl = document.createElement('video');
+      videoEl.preload = 'metadata';
+      videoEl.muted = true;
+      videoEl.playsInline = true;
+      videoEl.src = url;
+      var done = false;
+      var finish = function(dataUrl){
+        if(done) return;
+        done = true;
+        URL.revokeObjectURL(url);
+        resolve(dataUrl);
+      };
+      videoEl.addEventListener('loadeddata', function(){
+        try{
+          // Seek slightly into the video to avoid an all-black first frame
+          var seekTo = Math.min(0.5, (videoEl.duration||1)/4);
+          videoEl.currentTime = seekTo;
+        }catch(e){ captureFrame(); }
+      });
+      videoEl.addEventListener('seeked', captureFrame);
+      videoEl.addEventListener('error', function(){ finish(null); });
+      function captureFrame(){
+        try{
+          var canvas = document.createElement('canvas');
+          var w = videoEl.videoWidth || 320, h = videoEl.videoHeight || 240;
+          var maxDim = 480;
+          var scale = Math.min(1, maxDim/Math.max(w,h));
+          canvas.width = Math.round(w*scale);
+          canvas.height = Math.round(h*scale);
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+          finish(canvas.toDataURL('image/jpeg', 0.7));
+        }catch(e){ finish(null); }
+      }
+      // Safety timeout in case metadata/seek events never fire (some mobile
+      // browsers are inconsistent with video element events for local files)
+      setTimeout(function(){ finish(null); }, 4000);
+    }catch(e){ resolve(null); }
+  });
+}
+
 function getFileTimestamp(file){
   var inner = new Promise(function(resolve){
     var fb=function(){resolve(file.lastModified?new Date(file.lastModified).toISOString():null);};
@@ -798,9 +852,11 @@ function renderMainApp(){
       if(e.images&&e.images.length){
         imgs='<div class="thumbs">';
         e.images.forEach(function(img,i){
-          imgs+='<div class="thumb" tabindex="0" data-src="'+img.data+'">'
-            +'<img src="'+img.data+'" alt="Adjunt '+(i+1)+'" loading="lazy">'
-            +(img.type==='video'?'<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.4);font-size:22px">&#9654;</div>':'')
+          var isVideo = img.type==='video';
+          var thumbSrc = isVideo ? (img.poster||'') : img.data;
+          imgs+='<div class="thumb" tabindex="0" data-src="'+(isVideo?img.data:img.data)+'" data-type="'+(isVideo?'video':'image')+'" data-name="'+esc(img.name||'')+'">'
+            +(thumbSrc?'<img src="'+thumbSrc+'" alt="Attachment '+(i+1)+'" loading="lazy">':'<div class="thumb-placeholder">&#127909;</div>')
+            +(isVideo?'<div class="thumb-vid-badge">&#9654;</div>':'')
             +'</div>';
         });
         imgs+='</div>';
@@ -814,7 +870,7 @@ function renderMainApp(){
         +'</div><div class="log-text">'+esc(e.text)+'</div>'+imgs+'</div>'
         +(canEdit?'<div class="log-actions"><button class="log-act-btn" data-act="edit" title="Edit">&#9998;</button><button class="log-act-btn" data-act="del" title="Delete">&#10005;</button></div>':'');
       div.querySelectorAll('.thumb').forEach(function(t){
-        t.addEventListener('click',function(){el('imgMI').src=t.dataset.src;el('imgM').style.display='flex';});
+        t.addEventListener('click',function(){openMediaViewer(t.dataset.src, t.dataset.type, t.dataset.name);});
       });
       if(canEdit){
         var editBtn=div.querySelector('[data-act="edit"]');
@@ -872,7 +928,8 @@ function renderMainApp(){
       Array.from(e.target.files||[]).forEach(function(file){
         var r=new FileReader();
         r.onload=function(ev){
-          var img={data:ev.target.result,type:file.type.startsWith('video')?'video':'image',name:file.name};
+          var isVideo = file.type.startsWith('video');
+          var img={data:ev.target.result,type:isVideo?'video':'image',name:file.name};
           pImgs.push(img);
           rThumbs();
           pendingExifReads++;
@@ -881,6 +938,14 @@ function renderMainApp(){
             pendingExifReads--;
             rThumbs();
           });
+          if(isVideo){
+            pendingExifReads++;
+            generateVideoThumbnail(file).then(function(thumb){
+              if(thumb) img.poster=thumb;
+              pendingExifReads--;
+              rThumbs();
+            });
+          }
         };
         r.readAsDataURL(file);
       });
@@ -896,7 +961,11 @@ function rThumbs(){
   c.innerHTML='';
   pImgs.forEach(function(img,i){
     var d=document.createElement('div');d.className='thumb';
-    d.innerHTML='<img src="'+img.data+'" alt="Pending"><button class="thumb-del" data-i="'+i+'">&#10005;</button>';
+    var isVideo = img.type==='video';
+    var thumbSrc = isVideo ? (img.poster||'') : img.data;
+    d.innerHTML=(thumbSrc?'<img src="'+thumbSrc+'" alt="Pending">':'<div class="thumb-placeholder">&#127909;</div>')
+      +(isVideo?'<div class="thumb-vid-badge">&#9654;</div>':'')
+      +'<button class="thumb-del" data-i="'+i+'">&#10005;</button>';
     d.querySelector('.thumb-del').addEventListener('click',function(){pImgs=pImgs.filter(function(_,j){return j!==i;});rThumbs();});
     c.appendChild(d);
   });
@@ -973,7 +1042,11 @@ function rEThumbs(){
   c.innerHTML='';
   eImgs.forEach(function(img,i){
     var d=document.createElement('div');d.className='thumb';
-    d.innerHTML='<img src="'+img.data+'" alt="Attachment"><button class="thumb-del" data-i="'+i+'">&#10005;</button>';
+    var isVideo = img.type==='video';
+    var thumbSrc = isVideo ? (img.poster||'') : img.data;
+    d.innerHTML=(thumbSrc?'<img src="'+thumbSrc+'" alt="Attachment">':'<div class="thumb-placeholder">&#127909;</div>')
+      +(isVideo?'<div class="thumb-vid-badge">&#9654;</div>':'')
+      +'<button class="thumb-del" data-i="'+i+'">&#10005;</button>';
     d.querySelector('.thumb-del').addEventListener('click',function(){eImgs=eImgs.filter(function(_,j){return j!==i;});rEThumbs();});
     c.appendChild(d);
   });
@@ -984,7 +1057,8 @@ el('eFileIn').addEventListener('change',function(e){
   Array.from(e.target.files||[]).forEach(function(file){
     var r=new FileReader();
     r.onload=function(ev){
-      var img={data:ev.target.result,type:file.type.startsWith('video')?'video':'image',name:file.name};
+      var isVideo = file.type.startsWith('video');
+      var img={data:ev.target.result,type:isVideo?'video':'image',name:file.name};
       eImgs.push(img);
       rEThumbs();
       pendingExifReadsEdit++;
@@ -993,6 +1067,14 @@ el('eFileIn').addEventListener('change',function(e){
         pendingExifReadsEdit--;
         rEThumbs();
       });
+      if(isVideo){
+        pendingExifReadsEdit++;
+        generateVideoThumbnail(file).then(function(thumb){
+          if(thumb) img.poster=thumb;
+          pendingExifReadsEdit--;
+          rEThumbs();
+        });
+      }
     };
     r.readAsDataURL(file);
   });
@@ -1072,12 +1154,44 @@ el('mSave').addEventListener('click',function(){
   scheduleSave();renderAll();
 });
 
-// ── IMAGE VIEWER ───────────────────────────────────────────────────────────
-el('imgM').addEventListener('click',function(){el('imgM').style.display='none';});
-el('imgX').addEventListener('click',function(e){e.stopPropagation();el('imgM').style.display='none';});
+// ── MEDIA VIEWER (images + video playback) ─────────────────────────────────
+function closeMediaViewer(){
+  el('imgM').style.display='none';
+  var vid = el('imgMV');
+  vid.pause();
+  vid.removeAttribute('src');
+  vid.load();
+  vid.style.display='none';
+  el('imgMI').style.display='none';
+  el('imgMName').style.display='none';
+}
+function openMediaViewer(src, type, name){
+  var imgEl = el('imgMI'), vidEl = el('imgMV'), nameEl = el('imgMName');
+  if(type==='video'){
+    imgEl.style.display='none';
+    vidEl.src = src;
+    vidEl.style.display='block';
+    nameEl.textContent = name || 'Video';
+    nameEl.style.display = name ? 'block' : 'none';
+  } else {
+    vidEl.pause();
+    vidEl.style.display='none';
+    imgEl.src = src;
+    imgEl.style.display='block';
+    nameEl.style.display='none';
+  }
+  el('imgM').style.display='flex';
+}
+el('imgM').addEventListener('click',function(e){
+  // Avoid closing when clicking on the video controls themselves
+  if(e.target.id==='imgMV') return;
+  closeMediaViewer();
+});
+el('imgMV').addEventListener('click',function(e){ e.stopPropagation(); });
+el('imgX').addEventListener('click',function(e){ e.stopPropagation(); closeMediaViewer(); });
 
 // ── EXPORT ─────────────────────────────────────────────────────────────────
-function buildReportHtml(s){
+function buildReportHtml(s, forPrint){
   var tm=TM[s.type]||TM.commissioning;
   var entries=s.entries||[];
   var errs=entries.filter(function(e){return e.severity==='error';}).length;
@@ -1085,9 +1199,24 @@ function buildReportHtml(s){
   var oks=entries.filter(function(e){return e.severity==='ok';}).length;
   var rows=entries.map(function(e){
     var sm=SM[e.severity]||SM.info;
-    var imgs=(e.images||[]).map(function(img){return img.type!=='video'
-      ?'<img src="'+img.data+'" style="max-width:100px;max-height:70px;object-fit:cover;border-radius:4px;margin:2px">'
-      :'<span style="font-size:11px;background:#eee;padding:2px 6px;border-radius:3px">Video</span>';}).join('');
+    var imgs=(e.images||[]).map(function(img){
+      if(img.type==='video'){
+        if(forPrint){
+          // PDF/print: show extracted thumbnail frame + filename (video
+          // playback is not possible in a printed/static document).
+          var posterHtml = img.poster
+            ? '<img src="'+img.poster+'" style="max-width:140px;max-height:90px;object-fit:cover;border-radius:4px;display:block">'
+            : '<div style="width:120px;height:80px;background:#eee;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:22px">&#127909;</div>';
+          return '<div style="margin:2px">'+posterHtml
+            +'<div style="font-size:9px;color:#6b7280;font-family:monospace;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">&#9654; '+esc(img.name||'video')+'</div></div>';
+        }
+        return '<div style="margin:2px"><video src="'+img.data+'" controls preload="metadata" '
+          +(img.poster?'poster="'+img.poster+'" ':'')
+          +'style="max-width:160px;max-height:110px;border-radius:4px;display:block"></video>'
+          +'<div style="font-size:9px;color:#6b7280;font-family:monospace;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(img.name||'video')+'</div></div>';
+      }
+      return '<img src="'+img.data+'" style="max-width:100px;max-height:70px;object-fit:cover;border-radius:4px;margin:2px">';
+    }).join('');
     return '<tr><td style="font-family:monospace;font-size:11px;white-space:nowrap;padding:5px 8px;border:1px solid #e5e7eb;color:#6b7280">'+fts(e.ts)+(e.tsFromPhoto?' \uD83D\uDCF7':'')+' '+(e.editedAt?'<em style="color:#aaa">(ed.)</em>':'')+'</td>'
       +'<td style="padding:5px 8px;border:1px solid #e5e7eb;font-size:11px;font-weight:700;color:'+sm.tx+'">'+sm.label+'</td>'
       +'<td style="padding:5px 8px;border:1px solid #e5e7eb;font-size:11px;font-family:monospace;color:#1d4ed8">'+esc(e.tag||'')+'</td>'
@@ -1149,10 +1278,12 @@ function exportRep(s, fmt){
     downloadBlob(new Blob([buildReportHtml(s)],{type:'text/html;charset=utf-8'}), 'informe_'+base+'.html');
 
   } else if(fmt==='pdf'){
-    // PDF via print: open report in a new window and trigger print dialog
+    // PDF via print: open report in a new window and trigger print dialog.
+    // Videos cannot play in a print/PDF context, so we render their
+    // extracted thumbnail frame instead (forPrint=true).
     var win = window.open('','_blank');
     if(!win){ alert('Please allow pop-ups to generate the PDF.'); return; }
-    win.document.write(buildReportHtml(s));
+    win.document.write(buildReportHtml(s, true));
     win.document.close();
     win.onload = function(){
       setTimeout(function(){ win.print(); }, 300);
@@ -1194,20 +1325,63 @@ function exportDocx(s, base){
     });
   };
 
+  // Convert a data URL (e.g. "data:image/jpeg;base64,...") into a Uint8Array
+  // so it can be embedded as an ImageRun in the docx document. Also returns
+  // the detected docx image type ('jpg'|'png'|'gif'|'bmp') based on the
+  // data URL MIME type, defaulting to 'jpg' for anything unrecognized.
+  function dataUrlToImageData(dataUrl){
+    try{
+      var mimeMatch = /^data:image\/([a-zA-Z+]+);base64,/.exec(dataUrl);
+      var mime = mimeMatch ? mimeMatch[1].toLowerCase() : 'jpeg';
+      var type = 'jpg';
+      if(mime.indexOf('png')>=0) type='png';
+      else if(mime.indexOf('gif')>=0) type='gif';
+      else if(mime.indexOf('bmp')>=0) type='bmp';
+      var base64 = dataUrl.split(',')[1];
+      var binary = atob(base64);
+      var bytes = new Uint8Array(binary.length);
+      for(var i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+      return {bytes:bytes, type:type};
+    }catch(e){ return null; }
+  }
+
   // Data rows
   var dataRows = entries.map(function(e){
     var sm = SM[e.severity]||SM.info;
     var sevColor = sm.tx.replace('#','');
     var fill = e.severity==='error'?'FEF2F2': e.severity==='warning'?'FFFBEB': e.severity==='ok'?'F0FDF4':'FFFFFF';
-    var imgCount = (e.images||[]).filter(function(i){return i.type!=='video';}).length;
-    var vidCount = (e.images||[]).filter(function(i){return i.type==='video';}).length;
-    var adjTxt = '';
-    if(imgCount) adjTxt += imgCount+' photo'+(imgCount>1?'s':'');
-    if(vidCount) adjTxt += (adjTxt?' + ':'')+vidCount+' video'+(vidCount>1?'s':'');
+
+    // Build attachment cell content: each photo becomes an embedded image,
+    // each video becomes its extracted thumbnail (or a placeholder) plus
+    // the original filename printed underneath.
+    var attachChildren = [];
+    (e.images||[]).forEach(function(img){
+      var isVideo = img.type==='video';
+      var imgSrc = isVideo ? img.poster : img.data;
+      if(imgSrc){
+        var imgData = dataUrlToImageData(imgSrc);
+        if(imgData){
+          try{
+            attachChildren.push(new D.Paragraph({spacing:{after:20}, children:[
+              new D.ImageRun({data:imgData.bytes, type:imgData.type, transformation:{width:70, height:50}})
+            ]}));
+          }catch(err){ /* image embed failed, skip silently */ }
+        }
+      }
+      if(isVideo){
+        attachChildren.push(new D.Paragraph({spacing:{after:60}, children:[
+          new D.TextRun({text:'\u25B6 '+(img.name||'video'), size:14, font:'Arial', color:'6B7280', italics:true})
+        ]}));
+      }
+    });
+    if(!attachChildren.length){
+      attachChildren.push(new D.Paragraph({children:[new D.TextRun({text:'', size:18})]}));
+    }
+
     return new D.TableRow({children:[
       new D.TableCell({borders:borders, margins:cellMargins, width:{size:1800,type:D.WidthType.DXA},
         shading:{fill:fill, type:D.ShadingType.CLEAR},
-        children:[new D.Paragraph({children:[new D.TextRun({text:fts(e.ts)+(e.tsFromPhoto?' [foto]':''), size:16, font:'Courier New', color:'6B7280'})]})]}),
+        children:[new D.Paragraph({children:[new D.TextRun({text:fts(e.ts)+(e.tsFromPhoto?' [photo]':''), size:16, font:'Courier New', color:'6B7280'})]})]}),
       new D.TableCell({borders:borders, margins:cellMargins, width:{size:900,type:D.WidthType.DXA},
         shading:{fill:fill, type:D.ShadingType.CLEAR},
         children:[new D.Paragraph({children:[new D.TextRun({text:sm.label, bold:true, size:18, color:sevColor, font:'Arial'})]})]}) ,
@@ -1219,7 +1393,7 @@ function exportDocx(s, base){
         children:[new D.Paragraph({children:[new D.TextRun({text:e.text||'', size:20, font:'Arial'})]})]}) ,
       new D.TableCell({borders:borders, margins:cellMargins, width:{size:1000,type:D.WidthType.DXA},
         shading:{fill:fill, type:D.ShadingType.CLEAR},
-        children:[new D.Paragraph({children:[new D.TextRun({text:adjTxt, size:18, font:'Arial', color:'6B7280'})]})]})
+        children:attachChildren})
     ]});
   });
 

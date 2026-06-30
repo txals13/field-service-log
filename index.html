@@ -151,6 +151,8 @@ button:disabled{opacity:.4;cursor:not-allowed}
     <span class="top-badge" id="topBadge" style="display:none"></span>
     <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0">
       <span id="syncStatus" style="font-size:11px;color:var(--tx3);font-family:monospace;white-space:nowrap"></span>
+      <button class="btn-sm btn-g" id="btnImport" title="Import sessions from JSON file">&#8679; Import</button>
+      <input type="file" id="importFileIn" accept=".json" style="display:none">
       <button class="btn-p btn-sm" id="btnNew" style="flex-shrink:0">+ New</button>
     </div>
   </div>
@@ -1918,6 +1920,39 @@ if('serviceWorker' in navigator){
   var blob=new Blob([sw],{type:'application/javascript'});
   navigator.serviceWorker.register(URL.createObjectURL(blob),{scope:'./'}).catch(function(){});
 }
+
+// ── IMPORT JSON ────────────────────────────────────────────────────────────
+el('btnImport').addEventListener('click', function(){
+  el('importFileIn').click();
+});
+el('importFileIn').addEventListener('change', function(e){
+  var file = e.target.files && e.target.files[0];
+  if(!file) return;
+  var r = new FileReader();
+  r.onload = function(ev){
+    try{
+      var data = JSON.parse(ev.target.result);
+      if(!Array.isArray(data)) throw new Error('Expected a JSON array');
+      var count = data.length;
+      if(count === 0){ alert('The file contains no sessions.'); return; }
+      // Merge: add imported sessions that do not already exist (by id)
+      var existingIds = new Set(sessions.map(function(s){ return s.id; }));
+      var newSessions = data.filter(function(s){ return s.id && !existingIds.has(s.id); });
+      var skipped = count - newSessions.length;
+      sessions = newSessions.concat(sessions);
+      saveLocal();
+      renderAll();
+      var msg = 'Imported ' + newSessions.length + ' session(s).';
+      if(skipped > 0) msg += ' ' + skipped + ' skipped (already exist).';
+      alert(msg);
+    } catch(err){
+      alert('Import failed: ' + err.message);
+    }
+    e.target.value = '';
+  };
+  r.onerror = function(){ alert('Could not read file.'); };
+  r.readAsText(file);
+});
 
 // Close export dropdowns when clicking outside
 document.addEventListener('click',function(){

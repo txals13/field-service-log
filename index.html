@@ -214,6 +214,21 @@ button:disabled{opacity:.4;cursor:not-allowed}
       </div>
     </div>
   </div>
+  <div class="modal-back" id="delBack" style="display:none">
+    <div class="modal">
+      <div class="modal-title" style="color:var(--red)">&#9888; Delete Service Visit</div>
+      <p id="delModalDesc" style="font-size:13px;color:var(--tx2);margin-bottom:14px;line-height:1.6"></p>
+      <div style="background:var(--bg2);border:1px solid var(--br);border-radius:6px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--tx2)">
+        <div style="margin-bottom:6px">&#128190; <strong>A backup file will be saved automatically:</strong></div>
+        <div id="delBackupName" style="font-family:monospace;font-size:11px;color:var(--amber);word-break:break-all"></div>
+        <div style="margin-top:6px;color:var(--tx3)">&#128194; Saved to your <strong>Downloads</strong> folder. If connected to Google Drive, also uploaded to <strong>Field Service Log/</strong> automatically. You can re-import it later with the &#8679; Import button.</div>
+      </div>
+      <div class="modal-actions">
+        <button id="delCancel">Cancel</button>
+        <button class="btn-d" id="delConfirm">&#128190; Save backup &amp; Delete</button>
+      </div>
+    </div>
+  </div>
   <div class="img-modal" id="imgM" style="display:none">
     <button class="img-close" id="imgX">&#10005;</button>
     <img id="imgMI" src="" alt="Enlarged image" style="display:none">
@@ -892,23 +907,7 @@ function rSessions(){
     div.addEventListener('click',function(){aid=s.id;if(mob())closeSide();renderAll();});
     div.querySelector('.sitem-del').addEventListener('click',function(e){
       e.stopPropagation();
-      if(confirm('Delete this service visit?\n\nA backup JSON file will be downloaded automatically before deletion so you can recover it later.')){
-        // Export a backup of just this session before deleting it
-        var backup = JSON.stringify([s], null, 2);
-        var date = new Date().toISOString().slice(0,10);
-        var safeName = (s.client||'session').replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,40);
-        var filename = 'backup_' + safeName + '_' + date + '.json';
-        var blob = new Blob([backup], {type:'application/json;charset=utf-8'});
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href=url; a.download=filename;
-        document.body.appendChild(a); a.click();
-        document.body.removeChild(a); URL.revokeObjectURL(url);
-        // Now delete
-        sessions=sessions.filter(function(x){return x.id!==s.id;});
-        if(aid===s.id)aid=null;
-        scheduleSave();renderAll();
-      }
+      openDeleteConfirm(s);
     });
     list.appendChild(div);
   });
@@ -1932,6 +1931,94 @@ if('serviceWorker' in navigator){
   var blob=new Blob([sw],{type:'application/javascript'});
   navigator.serviceWorker.register(URL.createObjectURL(blob),{scope:'./'}).catch(function(){});
 }
+
+// ── DELETE SESSION CONFIRM MODAL ───────────────────────────────────────────
+var pendingDeleteSession = null;
+
+function openDeleteConfirm(s){
+  pendingDeleteSession = s;
+  var date = new Date().toISOString().slice(0,10);
+  var safeName = (s.client||'session').replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,40);
+  var filename = 'backup_' + safeName + '_' + date + '.json';
+  el('delModalDesc').innerHTML = 'You are about to delete <strong>' + esc(s.client||'this session') + '</strong>'
+    + (s.machine ? ' &mdash; ' + esc(s.machine) : '')
+    + '. This cannot be undone.';
+  el('delBackupName').textContent = filename;
+  el('delBack').style.display = 'flex';
+}
+
+function closeDeleteConfirm(){
+  el('delBack').style.display = 'none';
+  pendingDeleteSession = null;
+}
+
+el('delCancel').addEventListener('click', closeDeleteConfirm);
+el('delBack').addEventListener('click', function(e){ if(e.target===el('delBack')) closeDeleteConfirm(); });
+
+el('delConfirm').addEventListener('click', async function(){
+  var s = pendingDeleteSession;
+  if(!s){ closeDeleteConfirm(); return; }
+
+  var date = new Date().toISOString().slice(0,10);
+  var safeName = (s.client||'session').replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,40);
+  var filename = 'backup_' + safeName + '_' + date + '.json';
+  var jsonStr = JSON.stringify([s], null, 2);
+
+  // 1. Download locally
+  var blob = new Blob([jsonStr], {type:'application/json;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  // 2. Delete session immediately (do not wait for Drive upload)
+  sessions = sessions.filter(function(x){ return x.id !== s.id; });
+  if(aid === s.id) aid = null;
+  closeDeleteConfirm();
+  scheduleSave();
+  renderAll();
+
+  // 3. Upload backup to "Field Service Log" root folder on Drive (background)
+  if(isLoggedIn){
+    var token = await ensureToken();
+    if(token){
+      setSyncStatus('loading', 'Uploading backup to Drive...');
+      try{
+        var rootId = await getRootFolder(token);
+        if(rootId){
+          // Upload the backup JSON as a new file in the root folder
+          var meta = {name: filename, mimeType: 'application/json', parents: [rootId]};
+          var boundary = 'fsl_backup_' + Date.now();
+          var encoder = new TextEncoder();
+          var metaPart = '--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'
+            + JSON.stringify(meta) + '\r\n';
+          var filePart = '--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'
+            + jsonStr + '\r\n--'+boundary+'--';
+          var bodyBytes = encoder.encode(metaPart + filePart);
+          var resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{
+            method: 'POST',
+            headers: {
+              Authorization: 'Bearer ' + token,
+              'Content-Type': 'multipart/related; boundary=' + boundary
+            },
+            body: bodyBytes
+          });
+          if(resp.ok){
+            setSyncStatus('ok', 'Backup saved to Drive \u2713');
+          } else {
+            setSyncStatus('error', 'Local backup saved. Drive upload failed.');
+          }
+        } else {
+          setSyncStatus('error', 'Local backup saved. Drive folder not found.');
+        }
+      } catch(e){
+        setSyncStatus('error', 'Local backup saved. Drive unavailable.');
+      }
+    }
+  }
+});
 
 // ── IMPORT JSON ────────────────────────────────────────────────────────────
 el('btnImport').addEventListener('click', function(){

@@ -892,7 +892,19 @@ function rSessions(){
     div.addEventListener('click',function(){aid=s.id;if(mob())closeSide();renderAll();});
     div.querySelector('.sitem-del').addEventListener('click',function(e){
       e.stopPropagation();
-      if(confirm('Delete this service visit?')){
+      if(confirm('Delete this service visit?\n\nA backup JSON file will be downloaded automatically before deletion so you can recover it later.')){
+        // Export a backup of just this session before deleting it
+        var backup = JSON.stringify([s], null, 2);
+        var date = new Date().toISOString().slice(0,10);
+        var safeName = (s.client||'session').replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,40);
+        var filename = 'backup_' + safeName + '_' + date + '.json';
+        var blob = new Blob([backup], {type:'application/json;charset=utf-8'});
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href=url; a.download=filename;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a); URL.revokeObjectURL(url);
+        // Now delete
         sessions=sessions.filter(function(x){return x.id!==s.id;});
         if(aid===s.id)aid=null;
         scheduleSave();renderAll();

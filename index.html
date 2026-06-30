@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ca">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
@@ -130,7 +130,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
 <div id="app">
   <div id="ibar" class="install-bar" style="display:none">
     <span>&#128242; Instal&#183;la l'app per accedir offline</span>
-    <button class="btn-p btn-sm" id="btnInst">Instal&#183;lar</button>
+    <button class="btn-p btn-sm" id="btnInst">Install</button>
     <button class="btn-g btn-sm" id="btnInstX">&#10005;</button>
   </div>
   <div class="topbar">
@@ -139,12 +139,12 @@ button:disabled{opacity:.4;cursor:not-allowed}
     <span class="top-badge" id="topBadge" style="display:none"></span>
     <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0">
       <span id="syncStatus" style="font-size:11px;color:var(--tx3);font-family:monospace;white-space:nowrap"></span>
-      <button class="btn-p btn-sm" id="btnNew" style="flex-shrink:0">+ Nova</button>
+      <button class="btn-p btn-sm" id="btnNew" style="flex-shrink:0">+ New</button>
     </div>
   </div>
   <div id="syncBar" class="sync-bar" style="display:none">
     <span class="spinner"></span>
-    <span id="syncMsg">Sincronitzant amb Google Drive...</span>
+    <span id="syncMsg">Syncing with Google Drive...</span>
   </div>
   <div class="body">
     <div class="sidebar" id="sidebar">
@@ -161,48 +161,48 @@ button:disabled{opacity:.4;cursor:not-allowed}
   </div>
   <div class="modal-back" id="mBack" style="display:none">
     <div class="modal">
-      <div class="modal-title">&#9658; Nova Assistencia</div>
-      <div class="field"><label>Client / Empresa *</label><input type="text" id="mCli" placeholder="Nom del client"></div>
-      <div class="field"><label>Maquina / Equip *</label><input type="text" id="mMac" placeholder="Model o referencia"></div>
-      <div class="field"><label>Ubicacio</label><input type="text" id="mLoc" placeholder="Planta, linia..."></div>
-      <div class="field"><label>Tecnic</label><input type="text" id="mTec" placeholder="Nom del tecnic"></div>
-      <div class="field"><label>Tipus</label>
+      <div class="modal-title">&#9658; New Service Visit</div>
+      <div class="field"><label>Client / Company *</label><input type="text" id="mCli" placeholder="Client name"></div>
+      <div class="field"><label>Machine / Equipment *</label><input type="text" id="mMac" placeholder="Model or reference"></div>
+      <div class="field"><label>Location</label><input type="text" id="mLoc" placeholder="Plant, line..."></div>
+      <div class="field"><label>Technician</label><input type="text" id="mTec" placeholder="Technician name"></div>
+      <div class="field"><label>Type</label>
         <select id="mTyp" style="width:100%;font-size:13px;padding:7px 10px">
-          <option value="commissioning">Posada en Marxa (COM)</option>
-          <option value="maintenance">Manteniment (MNT)</option>
-          <option value="retrofit">Actualitzacio / Retrofit (RET)</option>
+          <option value="commissioning">Commissioning (COM)</option>
+          <option value="maintenance">Maintenance (MNT)</option>
+          <option value="retrofit">Upgrade / Retrofit (RET)</option>
         </select>
       </div>
       <div class="modal-actions">
-        <button id="mCancel">Cancel&#183;lar</button>
-        <button class="btn-p" id="mSave">&#10003; Crear sessio</button>
+        <button id="mCancel">Cancel</button>
+        <button class="btn-p" id="mSave">&#10003; Create session</button>
       </div>
     </div>
   </div>
   <div class="modal-back" id="eBack" style="display:none">
     <div class="modal">
-      <div class="modal-title">&#9998; Editar Entrada</div>
-      <div class="field"><label>Nivell</label>
+      <div class="modal-title">&#9998; Edit Entry</div>
+      <div class="field"><label>Severity</label>
         <select id="eSev" style="width:100%;font-size:13px;padding:7px 10px">
           <option value="info">&#9675; Info</option>
           <option value="ok">&#9679; OK</option>
-          <option value="warning">&#9650; Avis</option>
-          <option value="error">&#9632; Incidencia</option>
+          <option value="warning">&#9650; Warning</option>
+          <option value="error">&#9632; Issue</option>
         </select>
       </div>
-      <div class="field"><label>Tag</label><input type="text" id="eTag" placeholder="Tag (opcional)"></div>
-      <div class="field"><label>Descripcio</label><textarea id="eText" rows="4" style="resize:vertical"></textarea></div>
-      <div class="field"><label>Fotos / videos adjunts</label><div id="eThumbs" class="thumbs"></div></div>
-      <div class="field"><button class="btn-sm" id="eAddPhoto">&#128247; Afegir foto</button><input type="file" id="eFileIn" accept="image/*,video/*" multiple style="display:none"></div>
+      <div class="field"><label>Tag</label><input type="text" id="eTag" placeholder="Tag (optional)"></div>
+      <div class="field"><label>Description</label><textarea id="eText" rows="4" style="resize:vertical"></textarea></div>
+      <div class="field"><label>Attached photos / videos</label><div id="eThumbs" class="thumbs"></div></div>
+      <div class="field"><button class="btn-sm" id="eAddPhoto">&#128247; Add photo</button><input type="file" id="eFileIn" accept="image/*,video/*" multiple style="display:none"></div>
       <div class="modal-actions">
-        <button id="eCancel">Cancel&#183;lar</button>
-        <button class="btn-p" id="eSave">&#10003; Desar canvis</button>
+        <button id="eCancel">Cancel</button>
+        <button class="btn-p" id="eSave">&#10003; Save changes</button>
       </div>
     </div>
   </div>
   <div class="img-modal" id="imgM" style="display:none">
     <button class="img-close" id="imgX">&#10005;</button>
-    <img id="imgMI" src="" alt="Imatge ampliada">
+    <img id="imgMI" src="" alt="Enlarged image">
   </div>
 </div>
 <script>
@@ -219,15 +219,15 @@ var GDRIVE_FILE_NAME = 'field_service_log_data.json';
 
 // ── CONSTANTS ──────────────────────────────────────────────────────────────
 var TM={
-  commissioning:{label:'Posada en Marxa',abbr:'COM',bg:'rgba(59,130,246,.15)',tx:'#3b82f6',bd:'rgba(59,130,246,.5)'},
-  maintenance:{label:'Manteniment',abbr:'MNT',bg:'rgba(34,197,94,.12)',tx:'#22c55e',bd:'rgba(34,197,94,.5)'},
-  retrofit:{label:'Actualitzacio',abbr:'RET',bg:'rgba(245,166,35,.12)',tx:'#f5a623',bd:'rgba(245,166,35,.5)'}
+  commissioning:{label:'Commissioning',abbr:'COM',bg:'rgba(59,130,246,.15)',tx:'#3b82f6',bd:'rgba(59,130,246,.5)'},
+  maintenance:{label:'Maintenance',abbr:'MNT',bg:'rgba(34,197,94,.12)',tx:'#22c55e',bd:'rgba(34,197,94,.5)'},
+  retrofit:{label:'Upgrade',abbr:'RET',bg:'rgba(245,166,35,.12)',tx:'#f5a623',bd:'rgba(245,166,35,.5)'}
 };
 var SM={
   info:{label:'INFO',dot:'\u25cb',dc:'#5a6080',bg:'transparent',tx:'#9aa0c0'},
   ok:{label:'OK',dot:'\u25cf',dc:'#22c55e',bg:'rgba(34,197,94,.1)',tx:'#22c55e'},
-  warning:{label:'AVIS',dot:'\u25b2',dc:'#f5a623',bg:'rgba(245,166,35,.1)',tx:'#f5a623'},
-  error:{label:'INCID.',dot:'\u25a0',dc:'#ef4444',bg:'rgba(239,68,68,.1)',tx:'#ef4444'}
+  warning:{label:'WARNING',dot:'\u25b2',dc:'#f5a623',bg:'rgba(245,166,35,.1)',tx:'#f5a623'},
+  error:{label:'ISSUE',dot:'\u25a0',dc:'#ef4444',bg:'rgba(239,68,68,.1)',tx:'#ef4444'}
 };
 
 // ── STATE ──────────────────────────────────────────────────────────────────
@@ -239,7 +239,7 @@ var currentActive=null, isLoggedIn=false, gdriveFileId=null;
 // ── UTILS ──────────────────────────────────────────────────────────────────
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function now(){return new Date().toISOString()}
-function fts(iso){var d=new Date(iso);return d.toLocaleDateString('ca-ES',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+d.toTimeString().slice(0,8)}
+function fts(iso){var d=new Date(iso);return d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+d.toTimeString().slice(0,8)}
 function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
 function el(id){return document.getElementById(id)}
 
@@ -390,7 +390,7 @@ function loadGisScript(){
 async function googleLogin(){
   await loadGisScript();
   if(!window.google||!window.google.accounts){
-    alert('No es pot carregar Google Sign-In. Comprova la connexio a internet.');
+    alert('Could not load Google Sign-In. Check your internet connection.');
     return;
   }
   return new Promise(function(resolve){
@@ -446,12 +446,12 @@ async function findOrCreateDriveFile(token){
 
 async function loadFromDrive(){
   var token = await ensureToken();
-  if(!token){ setSyncStatus('error','No autenticat'); return; }
-  setSyncStatus('loading','Carregant des de Google Drive...');
+  if(!token){ setSyncStatus('error','Not authenticated'); return; }
+  setSyncStatus('loading','Loading from Google Drive...');
   try{
     if(!gdriveFileId) gdriveFileId = await findOrCreateDriveFile(token);
     saveTokenLocal();
-    if(!gdriveFileId){ setSyncStatus('ok','Google Drive connectat \u2713'); return; }
+    if(!gdriveFileId){ setSyncStatus('ok','Google Drive connected \u2713'); return; }
     var resp = await fetch('https://www.googleapis.com/drive/v3/files/'+gdriveFileId+'?alt=media',{
       headers:{Authorization:'Bearer '+token}
     });
@@ -463,22 +463,22 @@ async function loadFromDrive(){
         sessions = data.concat(localOnly);
         saveLocal();
       }
-      setSyncStatus('ok','Sincronitzat \u2713');
+      setSyncStatus('ok','Synced \u2713');
     } else if(resp.status===404){
       gdriveFileId=null; saveTokenLocal();
-      setSyncStatus('ok','Google Drive connectat \u2713');
+      setSyncStatus('ok','Google Drive connected \u2713');
     } else {
-      setSyncStatus('error','Error llegint Drive');
+      setSyncStatus('error','Error reading from Drive');
     }
   }catch(e){
-    setSyncStatus('error','Sense connexio (dades locals)');
+    setSyncStatus('error','No connection (using local data)');
   }
 }
 
 async function saveToDrive(){
   var token = await ensureToken();
   if(!token){ saveLocal(); return; }
-  setSyncStatus('loading','Desant a Google Drive...');
+  setSyncStatus('loading','Saving to Google Drive...');
   try{
     var body = JSON.stringify(sessions);
     var resp;
@@ -508,12 +508,12 @@ async function saveToDrive(){
     }
     if(resp&&resp.ok){
       isDirty=false; saveLocal();
-      setSyncStatus('ok','Desat a Drive \u2713 '+fts(now()).slice(12));
+      setSyncStatus('ok','Saved to Drive \u2713 '+fts(now()).slice(12));
     } else {
-      saveLocal(); setSyncStatus('error','Error desant a Drive');
+      saveLocal(); setSyncStatus('error','Error saving to Drive');
     }
   }catch(e){
-    saveLocal(); setSyncStatus('error','Sense connexio (desat local)');
+    saveLocal(); setSyncStatus('error','No connection (saved locally)');
   }
 }
 
@@ -593,7 +593,7 @@ function rSessions(){
   el('sideCount').textContent='Sessions ('+sessions.length+')';
   el('btnSideX').style.display=mob()?'block':'none';
   if(!sessions.length){
-    list.innerHTML='<div style="font-size:12px;color:var(--tx3);padding:20px 10px;text-align:center;font-family:monospace">Cap sessio.<br>Crea-ne una nova.</div>';
+    list.innerHTML='<div style="font-size:12px;color:var(--tx3);padding:20px 10px;text-align:center;font-family:monospace">No sessions yet.<br>Create a new one.</div>';
     return;
   }
   list.innerHTML='';
@@ -606,12 +606,12 @@ function rSessions(){
       +(errs?'<span style="float:right;background:rgba(239,68,68,.15);color:#ef4444;font-size:10px;padding:1px 5px;border-radius:3px;font-family:monospace">'+errs+' err</span>':'')
       +'<div class="sitem-name">'+esc(s.client||'—')+'</div>'
       +'<div class="sitem-sub">'+esc(s.machine||'')+'</div>'
-      +'<div class="sitem-sub" style="margin-top:2px">'+(s.status==='open'?'🟢 Oberta':'🔴 Tancada')+' · '+(s.entries||[]).length+' ent.</div>'
-      +'<button class="sitem-del" title="Eliminar">&#10005;</button>';
+      +'<div class="sitem-sub" style="margin-top:2px">'+(s.status==='open'?'🟢 Open':'🔴 Closed')+' · '+(s.entries||[]).length+' entries</div>'
+      +'<button class="sitem-del" title="Delete">&#10005;</button>';
     div.addEventListener('click',function(){aid=s.id;if(mob())closeSide();renderAll();});
     div.querySelector('.sitem-del').addEventListener('click',function(e){
       e.stopPropagation();
-      if(confirm('Eliminar aquesta assistencia?')){
+      if(confirm('Delete this service visit?')){
         sessions=sessions.filter(function(x){return x.id!==s.id;});
         if(aid===s.id)aid=null;
         scheduleSave();renderAll();
@@ -629,12 +629,12 @@ function renderMain(){
   if(!isLoggedIn){
     mc.innerHTML='<div class="login-screen"><div class="setup-box">'
       +'<h2>&#9881; Field Service Log</h2>'
-      +'<p style="font-size:15px">Sincronitza les teves sessions entre dispositius amb Google Drive, o usa-la en mode local.</p>'
+      +'<p style="font-size:15px">Sync your sessions across devices with Google Drive, or use it in local mode.</p>'
       +'<button class="btn-google" id="btnLoginSetup" style="margin-top:8px">'
       +'<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>'
-      +'Inicia sessio amb Google</button>'
+      +'Sign in with Google</button>'
       +'<div style="font-size:12px;color:var(--tx3)">o</div>'
-      +'<button class="btn-p" id="btnSkipSetup">Continuar en mode local (sense sync)</button>'
+      +'<button class="btn-p" id="btnSkipSetup">Continue in local mode (no sync)</button>'
       +'</div></div>';
     el('btnSkipSetup').addEventListener('click',function(){
       isLoggedIn=false;
@@ -653,13 +653,13 @@ function renderMain(){
   if(!isLoggedIn){
     mc.innerHTML='<div class="login-screen">'
       +'<div style="font-size:48px;opacity:.4">&#9728;</div>'
-      +'<div style="font-size:16px;font-weight:700">Connecta Google Drive</div>'
-      +'<div style="font-size:13px;color:var(--tx3);max-width:300px">Les teves sessions es desaran i sincronitzaran automaticament entre tots els dispositius</div>'
+      +'<div style="font-size:16px;font-weight:700">Connect Google Drive</div>'
+      +'<div style="font-size:13px;color:var(--tx3);max-width:300px">Your sessions will be saved and synced automatically across all your devices</div>'
       +'<button class="btn-google" id="btnLogin">'
       +'<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>'
-      +'Inicia sessio amb Google</button>'
+      +'Sign in with Google</button>'
       +'<div style="font-size:12px;color:var(--tx3)">o</div>'
-      +'<button class="btn-sm btn-g" id="btnLocalMode">Continuar en mode local (sense sync)</button>'
+      +'<button class="btn-sm btn-g" id="btnLocalMode">Continue in local mode (no sync)</button>'
       +'</div>';
     el('btnLogin').addEventListener('click',function(){ googleLogin().then(function(tok){ if(tok){ isLoggedIn=true; loadFromDrive().then(function(){renderAll(); scheduleSync();}); } }); });
     el('btnLocalMode').addEventListener('click',function(){
@@ -683,9 +683,9 @@ function renderMainApp(){
   if(!active){
     mc.innerHTML='<div class="empty-state" id="emptyEl">'
       +'<div style="font-size:48px;opacity:.3">&#9881;</div>'
-      +'<div style="font-size:16px;font-weight:700">Cap assistencia activa</div>'
-      +'<div style="font-size:13px;color:var(--tx3)">Crea una nova sessio per registrar incidencies</div>'
-      +'<button class="btn-p" id="btnNewE">+ Nova assistencia</button>'
+      +'<div style="font-size:16px;font-weight:700">No active service visit</div>'
+      +'<div style="font-size:13px;color:var(--tx3)">Create a new session to log incidents</div>'
+      +'<button class="btn-p" id="btnNewE">+ New assistencia</button>'
       +'</div>';
     el('btnNewE').addEventListener('click',openM);
     return;
@@ -707,8 +707,8 @@ function renderMainApp(){
     +'<div class="session-hdr" id="sHdr"></div>'
     +'<div class="filter-row">'
     +'<span style="color:var(--tx3)">&#128269;</span>'
-    +'<input type="text" id="filtIn" placeholder="Filtrar log..." style="max-width:180px;font-size:12px;padding:5px 8px" value="'+esc(ft)+'">'
-    +'<span style="font-size:11px;color:var(--tx3);font-family:monospace" id="eCnt">'+(ft?filtered.length+'/'+entries.length:entries.length+' entrades')+'</span>'
+    +'<input type="text" id="filtIn" placeholder="Filter log..." style="max-width:180px;font-size:12px;padding:5px 8px" value="'+esc(ft)+'">'
+    +'<span style="font-size:11px;color:var(--tx3);font-family:monospace" id="eCnt">'+(ft?filtered.length+'/'+entries.length:entries.length+' entries')+'</span>'
     +'</div>'
     +'<div class="log-area" id="logArea"></div>'
     +(active.status==='open'
@@ -716,24 +716,24 @@ function renderMainApp(){
         +'<div id="pThumbs" class="thumbs"></div>'
         +'<div class="input-row">'
         +'<div class="controls">'
-        +'<select id="sevSel" class="sel-sm" aria-label="Nivell">'
+        +'<select id="sevSel" class="sel-sm" aria-label="Severity">'
         +'<option value="info">&#9675; Info</option>'
         +'<option value="ok">&#9679; OK</option>'
-        +'<option value="warning">&#9650; Avis</option>'
-        +'<option value="error">&#9632; Incidencia</option>'
+        +'<option value="warning">&#9650; Warning</option>'
+        +'<option value="error">&#9632; Issue</option>'
         +'</select>'
         +'<input type="text" id="tagIn" placeholder="Tag..." class="inp-sm">'
         +'</div>'
-        +'<textarea id="entIn" rows="3" placeholder="Descripcio... (Ctrl+Enter per afegir)"></textarea>'
+        +'<textarea id="entIn" rows="3" placeholder="Description... (Ctrl+Enter to add)"></textarea>'
         +'<div class="controls">'
-        +'<button class="btn-p btn-sm" id="btnAdd">&#8629; Afegir</button>'
-        +'<button class="btn-sm" id="btnPh">&#128247; Foto</button>'
+        +'<button class="btn-p btn-sm" id="btnAdd">&#8629; Add</button>'
+        +'<button class="btn-sm" id="btnPh">&#128247; Photo</button>'
         +'<input type="file" id="fileIn" accept="image/*,video/*" multiple style="display:none">'
         +'</div></div>'
-        +'<input type="text" id="notesIn" placeholder="Observacio general..." style="font-size:12px;padding:5px 9px">'
+        +'<input type="text" id="notesIn" placeholder="General notes..." style="font-size:12px;padding:5px 9px">'
         +'</div>'
       :'<div class="closed-bar"><span id="closedTxt"></span>'
-        +'<div class="exp-menu-wrap"><button class="btn-sm" id="btnExpClosed">&#8595; Informe &#9662;</button>'
+        +'<div class="exp-menu-wrap"><button class="btn-sm" id="btnExpClosed">&#8595; Report &#9662;</button>'
         +'<div class="exp-menu" id="expMenuClosed"><button data-fmt="pdf">&#128196; PDF</button><button data-fmt="docx">&#128196; DOCX</button><button data-fmt="html">&#128196; HTML</button></div></div>'
         +'</div>')
     +'<div class="status-bar" id="statBar"></div>'
@@ -744,12 +744,12 @@ function renderMainApp(){
   hdr.innerHTML='<div class="shdr-top">'
     +'<span style="background:'+tm.bg+';color:'+tm.tx+';border:1px solid '+tm.bd+';border-radius:4px;font-size:11px;font-weight:700;padding:2px 8px;font-family:monospace">'+tm.label+'</span>'
     +'<span style="font-weight:700;font-size:14px">'+esc(active.client)+'</span>'
-    +(active.status==='open'?'<button class="btn-d btn-sm" id="btnCloseHdr" style="margin-left:auto">&#9632; Tancar</button>':'')
+    +(active.status==='open'?'<button class="btn-d btn-sm" id="btnCloseHdr" style="margin-left:auto">&#9632; Close</button>':'')
     +'<div class="exp-menu-wrap" style="'+(active.status==='open'?'':'margin-left:auto')+'">'
-    +'<button class="btn-sm" id="btnExpHdr">&#8595; Informe &#9662;</button>'
+    +'<button class="btn-sm" id="btnExpHdr">&#8595; Report &#9662;</button>'
     +'<div class="exp-menu" id="expMenuHdr"><button data-fmt="pdf">&#128196; PDF</button><button data-fmt="docx">&#128196; DOCX</button><button data-fmt="html">&#128196; HTML</button></div>'
     +'</div>'
-    +(isLoggedIn?'<button class="btn-sm btn-g" id="btnSyncNow" title="Sincronitzar ara">&#8635;</button>':'')
+    +(isLoggedIn?'<button class="btn-sm btn-g" id="btnSyncNow" title="Sync now">&#8635;</button>':'')
     +'</div>'
     +'<div class="shdr-meta">'
     +(active.machine?'<span>&#128295; '+esc(active.machine)+'</span>':'')
@@ -761,7 +761,7 @@ function renderMainApp(){
   // Attach header events
   var btnCH=el('btnCloseHdr');
   if(btnCH) btnCH.addEventListener('click',function(){
-    if(confirm('Tancar la sessio? Ja no podras afegir mes entrades.')){
+    if(confirm('Close this session? You will not be able to add more entries.')){
       sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:'closed',closedAt:now()}):s;});
       scheduleSave();renderAll();
     }
@@ -782,7 +782,7 @@ function renderMainApp(){
   var log=el('logArea');
   log.innerHTML='';
   if(!filtered.length){
-    log.innerHTML='<div class="no-ent">'+(ft?'Cap resultat.':'— Sense entrades. Registra la primera accio o incidencia. —')+'</div>';
+    log.innerHTML='<div class="no-ent">'+(ft?'No results.':'— No entries yet. Log the first action or incident. —')+'</div>';
   } else {
     var canEdit = active.status==='open';
     filtered.forEach(function(e){
@@ -802,12 +802,12 @@ function renderMainApp(){
       }
       div.innerHTML='<span class="log-dot" style="color:'+sm.dc+'">'+sm.dot+'</span>'
         +'<div style="flex:1;min-width:0">'
-        +'<div class="log-meta"><span class="log-ts"'+(e.tsFromPhoto?' title="Hora extreta de la foto"':'')+'>'+fts(e.ts)+(e.tsFromPhoto?' &#128247;':'')+'</span>'
+        +'<div class="log-meta"><span class="log-ts"'+(e.tsFromPhoto?' title="Time extracted from photo"':'')+'>'+fts(e.ts)+(e.tsFromPhoto?' &#128247;':'')+'</span>'
         +'<span class="log-sev" style="background:'+sm.bg+';color:'+sm.tx+'">'+sm.label+'</span>'
         +(e.tag?'<span class="log-tag">'+esc(e.tag)+'</span>':'')
-        +(e.editedAt?'<span style="font-size:10px;color:var(--tx3);font-style:italic">editat</span>':'')
+        +(e.editedAt?'<span style="font-size:10px;color:var(--tx3);font-style:italic">edited</span>':'')
         +'</div><div class="log-text">'+esc(e.text)+'</div>'+imgs+'</div>'
-        +(canEdit?'<div class="log-actions"><button class="log-act-btn" data-act="edit" title="Editar">&#9998;</button><button class="log-act-btn" data-act="del" title="Eliminar">&#10005;</button></div>':'');
+        +(canEdit?'<div class="log-actions"><button class="log-act-btn" data-act="edit" title="Edit">&#9998;</button><button class="log-act-btn" data-act="del" title="Delete">&#10005;</button></div>':'');
       div.querySelectorAll('.thumb').forEach(function(t){
         t.addEventListener('click',function(){el('imgMI').src=t.dataset.src;el('imgM').style.display='flex';});
       });
@@ -824,7 +824,7 @@ function renderMainApp(){
 
   // Closed bar
   var cbt=el('closedTxt');
-  if(cbt) cbt.textContent='Sessio tancada el '+(active.closedAt?fts(active.closedAt):'—');
+  if(cbt) cbt.textContent='Session closed on '+(active.closedAt?fts(active.closedAt):'—');
   var btnEC=el('btnExpClosed');
   if(btnEC){
     btnEC.addEventListener('click',function(e){
@@ -843,8 +843,8 @@ function renderMainApp(){
   var warns=entries.filter(function(e){return e.severity==='warning';}).length;
   var oks=entries.filter(function(e){return e.severity==='ok';}).length;
   el('statBar').innerHTML='<span style="color:var(--red)">&#9632; '+errs+' incid.</span>'
-    +'<span style="color:var(--amber)">&#9650; '+warns+' avisos</span>'
-    +'<span style="color:var(--green)">&#9679; '+oks+' resolts</span>'
+    +'<span style="color:var(--amber)">&#9650; '+warns+' warnings</span>'
+    +'<span style="color:var(--green)">&#9679; '+oks+' resolved</span>'
     +'<span style="margin-left:auto">'+entries.length+' total</span>';
 
   // Input bar events
@@ -888,7 +888,7 @@ function rThumbs(){
   c.innerHTML='';
   pImgs.forEach(function(img,i){
     var d=document.createElement('div');d.className='thumb';
-    d.innerHTML='<img src="'+img.data+'" alt="Pendent"><button class="thumb-del" data-i="'+i+'">&#10005;</button>';
+    d.innerHTML='<img src="'+img.data+'" alt="Pending"><button class="thumb-del" data-i="'+i+'">&#10005;</button>';
     d.querySelector('.thumb-del').addEventListener('click',function(){pImgs=pImgs.filter(function(_,j){return j!==i;});rThumbs();});
     c.appendChild(d);
   });
@@ -917,14 +917,14 @@ function addEntry(){
   function tryFinish(){
     var btn = el('btnAdd');
     if(pendingExifReads > 0 && waited < 3000){
-      if(btn){ btn.disabled=true; btn.textContent='Processant fotos...'; }
+      if(btn){ btn.disabled=true; btn.textContent='Processing photos...'; }
       waited += 150;
       setTimeout(tryFinish, 150);
       return;
     }
     // Either all reads finished, or we hit the 3s safety timeout: proceed
     // anyway using whatever capturedAt data is available so far.
-    if(btn){ btn.disabled=false; btn.innerHTML='&#8629; Afegir'; }
+    if(btn){ btn.disabled=false; btn.innerHTML='&#8629; Add'; }
     var imgs = pImgs.slice();
     var photoTs = earliestCapturedAt(imgs);
     var e = {id:uid(), ts:photoTs||now(), text:capturedText, severity:capturedSev, tag:capturedTag, images:imgs};
@@ -965,7 +965,7 @@ function rEThumbs(){
   c.innerHTML='';
   eImgs.forEach(function(img,i){
     var d=document.createElement('div');d.className='thumb';
-    d.innerHTML='<img src="'+img.data+'" alt="Adjunt"><button class="thumb-del" data-i="'+i+'">&#10005;</button>';
+    d.innerHTML='<img src="'+img.data+'" alt="Attachment"><button class="thumb-del" data-i="'+i+'">&#10005;</button>';
     d.querySelector('.thumb-del').addEventListener('click',function(){eImgs=eImgs.filter(function(_,j){return j!==i;});rEThumbs();});
     c.appendChild(d);
   });
@@ -995,7 +995,7 @@ el('eCancel').addEventListener('click',closeEditEntry);
 el('eBack').addEventListener('click',function(e){if(e.target===el('eBack'))closeEditEntry();});
 function saveEditEntry(){
   var text=el('eText').value.trim();
-  if(!text){alert('La descripcio no pot quedar buida.');return;}
+  if(!text){alert('Description cannot be empty.');return;}
   if(!editingEntryId)return;
 
   var capturedText = text;
@@ -1007,12 +1007,12 @@ function saveEditEntry(){
   function tryFinish(){
     var btn = el('eSave');
     if(pendingExifReadsEdit > 0 && waited < 3000){
-      if(btn){ btn.disabled=true; btn.textContent='Processant fotos...'; }
+      if(btn){ btn.disabled=true; btn.textContent='Processing photos...'; }
       waited += 150;
       setTimeout(tryFinish, 150);
       return;
     }
-    if(btn){ btn.disabled=false; btn.innerHTML='&#10003; Desar canvis'; }
+    if(btn){ btn.disabled=false; btn.innerHTML='&#10003; Save changes'; }
     var newImgs = eImgs.slice();
     sessions = sessions.map(function(s){
       if(s.id!==aid) return s;
@@ -1031,7 +1031,7 @@ function saveEditEntry(){
 el('eSave').addEventListener('click',saveEditEntry);
 
 function deleteEntry(entryId){
-  if(!confirm('Eliminar aquesta entrada del log? Aquesta accio no es pot desfer.'))return;
+  if(!confirm('Delete this log entry? This action cannot be undone.'))return;
   sessions=sessions.map(function(s){
     if(s.id!==aid)return s;
     return Object.assign({},s,{entries:(s.entries||[]).filter(function(en){return en.id!==entryId;})});
@@ -1056,7 +1056,7 @@ el('mCancel').addEventListener('click',closeM);
 el('mBack').addEventListener('click',function(e){if(e.target===el('mBack'))closeM();});
 el('mSave').addEventListener('click',function(){
   var c=el('mCli').value.trim(),m=el('mMac').value.trim();
-  if(!c||!m){alert('El client i la maquina son obligatoris.');return;}
+  if(!c||!m){alert('Client and machine are required.');return;}
   var s={id:uid(),client:c,machine:m,location:el('mLoc').value.trim(),tech:el('mTec').value.trim(),type:el('mTyp').value,status:'open',createdAt:now(),entries:[],notes:''};
   sessions=[s].concat(sessions);aid=s.id;
   closeM();
@@ -1086,7 +1086,7 @@ function buildReportHtml(s){
       +'<td style="padding:5px 8px;border:1px solid #e5e7eb;font-size:13px">'+esc(e.text)+'</td>'
       +'<td style="padding:5px 8px;border:1px solid #e5e7eb">'+imgs+'</td></tr>';
   }).join('');
-  return '<!DOCTYPE html><html lang="ca"><head><meta charset="UTF-8"><title>Informe - '+esc(s.client||'')+'</title>'
+  return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Report - '+esc(s.client||'')+'</title>'
     +'<style>body{font-family:Arial,sans-serif;max-width:960px;margin:40px auto;padding:0 24px;color:#1a1a1a}'
     +'h1{font-size:22px;font-weight:800;margin:8px 0 4px}'
     +'.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;margin:16px 0}'
@@ -1100,26 +1100,26 @@ function buildReportHtml(s){
     +'@media print{body{margin:0;padding:16px}}</style></head><body>'
     +'<div style="border-bottom:3px solid #f5a623;padding-bottom:14px;margin-bottom:16px">'
     +'<span style="background:'+tm.bg+';color:'+tm.tx+';border-radius:4px;padding:3px 12px;font-size:11px;font-weight:700;letter-spacing:1px">'+tm.label.toUpperCase()+'</span>'
-    +'<h1>Informe d&#39;Assistencia Tecnica</h1>'
-    +'<div style="color:#6b7280;font-size:13px">Generat el '+fts(new Date().toISOString())+'</div></div>'
+    +'<h1>Informe d&#39;Assistencia Techniciana</h1>'
+    +'<div style="color:#6b7280;font-size:13px">Generated on '+fts(new Date().toISOString())+'</div></div>'
     +'<div class="meta">'
     +'<div><div class="ml">Client</div><div class="mv">'+esc(s.client||'—')+'</div></div>'
-    +'<div><div class="ml">Maquina</div><div class="mv">'+esc(s.machine||'—')+'</div></div>'
-    +'<div><div class="ml">Ubicacio</div><div class="mv">'+esc(s.location||'—')+'</div></div>'
-    +'<div><div class="ml">Tecnic</div><div class="mv">'+esc(s.tech||'—')+'</div></div>'
-    +'<div><div class="ml">Inici</div><div class="mv">'+fts(s.createdAt)+'</div></div>'
-    +'<div><div class="ml">Estat</div><div class="mv">'+(s.status==='open'?'Oberta':'Tancada')+'</div></div>'
+    +'<div><div class="ml">Machine</div><div class="mv">'+esc(s.machine||'—')+'</div></div>'
+    +'<div><div class="ml">Location</div><div class="mv">'+esc(s.location||'—')+'</div></div>'
+    +'<div><div class="ml">Technician</div><div class="mv">'+esc(s.tech||'—')+'</div></div>'
+    +'<div><div class="ml">Start</div><div class="mv">'+fts(s.createdAt)+'</div></div>'
+    +'<div><div class="ml">Status</div><div class="mv">'+(s.status==='open'?'Open':'Closed')+'</div></div>'
     +'</div>'
     +'<div class="stats">'
-    +'<div class="stat" style="background:#fef2f2;color:#dc2626"><strong style="font-size:28px;display:block">'+errs+'</strong><span style="font-size:11px">Incidencies</span></div>'
-    +'<div class="stat" style="background:#fffbeb;color:#d97706"><strong style="font-size:28px;display:block">'+warns+'</strong><span style="font-size:11px">Avisos</span></div>'
-    +'<div class="stat" style="background:#f0fdf4;color:#16a34a"><strong style="font-size:28px;display:block">'+oks+'</strong><span style="font-size:11px">Resolts</span></div>'
+    +'<div class="stat" style="background:#fef2f2;color:#dc2626"><strong style="font-size:28px;display:block">'+errs+'</strong><span style="font-size:11px">Issues</span></div>'
+    +'<div class="stat" style="background:#fffbeb;color:#d97706"><strong style="font-size:28px;display:block">'+warns+'</strong><span style="font-size:11px">Warnings</span></div>'
+    +'<div class="stat" style="background:#f0fdf4;color:#16a34a"><strong style="font-size:28px;display:block">'+oks+'</strong><span style="font-size:11px">Resolved</span></div>'
     +'<div class="stat" style="background:#f1f5f9;color:#475569"><strong style="font-size:28px;display:block">'+entries.length+'</strong><span style="font-size:11px">Total</span></div>'
     +'</div>'
-    +'<table><thead><tr><th>Timestamp</th><th>Nivell</th><th>Tag</th><th>Descripcio</th><th>Adjunts</th></tr></thead><tbody>'+rows+'</tbody></table>'
-    +(s.notes?'<div style="margin-top:18px;padding:12px;background:#f9fafb;border-radius:6px;border-left:3px solid #f5a623"><strong>Observacions generals:</strong><br>'+esc(s.notes)+'</div>':'')
-    +'<div class="sig"><div><div class="sl">Signatura del Tecnic<br><strong>'+esc(s.tech||'_________________')+'</strong></div></div>'
-    +'<div><div class="sl">Signatura del Client / Receptor</div></div></div>'
+    +'<table><thead><tr><th>Timestamp</th><th>Severity</th><th>Tag</th><th>Description</th><th>Attachments</th></tr></thead><tbody>'+rows+'</tbody></table>'
+    +(s.notes?'<div style="margin-top:18px;padding:12px;background:#f9fafb;border-radius:6px;border-left:3px solid #f5a623"><strong>General notes:</strong><br>'+esc(s.notes)+'</div>':'')
+    +'<div class="sig"><div><div class="sl">Signatura del Technician<br><strong>'+esc(s.tech||'_________________')+'</strong></div></div>'
+    +'<div><div class="sl">Client / Recipient signature</div></div></div>'
     +'<div class="ft"><span>ID: '+s.id+'</span><span>Field Service Log</span></div>'
     +'</body></html>';
 }
@@ -1143,7 +1143,7 @@ function exportRep(s, fmt){
   } else if(fmt==='pdf'){
     // PDF via print: open report in a new window and trigger print dialog
     var win = window.open('','_blank');
-    if(!win){ alert('Permet les finestres emergents per generar el PDF.'); return; }
+    if(!win){ alert('Please allow pop-ups to generate the PDF.'); return; }
     win.document.write(buildReportHtml(s));
     win.document.close();
     win.onload = function(){
@@ -1161,7 +1161,7 @@ function exportDocx(s, base){
     var script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js';
     script.onload = function(){ exportDocx(s, base); };
-    script.onerror = function(){ alert('No es pot carregar la llibreria DOCX. Comprova la connexio a internet.'); };
+    script.onerror = function(){ alert('Could not load the DOCX library. Check your internet connection.'); };
     document.head.appendChild(script);
     return;
   }
@@ -1194,7 +1194,7 @@ function exportDocx(s, base){
     var imgCount = (e.images||[]).filter(function(i){return i.type!=='video';}).length;
     var vidCount = (e.images||[]).filter(function(i){return i.type==='video';}).length;
     var adjTxt = '';
-    if(imgCount) adjTxt += imgCount+' foto'+(imgCount>1?'s':'');
+    if(imgCount) adjTxt += imgCount+' photo'+(imgCount>1?'s':'');
     if(vidCount) adjTxt += (adjTxt?' + ':'')+vidCount+' video'+(vidCount>1?'s':'');
     return new D.TableRow({children:[
       new D.TableCell({borders:borders, margins:cellMargins, width:{size:1800,type:D.WidthType.DXA},
@@ -1228,25 +1228,25 @@ function exportDocx(s, base){
     new D.Paragraph({
       spacing:{after:80},
       border:{bottom:{style:D.BorderStyle.SINGLE, size:6, color:'F5A623', space:1}},
-      children:[new D.TextRun({text:'Informe d\'Assistencia Tecnica', bold:true, size:40, font:'Arial', color:'111827'})]
+      children:[new D.TextRun({text:'Informe d\'Assistencia Techniciana', bold:true, size:40, font:'Arial', color:'111827'})]
     }),
-    new D.Paragraph({spacing:{after:40}, children:[new D.TextRun({text:'Tipus: '+tm.label, size:20, font:'Arial', color:'6B7280'})]}),
-    new D.Paragraph({spacing:{after:200}, children:[new D.TextRun({text:'Generat el '+fts(new Date().toISOString()), size:18, font:'Arial', color:'9CA3AF'})]}),
+    new D.Paragraph({spacing:{after:40}, children:[new D.TextRun({text:'Type: '+tm.label, size:20, font:'Arial', color:'6B7280'})]}),
+    new D.Paragraph({spacing:{after:200}, children:[new D.TextRun({text:'Generated on '+fts(new Date().toISOString()), size:18, font:'Arial', color:'9CA3AF'})]}),
     // Meta
     metaPair('Client', s.client),
-    metaPair('Maquina / Equip', s.machine),
-    metaPair('Ubicacio', s.location),
-    metaPair('Tecnic', s.tech),
-    metaPair('Inici', fts(s.createdAt)),
-    metaPair('Estat', s.status==='open'?'Oberta':'Tancada'),
+    metaPair('Machine / Equipment', s.machine),
+    metaPair('Location', s.location),
+    metaPair('Technician', s.tech),
+    metaPair('Start', fts(s.createdAt)),
+    metaPair('Status', s.status==='open'?'Open':'Closed'),
     new D.Paragraph({spacing:{after:200}, children:[new D.TextRun({text:''})]}),
     // Stats
     new D.Paragraph({spacing:{after:40}, children:[
-      new D.TextRun({text:'Incidencies: ', bold:true, size:20, font:'Arial', color:'DC2626'}),
+      new D.TextRun({text:'Issues: ', bold:true, size:20, font:'Arial', color:'DC2626'}),
       new D.TextRun({text:errs+'   ', size:20, font:'Arial', color:'DC2626'}),
-      new D.TextRun({text:'Avisos: ', bold:true, size:20, font:'Arial', color:'D97706'}),
+      new D.TextRun({text:'Warnings: ', bold:true, size:20, font:'Arial', color:'D97706'}),
       new D.TextRun({text:warns+'   ', size:20, font:'Arial', color:'D97706'}),
-      new D.TextRun({text:'Resolts: ', bold:true, size:20, font:'Arial', color:'16A34A'}),
+      new D.TextRun({text:'Resolved: ', bold:true, size:20, font:'Arial', color:'16A34A'}),
       new D.TextRun({text:oks+'   ', size:20, font:'Arial', color:'16A34A'}),
       new D.TextRun({text:'Total: ', bold:true, size:20, font:'Arial'}),
       new D.TextRun({text:''+entries.length, size:20, font:'Arial'})
@@ -1259,10 +1259,10 @@ function exportDocx(s, base){
       rows:[
         new D.TableRow({tableHeader:true, children:[
           hdrCellOpts('Timestamp'),
-          hdrCellOpts('Nivell'),
+          hdrCellOpts('Severity'),
           hdrCellOpts('Tag'),
-          hdrCellOpts('Descripcio'),
-          hdrCellOpts('Adjunts')
+          hdrCellOpts('Description'),
+          hdrCellOpts('Attachments')
         ]})
       ].concat(dataRows)
     }),
@@ -1271,13 +1271,13 @@ function exportDocx(s, base){
 
   // Notes
   if(s.notes){
-    children.push(new D.Paragraph({spacing:{after:80}, children:[new D.TextRun({text:'Observacions generals:', bold:true, size:20, font:'Arial'})]}));
+    children.push(new D.Paragraph({spacing:{after:80}, children:[new D.TextRun({text:'General notes:', bold:true, size:20, font:'Arial'})]}));
     children.push(new D.Paragraph({spacing:{after:400}, children:[new D.TextRun({text:s.notes, size:20, font:'Arial'})]}));
   }
 
   // Signatures
-  children.push(new D.Paragraph({spacing:{before:800, after:40}, border:{top:{style:D.BorderStyle.SINGLE, size:2, color:'CCCCCC', space:1}}, children:[new D.TextRun({text:'Signatura del Tecnic: '+(s.tech||'_________________'), size:20, font:'Arial'})]}));
-  children.push(new D.Paragraph({spacing:{before:600, after:40}, border:{top:{style:D.BorderStyle.SINGLE, size:2, color:'CCCCCC', space:1}}, children:[new D.TextRun({text:'Signatura del Client / Receptor: _________________', size:20, font:'Arial'})]}));
+  children.push(new D.Paragraph({spacing:{before:800, after:40}, border:{top:{style:D.BorderStyle.SINGLE, size:2, color:'CCCCCC', space:1}}, children:[new D.TextRun({text:'Signatura del Technician: '+(s.tech||'_________________'), size:20, font:'Arial'})]}));
+  children.push(new D.Paragraph({spacing:{before:600, after:40}, border:{top:{style:D.BorderStyle.SINGLE, size:2, color:'CCCCCC', space:1}}, children:[new D.TextRun({text:'Client / Recipient signature: _________________', size:20, font:'Arial'})]}));
   children.push(new D.Paragraph({spacing:{before:200}, children:[new D.TextRun({text:'ID: '+s.id, size:16, font:'Arial', color:'9CA3AF'})]}));
 
   var doc = new D.Document({
@@ -1291,7 +1291,7 @@ function exportDocx(s, base){
   D.Packer.toBlob(doc).then(function(blob){
     downloadBlob(blob, 'informe_'+base+'.docx');
   }).catch(function(err){
-    alert('Error generant el DOCX: '+err.message);
+    alert('Error generating DOCX: '+err.message);
   });
 }
 

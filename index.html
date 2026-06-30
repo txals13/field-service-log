@@ -73,6 +73,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
 .thumb{width:64px;height:64px;border-radius:6px;overflow:hidden;border:1px solid var(--br);cursor:pointer;flex-shrink:0;position:relative}
 .thumb-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--bg2);font-size:22px}
 .thumb-vid-badge{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35);color:#fff;font-size:18px;pointer-events:none}
+.thumb-status{position:absolute;bottom:2px;left:2px;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff}
+.thumb-status.uploading{background:var(--blue);animation:spin 1s linear infinite}
+.thumb-status.error{background:var(--red)}
+.file-names-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.file-name-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.file-name-row .fnr-icon{flex-shrink:0;color:var(--tx3)}
+.file-name-row input{flex:1;font-size:12px;padding:5px 8px}
+.file-name-row .fnr-status{font-size:10px;color:var(--tx3);flex-shrink:0;width:14px;text-align:center}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 .media-filename{position:absolute;bottom:16px;left:0;right:0;text-align:center;color:#fff;font-size:12px;font-family:monospace;background:rgba(0,0,0,.5);padding:4px 10px;width:fit-content;margin:0 auto;border-radius:4px}
 .thumb img{width:100%;height:100%;object-fit:cover}
 .thumb-del{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);border:none;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
@@ -195,7 +204,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
       </div>
       <div class="field"><label>Tag</label><input type="text" id="eTag" placeholder="Tag (optional)"></div>
       <div class="field"><label>Description</label><textarea id="eText" rows="4" style="resize:vertical"></textarea></div>
-      <div class="field"><label>Attached photos / videos</label><div id="eThumbs" class="thumbs"></div></div>
+      <div class="field"><label>Attached photos / videos</label><div id="eThumbs" class="thumbs"></div><div id="eFileNames" class="file-names-list"></div></div>
       <div class="field"><button class="btn-sm" id="eAddPhoto">&#128247; Add photo</button><input type="file" id="eFileIn" accept="image/*,video/*" multiple style="display:none"></div>
       <div class="modal-actions">
         <button id="eCancel">Cancel</button>
@@ -501,6 +510,133 @@ async function findOrCreateDriveFile(token){
     return data.files[0].id;
   }
   return null; // will be created on first save
+}
+
+// ── GOOGLE DRIVE MEDIA STORAGE ──────────────────────────────────────────────
+// Photos and videos are no longer embedded as base64 inside the sessions
+// JSON. Instead, each file is uploaded to Drive under a per-session folder
+// structure, and we keep only lightweight references (driveId, etc.) plus a
+// small JPEG thumbnail for offline/instant preview. This avoids bloating the
+// synced JSON and prevents mobile browsers from running out of memory when
+// handling large video files.
+//
+// Folder layout in Drive:
+//   Field Service Log/
+//     {Client}_{Machine}_{Technician}/
+//       photos/
+//       videos/
+
+var driveFolderCache = {}; // path string -> folder ID, to avoid repeat lookups within a session
+
+function sanitizeDriveName(s){
+  return (s||'untitled').toString().trim().replace(/[\\/:*?"<>|]/g,'_').replace(/\s+/g,'_').slice(0,80) || 'untitled';
+}
+
+async function findOrCreateFolder(token, name, parentId){
+  var cacheKey = (parentId||'root')+'/'+name;
+  if(driveFolderCache[cacheKey]) return driveFolderCache[cacheKey];
+  var q = "name='"+name.replace(/'/g,"\\'")+"' and trashed=false and mimeType='application/vnd.google-apps.folder'"
+    + (parentId ? " and '"+parentId+"' in parents" : " and 'root' in parents");
+  var resp = await fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+'&fields=files(id,name)',{
+    headers:{Authorization:'Bearer '+token}
+  });
+  if(resp.ok){
+    var data = await resp.json();
+    if(data.files && data.files.length>0){
+      driveFolderCache[cacheKey] = data.files[0].id;
+      return data.files[0].id;
+    }
+  }
+  // Not found: create it
+  var metadata = {name:name, mimeType:'application/vnd.google-apps.folder'};
+  if(parentId) metadata.parents = [parentId];
+  var createResp = await fetch('https://www.googleapis.com/drive/v3/files',{
+    method:'POST',
+    headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+    body: JSON.stringify(metadata)
+  });
+  if(createResp.ok){
+    var created = await createResp.json();
+    driveFolderCache[cacheKey] = created.id;
+    return created.id;
+  }
+  return null;
+}
+
+// Builds (creating if needed) the folder chain for a session media:
+// "Field Service Log" / "{Client}_{Machine}_{Technician}" / "photos|videos"
+async function getSessionMediaFolder(token, session, kind){
+  var rootId = await findOrCreateFolder(token, 'Field Service Log', null);
+  if(!rootId) return null;
+  var sessionFolderName = sanitizeDriveName(session.client)+'_'+sanitizeDriveName(session.machine)+'_'+sanitizeDriveName(session.tech);
+  var sessionId = await findOrCreateFolder(token, sessionFolderName, rootId);
+  if(!sessionId) return null;
+  var kindId = await findOrCreateFolder(token, kind, sessionId);
+  return kindId;
+}
+
+// Uploads a File/Blob to Drive inside the given session photos/videos
+// folder. Returns {driveId, name} on success, or null on failure.
+async function uploadMediaToDrive(session, file, kind){
+  var token = await ensureToken();
+  if(!token) return null;
+  var folderId = await getSessionMediaFolder(token, session, kind);
+  if(!folderId) return null;
+  var metadata = {name:file.name||('file_'+Date.now()), parents:[folderId]};
+  var boundary = 'fsl_media_'+Date.now();
+  var metaPart = '--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(metadata)+'\r\n';
+  var fileHeader = '--'+boundary+'\r\nContent-Type: '+(file.type||'application/octet-stream')+'\r\n\r\n';
+  var closing = '\r\n--'+boundary+'--';
+
+  var fileBuffer = await file.arrayBuffer();
+  var encoder = new TextEncoder();
+  var metaBytes = encoder.encode(metaPart);
+  var headerBytes = encoder.encode(fileHeader);
+  var closingBytes = encoder.encode(closing);
+  var totalLen = metaBytes.length + headerBytes.length + fileBuffer.byteLength + closingBytes.length;
+  var body = new Uint8Array(totalLen);
+  var offset = 0;
+  body.set(metaBytes, offset); offset += metaBytes.length;
+  body.set(headerBytes, offset); offset += headerBytes.length;
+  body.set(new Uint8Array(fileBuffer), offset); offset += fileBuffer.byteLength;
+  body.set(closingBytes, offset);
+
+  try{
+    var resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',{
+      method:'POST',
+      headers:{Authorization:'Bearer '+token,'Content-Type':'multipart/related; boundary='+boundary},
+      body: body
+    });
+    if(resp.ok){
+      var created = await resp.json();
+      return {driveId:created.id, name:created.name};
+    }
+  }catch(e){}
+  return null;
+}
+
+// Renames a file already stored on Drive. Called whenever the user edits an
+// attachment display name in the app, so the actual Drive filename stays
+// in sync with what is shown.
+async function renameMediaOnDrive(driveId, newName){
+  var token = await ensureToken();
+  if(!token || !driveId) return false;
+  try{
+    var resp = await fetch('https://www.googleapis.com/drive/v3/files/'+driveId,{
+      method:'PATCH',
+      headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+      body: JSON.stringify({name:newName})
+    });
+    return resp.ok;
+  }catch(e){ return false; }
+}
+
+// Returns a direct streaming/download URL for a Drive file (requires the
+// current access token, appended as a query param since <video>/<img> tags
+// cannot send Authorization headers).
+function getDriveStreamUrl(driveId){
+  if(!accessToken || !driveId) return null;
+  return 'https://www.googleapis.com/drive/v3/files/'+driveId+'?alt=media&access_token='+encodeURIComponent(accessToken);
 }
 
 async function loadFromDrive(){
@@ -854,7 +990,7 @@ function renderMainApp(){
         e.images.forEach(function(img,i){
           var isVideo = img.type==='video';
           var thumbSrc = isVideo ? (img.poster||'') : img.data;
-          imgs+='<div class="thumb" tabindex="0" data-src="'+(isVideo?img.data:img.data)+'" data-type="'+(isVideo?'video':'image')+'" data-name="'+esc(img.name||'')+'">'
+          imgs+='<div class="thumb" tabindex="0" data-idx="'+i+'" data-type="'+(isVideo?'video':'image')+'" data-name="'+esc(img.name||'')+'">'
             +(thumbSrc?'<img src="'+thumbSrc+'" alt="Attachment '+(i+1)+'" loading="lazy">':'<div class="thumb-placeholder">&#127909;</div>')
             +(isVideo?'<div class="thumb-vid-badge">&#9654;</div>':'')
             +'</div>';
@@ -870,7 +1006,22 @@ function renderMainApp(){
         +'</div><div class="log-text">'+esc(e.text)+'</div>'+imgs+'</div>'
         +(canEdit?'<div class="log-actions"><button class="log-act-btn" data-act="edit" title="Edit">&#9998;</button><button class="log-act-btn" data-act="del" title="Delete">&#10005;</button></div>':'');
       div.querySelectorAll('.thumb').forEach(function(t){
-        t.addEventListener('click',function(){openMediaViewer(t.dataset.src, t.dataset.type, t.dataset.name);});
+        var idx = parseInt(t.dataset.idx, 10);
+        var imgObj = (e.images||[])[idx];
+        t.addEventListener('click',function(){
+          if(!imgObj) return;
+          if(imgObj.type==='video'){
+            if(!imgObj.driveId){
+              alert('This video has not finished uploading to Google Drive yet, or upload failed. It cannot be played.');
+              return;
+            }
+            var streamUrl = getDriveStreamUrl(imgObj.driveId);
+            if(!streamUrl){ alert('Sign in to Google Drive to play this video.'); return; }
+            openMediaViewer(streamUrl, 'video', imgObj.name);
+          } else {
+            openMediaViewer(imgObj.data, 'image', imgObj.name);
+          }
+        });
       });
       if(canEdit){
         var editBtn=div.querySelector('[data-act="edit"]');
@@ -925,11 +1076,67 @@ function renderMainApp(){
     });
     el('btnPh').addEventListener('click',function(){el('fileIn').click();});
     el('fileIn').addEventListener('change',function(e){
+      var activeSession = sessions.find(function(s){return s.id===aid;});
       Array.from(e.target.files||[]).forEach(function(file){
+        var isVideo = file.type.startsWith('video') || /\.(mp4|mov|m4v)$/i.test(file.name||'');
+
+        if(isVideo){
+          // Videos are never read into memory as base64: we extract a small
+          // thumbnail frame, then stream the original file straight to
+          // Google Drive. Only the Drive file ID, name and thumbnail are
+          // kept in the entry, keeping the synced JSON small and avoiding
+          // mobile out-of-memory crashes.
+          var img={data:null, type:'video', name:file.name, uploadStatus:'uploading', poster:null};
+          pImgs.push(img);
+          rThumbs();
+
+          pendingExifReads++;
+          getFileTimestamp(file).then(function(ts){
+            img.capturedAt=ts;
+            pendingExifReads--;
+            rThumbs();
+          });
+
+          pendingExifReads++;
+          generateVideoThumbnail(file).then(function(thumb){
+            if(thumb) img.poster=thumb;
+            pendingExifReads--;
+            rThumbs();
+          });
+
+          if(activeSession && isLoggedIn){
+            pendingExifReads++;
+            uploadMediaToDrive(activeSession, file, 'videos').then(function(result){
+              if(result){
+                img.driveId = result.driveId;
+                img.name = result.name;
+                img.uploadStatus = 'done';
+              } else {
+                img.uploadStatus = 'error';
+              }
+              pendingExifReads--;
+              rThumbs();
+              // The entry may already have been saved (if the user pressed
+              // Add before the upload finished); persist the driveId now
+              // that it is available so it survives a reload/sync.
+              scheduleSave();
+            });
+          } else {
+            // Not logged in to Drive: cannot store the video remotely, and
+            // we deliberately do not fall back to embedding it as base64
+            // (that is exactly what causes mobile crashes). Mark it so the
+            // UI can warn the user.
+            img.uploadStatus = 'no-drive';
+          }
+          return;
+        }
+
+        // Photos: small enough to keep the existing base64 flow, but we
+        // also upload them to Drive in the background for the requested
+        // folder organization (Field Service Log/{session}/photos).
         var r=new FileReader();
         r.onload=function(ev){
-          var isVideo = file.type.startsWith('video');
-          var img={data:ev.target.result,type:isVideo?'video':'image',name:file.name};
+          var img={data:ev.target.result,type:'image',name:file.name};
           pImgs.push(img);
           rThumbs();
           pendingExifReads++;
@@ -938,12 +1145,9 @@ function renderMainApp(){
             pendingExifReads--;
             rThumbs();
           });
-          if(isVideo){
-            pendingExifReads++;
-            generateVideoThumbnail(file).then(function(thumb){
-              if(thumb) img.poster=thumb;
-              pendingExifReads--;
-              rThumbs();
+          if(activeSession && isLoggedIn){
+            uploadMediaToDrive(activeSession, file, 'photos').then(function(result){
+              if(result){ img.driveId=result.driveId; img.name=result.name; }
             });
           }
         };
@@ -963,8 +1167,15 @@ function rThumbs(){
     var d=document.createElement('div');d.className='thumb';
     var isVideo = img.type==='video';
     var thumbSrc = isVideo ? (img.poster||'') : img.data;
+    var statusBadge = '';
+    if(isVideo){
+      if(img.uploadStatus==='uploading') statusBadge='<div class="thumb-status uploading">&#8635;</div>';
+      else if(img.uploadStatus==='error') statusBadge='<div class="thumb-status error" title="Upload failed">&#9888;</div>';
+      else if(img.uploadStatus==='no-drive') statusBadge='<div class="thumb-status error" title="Sign in to Google Drive to attach videos">&#9888;</div>';
+    }
     d.innerHTML=(thumbSrc?'<img src="'+thumbSrc+'" alt="Pending">':'<div class="thumb-placeholder">&#127909;</div>')
       +(isVideo?'<div class="thumb-vid-badge">&#9654;</div>':'')
+      +statusBadge
       +'<button class="thumb-del" data-i="'+i+'">&#10005;</button>';
     d.querySelector('.thumb-del').addEventListener('click',function(){pImgs=pImgs.filter(function(_,j){return j!==i;});rThumbs();});
     c.appendChild(d);
@@ -1044,21 +1255,106 @@ function rEThumbs(){
     var d=document.createElement('div');d.className='thumb';
     var isVideo = img.type==='video';
     var thumbSrc = isVideo ? (img.poster||'') : img.data;
+    var statusBadge = '';
+    if(isVideo){
+      if(img.uploadStatus==='uploading') statusBadge='<div class="thumb-status uploading">&#8635;</div>';
+      else if(img.uploadStatus==='error') statusBadge='<div class="thumb-status error" title="Upload failed">&#9888;</div>';
+      else if(img.uploadStatus==='no-drive') statusBadge='<div class="thumb-status error" title="Sign in to Google Drive to attach videos">&#9888;</div>';
+    }
     d.innerHTML=(thumbSrc?'<img src="'+thumbSrc+'" alt="Attachment">':'<div class="thumb-placeholder">&#127909;</div>')
       +(isVideo?'<div class="thumb-vid-badge">&#9654;</div>':'')
+      +statusBadge
       +'<button class="thumb-del" data-i="'+i+'">&#10005;</button>';
     d.querySelector('.thumb-del').addEventListener('click',function(){eImgs=eImgs.filter(function(_,j){return j!==i;});rEThumbs();});
     c.appendChild(d);
+  });
+  renderEFileNames();
+}
+
+function renderEFileNames(){
+  var list = el('eFileNames');
+  if(!list) return;
+  list.innerHTML = '';
+  eImgs.forEach(function(img, i){
+    var isVideo = img.type==='video';
+    var row = document.createElement('div');
+    row.className = 'file-name-row';
+    row.innerHTML = '<span class="fnr-icon">'+(isVideo?'&#127909;':'&#128247;')+'</span>'
+      + '<input type="text" value="'+esc(img.name||'')+'" data-i="'+i+'">'
+      + '<span class="fnr-status" data-i="'+i+'"></span>';
+    var input = row.querySelector('input');
+    var statusEl = row.querySelector('.fnr-status');
+    input.addEventListener('change', function(){
+      var newName = input.value.trim();
+      if(!newName || newName===img.name) return;
+      var oldName = img.name;
+      img.name = newName;
+      if(img.driveId){
+        statusEl.innerHTML = '<span class="spinner"></span>';
+        renameMediaOnDrive(img.driveId, newName).then(function(ok){
+          statusEl.textContent = ok ? '\u2713' : '\u26A0';
+          if(!ok) img.name = oldName; // revert local label if remote rename failed
+          if(!ok) input.value = oldName;
+          scheduleSave();
+        });
+      } else {
+        scheduleSave();
+      }
+    });
+    list.appendChild(row);
   });
 }
 
 el('eAddPhoto').addEventListener('click',function(){el('eFileIn').click();});
 el('eFileIn').addEventListener('change',function(e){
+  var activeSession = sessions.find(function(s){return s.id===aid;});
   Array.from(e.target.files||[]).forEach(function(file){
+    var isVideo = file.type.startsWith('video') || /\.(mp4|mov|m4v)$/i.test(file.name||'');
+
+    if(isVideo){
+      var img={data:null, type:'video', name:file.name, uploadStatus:'uploading', poster:null};
+      eImgs.push(img);
+      rEThumbs();
+
+      pendingExifReadsEdit++;
+      getFileTimestamp(file).then(function(ts){
+        img.capturedAt=ts;
+        pendingExifReadsEdit--;
+        rEThumbs();
+      });
+
+      pendingExifReadsEdit++;
+      generateVideoThumbnail(file).then(function(thumb){
+        if(thumb) img.poster=thumb;
+        pendingExifReadsEdit--;
+        rEThumbs();
+      });
+
+      if(activeSession && isLoggedIn){
+        pendingExifReadsEdit++;
+        uploadMediaToDrive(activeSession, file, 'videos').then(function(result){
+          if(result){
+            img.driveId = result.driveId;
+            img.name = result.name;
+            img.uploadStatus = 'done';
+          } else {
+            img.uploadStatus = 'error';
+          }
+          pendingExifReadsEdit--;
+          rEThumbs();
+          // Persist the driveId even if the edit was already saved before
+          // the upload finished.
+          scheduleSave();
+        });
+      } else {
+        img.uploadStatus = 'no-drive';
+      }
+      return;
+    }
+
     var r=new FileReader();
     r.onload=function(ev){
-      var isVideo = file.type.startsWith('video');
-      var img={data:ev.target.result,type:isVideo?'video':'image',name:file.name};
+      var img={data:ev.target.result,type:'image',name:file.name};
       eImgs.push(img);
       rEThumbs();
       pendingExifReadsEdit++;
@@ -1067,12 +1363,9 @@ el('eFileIn').addEventListener('change',function(e){
         pendingExifReadsEdit--;
         rEThumbs();
       });
-      if(isVideo){
-        pendingExifReadsEdit++;
-        generateVideoThumbnail(file).then(function(thumb){
-          if(thumb) img.poster=thumb;
-          pendingExifReadsEdit--;
-          rEThumbs();
+      if(activeSession && isLoggedIn){
+        uploadMediaToDrive(activeSession, file, 'photos').then(function(result){
+          if(result){ img.driveId=result.driveId; img.name=result.name; }
         });
       }
     };
@@ -1201,19 +1494,24 @@ function buildReportHtml(s, forPrint){
     var sm=SM[e.severity]||SM.info;
     var imgs=(e.images||[]).map(function(img){
       if(img.type==='video'){
-        if(forPrint){
-          // PDF/print: show extracted thumbnail frame + filename (video
-          // playback is not possible in a printed/static document).
-          var posterHtml = img.poster
-            ? '<img src="'+img.poster+'" style="max-width:140px;max-height:90px;object-fit:cover;border-radius:4px;display:block">'
-            : '<div style="width:120px;height:80px;background:#eee;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:22px">&#127909;</div>';
-          return '<div style="margin:2px">'+posterHtml
-            +'<div style="font-size:9px;color:#6b7280;font-family:monospace;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">&#9654; '+esc(img.name||'video')+'</div></div>';
+        var posterHtml = img.poster
+          ? '<img src="'+img.poster+'" style="max-width:140px;max-height:90px;object-fit:cover;border-radius:4px;display:block">'
+          : '<div style="width:120px;height:80px;background:#eee;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:22px">&#127909;</div>';
+        var nameLine = '<div style="font-size:9px;color:#6b7280;font-family:monospace;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">&#9654; '+esc(img.name||'video')+'</div>';
+        if(!forPrint && img.driveId){
+          // HTML export: this file is exported standalone and opened later
+          // without any OAuth token, so we cannot embed a playable <video>
+          // tag pointing at Drive (the stream URL requires a live token).
+          // Instead we link out to the file Drive viewer page, which
+          // works for anyone with view access to it.
+          var viewUrl = 'https://drive.google.com/file/d/'+img.driveId+'/view';
+          return '<a href="'+viewUrl+'" target="_blank" style="text-decoration:none;display:block;margin:2px">'
+            +posterHtml+nameLine
+            +'<div style="font-size:9px;color:#1d4ed8">&#8599; Open in Google Drive</div></a>'
+            +'<div style="font-size:8px;color:#9ca3af">(requires Drive access)</div>';
         }
-        return '<div style="margin:2px"><video src="'+img.data+'" controls preload="metadata" '
-          +(img.poster?'poster="'+img.poster+'" ':'')
-          +'style="max-width:160px;max-height:110px;border-radius:4px;display:block"></video>'
-          +'<div style="font-size:9px;color:#6b7280;font-family:monospace;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(img.name||'video')+'</div></div>';
+        // PDF/print, or video upload failed/missing: thumbnail + name only
+        return '<div style="margin:2px">'+posterHtml+nameLine+'</div>';
       }
       return '<img src="'+img.data+'" style="max-width:100px;max-height:70px;object-fit:cover;border-radius:4px;margin:2px">';
     }).join('');

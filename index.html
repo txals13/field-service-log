@@ -611,7 +611,7 @@ window.addEventListener('appinstalled',function(){el('installBar').style.display
 // ║  SERVICE WORKER                                              ║
 // ╚══════════════════════════════════════════════════════════════╝
 if('serviceWorker' in navigator){
-  var sw="self.addEventListener('install',function(){self.skipWaiting();});self.addEventListener('activate',function(e){self.clients.claim();});self.addEventListener('fetch',function(e){if(/googleapis|google\.com\/gsi\/client/.test(e.request.url))return;e.respondWith(fetch(e.request).catch(function(){return caches.match(e.request);}));});";
+  var sw="self.addEventListener('install',function(){self.skipWaiting();});self.addEventListener('activate',function(e){self.clients.claim();});self.addEventListener('fetch',function(e){if(/googleapis|google\\.com\\/gsi|unpkg\\.com|jsdelivr\\.net|cdnjs\\.cloudflare\\.com/.test(e.request.url))return;e.respondWith(fetch(e.request).catch(function(){return caches.match(e.request);}));});";
   navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'})),{scope:'./'}).catch(function(){});
 }
 
@@ -1182,7 +1182,7 @@ function exportRep(s,fmt){
   else if(fmt==='docx'){exportDOCX(s,base);}
 }
 function exportDOCX(s,base){
-  if(!window.docx){var sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js';sc.onload=function(){exportDOCX(s,base);};sc.onerror=function(){alert('Cannot load DOCX library. Check internet connection.');};document.head.appendChild(sc);return;}
+  if(!window.docx){var sc=document.createElement('script');sc.src='https://unpkg.com/docx@8.5.0/build/index.umd.js';sc.onload=function(){exportDOCX(s,base);};sc.onerror=function(){var sc2=document.createElement('script');sc2.src='https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js';sc2.onload=function(){exportDOCX(s,base);};sc2.onerror=function(){alert('Cannot load DOCX library. Check internet connection and try again.');};document.head.appendChild(sc2);};document.head.appendChild(sc);return;}
   var D=window.docx,tm=TM[s.type]||TM.commissioning,entries=s.entries||[];
   var errs=entries.filter(function(e){return e.severity==='issue';}).length;
   var warns=entries.filter(function(e){return e.severity==='warning';}).length;

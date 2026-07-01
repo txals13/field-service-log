@@ -1125,7 +1125,7 @@ function buildHTML(s,forPrint){
         var lnk=(!forPrint&&img.driveId)?'<a href="https://drive.google.com/file/d/'+img.driveId+'/view" target="_blank" style="font-size:9px;color:#1d4ed8;display:block">↗ Open in Drive</a>':'';
         return '<div style="margin:2px">'+ph+'<div style="font-size:9px;color:#6b7280;font-family:monospace;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">▶ '+esc(img.name||'video')+'</div>'+lnk+'</div>';
       }
-      return '<img src="'+img.data+'" style="max-width:90px;max-height:65px;object-fit:cover;border-radius:4px;margin:2px">';
+      return '<div style="margin:2px;display:inline-block;vertical-align:top"><img src="'+img.data+'" style="max-width:90px;max-height:65px;object-fit:cover;border-radius:4px;display:block"><div style="font-size:9px;color:#6b7280;font-family:monospace;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(img.name||'photo')+'</div></div>';
     }).join('');
     return '<tr>'
       +'<td style="font-family:monospace;font-size:11px;white-space:nowrap;padding:5px 8px;border:1px solid #e5e7eb;color:#6b7280">'+fts(e.ts)+(e.tsFromPhoto?' 📷':'')+'</td>'
@@ -1195,8 +1195,10 @@ function exportDOCX(s,base){
     var attChildren=[];
     (e.images||[]).forEach(function(img){
       var isVid=img.type==='video',src=isVid?img.poster:img.data;
-      if(src){var id=toImgData(src);if(id){try{attChildren.push(new D.Paragraph({spacing:{after:20},children:[new D.ImageRun({data:id.bytes,type:id.type,transformation:{width:65,height:45}})]}));}catch(err){}}}
-      if(isVid)attChildren.push(new D.Paragraph({spacing:{after:40},children:[new D.TextRun({text:'▶ '+(img.name||'video'),size:14,font:'Arial',color:'6B7280',italics:true})]}));
+      if(src){var id=toImgData(src);if(id){try{attChildren.push(new D.Paragraph({spacing:{after:4},children:[new D.ImageRun({data:id.bytes,type:id.type,transformation:{width:65,height:45}})]}));}catch(err){}}}
+      // Always show filename under every photo and video
+      var fname=(img.name||( isVid?'video':'photo'));
+      attChildren.push(new D.Paragraph({spacing:{after:30},children:[new D.TextRun({text:(isVid?'▶ ':'')+fname,size:14,font:'Courier New',color:'6B7280',italics:true})]}));
     });
     if(!attChildren.length)attChildren.push(new D.Paragraph({children:[new D.TextRun({text:'',size:18})]}));
     return new D.TableRow({children:[

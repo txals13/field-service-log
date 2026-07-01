@@ -465,9 +465,9 @@ function logout(){clearTok();isLoggedIn=false;renderAll();}
 // ║  DRIVE FOLDER UTILS                                          ║
 // ╚══════════════════════════════════════════════════════════════╝
 async function driveFind(token,name,parentId,mime){
-  var q="name='"+name.replace(/'/g,"\\'")+"' and trashed=false and mimeType='"+mime+"'";
-  if(parentId)q+=" and '"+parentId+"' in parents";
-  var r=await fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+'&fields=files(id,name)',{headers:{Authorization:'Bearer '+token}});
+  var q=["name="+JSON.stringify(name),"trashed=false","mimeType="+JSON.stringify(mime)];
+  if(parentId)q.push(JSON.stringify(parentId)+" in parents");
+  var r=await fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q.join(' and '))+'&fields=files(id,name)',{headers:{Authorization:'Bearer '+token}});
   if(!r.ok)return null;
   var d=await r.json();
   return(d.files&&d.files.length)?d.files[0].id:null;

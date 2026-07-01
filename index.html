@@ -87,7 +87,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-seri
 .log-act:hover{background:var(--bg2);color:var(--tx1)}
 /* thumbs */
 .thumbs{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
-.thumb{width:64px;height:64px;border-radius:6px;overflow:hidden;border:1px solid var(--br);cursor:pointer;flex-shrink:0;position:relative}
+.thumb{width:100px;height:100px;border-radius:6px;overflow:hidden;border:1px solid var(--br);cursor:pointer;flex-shrink:0;position:relative}
 .thumb img{width:100%;height:100%;object-fit:cover}
 .thumb-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.4);font-size:18px;pointer-events:none}
 .thumb-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--bg2);font-size:20px}
@@ -992,11 +992,11 @@ function buildReportHTML(s,forPrint){
     var sm=SM[e.severity]||SM.info;
     var imgCell=(e.images||[]).map(function(img){
       if(img.type==="video"){
-        var ph=img.poster?"<img src=\""+img.poster+"\" style=\"max-width:110px;max-height:75px;object-fit:cover;border-radius:4px;display:block\">":"<div style=\"width:100px;height:70px;background:#eee;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:20px\">🎬</div>";
+        var ph=img.poster?"<img src=\""+img.poster+"\" style=\"max-width:140px;max-height:100px;object-fit:cover;border-radius:4px;display:block\">":"<div style=\"width:130px;height:90px;background:#eee;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:24px\">🎬</div>";
         var lnk=(!forPrint&&img.driveId)?"<a href=\"https://drive.google.com/file/d/"+img.driveId+"/view\" target=\"_blank\" style=\"font-size:9px;color:#1d4ed8;display:block\">↗ Open in Drive</a>":"";
-        return "<div style=\"margin:2px;display:inline-block;vertical-align:top\">"+ph+"<div style=\"font-size:9px;color:#6b7280;font-family:monospace;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\">▶ "+esc(img.name||"video")+"</div>"+lnk+"</div>";
+        return "<div style=\"margin:2px;display:inline-block;vertical-align:top\">"+ph+"<div style=\"font-size:9px;color:#6b7280;font-family:monospace;word-break:break-all\">▶ "+esc(img.name||"video")+"</div>"+lnk+"</div>";
       }
-      return "<div style=\"margin:2px;display:inline-block;vertical-align:top\"><img src=\""+img.data+"\" style=\"max-width:90px;max-height:65px;object-fit:cover;border-radius:4px;display:block\"><div style=\"font-size:9px;color:#6b7280;font-family:monospace;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\">"+esc(img.name||"photo")+"</div></div>";
+      return "<div style=\"margin:2px;display:inline-block;vertical-align:top\"><img src=\""+img.data+"\" style=\"max-width:140px;max-height:100px;object-fit:cover;border-radius:4px;display:block\"><div style=\"font-size:9px;color:#6b7280;font-family:monospace;word-break:break-all\">"+esc(img.name||"photo")+"</div></div>";
     }).join("");
     return "<tr>"
       +"<td style=\"font-family:monospace;font-size:11px;white-space:nowrap;padding:5px 8px;border:1px solid #e5e7eb;color:#6b7280\">"+(e.tsFromPhoto?"📷 ":"")+fts(e.ts)+"</td>"

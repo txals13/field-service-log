@@ -465,9 +465,9 @@ function logout(){clearTok();isLoggedIn=false;renderAll();}
 // ║  DRIVE FOLDER UTILS                                          ║
 // ╚══════════════════════════════════════════════════════════════╝
 async function driveFind(token,name,parentId,mime){
-  var q="name='"+name.replace(/'/g,"\\'")+'\'+"and trashed=false and mimeType=\'"+mime+"'";
-  if(parentId)q+=" and '"+parentId+"' in parents";
-  var r=await fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+'&fields=files(id,name)',{headers:{Authorization:'Bearer '+token}});
+  var q=["name="+JSON.stringify(name),"trashed=false","mimeType="+JSON.stringify(mime)];
+  if(parentId)q.push(JSON.stringify(parentId)+" in parents");
+  var r=await fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q.join(' and '))+'&fields=files(id,name)',{headers:{Authorization:'Bearer '+token}});
   if(!r.ok)return null;
   var d=await r.json();
   return(d.files&&d.files.length)?d.files[0].id:null;
@@ -675,7 +675,6 @@ function renderContent(){
       +'</div>';
     el('btnLogin').addEventListener('click',async function(){var t=await googleLogin();if(t){isLoggedIn=true;await loadFromDrive();renderAll();scheduleSync();}});
     el('btnLocalMode').addEventListener('click',function(){isLoggedIn=false;renderContentApp();});
-    if(sessions.length)renderContentApp(); // show app even without login if data exists
     return;
   }
   renderContentApp();
@@ -688,10 +687,14 @@ function renderContentApp(){
     mc.innerHTML='<div class="empty">'
       +'<div class="empty-icon">&#9881;</div>'
       +'<div style="font-size:16px;font-weight:700">No active service visit</div>'
-      +'<div style="font-size:13px;color:var(--tx3)">Create a new session to start logging</div>'
+      +'<div style="font-size:13px;color:var(--tx3)">Create a new session or import an existing JSON file</div>'
+      +'<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">'
       +'<button class="btn-gold" id="btnNewE">+ New service visit</button>'
+      +'<button class="btn-sm" id="btnImportE">&#8679; Import JSON</button>'
+      +'</div>'
       +'</div>';
     el('btnNewE').addEventListener('click',openNewModal);
+    el('btnImportE').addEventListener('click',function(){el('importFile').click();});
     return;
   }
 

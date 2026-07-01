@@ -737,7 +737,7 @@ function renderContentApp(){
         +'<select id="sevSel" class="sel-sev"><option value="info">○ Info</option><option value="ok">● OK</option><option value="warning">▲ Warning</option><option value="issue">■ Issue</option></select>'
         +'<input type="text" id="tagIn" placeholder="Tag..." class="inp-tag">'
         +'</div>'
-        +'<textarea id="entIn" rows="3" placeholder="Description... (Ctrl+Enter to add)"></textarea>'
+        +'<textarea id="entIn" rows="3" placeholder="Description (optional if photo attached)... Ctrl+Enter to add"></textarea>'
         +'<div class="input-controls">'
         +'<button class="btn-gold btn-sm" id="btnAdd">↵ Add</button>'
         +'<button class="btn-sm" id="btnPhoto">📷 Photo</button>'
@@ -931,9 +931,10 @@ function handleFileInput(e,isEdit){
 function earliestTs(imgs){var d=(imgs||[]).map(function(i){return i.capturedAt;}).filter(Boolean).sort();return d.length?d[0]:null;}
 function addEntry(){
   var entIn=el('entIn');if(!entIn)return;
-  var text=entIn.value.trim();if(!text)return;
+  var text=entIn.value.trim();if(!text && !pImgs.length)return;
   var active=sessions.find(function(s){return s.id===aid;});if(!active||active.status!=='open')return;
-  var captText=text,captSev=el('sevSel').value,captTag=el('tagIn').value.trim(),waited=0;
+  // If no text but photos attached, use a placeholder — user can edit later
+  var captText=text||(pImgs.length?'[Photo / video attached — add description]':''),captSev=el('sevSel').value,captTag=el('tagIn').value.trim(),waited=0;
   function tryAdd(){
     if(pExif>0&&waited<3000){var b=el('btnAdd');if(b){b.disabled=true;b.textContent='Processing...';}waited+=150;setTimeout(tryAdd,150);return;}
     var b2=el('btnAdd');if(b2){b2.disabled=false;b2.innerHTML='↵ Add';}

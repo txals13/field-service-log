@@ -105,6 +105,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-seri
 .closed-bar{padding:7px 12px;border-top:1px solid var(--br);background:var(--redbg);font-size:12px;color:var(--tx2);display:flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0;flex-wrap:wrap}
 /* sync bar */
 .sync-bar{padding:4px 12px;background:var(--goldbg);border-bottom:1px solid rgba(245,158,11,.2);font-size:11px;color:var(--goldtx);display:flex;align-items:center;gap:6px;flex-shrink:0}
+/* auth expired bar */
+.auth-bar{padding:6px 12px;background:var(--redbg);border-bottom:1px solid rgba(239,68,68,.3);font-size:12px;color:var(--red);display:flex;align-items:center;gap:8px;flex-shrink:0}
 /* install bar */
 .inst-bar{background:var(--goldbg);border-bottom:1px solid rgba(245,158,11,.3);padding:6px 12px;display:flex;align-items:center;gap:8px;font-size:12px;flex-shrink:0;color:var(--goldtx)}
 /* export dropdown */
@@ -176,6 +178,10 @@ textarea{resize:none;line-height:1.4}
   </div>
   <div id="syncBar" class="sync-bar" style="display:none">
     <span class="spinner"></span><span id="syncMsg">Syncing...</span>
+  </div>
+  <div id="authBar" class="auth-bar" style="display:none">
+    <span style="flex:1">&#9888; Drive session expired — changes are saved locally only</span>
+    <button class="btn-sm" id="btnReconnect" style="background:var(--red);color:#fff;border-color:var(--red)">Reconnect</button>
   </div>
   <div class="topbar">
     <button class="btn-g" id="btnSide" style="font-size:20px;padding:4px 8px">&#9776;</button>
@@ -307,6 +313,8 @@ var pExif=0, pExifEdit=0;
 var accessToken=null, tokenExp=0, driveFileId=null, rootFolderId=null;
 var isLoggedIn=false, saveTimer=null, isDirty=false;
 var editingId=null, eImgs=[], pendingDel=null, dInst=null;
+var authExpired=false, syncStarted=false;
+var fileCache=new WeakMap(); // img object -> raw File, kept in memory only, for upload retry
 
 // ── UTILS ───────────────────────────────────────────────────────────────────
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
@@ -406,7 +414,13 @@ async function googleLogin(){
     c.requestAccessToken({prompt:"consent"});
   });
 }
-async function getToken(){if(accessToken&&Date.now()<tokenExp)return accessToken;clearTok();isLoggedIn=false;return null}
+async function getToken(){
+  if(accessToken&&Date.now()<tokenExp)return accessToken;
+  var wasLoggedIn=isLoggedIn;
+  clearTok();isLoggedIn=false;
+  if(wasLoggedIn)showAuthExpired();
+  return null;
+}
 async function ensureToken(){var t=await getToken();return t||(await googleLogin())}
 
 // ── DRIVE FOLDERS ────────────────────────────────────────────────────────────
@@ -457,16 +471,28 @@ async function uploadMedia(sess,file,kind){
   var token=await ensureToken();if(!token)return null;
   var folderId=await getMediaFolder(token,sess,kind);if(!folderId)return null;
   var meta={name:file.name||("file_"+Date.now()),parents:[folderId]};
-  var enc=new TextEncoder(),bnd="fsl_m_"+Date.now();
-  var p1=enc.encode("--"+bnd+"\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"+JSON.stringify(meta)+"\r\n");
-  var p2=enc.encode("--"+bnd+"\r\nContent-Type:"+(file.type||"application/octet-stream")+"\r\n\r\n");
-  var p3=enc.encode("\r\n--"+bnd+"--");
-  var fb=await file.arrayBuffer();
-  var body=new Uint8Array(p1.length+p2.length+fb.byteLength+p3.length),o=0;
-  body.set(p1,o);o+=p1.length;body.set(p2,o);o+=p2.length;body.set(new Uint8Array(fb),o);o+=fb.byteLength;body.set(p3,o);
-  var r=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"multipart/related; boundary="+bnd},body:body});
-  if(!r.ok)return null;
-  var cr=await r.json();return{driveId:cr.id,name:cr.name};
+  try{
+    // Resumable upload: metadata request returns a session URL, then the raw
+    // file is streamed to it directly (no arrayBuffer() — avoids loading the
+    // whole video into RAM, which crashes mobile browsers on large files).
+    var initR=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name",{
+      method:"POST",
+      headers:{
+        Authorization:"Bearer "+token,
+        "Content-Type":"application/json; charset=UTF-8",
+        "X-Upload-Content-Type":file.type||"application/octet-stream",
+        "X-Upload-Content-Length":String(file.size)
+      },
+      body:JSON.stringify(meta)
+    });
+    if(!initR.ok)return null;
+    var uploadUrl=initR.headers.get("Location");
+    if(!uploadUrl)return null;
+    var putR=await fetch(uploadUrl,{method:"PUT",headers:{"Content-Type":file.type||"application/octet-stream"},body:file});
+    if(!putR.ok)return null;
+    var cr=await putR.json();
+    return{driveId:cr.id,name:cr.name};
+  }catch(e){return null}
 }
 function driveStreamUrl(driveId){if(!accessToken||!driveId)return null;return"https://www.googleapis.com/drive/v3/files/"+driveId+"?alt=media&access_token="+encodeURIComponent(accessToken)}
 async function driveRename(driveId,name){
@@ -527,7 +553,7 @@ async function saveToDrive(){
   }catch(e){saveLocal();setSyncSt("error","Offline (saved locally)")}
 }
 function scheduleSave(){isDirty=true;saveLocal();if(saveTimer)clearTimeout(saveTimer);saveTimer=setTimeout(function(){if(isDirty&&isLoggedIn)saveToDrive()},2000)}
-function scheduleSync(){setInterval(function(){if(isLoggedIn&&!isDirty&&!hasUnsaved())loadFromDrive().then(renderAll)},30000)}
+function scheduleSync(){if(syncStarted)return;syncStarted=true;setInterval(function(){if(isLoggedIn&&!isDirty&&!hasUnsaved())loadFromDrive().then(renderAll)},30000)}
 function hasUnsaved(){var e=$$("entIn");if(e&&e.value.trim())return true;if(pImgs.length)return true;if(editingId)return true;return false}
 function setSyncSt(state,msg){
   var bar=$$("syncBar"),st=$$("syncSt");
@@ -535,6 +561,26 @@ function setSyncSt(state,msg){
   else if(state==="ok"){bar.style.display="none";st.innerHTML="<span style=\"color:var(--green)\">● Drive</span>"}
   else{bar.style.display="none";st.innerHTML="<span style=\"color:var(--red)\" title=\""+esc(msg)+"\">● Local</span>"}
 }
+function showAuthExpired(){
+  if(authExpired)return;
+  authExpired=true;
+  $$("authBar").style.display="flex";
+}
+function hideAuthExpired(){
+  authExpired=false;
+  $$("authBar").style.display="none";
+}
+$$("btnReconnect").addEventListener("click",async function(){
+  var btn=$$("btnReconnect");btn.disabled=true;btn.textContent="Connecting...";
+  var t=await googleLogin();
+  btn.disabled=false;btn.textContent="Reconnect";
+  if(!t){alert("Could not reconnect. Try again.");return}
+  isLoggedIn=true;hideAuthExpired();
+  await loadFromDrive();
+  if(isDirty)await saveToDrive();
+  renderAll();
+  scheduleSync();
+});
 
 // ── THEME ────────────────────────────────────────────────────────────────────
 function applyTheme(t){
@@ -706,6 +752,7 @@ function renderContent(){
           imgs+="<div class=\"thumb\" data-idx=\""+i+"\" tabindex=\"0\">"
             +(src?"<img src=\""+src+"\" alt=\"Attachment "+(i+1)+"\" loading=\"lazy\">":"<div class=\"thumb-ph\">"+(isVid?"🎬":"🖼")+"</div>")
             +(isVid?"<div class=\"thumb-play\">▶</div>":"")
+            +upBadge(img)
             +"</div>";
         });
         imgs+="</div>";
@@ -723,11 +770,23 @@ function renderContent(){
         +(isOpen?"<div class=\"log-actions\"><button class=\"log-act\" data-act=\"edit\" title=\"Edit\">✎</button><button class=\"log-act\" data-act=\"del\" title=\"Delete\">✕</button></div>":"");
       // thumb clicks
       div.querySelectorAll(".thumb").forEach(function(t){
+        var up=t.querySelector(".thumb-up.err");
+        if(up)up.addEventListener("click",function(ev){
+          ev.stopPropagation();
+          var img=(e.images||[])[parseInt(t.dataset.idx)];if(!img)return;
+          var file=fileCache.get(img);
+          if(!file){alert("Can't retry — the original file is no longer available in this session. Remove and re-add it via Edit.");return}
+          img.uploadStatus="loading";renderContent();
+          uploadMedia(active,file,img.type==="video"?"videos":"photos").then(function(r){
+            if(r){img.driveId=r.driveId;img.name=r.name;img.uploadStatus="ok"}else img.uploadStatus="err";
+            scheduleSave();renderContent();
+          });
+        });
         t.addEventListener("click",function(){
           var img=(e.images||[])[parseInt(t.dataset.idx)];if(!img)return;
           if(img.type==="video"){
             var url=img.driveId?driveStreamUrl(img.driveId):null;
-            if(!url){alert("Video stored on Drive. Sign in to play it.");return}
+            if(!url){alert(img.uploadStatus==="err"?"Video upload failed. Tap the ! badge to retry.":"Video stored on Drive. Sign in to play it.");return}
             openMedia(url,"video",img.name);
           } else openMedia(img.data,"image",img.name);
         });
@@ -763,6 +822,24 @@ function renderContent(){
 }
 
 // ── THUMBNAILS ────────────────────────────────────────────────────────────────
+function upBadge(img){
+  if(img.uploadStatus==="loading")return"<div class=\"thumb-up loading\">⟳</div>";
+  if(img.uploadStatus==="err")return"<div class=\"thumb-up err\" title=\"Upload failed — tap to retry\" style=\"cursor:pointer\">!</div>";
+  if(img.uploadStatus==="ok")return"<div class=\"thumb-up ok\">✓</div>";
+  return"";
+}
+function retryUpload(img,isEdit){
+  var active=sessions.find(function(s){return s.id===aid});
+  var file=fileCache.get(img);
+  if(!active||!file){alert("Can't retry — remove this attachment and add it again.");return}
+  img.uploadStatus="loading";
+  if(isEdit)rEThumbs();else rThumbs();
+  uploadMedia(active,file,img.type==="video"?"videos":"photos").then(function(r){
+    if(r){img.driveId=r.driveId;img.name=r.name;img.uploadStatus="ok"}else img.uploadStatus="err";
+    if(isEdit)rEThumbs();else rThumbs();
+    scheduleSave();
+  });
+}
 function rThumbs(){
   var c=$$("pThumbs");if(!c)return;c.innerHTML="";
   pImgs.forEach(function(img,i){
@@ -770,8 +847,9 @@ function rThumbs(){
     var d=document.createElement("div");d.className="thumb";
     d.innerHTML=(src?"<img src=\""+src+"\" alt=\"\">":"<div class=\"thumb-ph\">"+(isVid?"🎬":"🖼")+"</div>")
       +(isVid?"<div class=\"thumb-play\">▶</div>":"")
-      +(img.uploadStatus==="loading"?"<div class=\"thumb-up loading\">⟳</div>":img.uploadStatus==="err"?"<div class=\"thumb-up err\">!</div>":img.uploadStatus==="ok"?"<div class=\"thumb-up ok\">✓</div>":"")
+      +upBadge(img)
       +"<button class=\"thumb-del\">✕</button>";
+    var up=d.querySelector(".thumb-up.err");if(up)up.addEventListener("click",function(ev){ev.stopPropagation();retryUpload(img,false)});
     d.querySelector(".thumb-del").addEventListener("click",function(){pImgs=pImgs.filter(function(_,j){return j!==i});rThumbs()});
     c.appendChild(d);
   });
@@ -783,7 +861,9 @@ function rEThumbs(){
     var d=document.createElement("div");d.className="thumb";
     d.innerHTML=(src?"<img src=\""+src+"\" alt=\"\">":"<div class=\"thumb-ph\">"+(isVid?"🎬":"🖼")+"</div>")
       +(isVid?"<div class=\"thumb-play\">▶</div>":"")
+      +upBadge(img)
       +"<button class=\"thumb-del\">✕</button>";
+    var up=d.querySelector(".thumb-up.err");if(up)up.addEventListener("click",function(ev){ev.stopPropagation();retryUpload(img,true)});
     d.querySelector(".thumb-del").addEventListener("click",function(){eImgs=eImgs.filter(function(_,j){return j!==i});rEThumbs();rENames()});
     c.appendChild(d);
   });
@@ -806,31 +886,44 @@ function rENames(){
 }
 
 // ── FILE HANDLING ─────────────────────────────────────────────────────────────
+function isVidFile(f){return f.type.startsWith("video")||/\.(mp4|mov|m4v)$/i.test(f.name||"")}
 function handleFiles(e,isEdit){
   var active=sessions.find(function(s){return s.id===aid});
-  Array.from(e.target.files||[]).forEach(function(file){
-    var isVid=file.type.startsWith("video")||/\.(mp4|mov|m4v)$/i.test(file.name||"");
+  var files=Array.from(e.target.files||[]);
+  // Videos are never stored locally (only uploaded to Drive as a blob, see
+  // CONTEXT.md) — without a session and an active Drive login there is
+  // nowhere for the file to go, so block it up front instead of silently
+  // losing the video after showing a fake "uploaded" thumbnail.
+  if(files.some(isVidFile)&&(!active||!isLoggedIn)){
+    alert("Sign in with Google to attach videos — they upload directly to Drive and are not stored on this device.");
+    files=files.filter(function(f){return !isVidFile(f)});
+  }
+  files.forEach(function(file){
+    var isVid=isVidFile(file);
     if(isVid){
       var img={data:null,type:"video",name:file.name,uploadStatus:"loading",poster:null};
+      fileCache.set(img,file);
       if(isEdit){eImgs.push(img);rEThumbs()}else{pImgs.push(img);rThumbs()}
       function inc(){if(isEdit)pExifEdit++;else pExif++}
       function dec(){if(isEdit)pExifEdit--;else pExif--}
       inc();getFileTs(file).then(function(ts){img.capturedAt=ts;dec();if(isEdit)rEThumbs();else rThumbs()});
       inc();genThumb(file).then(function(t){if(t)img.poster=t;dec();if(isEdit)rEThumbs();else rThumbs()});
-      if(active&&isLoggedIn){
-        inc();uploadMedia(active,file,"videos").then(function(r){
-          if(r){img.driveId=r.driveId;img.name=r.name;img.uploadStatus="ok"}else img.uploadStatus="err";
-          dec();if(isEdit)rEThumbs();else rThumbs();scheduleSave();
-        });
-      } else img.uploadStatus=isLoggedIn?"err":"err";
+      inc();uploadMedia(active,file,"videos").then(function(r){
+        if(r){img.driveId=r.driveId;img.name=r.name;img.uploadStatus="ok"}else img.uploadStatus="err";
+        dec();if(isEdit)rEThumbs();else rThumbs();scheduleSave();
+      });
     } else {
       var r2=new FileReader();
       r2.onload=function(ev){
-        var img2={data:ev.target.result,type:"image",name:file.name};
+        var img2={data:ev.target.result,type:"image",name:file.name,uploadStatus:(active&&isLoggedIn)?"loading":""};
+        fileCache.set(img2,file);
         if(isEdit){eImgs.push(img2);rEThumbs()}else{pImgs.push(img2);rThumbs()}
         if(isEdit)pExifEdit++;else pExif++;
         getFileTs(file).then(function(ts){img2.capturedAt=ts;if(isEdit)pExifEdit--;else pExif--;if(isEdit)rEThumbs();else rThumbs()});
-        if(active&&isLoggedIn)uploadMedia(active,file,"photos").then(function(r3){if(r3){img2.driveId=r3.driveId;img2.name=r3.name}scheduleSave()});
+        if(active&&isLoggedIn)uploadMedia(active,file,"photos").then(function(r3){
+          if(r3){img2.driveId=r3.driveId;img2.name=r3.name;img2.uploadStatus="ok"}else img2.uploadStatus="err";
+          if(isEdit)rEThumbs();else rThumbs();scheduleSave();
+        });
       };r2.readAsDataURL(file);
     }
   });

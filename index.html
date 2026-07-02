@@ -505,9 +505,23 @@ function dataUrlToBlob(dataUrl){
 // driveId yet, rebuilt from the base64 already stored locally. Videos with
 // no driveId can't be recovered this way — the raw file is never kept
 // locally, only its thumbnail — so those are just counted and reported.
+// Keeps a session.json snapshot of just this session in its own Drive
+// folder (not the app's main synced data file), so it can be re-imported
+// later via ↑ Import on any device — a fresh app/device never reads this
+// file on its own, so it stays empty until someone imports it manually.
+async function saveSessionJsonToDrive(token,sess,folderId){
+  var jsonStr=JSON.stringify([sess],null,2);
+  var existingId=await driveFind(token,"session.json",folderId,"application/json");
+  if(existingId){
+    await fetch("https://www.googleapis.com/upload/drive/v3/files/"+existingId+"?uploadType=media",{method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json; charset=UTF-8"},body:jsonStr});
+  } else {
+    await uploadTextFile(token,"session.json",jsonStr,"application/json",folderId);
+  }
+}
 async function syncSessionToDrive(token,sess){
   var res={uploaded:0,missingVideos:0};
-  try{await getMediaFolder(token,sess,"photos");await getMediaFolder(token,sess,"videos")}catch(e){}
+  var folderId=await getSessionFolder(token,sess);
+  if(folderId){try{await driveFolder(token,"photos",folderId);await driveFolder(token,"videos",folderId)}catch(e){}}
   var entries=(sess.entries||[]).slice(),changed=false;
   for(var j=0;j<entries.length;j++){
     var e=entries[j];
@@ -518,13 +532,18 @@ async function syncSessionToDrive(token,sess){
       if(img.type==="video"){if(!img.driveId)res.missingVideos++;continue}
       if(img.driveId||!img.data)continue;
       var blob=dataUrlToBlob(img.data);if(!blob)continue;
-      var folderId=await getMediaFolder(token,sess,"photos");if(!folderId)continue;
-      var r=await driveUploadBlob(token,blob,img.name||("photo_"+uid()+".jpg"),blob.type||"image/jpeg",folderId);
+      var photosId=folderId?await driveFolder(token,"photos",folderId):null;if(!photosId)continue;
+      var r=await driveUploadBlob(token,blob,img.name||("photo_"+uid()+".jpg"),blob.type||"image/jpeg",photosId);
       if(r){imgs[k]=Object.assign({},img,{driveId:r.id,name:r.name});entryChanged=true;res.uploaded++}
     }
     if(entryChanged){entries[j]=Object.assign({},e,{images:imgs});changed=true}
   }
-  if(changed)sessions=sessions.map(function(s){return s.id===sess.id?Object.assign({},s,{entries:entries}):s});
+  var latest=sess;
+  if(changed){
+    sessions=sessions.map(function(s){return s.id===sess.id?Object.assign({},s,{entries:entries}):s});
+    latest=sessions.find(function(s){return s.id===sess.id})||sess;
+  }
+  if(folderId){try{await saveSessionJsonToDrive(token,latest,folderId)}catch(e){}}
   return res;
 }
 function syncSummary(res,n){

@@ -340,6 +340,18 @@ function highlightText(text,query){
   if(!eq)return e;
   return e.replace(new RegExp("("+eq+")","gi"),"<mark>$1</mark>");
 }
+// Matches text, tag, AND severity (both the raw value like "issue" and its
+// display label like "ISSUE") — used by both the in-session log filter and
+// the cross-session search so severity is searchable in either place.
+function entryMatches(e,rawQuery){
+  var q=(rawQuery||"").trim().toLowerCase();
+  if(!q)return true;
+  var sm=SM[e.severity]||SM.info;
+  return(e.text||"").toLowerCase().includes(q)
+    ||(e.tag||"").toLowerCase().includes(q)
+    ||(e.severity||"").toLowerCase().includes(q)
+    ||sm.label.toLowerCase().includes(q);
+}
 function $$(id){return document.getElementById(id)}
 function autoH(ta){if(!ta)return;ta.style.height="auto";ta.style.height=Math.min(ta.scrollHeight,200)+"px"}
 function sanitize(s){return(s||"untitled").toString().trim().replace(/[\/:*?"<>|]/g,"_").replace(/\s+/g,"_").slice(0,60)||"untitled"}
@@ -836,7 +848,7 @@ function renderSidebar(){
   // results, not just the session they belong to.
   var results=sessions.map(function(s){
     var sessMatch=[s.client,s.machine,s.project,s.tech,s.location].some(function(v){return(v||"").toLowerCase().includes(q)});
-    var hits=(s.entries||[]).filter(function(e){return(e.text||"").toLowerCase().includes(q)||(e.tag||"").toLowerCase().includes(q)});
+    var hits=(s.entries||[]).filter(function(e){return entryMatches(e,q)});
     return{s:s,sessMatch:sessMatch,hits:hits};
   }).filter(function(r){return r.sessMatch||r.hits.length});
 
@@ -849,7 +861,7 @@ function renderSidebar(){
       var sm=SM[e.severity]||SM.info;
       var hit=document.createElement("div");
       hit.className="sitem-hit";
-      hit.innerHTML="<span style=\"color:"+sm.dc+"\">"+sm.dot+"</span> "+highlightText((e.text||"").slice(0,60),sessFilterTxt)+(e.tag?" <span class=\"log-tag\" style=\"font-size:9px;vertical-align:1px\">"+highlightText(e.tag,sessFilterTxt)+"</span>":"");
+      hit.innerHTML="<span style=\"color:"+sm.dc+"\">"+sm.dot+"</span> <span style=\"font-size:9px;color:"+sm.tx+";font-family:monospace\">"+highlightText(sm.label,sessFilterTxt)+"</span> "+highlightText((e.text||"").slice(0,50),sessFilterTxt)+(e.tag?" <span class=\"log-tag\" style=\"font-size:9px;vertical-align:1px\">"+highlightText(e.tag,sessFilterTxt)+"</span>":"");
       hit.addEventListener("click",function(){aid=r.s.id;filterTxt=sessFilterTxt;if(mob())closeSide();renderAll()});
       list.appendChild(hit);
     });
@@ -870,7 +882,7 @@ function renderSidebar(){
 function renderLogArea(){
   var active=sessions.find(function(s){return s.id===aid});if(!active)return;
   var entries=active.entries||[];
-  var filtered=filterTxt?entries.filter(function(e){return(e.text||"").toLowerCase().includes(filterTxt.toLowerCase())||(e.tag||"").toLowerCase().includes(filterTxt.toLowerCase())}):entries;
+  var filtered=filterTxt?entries.filter(function(e){return entryMatches(e,filterTxt)}):entries;
   var isOpen=active.status==="open";
   var ec=$$("entCount");if(ec)ec.textContent=(filterTxt?filtered.length+"/":"")+entries.length+" entries";
   var logArea=$$("logArea");if(!logArea)return;
@@ -897,7 +909,7 @@ function renderLogArea(){
         +"<div style=\"flex:1;min-width:0\">"
         +"<div class=\"log-meta\">"
         +"<span class=\"log-ts\">"+(e.tsFromPhoto?"📷 ":"")+fts(e.ts)+"</span>"
-        +"<span class=\"log-sev\" style=\"background:"+sm.bg+";color:"+sm.tx+"\">"+sm.label+"</span>"
+        +"<span class=\"log-sev\" style=\"background:"+sm.bg+";color:"+sm.tx+"\">"+highlightText(sm.label,filterTxt)+"</span>"
         +(e.tag?"<span class=\"log-tag\">"+highlightText(e.tag,filterTxt)+"</span>":"")
         +(e.editedAt?"<span class=\"log-edited\">edited</span>":"")
         +"</div>"
@@ -979,7 +991,7 @@ function renderContent(){
 
   var tm=TM[active.type]||TM.commissioning;
   var entries=active.entries||[];
-  var filtered=filterTxt?entries.filter(function(e){return(e.text||"").toLowerCase().includes(filterTxt.toLowerCase())||(e.tag||"").toLowerCase().includes(filterTxt.toLowerCase())}):entries;
+  var filtered=filterTxt?entries.filter(function(e){return entryMatches(e,filterTxt)}):entries;
   var errs=entries.filter(function(e){return e.severity==="issue"}).length;
   var warns=entries.filter(function(e){return e.severity==="warning"}).length;
   var oks=entries.filter(function(e){return e.severity==="ok"}).length;

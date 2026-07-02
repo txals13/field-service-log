@@ -511,7 +511,7 @@ function dataUrlToBlob(dataUrl){
 // later via ↑ Import on any device — a fresh app/device never reads this
 // file on its own, so it stays empty until someone imports it manually.
 async function saveSessionJsonToDrive(token,sess,folderId){
-  var jsonStr=JSON.stringify([sess],null,2);
+  var jsonStr=sessionToJson(sess);
   var existingId=await driveFind(token,"session.json",folderId,"application/json");
   if(existingId){
     await fetch("https://www.googleapis.com/upload/drive/v3/files/"+existingId+"?uploadType=media",{method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json; charset=UTF-8"},body:jsonStr});
@@ -616,6 +616,9 @@ async function driveUploadBlob(token,blob,name,mime,parentId){
   }catch(e){return null}
 }
 function fnameStamp(){return now().replace(/[:.]/g,"-")}
+// Shared by the delete-session backup and the Drive session.json sync —
+// both are the same "one session, importable via ↑ Import" snapshot.
+function sessionToJson(sess){return JSON.stringify([sess],null,2)}
 // Saves a copy of a manually generated report into the session's Drive
 // folder, in the background. Always uploads as a new file (timestamped
 // name) — never overwrites or deletes a previous export.
@@ -1178,7 +1181,7 @@ $$("delBack").addEventListener("click",function(e){if(e.target===$$("delBack"))c
 $$("delConfirm").addEventListener("click",async function(){
   var s=pendingDel;if(!s){closeDelModal();return}
   var fname=pendingDelFname||("backup_"+(s.client||"session").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,40)+"_"+fnameStamp()+".json");
-  var jsonStr=JSON.stringify([s],null,2);
+  var jsonStr=sessionToJson(s);
   // local download
   var blob=new Blob([jsonStr],{type:"application/json;charset=utf-8"});
   var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=fname;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
@@ -1186,8 +1189,22 @@ $$("delConfirm").addEventListener("click",async function(){
   sessions=sessions.filter(function(x){return x.id!==s.id});
   if(aid===s.id)aid=null;
   closeDelModal();scheduleSave();renderAll();
-  // drive backup
-  if(isLoggedIn){var token=await ensureToken();if(token){setSyncSt("loading","Uploading backup...");try{var rootId=await getRootId(token);if(rootId)await uploadTextFile(token,fname,jsonStr,"application/json",rootId);setSyncSt("ok","Backup saved ✓")}catch(e){setSyncSt("error","Drive backup failed")}}}
+  // drive backup: a timestamped copy at the Drive root (safety net), plus a
+  // final refresh of session.json inside the session's own folder so it
+  // stays a complete, self-contained package after the session is gone.
+  if(isLoggedIn){
+    var token=await ensureToken();
+    if(token){
+      setSyncSt("loading","Uploading backup...");
+      try{
+        var rootId=await getRootId(token);
+        if(rootId)await uploadTextFile(token,fname,jsonStr,"application/json",rootId);
+        var folderId=await getSessionFolder(token,s);
+        if(folderId)await saveSessionJsonToDrive(token,s,folderId);
+        setSyncSt("ok","Backup saved ✓")
+      }catch(e){setSyncSt("error","Drive backup failed")}
+    }
+  }
 });
 
 // ── NEW / EDIT SESSION MODAL ───────────────────────────────────────────────────

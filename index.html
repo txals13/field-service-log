@@ -745,7 +745,7 @@ function renderContent(){
       ?"<button class=\"btn-danger btn-sm\" id=\"btnClose\" style=\"margin-left:auto\">■ Close</button>"
       :"<span style=\"margin-left:auto;font-size:11px;color:var(--tx3)\">🔴 Closed</span><button class=\"btn-sm\" id=\"btnReopen\" style=\"font-size:11px\">↺ Reopen</button>")
     +"<div class=\"exp-wrap\"><button class=\"btn-sm\" id=\"btnExp\">↓ Report ▾</button>"
-    +"<div class=\"exp-menu\" id=\"expMenu\"><button data-fmt=\"pdf\">📄 PDF</button><button data-fmt=\"docx\">📄 DOCX</button><button data-fmt=\"html\">📄 HTML</button></div></div>"
+    +"<div class=\"exp-menu\" id=\"expMenu\"><button data-fmt=\"pdf\">📄 PDF</button><button data-fmt=\"docx\">📄 DOCX</button><button data-fmt=\"html\">📄 HTML</button><button data-fmt=\"zip\">🗄 Drive ZIP</button></div></div>"
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSync\" title=\"Sync now\">⟳</button>":"")
     +"</div>"
     +"<div class=\"s-hdr-meta\">"
@@ -1239,6 +1239,7 @@ function exportRep(s,fmt){
     uploadReportCopy(s,new Blob([buildReportHTML(s,false)],{type:"text/html;charset=utf-8"}),"report_"+base+"_"+fnameStamp()+".html","text/html");
   }
   else if(fmt==="docx"){exportDOCX(s,base)}
+  else if(fmt==="zip"){exportSessionZip(s)}
 }
 
 function loadDocxLib(){
@@ -1307,6 +1308,68 @@ function buildDocxDocument(D,s){
     new D.Paragraph({spacing:{before:200},children:[new D.TextRun({text:"ID: "+s.id,size:16,font:"Arial",color:"9CA3AF"})]})
   ]);
   return new D.Document({styles:{default:{document:{run:{font:"Arial",size:20}}}},sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:1440,right:1440,bottom:1440,left:1440}}},children:children}]});
+}
+
+// ── DRIVE ZIP EXPORT ──────────────────────────────────────────────────────────
+function loadJSZip(){
+  return new Promise(function(res){
+    if(window.JSZip){res(window.JSZip);return}
+    function tryLoad(urls){
+      if(!urls.length){res(null);return}
+      var sc=document.createElement("script");sc.src=urls[0];
+      sc.onload=function(){res(window.JSZip||null)};
+      sc.onerror=function(){tryLoad(urls.slice(1))};
+      document.head.appendChild(sc);
+    }
+    tryLoad(["https://unpkg.com/jszip@3.10.1/dist/jszip.min.js","https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"]);
+  });
+}
+async function driveListChildren(token,folderId){
+  var q="trashed=false and "+JSON.stringify(folderId)+" in parents";
+  var out=[],pageToken=null;
+  do{
+    var url="https://www.googleapis.com/drive/v3/files?q="+encodeURIComponent(q)+"&fields="+encodeURIComponent("nextPageToken,files(id,name,mimeType)")+(pageToken?"&pageToken="+encodeURIComponent(pageToken):"");
+    var r=await fetch(url,{headers:{Authorization:"Bearer "+token}});
+    if(!r.ok)break;
+    var d=await r.json();
+    out=out.concat(d.files||[]);
+    pageToken=d.nextPageToken||null;
+  }while(pageToken);
+  return out;
+}
+var FOLDER_MIME="application/vnd.google-apps.folder";
+async function collectDriveFiles(token,folderId,pathPrefix,out){
+  var children=await driveListChildren(token,folderId);
+  for(var i=0;i<children.length;i++){
+    var c=children[i];
+    if(c.mimeType===FOLDER_MIME)await collectDriveFiles(token,c.id,pathPrefix+c.name+"/",out);
+    else out.push({id:c.id,path:pathPrefix+c.name});
+  }
+}
+async function exportSessionZip(s){
+  if(!s)return;
+  if(!isLoggedIn){alert("Sign in with Google first — this exports the files stored in the session's Drive folder.");return}
+  var token=await ensureToken();if(!token){alert("Could not authenticate with Drive.");return}
+  var btn=$$("btnExp");if(btn){btn.disabled=true;btn.textContent="Zipping..."}
+  try{
+    var folderId=await getSessionFolder(token,s);
+    if(!folderId){alert("No Drive folder found for this session yet.");return}
+    var JSZipLib=await loadJSZip();
+    if(!JSZipLib){alert("Cannot load ZIP library. Check internet connection.");return}
+    var files=[];
+    await collectDriveFiles(token,folderId,"",files);
+    if(!files.length){alert("This session's Drive folder is empty.");return}
+    var zip=new JSZipLib();
+    for(var i=0;i<files.length;i++){
+      var f=files[i];
+      var r=await fetch("https://www.googleapis.com/drive/v3/files/"+f.id+"?alt=media",{headers:{Authorization:"Bearer "+token}});
+      if(!r.ok)continue;
+      zip.file(f.path,await r.blob());
+    }
+    var zipBlob=await zip.generateAsync({type:"blob"});
+    dlBlob(zipBlob,sanitize(s.client)+"_"+sanitize(s.machine)+"_drive_export.zip");
+  }catch(e){alert("ZIP export failed: "+((e&&e.message)||e))}
+  finally{var b2=$$("btnExp");if(b2){b2.disabled=false;b2.innerHTML="↓ Report ▾"}}
 }
 
 // ── CLOSE DROPDOWNS ───────────────────────────────────────────────────────────

@@ -776,7 +776,7 @@ if("serviceWorker" in navigator){
 }
 
 // ── SIDEBAR ──────────────────────────────────────────────────────────────────
-function openSide(){$$("sidebar").classList.add("open");$$("overlay").style.display="block"}
+function openSide(){$$("sidebar").classList.remove("collapsed");$$("sidebar").classList.add("open");$$("overlay").style.display="block"}
 function closeSide(){$$("sidebar").classList.remove("open");$$("overlay").style.display="none"}
 $$("btnSide").addEventListener("click",function(){
   if(mob()){if($$("sidebar").classList.contains("open"))closeSide();else openSide()}
@@ -1517,14 +1517,23 @@ document.addEventListener("click",function(){var m=$$("expMenu");if(m)m.style.di
 function renderAll(){renderSidebar();renderContent()}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-sessions=loadLocal();
-if(loadTok()&&accessToken&&Date.now()<tokenExp){
-  isLoggedIn=true;
-  loadFromDrive().then(function(){renderAll();scheduleSync()});
-} else {
-  renderAll();
-}
-updateAuthUI();
+// Parsing localStorage (JSON.parse) and building the first render can take
+// a noticeable moment once there's a lot of session/photo data, and since
+// it ran synchronously here it could delay the page becoming interactive —
+// e.g. a tap on the hamburger right after paint would queue behind it and
+// feel stuck. Show a lightweight placeholder immediately (cheap, no parsing)
+// and defer the real load to right after the browser gets to paint it.
+$$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><div style=\"font-size:13px;color:var(--tx3)\">Loading sessions...</div></div>";
+setTimeout(function(){
+  sessions=loadLocal();
+  if(loadTok()&&accessToken&&Date.now()<tokenExp){
+    isLoggedIn=true;
+    loadFromDrive().then(function(){renderAll();scheduleSync()});
+  } else {
+    renderAll();
+  }
+  updateAuthUI();
+},0);
 
 })();
 </script>

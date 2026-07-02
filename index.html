@@ -509,6 +509,18 @@ async function driveUploadBlob(token,blob,name,mime,parentId){
     return{id:cr.id,name:cr.name};
   }catch(e){return null}
 }
+function fnameStamp(){return now().replace(/[:.]/g,"-")}
+// Saves a copy of a manually generated report into the session's Drive
+// folder, in the background. Always uploads as a new file (timestamped
+// name) — never overwrites or deletes a previous export.
+async function uploadReportCopy(sess,blob,fname,mime){
+  if(!isLoggedIn)return;
+  var token=await ensureToken();if(!token)return;
+  try{
+    var folderId=await getSessionFolder(token,sess);if(!folderId)return;
+    await driveUploadBlob(token,blob,fname,mime,folderId);
+  }catch(e){}
+}
 async function uploadMedia(sess,file,kind){
   var token=await ensureToken();if(!token)return null;
   var folderId=await getMediaFolder(token,sess,kind);if(!folderId)return null;
@@ -1177,8 +1189,19 @@ function buildReportHTML(s,forPrint){
 function exportRep(s,fmt){
   if(!s)return;
   var base=(s.client||"session").replace(/\s+/g,"_")+"_"+s.createdAt.slice(0,10);
-  if(fmt==="html"){dlBlob(new Blob([buildReportHTML(s,false)],{type:"text/html;charset=utf-8"}),"report_"+base+".html")}
-  else if(fmt==="pdf"){var w=window.open("","_blank");if(!w){alert("Allow pop-ups to generate PDF.");return}w.document.write(buildReportHTML(s,true));w.document.close();w.onload=function(){setTimeout(function(){w.print()},300)}}
+  if(fmt==="html"){
+    var htmlBlob=new Blob([buildReportHTML(s,false)],{type:"text/html;charset=utf-8"});
+    dlBlob(htmlBlob,"report_"+base+".html");
+    uploadReportCopy(s,htmlBlob,"report_"+base+"_"+fnameStamp()+".html","text/html");
+  }
+  else if(fmt==="pdf"){
+    var w=window.open("","_blank");if(!w){alert("Allow pop-ups to generate PDF.");return}
+    w.document.write(buildReportHTML(s,true));w.document.close();
+    w.onload=function(){setTimeout(function(){w.print()},300)};
+    // The PDF itself is produced by the browser's print dialog, so we never
+    // get its bytes in JS — save the same-content HTML report to Drive instead.
+    uploadReportCopy(s,new Blob([buildReportHTML(s,false)],{type:"text/html;charset=utf-8"}),"report_"+base+"_"+fnameStamp()+".html","text/html");
+  }
   else if(fmt==="docx"){exportDOCX(s,base)}
 }
 
@@ -1199,7 +1222,10 @@ async function exportDOCX(s,base){
   var D=await loadDocxLib();
   if(!D){alert("Cannot load DOCX library. Check internet connection.");return}
   var doc=buildDocxDocument(D,s);
-  D.Packer.toBlob(doc).then(function(blob){dlBlob(blob,"report_"+base+".docx")}).catch(function(err){alert("DOCX error: "+err.message)});
+  D.Packer.toBlob(doc).then(function(blob){
+    dlBlob(blob,"report_"+base+".docx");
+    uploadReportCopy(s,blob,"report_"+base+"_"+fnameStamp()+".docx","application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+  }).catch(function(err){alert("DOCX error: "+err.message)});
 }
 function buildDocxDocument(D,s){
   var tm=TM[s.type]||TM.commissioning,entries=s.entries||[];

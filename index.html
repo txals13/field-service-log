@@ -213,6 +213,7 @@ textarea{resize:none;line-height:1.4}
     <div class="modal">
       <div class="modal-title" id="newModalTitle">&#9658; New Service Visit</div>
       <div class="field"><label>Client / Company *</label><input type="text" id="nClient" placeholder="Client name"></div>
+      <div class="field"><label>Project Number</label><input type="text" id="nProject" placeholder="Project #"></div>
       <div class="field"><label>Machine / Equipment *</label><input type="text" id="nMachine" placeholder="Model or reference"></div>
       <div class="field"><label>Location</label><input type="text" id="nLoc" placeholder="Plant, line, address..."></div>
       <div class="field"><label>Technician</label><input type="text" id="nTech" placeholder="Technician name"></div>
@@ -748,6 +749,7 @@ function renderContent(){
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSync\" title=\"Sync now\">⟳</button>":"")
     +"</div>"
     +"<div class=\"s-hdr-meta\">"
+    +(active.project?"<span>&#128209; "+esc(active.project)+"</span>":"")
     +(active.machine?"<span>🔧 "+esc(active.machine)+"</span>":"")
     +(active.location?"<span>📍 "+esc(active.location)+"</span>":"")
     +(active.tech?"<span>👤 "+esc(active.tech)+"</span>":"")
@@ -1074,6 +1076,7 @@ function openNewModal(editSess){
   $$("newModalTitle").innerHTML=editSess?"&#9998; Edit Service Visit":"&#9658; New Service Visit";
   $$("nSave").innerHTML=editSess?"&#10003; Save changes":"&#10003; Create session";
   $$("nClient").value=editSess?(editSess.client||""):"";
+  $$("nProject").value=editSess?(editSess.project||""):"";
   $$("nMachine").value=editSess?(editSess.machine||""):"";
   $$("nLoc").value=editSess?(editSess.location||""):"";
   $$("nTech").value=editSess?(editSess.tech||""):"";
@@ -1098,18 +1101,18 @@ $$("newBack").addEventListener("click",function(e){if(e.target===$$("newBack"))c
 $$("nSave").addEventListener("click",function(){
   var c=$$("nClient").value.trim(),m=$$("nMachine").value.trim();
   if(!c||!m){alert("Client and machine are required.");return}
-  var loc=$$("nLoc").value.trim(),tech=$$("nTech").value.trim(),type=$$("nType").value;
+  var proj=$$("nProject").value.trim(),loc=$$("nLoc").value.trim(),tech=$$("nTech").value.trim(),type=$$("nType").value;
   if(editingSessId){
     var editId=editingSessId,old=sessions.find(function(s){return s.id===editId});
     var folderChanged=old&&(old.client!==c||old.machine!==m||(old.tech||"")!==tech);
-    sessions=sessions.map(function(s){return s.id===editId?Object.assign({},s,{client:c,machine:m,location:loc,tech:tech,type:type}):s});
-    closeNewModal();["nClient","nMachine","nLoc","nTech"].forEach(function(id){$$(id).value=""});
+    sessions=sessions.map(function(s){return s.id===editId?Object.assign({},s,{client:c,project:proj,machine:m,location:loc,tech:tech,type:type}):s});
+    closeNewModal();["nClient","nProject","nMachine","nLoc","nTech"].forEach(function(id){$$(id).value=""});
     scheduleSave();renderAll();
     if(isLoggedIn&&old&&folderChanged)renameSessionFolder(old,{client:c,machine:m,tech:tech});
   } else {
-    var s={id:uid(),client:c,machine:m,location:loc,tech:tech,type:type,status:"open",createdAt:now(),entries:[],notes:""};
+    var s={id:uid(),client:c,project:proj,machine:m,location:loc,tech:tech,type:type,status:"open",createdAt:now(),entries:[],notes:""};
     sessions=[s].concat(sessions);aid=s.id;
-    closeNewModal();["nClient","nMachine","nLoc","nTech"].forEach(function(id){$$(id).value=""});
+    closeNewModal();["nClient","nProject","nMachine","nLoc","nTech"].forEach(function(id){$$(id).value=""});
     scheduleSave();renderAll();
     if(isLoggedIn)ensureSessionFolders(s.id); // create Drive folders up front, not on first upload
   }
@@ -1199,6 +1202,7 @@ function buildReportHTML(s,forPrint){
     +"<div style=\"color:#6b7280;font-size:13px\">Generated on "+fts(new Date().toISOString())+"</div></div>"
     +"<div class=\"meta\">"
     +"<div><div class=\"ml\">Client</div><div class=\"mv\">"+esc(s.client||"—")+"</div></div>"
+    +"<div><div class=\"ml\">Project Number</div><div class=\"mv\">"+esc(s.project||"—")+"</div></div>"
     +"<div><div class=\"ml\">Machine</div><div class=\"mv\">"+esc(s.machine||"—")+"</div></div>"
     +"<div><div class=\"ml\">Location</div><div class=\"mv\">"+esc(s.location||"—")+"</div></div>"
     +"<div><div class=\"ml\">Technician</div><div class=\"mv\">"+esc(s.tech||"—")+"</div></div>"
@@ -1289,7 +1293,7 @@ function buildDocxDocument(D,s){
     new D.Paragraph({spacing:{after:80},border:{bottom:{style:D.BorderStyle.SINGLE,size:6,color:"F59E0B",space:1}},children:[new D.TextRun({text:"Field Service Report",bold:true,size:40,font:"Arial",color:"111827"})]}),
     new D.Paragraph({spacing:{after:40},children:[new D.TextRun({text:tm.label,size:20,font:"Arial",color:"6B7280"})]}),
     new D.Paragraph({spacing:{after:200},children:[new D.TextRun({text:"Generated on "+fts(new Date().toISOString()),size:18,font:"Arial",color:"9CA3AF"})]}),
-    mp("Client",s.client),mp("Machine / Equipment",s.machine),mp("Location",s.location),mp("Technician",s.tech),mp("Start",fts(s.createdAt)),mp("Status",s.status==="open"?"Open":"Closed"),
+    mp("Client",s.client),mp("Project Number",s.project),mp("Machine / Equipment",s.machine),mp("Location",s.location),mp("Technician",s.tech),mp("Start",fts(s.createdAt)),mp("Status",s.status==="open"?"Open":"Closed"),
     new D.Paragraph({spacing:{after:200},children:[new D.TextRun({text:""})]}),
     new D.Paragraph({spacing:{after:40},children:[new D.TextRun({text:"Issues: ",bold:true,size:20,font:"Arial",color:"DC2626"}),new D.TextRun({text:errs+"   ",size:20,color:"DC2626"}),new D.TextRun({text:"Warnings: ",bold:true,size:20,font:"Arial",color:"EA580C"}),new D.TextRun({text:warns+"   ",size:20,color:"EA580C"}),new D.TextRun({text:"OK: ",bold:true,size:20,font:"Arial",color:"16A34A"}),new D.TextRun({text:oks+"   ",size:20,color:"16A34A"}),new D.TextRun({text:"Total: ",bold:true,size:20,font:"Arial"}),new D.TextRun({text:""+entries.length,size:20})]}),
     new D.Paragraph({spacing:{after:160},children:[new D.TextRun({text:""})]}),

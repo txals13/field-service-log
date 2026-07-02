@@ -456,10 +456,24 @@ async function driveFolder(token,name,parentId){
   var id=await driveFind(token,name,parentId,MIME);
   return id||(await driveCreateFolder(token,name,parentId));
 }
+async function driveFileExists(token,id){
+  try{
+    var r=await fetch("https://www.googleapis.com/drive/v3/files/"+id+"?fields=id,trashed",{headers:{Authorization:"Bearer "+token}});
+    if(!r.ok)return false;
+    return !(await r.json()).trashed;
+  }catch(e){return false}
+}
+// Verifies the cached root folder id still exists before trusting it — if
+// the user deleted "Field Service Log" in Drive, a stale id would otherwise
+// make every upload underneath it fail forever. Only checked once per page
+// load (rootFolderId is trusted in-memory after that, like before).
 async function getRootId(token){
   if(rootFolderId)return rootFolderId;
-  try{var s=localStorage.getItem(LS_ROOT);if(s){rootFolderId=s;return s}}catch(e){}
-  var id=await driveFolder(token,ROOT_NAME,null);
+  var cached=null;
+  try{cached=localStorage.getItem(LS_ROOT)}catch(e){}
+  if(cached&&await driveFileExists(token,cached)){rootFolderId=cached;return cached}
+  if(cached){try{localStorage.removeItem(LS_ROOT)}catch(e){}}
+  var id=await driveFolder(token,ROOT_NAME,null); // find-or-create by name
   if(id){rootFolderId=id;try{localStorage.setItem(LS_ROOT,id)}catch(e){}}
   return id;
 }
@@ -574,7 +588,9 @@ async function saveToDrive(){
     var body=JSON.stringify(sessions),r;
     if(driveFileId){
       r=await fetch("https://www.googleapis.com/upload/drive/v3/files/"+driveFileId+"?uploadType=media",{method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:body});
-    } else {
+      if(r.status===404){driveFileId=null;saveTok()} // deleted in Drive — recreate below from the sessions already loaded
+    }
+    if(!driveFileId){
       var rootId=await getRootId(token);
       var meta=JSON.stringify({name:DATA_FILE,mimeType:"application/json",parents:rootId?[rootId]:[]});
       var bnd="fsl_d_"+Date.now();

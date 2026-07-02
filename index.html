@@ -313,7 +313,7 @@ var sessions=[], aid=null, pImgs=[], filterTxt="";
 var pExif=0, pExifEdit=0;
 var accessToken=null, tokenExp=0, driveFileId=null, rootFolderId=null;
 var isLoggedIn=false, saveTimer=null, isDirty=false;
-var editingId=null, eImgs=[], pendingDel=null, dInst=null;
+var editingId=null, eImgs=[], pendingDel=null, pendingDelFname=null, dInst=null;
 var authExpired=false, syncStarted=false;
 var fileCache=new WeakMap(); // img object -> raw File, kept in memory only, for upload retry
 
@@ -1042,19 +1042,17 @@ $$("eFileIn").addEventListener("change",function(e){handleFiles(e,true)});
 // ── DELETE SESSION MODAL ──────────────────────────────────────────────────────
 function openDelModal(s){
   pendingDel=s;
-  var date=new Date().toISOString().slice(0,10);
-  var fname="backup_"+(s.client||"session").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,40)+"_"+date+".json";
+  pendingDelFname="backup_"+(s.client||"session").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,40)+"_"+fnameStamp()+".json";
   $$("delDesc").innerHTML="You are about to permanently delete <strong>"+esc(s.client||"this session")+"</strong>"+(s.machine?" — "+esc(s.machine):"")+".<br>This cannot be undone.";
-  $$("delFile").textContent=fname;
+  $$("delFile").textContent=pendingDelFname;
   $$("delBack").style.display="flex";
 }
-function closeDelModal(){$$("delBack").style.display="none";pendingDel=null}
+function closeDelModal(){$$("delBack").style.display="none";pendingDel=null;pendingDelFname=null}
 $$("delCancel").addEventListener("click",closeDelModal);
 $$("delBack").addEventListener("click",function(e){if(e.target===$$("delBack"))closeDelModal()});
 $$("delConfirm").addEventListener("click",async function(){
   var s=pendingDel;if(!s){closeDelModal();return}
-  var date=new Date().toISOString().slice(0,10);
-  var fname="backup_"+(s.client||"session").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,40)+"_"+date+".json";
+  var fname=pendingDelFname||("backup_"+(s.client||"session").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,40)+"_"+fnameStamp()+".json");
   var jsonStr=JSON.stringify([s],null,2);
   // local download
   var blob=new Blob([jsonStr],{type:"application/json;charset=utf-8"});

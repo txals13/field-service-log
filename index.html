@@ -189,6 +189,7 @@ textarea{resize:none;line-height:1.4}
     <span id="topBadge" style="display:none;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;flex-shrink:1"></span>
     <div style="display:flex;align-items:center;gap:4px;margin-left:auto;flex-shrink:0">
       <button class="btn-gold btn-sm" id="btnLoginTop" style="display:none" title="Sign in with Google to sync with Drive">Sign in</button>
+      <button class="btn-g btn-sm" id="btnFullSync" style="display:none" title="Recreate Drive folders and upload any photo missing from Drive, across all sessions">&#9729; Sync all</button>
       <span id="syncSt" style="font-size:11px;color:var(--tx3);font-family:monospace;white-space:nowrap"></span>
       <button class="btn-g btn-sm" id="btnTheme" style="font-size:16px;padding:5px 7px" title="Toggle theme">&#9788;</button>
       <button class="btn-g btn-sm" id="btnImport" title="Import JSON">&#8679; Import</button>
@@ -492,6 +493,76 @@ async function ensureSessionFolders(sessId){
   var token=await ensureToken();if(!token)return;
   try{await getMediaFolder(token,sess,"photos");await getMediaFolder(token,sess,"videos")}catch(e){}
 }
+function dataUrlToBlob(dataUrl){
+  try{
+    var parts=dataUrl.split(","),m=/data:([^;]+)/.exec(parts[0]),mime=m?m[1]:"image/jpeg";
+    var bin=atob(parts[1]),arr=new Uint8Array(bin.length);
+    for(var i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
+    return new Blob([arr],{type:mime});
+  }catch(e){return null}
+}
+// Recreates a session's Drive folders and uploads any photo that has no
+// driveId yet, rebuilt from the base64 already stored locally. Videos with
+// no driveId can't be recovered this way — the raw file is never kept
+// locally, only its thumbnail — so those are just counted and reported.
+async function syncSessionToDrive(token,sess){
+  var res={uploaded:0,missingVideos:0};
+  try{await getMediaFolder(token,sess,"photos");await getMediaFolder(token,sess,"videos")}catch(e){}
+  var entries=(sess.entries||[]).slice(),changed=false;
+  for(var j=0;j<entries.length;j++){
+    var e=entries[j];
+    if(!e.images||!e.images.length)continue;
+    var imgs=e.images.slice(),entryChanged=false;
+    for(var k=0;k<imgs.length;k++){
+      var img=imgs[k];
+      if(img.type==="video"){if(!img.driveId)res.missingVideos++;continue}
+      if(img.driveId||!img.data)continue;
+      var blob=dataUrlToBlob(img.data);if(!blob)continue;
+      var folderId=await getMediaFolder(token,sess,"photos");if(!folderId)continue;
+      var r=await driveUploadBlob(token,blob,img.name||("photo_"+uid()+".jpg"),blob.type||"image/jpeg",folderId);
+      if(r){imgs[k]=Object.assign({},img,{driveId:r.id,name:r.name});entryChanged=true;res.uploaded++}
+    }
+    if(entryChanged){entries[j]=Object.assign({},e,{images:imgs});changed=true}
+  }
+  if(changed)sessions=sessions.map(function(s){return s.id===sess.id?Object.assign({},s,{entries:entries}):s});
+  return res;
+}
+function syncSummary(res,n){
+  return res.uploaded+" photo(s) uploaded"+(n?" across "+n+" session(s)":"")+"."
+    +(res.missingVideos?"\n"+res.missingVideos+" video(s) could not be recovered (the original file was never stored, only its thumbnail).":"");
+}
+async function syncActiveSessionToDrive(){
+  if(!isLoggedIn){alert("Sign in with Google first.");return}
+  var sess=sessions.find(function(s){return s.id===aid});if(!sess)return;
+  var token=await ensureToken();if(!token){alert("Could not authenticate with Drive.");return}
+  var btn=$$("btnSessSync");if(btn){btn.disabled=true;btn.textContent="Saving..."}
+  try{
+    var res=await syncSessionToDrive(token,sess);
+    saveLocal();
+    if(res.uploaded>0){isDirty=true;await saveToDrive()}
+    renderAll();
+    alert("Session saved to Drive.\n"+syncSummary(res));
+  }catch(e){alert("Sync failed: "+((e&&e.message)||e))}
+  finally{var b2=$$("btnSessSync");if(b2){b2.disabled=false;b2.innerHTML="&#9729; Save"}}
+}
+async function syncAllToDrive(){
+  if(!isLoggedIn){alert("Sign in with Google first.");return}
+  var token=await ensureToken();if(!token){alert("Could not authenticate with Drive.");return}
+  var btn=$$("btnFullSync");if(btn){btn.disabled=true;btn.textContent="Syncing..."}
+  var total={uploaded:0,missingVideos:0};
+  try{
+    for(var i=0;i<sessions.length;i++){
+      var res=await syncSessionToDrive(token,sessions[i]);
+      total.uploaded+=res.uploaded;total.missingVideos+=res.missingVideos;
+    }
+    saveLocal();
+    if(total.uploaded>0){isDirty=true;await saveToDrive()}
+    renderAll();
+    alert("Sync complete.\n"+syncSummary(total,sessions.length));
+  }catch(e){alert("Sync failed: "+((e&&e.message)||e))}
+  finally{var b2=$$("btnFullSync");if(b2){b2.disabled=false;b2.innerHTML="&#9729; Sync all"}}
+}
+$$("btnFullSync").addEventListener("click",syncAllToDrive);
 async function uploadTextFile(token,name,content,mime,parentId){
   var meta={name:name,mimeType:mime};if(parentId)meta.parents=[parentId];
   var bnd="fsl_b_"+Date.now();
@@ -626,6 +697,7 @@ function hideAuthExpired(){
 // imported, or used before ever signing in) has no way to connect Drive.
 function updateAuthUI(){
   var b=$$("btnLoginTop");if(b)b.style.display=isLoggedIn?"none":"";
+  var fs=$$("btnFullSync");if(fs)fs.style.display=isLoggedIn?"":"none";
 }
 async function finishLogin(){
   isLoggedIn=true;hideAuthExpired();updateAuthUI();
@@ -763,6 +835,7 @@ function renderContent(){
     +"<div class=\"exp-wrap\"><button class=\"btn-sm\" id=\"btnExp\">↓ Report ▾</button>"
     +"<div class=\"exp-menu\" id=\"expMenu\"><button data-fmt=\"pdf\">📄 PDF</button><button data-fmt=\"docx\">📄 DOCX</button><button data-fmt=\"html\">📄 HTML</button><button data-fmt=\"zip\">🗄 Drive ZIP</button></div></div>"
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSync\" title=\"Sync now\">⟳</button>":"")
+    +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSessSync\" title=\"Recreate Drive folders and upload any photo missing from Drive for this session\">&#9729; Save</button>":"")
     +"</div>"
     +"<div class=\"s-hdr-meta\">"
     +(active.project?"<span>&#128209; "+esc(active.project)+"</span>":"")
@@ -879,6 +952,7 @@ function renderContent(){
     $$("expMenu").addEventListener("click",function(e){var f=e.target.dataset.fmt;if(f){$$("expMenu").style.display="none";exportRep(active,f)}});
   }
   var btnSy=$$("btnSync");if(btnSy)btnSy.addEventListener("click",function(){loadFromDrive().then(renderAll)});
+  var btnSS=$$("btnSessSync");if(btnSS)btnSS.addEventListener("click",syncActiveSessionToDrive);
   var fi=$$("filtIn");if(fi)fi.addEventListener("input",function(e){filterTxt=e.target.value;renderContent()});
   if(isOpen){
     var ni=$$("notesIn");ni.value=active.notes||"";autoH(ni);

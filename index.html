@@ -484,27 +484,66 @@ async function uploadTextFile(token,name,content,mime,parentId){
   var r=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"multipart/related; boundary="+bnd},body:body});
   return r.ok?(await r.json()).id:null;
 }
-async function updateFileContent(token,fileId,content,mime){
-  var r=await fetch("https://www.googleapis.com/upload/drive/v3/files/"+fileId+"?uploadType=media",{method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":mime+"; charset=UTF-8"},body:content});
-  return r.ok;
+// Resumable upload: metadata request returns a session URL, then the raw
+// blob is streamed to it directly (no arrayBuffer() — avoids loading a
+// whole video into RAM, which crashes mobile browsers on large files).
+async function driveUploadBlob(token,blob,name,mime,parentId){
+  var meta={name:name};if(parentId)meta.parents=[parentId];
+  try{
+    var initR=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name",{
+      method:"POST",
+      headers:{
+        Authorization:"Bearer "+token,
+        "Content-Type":"application/json; charset=UTF-8",
+        "X-Upload-Content-Type":mime,
+        "X-Upload-Content-Length":String(blob.size)
+      },
+      body:JSON.stringify(meta)
+    });
+    if(!initR.ok)return null;
+    var uploadUrl=initR.headers.get("Location");
+    if(!uploadUrl)return null;
+    var putR=await fetch(uploadUrl,{method:"PUT",headers:{"Content-Type":mime},body:blob});
+    if(!putR.ok)return null;
+    var cr=await putR.json();
+    return{id:cr.id,name:cr.name};
+  }catch(e){return null}
 }
-// Keeps one HTML report per session up to date in its Drive folder, in the
-// background, without ever opening a print dialog or new window.
+// Overwrites both content and name in one request — needed because a
+// session's stored reportFileId may point at a file saved in a previous
+// format (e.g. an old .html report before this was switched to .docx).
+async function driveOverwriteBlob(token,fileId,blob,mime,name){
+  try{
+    var bnd="fsl_o_"+Date.now();
+    var body=new Blob([
+      "--"+bnd+"\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"+JSON.stringify({name:name})+"\r\n--"+bnd+"\r\nContent-Type: "+mime+"\r\n\r\n",
+      blob,
+      "\r\n--"+bnd+"--"
+    ]);
+    var r=await fetch("https://www.googleapis.com/upload/drive/v3/files/"+fileId+"?uploadType=multipart",{method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"multipart/related; boundary="+bnd},body:body});
+    return r.ok;
+  }catch(e){return false}
+}
+// Keeps one DOCX report per session up to date in its Drive folder, in the
+// background, without ever opening a print dialog or new window. DOCX (not
+// HTML) because Google Drive's preview shows raw source for HTML files
+// instead of rendering them.
 async function saveReportToDrive(sessId){
   if(!isLoggedIn)return;
   var sess=sessions.find(function(s){return s.id===sessId});if(!sess)return;
   var token=await ensureToken();if(!token)return;
   try{
-    var html=buildReportHTML(sess,false);
+    var blob=await buildReportDocxBlob(sess);if(!blob)return;
+    var mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    var fname="report_"+sanitize(sess.client)+"_"+(sess.createdAt||now()).slice(0,10)+".docx";
     if(sess.reportFileId){
-      var ok=await updateFileContent(token,sess.reportFileId,html,"text/html");
+      var ok=await driveOverwriteBlob(token,sess.reportFileId,blob,mime,fname);
       if(ok)return;
     }
     var folderId=await getSessionFolder(token,sess);if(!folderId)return;
-    var fname="report_"+sanitize(sess.client)+"_"+(sess.createdAt||now()).slice(0,10)+".html";
-    var id=await uploadTextFile(token,fname,html,"text/html",folderId);
-    if(id){
-      sessions=sessions.map(function(x){return x.id===sessId?Object.assign({},x,{reportFileId:id}):x});
+    var r=await driveUploadBlob(token,blob,fname,mime,folderId);
+    if(r){
+      sessions=sessions.map(function(x){return x.id===sessId?Object.assign({},x,{reportFileId:r.id}):x});
       saveLocal();
     }
   }catch(e){}
@@ -512,29 +551,8 @@ async function saveReportToDrive(sessId){
 async function uploadMedia(sess,file,kind){
   var token=await ensureToken();if(!token)return null;
   var folderId=await getMediaFolder(token,sess,kind);if(!folderId)return null;
-  var meta={name:file.name||("file_"+Date.now()),parents:[folderId]};
-  try{
-    // Resumable upload: metadata request returns a session URL, then the raw
-    // file is streamed to it directly (no arrayBuffer() — avoids loading the
-    // whole video into RAM, which crashes mobile browsers on large files).
-    var initR=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name",{
-      method:"POST",
-      headers:{
-        Authorization:"Bearer "+token,
-        "Content-Type":"application/json; charset=UTF-8",
-        "X-Upload-Content-Type":file.type||"application/octet-stream",
-        "X-Upload-Content-Length":String(file.size)
-      },
-      body:JSON.stringify(meta)
-    });
-    if(!initR.ok)return null;
-    var uploadUrl=initR.headers.get("Location");
-    if(!uploadUrl)return null;
-    var putR=await fetch(uploadUrl,{method:"PUT",headers:{"Content-Type":file.type||"application/octet-stream"},body:file});
-    if(!putR.ok)return null;
-    var cr=await putR.json();
-    return{driveId:cr.id,name:cr.name};
-  }catch(e){return null}
+  var r=await driveUploadBlob(token,file,file.name||("file_"+Date.now()),file.type||"application/octet-stream",folderId);
+  return r?{driveId:r.id,name:r.name}:null;
 }
 function driveStreamUrl(driveId){if(!accessToken||!driveId)return null;return"https://www.googleapis.com/drive/v3/files/"+driveId+"?alt=media&access_token="+encodeURIComponent(accessToken)}
 async function driveRename(driveId,name){
@@ -1204,16 +1222,32 @@ function exportRep(s,fmt){
   else if(fmt==="docx"){exportDOCX(s,base)}
 }
 
-function exportDOCX(s,base){
-  function tryLoad(urls,cb){
-    if(!urls.length){alert("Cannot load DOCX library. Check internet connection.");return}
-    var sc=document.createElement("script");sc.src=urls[0];
-    sc.onload=cb;
-    sc.onerror=function(){tryLoad(urls.slice(1),cb)};
-    document.head.appendChild(sc);
-  }
-  if(!window.docx){tryLoad(["https://unpkg.com/docx@8.5.0/build/index.umd.js","https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"],function(){exportDOCX(s,base)});return}
-  var D=window.docx,tm=TM[s.type]||TM.commissioning,entries=s.entries||[];
+function loadDocxLib(){
+  return new Promise(function(res){
+    if(window.docx){res(window.docx);return}
+    function tryLoad(urls){
+      if(!urls.length){res(null);return}
+      var sc=document.createElement("script");sc.src=urls[0];
+      sc.onload=function(){res(window.docx||null)};
+      sc.onerror=function(){tryLoad(urls.slice(1))};
+      document.head.appendChild(sc);
+    }
+    tryLoad(["https://unpkg.com/docx@8.5.0/build/index.umd.js","https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"]);
+  });
+}
+async function exportDOCX(s,base){
+  var D=await loadDocxLib();
+  if(!D){alert("Cannot load DOCX library. Check internet connection.");return}
+  var doc=buildDocxDocument(D,s);
+  D.Packer.toBlob(doc).then(function(blob){dlBlob(blob,"report_"+base+".docx")}).catch(function(err){alert("DOCX error: "+err.message)});
+}
+// Also used by saveReportToDrive() for the silent background report.
+async function buildReportDocxBlob(s){
+  var D=await loadDocxLib();if(!D)return null;
+  try{return await D.Packer.toBlob(buildDocxDocument(D,s))}catch(e){return null}
+}
+function buildDocxDocument(D,s){
+  var tm=TM[s.type]||TM.commissioning,entries=s.entries||[];
   var errs=entries.filter(function(e){return e.severity==="issue"}).length;
   var warns=entries.filter(function(e){return e.severity==="warning"}).length;
   var oks=entries.filter(function(e){return e.severity==="ok"}).length;
@@ -1255,8 +1289,7 @@ function exportDOCX(s,base){
     new D.Paragraph({spacing:{before:600,after:40},border:{top:{style:D.BorderStyle.SINGLE,size:2,color:"E5E7EB",space:1}},children:[new D.TextRun({text:"Client / Recipient signature: _________________",size:20,font:"Arial"})]}),
     new D.Paragraph({spacing:{before:200},children:[new D.TextRun({text:"ID: "+s.id,size:16,font:"Arial",color:"9CA3AF"})]})
   ]);
-  var doc=new D.Document({styles:{default:{document:{run:{font:"Arial",size:20}}}},sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:1440,right:1440,bottom:1440,left:1440}}},children:children}]});
-  D.Packer.toBlob(doc).then(function(blob){dlBlob(blob,"report_"+base+".docx")}).catch(function(err){alert("DOCX error: "+err.message)});
+  return new D.Document({styles:{default:{document:{run:{font:"Arial",size:20}}}},sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:1440,right:1440,bottom:1440,left:1440}}},children:children}]});
 }
 
 // ── CLOSE DROPDOWNS ───────────────────────────────────────────────────────────

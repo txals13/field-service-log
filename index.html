@@ -188,6 +188,7 @@ textarea{resize:none;line-height:1.4}
     <span class="logo">&#9881; Field Service Log</span>
     <span id="topBadge" style="display:none;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;flex-shrink:1"></span>
     <div style="display:flex;align-items:center;gap:4px;margin-left:auto;flex-shrink:0">
+      <button class="btn-gold btn-sm" id="btnLoginTop" style="display:none" title="Sign in with Google to sync with Drive">Sign in</button>
       <span id="syncSt" style="font-size:11px;color:var(--tx3);font-family:monospace;white-space:nowrap"></span>
       <button class="btn-g btn-sm" id="btnTheme" style="font-size:16px;padding:5px 7px" title="Toggle theme">&#9788;</button>
       <button class="btn-g btn-sm" id="btnImport" title="Import JSON">&#8679; Import</button>
@@ -409,15 +410,23 @@ function loadGIS(){return new Promise(function(res){if(window.google&&window.goo
 async function googleLogin(){
   await loadGIS();
   if(!window.google||!window.google.accounts){alert("Cannot load Google Sign-In. Check internet connection.");return null}
-  return new Promise(function(res){
+  // If the browser blocks the Google popup, requestAccessToken's callback
+  // never fires and this would hang forever — race it against a timeout so
+  // the caller always gets an answer and can show a useful message.
+  var opened=new Promise(function(res){
     var c=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:"https://www.googleapis.com/auth/drive.file",callback:function(r){if(r.error){res(null);return}accessToken=r.access_token;tokenExp=Date.now()+(((r.expires_in||3600)-120)*1000);saveTok();res(accessToken)}});
     c.requestAccessToken({prompt:"consent"});
   });
+  var timeout=new Promise(function(res){setTimeout(function(){res("timeout")},25000)});
+  var result=await Promise.race([opened,timeout]);
+  if(result==="timeout"){alert("Sign-in didn't complete. If a Google pop-up was blocked, allow pop-ups for this site and try again.");return null}
+  return result;
 }
 async function getToken(){
   if(accessToken&&Date.now()<tokenExp)return accessToken;
   var wasLoggedIn=isLoggedIn;
   clearTok();isLoggedIn=false;
+  updateAuthUI();
   if(wasLoggedIn)showAuthExpired();
   return null;
 }
@@ -570,16 +579,33 @@ function hideAuthExpired(){
   authExpired=false;
   $$("authBar").style.display="none";
 }
+// Sign-in is only reachable from the empty-state screen when there are no
+// local sessions yet, so this button stays visible in the topbar any time
+// we're not logged in — otherwise a device with existing local data (e.g.
+// imported, or used before ever signing in) has no way to connect Drive.
+function updateAuthUI(){
+  var b=$$("btnLoginTop");if(b)b.style.display=isLoggedIn?"none":"";
+}
+async function finishLogin(){
+  isLoggedIn=true;hideAuthExpired();updateAuthUI();
+  await loadFromDrive();
+  await saveToDrive(); // push any sessions created locally before signing in
+  renderAll();
+  scheduleSync();
+}
 $$("btnReconnect").addEventListener("click",async function(){
   var btn=$$("btnReconnect");btn.disabled=true;btn.textContent="Connecting...";
   var t=await googleLogin();
   btn.disabled=false;btn.textContent="Reconnect";
-  if(!t){alert("Could not reconnect. Try again.");return}
-  isLoggedIn=true;hideAuthExpired();
-  await loadFromDrive();
-  if(isDirty)await saveToDrive();
-  renderAll();
-  scheduleSync();
+  if(!t)return;
+  await finishLogin();
+});
+$$("btnLoginTop").addEventListener("click",async function(){
+  var btn=$$("btnLoginTop");btn.disabled=true;btn.textContent="Connecting...";
+  var t=await googleLogin();
+  btn.disabled=false;btn.textContent="Sign in";
+  if(!t)return;
+  await finishLogin();
 });
 
 // ── THEME ────────────────────────────────────────────────────────────────────
@@ -655,8 +681,8 @@ function renderContent(){
       +"<button class=\"btn-sm btn-g\" id=\"btnLocal\">Continue without Drive (local only)</button>"
       +"<button class=\"btn-sm\" id=\"btnImportE\">↑ Import JSON file</button>"
       +"</div>";
-    $$("btnLogin").addEventListener("click",async function(){var t=await googleLogin();if(t){isLoggedIn=true;await loadFromDrive();renderAll();scheduleSync()}});
-    $$("btnLocal").addEventListener("click",function(){isLoggedIn=false;renderAll()});
+    $$("btnLogin").addEventListener("click",async function(){var t=await googleLogin();if(t)await finishLogin()});
+    $$("btnLocal").addEventListener("click",function(){isLoggedIn=false;updateAuthUI();renderAll()});
     $$("btnImportE").addEventListener("click",function(){$$("importFile").click()});
     return;
   }
@@ -1212,6 +1238,7 @@ if(loadTok()&&accessToken&&Date.now()<tokenExp){
 } else {
   renderAll();
 }
+updateAuthUI();
 
 })();
 </script>

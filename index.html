@@ -509,45 +509,6 @@ async function driveUploadBlob(token,blob,name,mime,parentId){
     return{id:cr.id,name:cr.name};
   }catch(e){return null}
 }
-// Overwrites both content and name in one request — needed because a
-// session's stored reportFileId may point at a file saved in a previous
-// format (e.g. an old .html report before this was switched to .docx).
-async function driveOverwriteBlob(token,fileId,blob,mime,name){
-  try{
-    var bnd="fsl_o_"+Date.now();
-    var body=new Blob([
-      "--"+bnd+"\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"+JSON.stringify({name:name})+"\r\n--"+bnd+"\r\nContent-Type: "+mime+"\r\n\r\n",
-      blob,
-      "\r\n--"+bnd+"--"
-    ]);
-    var r=await fetch("https://www.googleapis.com/upload/drive/v3/files/"+fileId+"?uploadType=multipart",{method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"multipart/related; boundary="+bnd},body:body});
-    return r.ok;
-  }catch(e){return false}
-}
-// Keeps one DOCX report per session up to date in its Drive folder, in the
-// background, without ever opening a print dialog or new window. DOCX (not
-// HTML) because Google Drive's preview shows raw source for HTML files
-// instead of rendering them.
-async function saveReportToDrive(sessId){
-  if(!isLoggedIn)return;
-  var sess=sessions.find(function(s){return s.id===sessId});if(!sess)return;
-  var token=await ensureToken();if(!token)return;
-  try{
-    var blob=await buildReportDocxBlob(sess);if(!blob)return;
-    var mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-    var fname="report_"+sanitize(sess.client)+"_"+(sess.createdAt||now()).slice(0,10)+".docx";
-    if(sess.reportFileId){
-      var ok=await driveOverwriteBlob(token,sess.reportFileId,blob,mime,fname);
-      if(ok)return;
-    }
-    var folderId=await getSessionFolder(token,sess);if(!folderId)return;
-    var r=await driveUploadBlob(token,blob,fname,mime,folderId);
-    if(r){
-      sessions=sessions.map(function(x){return x.id===sessId?Object.assign({},x,{reportFileId:r.id}):x});
-      saveLocal();
-    }
-  }catch(e){}
-}
 async function uploadMedia(sess,file,kind){
   var token=await ensureToken();if(!token)return null;
   var folderId=await getMediaFolder(token,sess,kind);if(!folderId)return null;
@@ -1024,7 +985,6 @@ function addEntry(){
     sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{entries:(s.entries||[]).concat([entry])}):s});
     entIn.value="";var ti=$$("tagIn");if(ti)ti.value="";pImgs=[];
     scheduleSave();renderAll();
-    saveReportToDrive(aid); // background HTML report snapshot, not awaited
   }
   tryAdd();
 }
@@ -1240,11 +1200,6 @@ async function exportDOCX(s,base){
   if(!D){alert("Cannot load DOCX library. Check internet connection.");return}
   var doc=buildDocxDocument(D,s);
   D.Packer.toBlob(doc).then(function(blob){dlBlob(blob,"report_"+base+".docx")}).catch(function(err){alert("DOCX error: "+err.message)});
-}
-// Also used by saveReportToDrive() for the silent background report.
-async function buildReportDocxBlob(s){
-  var D=await loadDocxLib();if(!D)return null;
-  try{return await D.Packer.toBlob(buildDocxDocument(D,s))}catch(e){return null}
 }
 function buildDocxDocument(D,s){
   var tm=TM[s.type]||TM.commissioning,entries=s.entries||[];

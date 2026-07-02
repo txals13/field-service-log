@@ -58,6 +58,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-seri
 .sitem-del{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--tx3);font-size:11px;padding:2px 5px;border-radius:4px;cursor:pointer;opacity:0}
 .sitem:hover .sitem-del,.sitem.active .sitem-del{opacity:1}
 @media(max-width:640px){.sitem-del{opacity:1}}
+.sitem-hit{font-size:11px;color:var(--tx2);padding:4px 10px 4px 24px;margin-bottom:2px;cursor:pointer;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sitem-hit:hover{background:var(--bg2)}
+.sitem-hit-more{font-size:10px;color:var(--tx3);padding:2px 10px 8px 24px}
 /* content */
 .content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .overlay{position:absolute;inset:0;z-index:25;background:rgba(0,0,0,.5);display:none}
@@ -204,6 +207,9 @@ textarea{resize:none;line-height:1.4}
         <span class="side-label" id="sideCount">Sessions</span>
         <button class="btn-g btn-sm" id="btnSideX">&#10005;</button>
       </div>
+      <div style="padding:6px 10px;border-bottom:1px solid var(--br);flex-shrink:0">
+        <input type="text" id="sessFiltIn" placeholder="Filter sessions..." style="font-size:12px;padding:5px 8px">
+      </div>
       <div class="s-list" id="sList"></div>
     </div>
     <div class="overlay" id="overlay"></div>
@@ -312,7 +318,7 @@ var SM = {
 };
 
 // ── STATE ───────────────────────────────────────────────────────────────────
-var sessions=[], aid=null, pImgs=[], filterTxt="";
+var sessions=[], aid=null, pImgs=[], filterTxt="", sessFilterTxt="";
 var pExif=0, pExifEdit=0;
 var accessToken=null, tokenExp=0, driveFileId=null, rootFolderId=null;
 var isLoggedIn=false, saveTimer=null, isDirty=false;
@@ -783,27 +789,67 @@ $$("btnSide").addEventListener("click",function(){
   else $$("sidebar").classList.toggle("collapsed");
 });
 $$("btnSideX").addEventListener("click",closeSide);
+$$("sessFiltIn").addEventListener("input",function(e){sessFilterTxt=e.target.value;renderSidebar()});
 $$("overlay").addEventListener("click",closeSide);
 
+// applyFilter: filterTxt to carry into the session's own log view when
+// opened from here — used by search results so picking a session that
+// matched by its entries lands you already filtered to those entries.
+function buildSitem(s,applyFilter){
+  var tm=TM[s.type]||TM.commissioning;
+  var issues=(s.entries||[]).filter(function(e){return e.severity==="issue"}).length;
+  var div=document.createElement("div");
+  div.className="sitem"+(s.id===aid?" active":"");
+  div.innerHTML="<span class=\"sitem-badge\" style=\"background:"+tm.bg+";color:"+tm.tx+"\">"+tm.abbr+"</span>"
+    +(issues?"<span style=\"float:right;font-size:10px;font-family:monospace;background:var(--redbg);color:var(--red);padding:1px 5px;border-radius:20px\">"+issues+" !</span>":"")
+    +"<div class=\"sitem-name\">"+esc(s.client||"—")+"</div>"
+    +"<div class=\"sitem-sub\">"+esc(s.machine||"")+"</div>"
+    +"<div class=\"sitem-sub\" style=\"margin-top:2px\">"+(s.status==="open"?"🟢 Open":"🔴 Closed")+" · "+(s.entries||[]).length+" entries</div>"
+    +"<button class=\"sitem-del\" title=\"Delete\">✕</button>";
+  div.addEventListener("click",function(){aid=s.id;filterTxt=applyFilter||"";if(mob())closeSide();renderAll()});
+  div.querySelector(".sitem-del").addEventListener("click",function(e){e.stopPropagation();openDelModal(s)});
+  return div;
+}
 function renderSidebar(){
-  $$("sideCount").textContent="Sessions ("+sessions.length+")";
   $$("btnSideX").style.display=mob()?"block":"none";
   var list=$$("sList");list.innerHTML="";
-  if(!sessions.length){list.innerHTML="<div style=\"font-size:12px;color:var(--tx3);padding:20px 10px;text-align:center\">No sessions yet.<br>Create a new one.</div>";return}
-  sessions.forEach(function(s){
-    var tm=TM[s.type]||TM.commissioning;
-    var issues=(s.entries||[]).filter(function(e){return e.severity==="issue"}).length;
-    var div=document.createElement("div");
-    div.className="sitem"+(s.id===aid?" active":"");
-    div.innerHTML="<span class=\"sitem-badge\" style=\"background:"+tm.bg+";color:"+tm.tx+"\">"+tm.abbr+"</span>"
-      +(issues?"<span style=\"float:right;font-size:10px;font-family:monospace;background:var(--redbg);color:var(--red);padding:1px 5px;border-radius:20px\">"+issues+" !</span>":"")
-      +"<div class=\"sitem-name\">"+esc(s.client||"—")+"</div>"
-      +"<div class=\"sitem-sub\">"+esc(s.machine||"")+"</div>"
-      +"<div class=\"sitem-sub\" style=\"margin-top:2px\">"+(s.status==="open"?"🟢 Open":"🔴 Closed")+" · "+(s.entries||[]).length+" entries</div>"
-      +"<button class=\"sitem-del\" title=\"Delete\">✕</button>";
-    div.addEventListener("click",function(){aid=s.id;if(mob())closeSide();renderAll()});
-    div.querySelector(".sitem-del").addEventListener("click",function(e){e.stopPropagation();openDelModal(s)});
-    list.appendChild(div);
+  if(!sessions.length){$$("sideCount").textContent="Sessions (0)";list.innerHTML="<div style=\"font-size:12px;color:var(--tx3);padding:20px 10px;text-align:center\">No sessions yet.<br>Create a new one.</div>";return}
+
+  var q=sessFilterTxt.trim().toLowerCase();
+  if(!q){
+    $$("sideCount").textContent="Sessions ("+sessions.length+")";
+    sessions.forEach(function(s){list.appendChild(buildSitem(s))});
+    return;
+  }
+
+  // Search mode: match session details, and also search every entry's text
+  // and tag across all sessions — matching entries show up as clickable
+  // results, not just the session they belong to.
+  var results=sessions.map(function(s){
+    var sessMatch=[s.client,s.machine,s.project,s.tech,s.location].some(function(v){return(v||"").toLowerCase().includes(q)});
+    var hits=(s.entries||[]).filter(function(e){return(e.text||"").toLowerCase().includes(q)||(e.tag||"").toLowerCase().includes(q)});
+    return{s:s,sessMatch:sessMatch,hits:hits};
+  }).filter(function(r){return r.sessMatch||r.hits.length});
+
+  $$("sideCount").textContent="Sessions ("+results.length+"/"+sessions.length+")";
+  if(!results.length){list.innerHTML="<div style=\"font-size:12px;color:var(--tx3);padding:20px 10px;text-align:center\">No matches for \""+esc(sessFilterTxt)+"\".</div>";return}
+
+  results.forEach(function(r){
+    list.appendChild(buildSitem(r.s,r.hits.length?sessFilterTxt:""));
+    r.hits.slice(0,5).forEach(function(e){
+      var sm=SM[e.severity]||SM.info;
+      var hit=document.createElement("div");
+      hit.className="sitem-hit";
+      hit.innerHTML="<span style=\"color:"+sm.dc+"\">"+sm.dot+"</span> "+esc((e.text||"").slice(0,60))+(e.tag?" <span class=\"log-tag\" style=\"font-size:9px;vertical-align:1px\">"+esc(e.tag)+"</span>":"");
+      hit.addEventListener("click",function(){aid=r.s.id;filterTxt=sessFilterTxt;if(mob())closeSide();renderAll()});
+      list.appendChild(hit);
+    });
+    if(r.hits.length>5){
+      var more=document.createElement("div");
+      more.className="sitem-hit-more";
+      more.textContent="+"+(r.hits.length-5)+" more match(es)";
+      list.appendChild(more);
+    }
   });
 }
 

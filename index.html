@@ -808,6 +808,80 @@ function renderSidebar(){
 }
 
 // ── MAIN CONTENT ─────────────────────────────────────────────────────────────
+// Rebuilds only the log entries + the counter next to the filter box, so
+// typing in #filtIn never touches (and never steals focus from) itself —
+// a full renderContent() replaces the whole pane's innerHTML, including
+// the input the user is typing into.
+function renderLogArea(){
+  var active=sessions.find(function(s){return s.id===aid});if(!active)return;
+  var entries=active.entries||[];
+  var filtered=filterTxt?entries.filter(function(e){return(e.text||"").toLowerCase().includes(filterTxt.toLowerCase())||(e.tag||"").toLowerCase().includes(filterTxt.toLowerCase())}):entries;
+  var isOpen=active.status==="open";
+  var ec=$$("entCount");if(ec)ec.textContent=(filterTxt?filtered.length+"/":"")+entries.length+" entries";
+  var logArea=$$("logArea");if(!logArea)return;
+  logArea.innerHTML="";
+  if(!filtered.length){logArea.innerHTML="<div class=\"no-ent\">"+(filterTxt?"No results.":"— No entries yet. Log the first action or incident. —")+"</div>"}
+  else{
+    filtered.forEach(function(e){
+      var sm=SM[e.severity]||SM.info;
+      var div=document.createElement("div");div.className="log-entry sev-"+e.severity;
+      var imgs="";
+      if(e.images&&e.images.length){
+        imgs="<div class=\"thumbs\">";
+        e.images.forEach(function(img,i){
+          var isVid=img.type==="video",src=isVid?(img.poster||""):img.data;
+          imgs+="<div class=\"thumb\" data-idx=\""+i+"\" tabindex=\"0\">"
+            +(src?"<img src=\""+src+"\" alt=\"Attachment "+(i+1)+"\" loading=\"lazy\">":"<div class=\"thumb-ph\">"+(isVid?"🎬":"🖼")+"</div>")
+            +(isVid?"<div class=\"thumb-play\">▶</div>":"")
+            +upBadge(img)
+            +"</div>";
+        });
+        imgs+="</div>";
+      }
+      div.innerHTML="<span class=\"log-dot\" style=\"color:"+sm.dc+"\">"+sm.dot+"</span>"
+        +"<div style=\"flex:1;min-width:0\">"
+        +"<div class=\"log-meta\">"
+        +"<span class=\"log-ts\">"+(e.tsFromPhoto?"📷 ":"")+fts(e.ts)+"</span>"
+        +"<span class=\"log-sev\" style=\"background:"+sm.bg+";color:"+sm.tx+"\">"+sm.label+"</span>"
+        +(e.tag?"<span class=\"log-tag\">"+esc(e.tag)+"</span>":"")
+        +(e.editedAt?"<span class=\"log-edited\">edited</span>":"")
+        +"</div>"
+        +"<div class=\"log-text\">"+esc(e.text||"")+"</div>"
+        +imgs+"</div>"
+        +(isOpen?"<div class=\"log-actions\"><button class=\"log-act\" data-act=\"edit\" title=\"Edit\">✎</button><button class=\"log-act\" data-act=\"del\" title=\"Delete\">✕</button></div>":"");
+      // thumb clicks
+      div.querySelectorAll(".thumb").forEach(function(t){
+        var up=t.querySelector(".thumb-up.err");
+        if(up)up.addEventListener("click",function(ev){
+          ev.stopPropagation();
+          var img=(e.images||[])[parseInt(t.dataset.idx)];if(!img)return;
+          var file=fileCache.get(img);
+          if(!file){alert("Can't retry — the original file is no longer available in this session. Remove and re-add it via Edit.");return}
+          img.uploadStatus="loading";renderLogArea();
+          uploadMedia(active,file,img.type==="video"?"videos":"photos").then(function(r){
+            if(r){img.driveId=r.driveId;img.name=r.name;img.uploadStatus="ok"}else img.uploadStatus="err";
+            scheduleSave();renderLogArea();
+          });
+        });
+        t.addEventListener("click",function(){
+          var img=(e.images||[])[parseInt(t.dataset.idx)];if(!img)return;
+          if(img.type==="video"){
+            var url=img.driveId?driveStreamUrl(img.driveId):null;
+            if(!url){alert(img.uploadStatus==="err"?"Video upload failed. Tap the ! badge to retry.":"Video stored on Drive. Sign in to play it.");return}
+            openMedia(url,"video",img.name);
+          } else openMedia(img.data,"image",img.name);
+        });
+      });
+      if(isOpen){
+        var ea=div.querySelector("[data-act=edit]"),da=div.querySelector("[data-act=del]");
+        if(ea)ea.addEventListener("click",function(){openEdit(e.id)});
+        if(da)da.addEventListener("click",function(){delEntry(e.id)});
+      }
+      logArea.appendChild(div);
+    });
+    requestAnimationFrame(function(){logArea.scrollTop=logArea.scrollHeight});
+  }
+}
 function renderContent(){
   var mc=$$("content");
   var active=sessions.find(function(s){return s.id===aid});
@@ -882,7 +956,7 @@ function renderContent(){
     +"<div class=\"filter-row\">"
     +"<span style=\"color:var(--tx3)\">🔍</span>"
     +"<input type=\"text\" id=\"filtIn\" placeholder=\"Filter log...\" style=\"max-width:180px;font-size:12px;padding:5px 8px\" value=\""+esc(filterTxt)+"\">"
-    +"<span style=\"font-size:11px;color:var(--tx3);font-family:monospace\">"+(filterTxt?filtered.length+"/":"")+entries.length+" entries</span>"
+    +"<span id=\"entCount\" style=\"font-size:11px;color:var(--tx3);font-family:monospace\">"+(filterTxt?filtered.length+"/":"")+entries.length+" entries</span>"
     +"</div>"
     // log
     +"<div class=\"log-area\" id=\"logArea\"></div>"
@@ -913,69 +987,7 @@ function renderContent(){
     +"</div>"
     +"</div>";
 
-  // Render log entries
-  var logArea=$$("logArea");logArea.innerHTML="";
-  if(!filtered.length){logArea.innerHTML="<div class=\"no-ent\">"+(filterTxt?"No results.":"— No entries yet. Log the first action or incident. —")+"</div>"}
-  else{
-    filtered.forEach(function(e){
-      var sm=SM[e.severity]||SM.info;
-      var div=document.createElement("div");div.className="log-entry sev-"+e.severity;
-      var imgs="";
-      if(e.images&&e.images.length){
-        imgs="<div class=\"thumbs\">";
-        e.images.forEach(function(img,i){
-          var isVid=img.type==="video",src=isVid?(img.poster||""):img.data;
-          imgs+="<div class=\"thumb\" data-idx=\""+i+"\" tabindex=\"0\">"
-            +(src?"<img src=\""+src+"\" alt=\"Attachment "+(i+1)+"\" loading=\"lazy\">":"<div class=\"thumb-ph\">"+(isVid?"🎬":"🖼")+"</div>")
-            +(isVid?"<div class=\"thumb-play\">▶</div>":"")
-            +upBadge(img)
-            +"</div>";
-        });
-        imgs+="</div>";
-      }
-      div.innerHTML="<span class=\"log-dot\" style=\"color:"+sm.dc+"\">"+sm.dot+"</span>"
-        +"<div style=\"flex:1;min-width:0\">"
-        +"<div class=\"log-meta\">"
-        +"<span class=\"log-ts\">"+(e.tsFromPhoto?"📷 ":"")+fts(e.ts)+"</span>"
-        +"<span class=\"log-sev\" style=\"background:"+sm.bg+";color:"+sm.tx+"\">"+sm.label+"</span>"
-        +(e.tag?"<span class=\"log-tag\">"+esc(e.tag)+"</span>":"")
-        +(e.editedAt?"<span class=\"log-edited\">edited</span>":"")
-        +"</div>"
-        +"<div class=\"log-text\">"+esc(e.text||"")+"</div>"
-        +imgs+"</div>"
-        +(isOpen?"<div class=\"log-actions\"><button class=\"log-act\" data-act=\"edit\" title=\"Edit\">✎</button><button class=\"log-act\" data-act=\"del\" title=\"Delete\">✕</button></div>":"");
-      // thumb clicks
-      div.querySelectorAll(".thumb").forEach(function(t){
-        var up=t.querySelector(".thumb-up.err");
-        if(up)up.addEventListener("click",function(ev){
-          ev.stopPropagation();
-          var img=(e.images||[])[parseInt(t.dataset.idx)];if(!img)return;
-          var file=fileCache.get(img);
-          if(!file){alert("Can't retry — the original file is no longer available in this session. Remove and re-add it via Edit.");return}
-          img.uploadStatus="loading";renderContent();
-          uploadMedia(active,file,img.type==="video"?"videos":"photos").then(function(r){
-            if(r){img.driveId=r.driveId;img.name=r.name;img.uploadStatus="ok"}else img.uploadStatus="err";
-            scheduleSave();renderContent();
-          });
-        });
-        t.addEventListener("click",function(){
-          var img=(e.images||[])[parseInt(t.dataset.idx)];if(!img)return;
-          if(img.type==="video"){
-            var url=img.driveId?driveStreamUrl(img.driveId):null;
-            if(!url){alert(img.uploadStatus==="err"?"Video upload failed. Tap the ! badge to retry.":"Video stored on Drive. Sign in to play it.");return}
-            openMedia(url,"video",img.name);
-          } else openMedia(img.data,"image",img.name);
-        });
-      });
-      if(isOpen){
-        var ea=div.querySelector("[data-act=edit]"),da=div.querySelector("[data-act=del]");
-        if(ea)ea.addEventListener("click",function(){openEdit(e.id)});
-        if(da)da.addEventListener("click",function(){delEntry(e.id)});
-      }
-      logArea.appendChild(div);
-    });
-    requestAnimationFrame(function(){logArea.scrollTop=logArea.scrollHeight});
-  }
+  renderLogArea();
 
   // Wire up controls
   var btnEd=$$("btnEditSess");if(btnEd)btnEd.addEventListener("click",function(){openNewModal(active)});
@@ -987,7 +999,7 @@ function renderContent(){
   }
   var btnSy=$$("btnSync");if(btnSy)btnSy.addEventListener("click",function(){loadFromDrive().then(renderAll)});
   var btnSS=$$("btnSessSync");if(btnSS)btnSS.addEventListener("click",syncActiveSessionToDrive);
-  var fi=$$("filtIn");if(fi)fi.addEventListener("input",function(e){filterTxt=e.target.value;renderContent()});
+  var fi=$$("filtIn");if(fi)fi.addEventListener("input",function(e){filterTxt=e.target.value;renderLogArea()});
   if(isOpen){
     var ni=$$("notesIn");ni.value=active.notes||"";autoH(ni);
     rThumbs();

@@ -100,6 +100,19 @@ mark{background:var(--goldbg);color:var(--goldtx);padding:0 1px;border-radius:2p
 .thumb-up.loading{background:var(--blue);animation:spin .8s linear infinite}
 .thumb-up.err{background:var(--red)}
 .thumb-up.ok{background:var(--green)}
+/* audio / voice notes */
+.audio-chip{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--br2);border-radius:8px;padding:6px 9px;width:100%;position:relative;font-size:12px;flex-wrap:wrap}
+.ac-play{flex-shrink:0;width:28px;height:28px;border-radius:50%;border:none;background:var(--gold);color:#000;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.ac-dur{font-family:monospace;color:var(--tx2);flex-shrink:0}
+.ac-tr{flex:1 1 100%;color:var(--tx1);line-height:1.4;min-width:120px;word-break:break-word}
+.ac-tr.empty{color:var(--tx3);font-style:italic}
+.ac-btn{flex-shrink:0;background:none;border:1px solid var(--br2);color:var(--tx2);font-size:11px;padding:3px 8px;border-radius:6px;cursor:pointer}
+.ac-btn:disabled{opacity:.5;cursor:default}
+.ac-del{flex-shrink:0;background:none;border:none;color:var(--tx3);font-size:12px;cursor:pointer;padding:2px 5px}
+.ac-badge{flex-shrink:0;font-size:10px}
+.rec-live{display:flex;align-items:center;gap:8px;background:var(--redbg);border:1px solid rgba(239,68,68,.4);border-radius:8px;padding:6px 10px;width:100%;font-size:12px;color:var(--red)}
+.rec-dot{width:10px;height:10px;border-radius:50%;background:var(--red);animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 /* input bar */
 .input-bar{border-top:1px solid var(--br);padding:8px 12px;background:var(--bg1);flex-shrink:0;display:flex;flex-direction:column;gap:6px}
 .input-row{display:flex;gap:6px;align-items:flex-end}
@@ -254,6 +267,7 @@ textarea{resize:none;line-height:1.4}
         <div id="eThumbs" class="thumbs"></div>
         <div id="eFileNames" class="fnames"></div>
         <button class="btn-sm" id="eAddPhoto" style="margin-top:6px">&#128247; Add photo / video</button>
+        <button class="btn-sm" id="eRec" title="Record voice note" style="margin-top:6px">&#127897; Record voice note</button>
         <input type="file" id="eFileIn" accept="image/*,video/*" multiple style="display:none">
       </div>
       <div class="modal-actions">
@@ -325,7 +339,11 @@ var accessToken=null, tokenExp=0, driveFileId=null, rootFolderId=null;
 var isLoggedIn=false, saveTimer=null, isDirty=false;
 var editingId=null, eImgs=[], pendingDel=null, pendingDelFname=null, dInst=null;
 var authExpired=false, syncStarted=false;
-var fileCache=new WeakMap(); // img object -> raw File, kept in memory only, for upload retry
+var fileCache=new WeakMap(); // img object -> raw File/Blob, kept in memory only, for upload retry
+// Voice-note recording + on-device transcription state
+var mediaRec=null, recChunks=[], recTimer=null, recSeconds=0, recIsEdit=false, recStream=null;
+var curAudio=null, curAudioImg=null; // single shared <audio> so only one note plays at a time
+var whisperWorker=null, whisperJobId=0, whisperCbs={};
 
 // ── UTILS ───────────────────────────────────────────────────────────────────
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
@@ -351,7 +369,8 @@ function entryMatches(e,rawQuery){
     ||(e.tag||"").toLowerCase().includes(q)
     ||(e.severity||"").toLowerCase().includes(q)
     ||sm.label.toLowerCase().includes(q)
-    ||fts(e.ts).toLowerCase().includes(q); // "10/03/25 15:30:00" — same format shown on screen
+    ||fts(e.ts).toLowerCase().includes(q) // "10/03/25 15:30:00" — same format shown on screen
+    ||(e.images||[]).some(function(im){return im.transcript&&im.transcript.toLowerCase().includes(q)});
 }
 function $$(id){return document.getElementById(id)}
 function autoH(ta){if(!ta)return;ta.style.height="auto";ta.style.height=Math.min(ta.scrollHeight,200)+"px"}
@@ -520,7 +539,7 @@ async function getMediaFolder(token,sess,kind){
 async function ensureSessionFolders(sessId){
   var sess=sessions.find(function(s){return s.id===sessId});if(!sess)return;
   var token=await ensureToken();if(!token)return;
-  try{await getMediaFolder(token,sess,"photos");await getMediaFolder(token,sess,"videos")}catch(e){}
+  try{await getMediaFolder(token,sess,"photos");await getMediaFolder(token,sess,"videos");await getMediaFolder(token,sess,"audio")}catch(e){}
 }
 function dataUrlToBlob(dataUrl){
   try{
@@ -561,8 +580,12 @@ async function syncSessionToDrive(token,sess){
       if(img.type==="video"){if(!img.driveId)res.missingVideos++;continue}
       if(img.driveId||!img.data)continue;
       var blob=dataUrlToBlob(img.data);if(!blob)continue;
-      var photosId=folderId?await driveFolder(token,"photos",folderId):null;if(!photosId)continue;
-      var r=await driveUploadBlob(token,blob,img.name||("photo_"+uid()+".jpg"),blob.type||"image/jpeg",photosId);
+      var isAudio=img.type==="audio";
+      var kind=isAudio?"audio":"photos";
+      var kindId=folderId?await driveFolder(token,kind,folderId):null;if(!kindId)continue;
+      var defName=isAudio?("voice_"+uid()+".webm"):("photo_"+uid()+".jpg");
+      var defMime=isAudio?(blob.type||"audio/webm"):(blob.type||"image/jpeg");
+      var r=await driveUploadBlob(token,blob,img.name||defName,defMime,kindId);
       if(r){imgs[k]=Object.assign({},img,{driveId:r.id,name:r.name});entryChanged=true;res.uploaded++}
     }
     if(entryChanged){entries[j]=Object.assign({},e,{images:imgs});changed=true}
@@ -576,7 +599,7 @@ async function syncSessionToDrive(token,sess){
   return res;
 }
 function syncSummary(res,n){
-  return res.uploaded+" photo(s) uploaded"+(n?" across "+n+" session(s)":"")+"."
+  return res.uploaded+" file(s) (photos / voice notes) uploaded"+(n?" across "+n+" session(s)":"")+"."
     +(res.missingVideos?"\n"+res.missingVideos+" video(s) could not be recovered (the original file was never stored, only its thumbnail).":"");
 }
 async function syncActiveSessionToDrive(){
@@ -726,7 +749,7 @@ async function saveToDrive(){
 }
 function scheduleSave(){isDirty=true;saveLocal();if(saveTimer)clearTimeout(saveTimer);saveTimer=setTimeout(function(){if(isDirty&&isLoggedIn)saveToDrive()},2000)}
 function scheduleSync(){if(syncStarted)return;syncStarted=true;setInterval(function(){if(isLoggedIn&&!isDirty&&!hasUnsaved())loadFromDrive().then(renderAll)},30000)}
-function hasUnsaved(){var e=$$("entIn");if(e&&e.value.trim())return true;if(pImgs.length)return true;if(editingId)return true;return false}
+function hasUnsaved(){if(mediaRec)return true;var e=$$("entIn");if(e&&e.value.trim())return true;if(pImgs.length)return true;if(editingId)return true;return false}
 function setSyncSt(state,msg){
   var bar=$$("syncBar"),st=$$("syncSt");
   if(state==="loading"){bar.style.display="flex";$$("syncMsg").textContent=msg;st.innerHTML="<span class=\"spinner\"></span>"}
@@ -799,7 +822,7 @@ $$("btnInstX").addEventListener("click",function(){$$("instBar").style.display="
 
 // ── SERVICE WORKER ───────────────────────────────────────────────────────────
 if("serviceWorker" in navigator){
-  var sw="self.addEventListener(\'install\',function(){self.skipWaiting()});self.addEventListener(\'activate\',function(e){self.clients.claim()});self.addEventListener(\'fetch\',function(e){if(/googleapis|accounts\\.google\\.com|unpkg\\.com|jsdelivr\\.net|cdnjs/.test(e.request.url))return;e.respondWith(fetch(e.request).catch(function(){return caches.match(e.request)}))});";
+  var sw="self.addEventListener(\'install\',function(){self.skipWaiting()});self.addEventListener(\'activate\',function(e){self.clients.claim()});self.addEventListener(\'fetch\',function(e){if(/googleapis|accounts\\.google\\.com|unpkg\\.com|jsdelivr\\.net|cdnjs|huggingface\\.co|hf\\.co|cdn-lfs/.test(e.request.url))return;e.respondWith(fetch(e.request).catch(function(){return caches.match(e.request)}))});";
   navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:"application/javascript"})),{scope:"./"}).catch(function(){});
 }
 
@@ -894,9 +917,11 @@ function renderLogArea(){
       var sm=SM[e.severity]||SM.info;
       var div=document.createElement("div");div.className="log-entry sev-"+e.severity;
       var imgs="";
-      if(e.images&&e.images.length){
+      var nonAudio=(e.images||[]).filter(function(im){return im.type!=="audio"});
+      if(nonAudio.length){
         imgs="<div class=\"thumbs\">";
         e.images.forEach(function(img,i){
+          if(img.type==="audio")return;
           var isVid=img.type==="video",src=isVid?(img.poster||""):img.data;
           imgs+="<div class=\"thumb\" data-idx=\""+i+"\" tabindex=\"0\">"
             +(src?"<img src=\""+src+"\" alt=\"Attachment "+(i+1)+"\" loading=\"lazy\">":"<div class=\"thumb-ph\">"+(isVid?"🎬":"🖼")+"</div>")
@@ -907,7 +932,7 @@ function renderLogArea(){
         imgs+="</div>";
       }
       div.innerHTML="<span class=\"log-dot\" style=\"color:"+sm.dc+"\">"+sm.dot+"</span>"
-        +"<div style=\"flex:1;min-width:0\">"
+        +"<div class=\"log-body\" style=\"flex:1;min-width:0\">"
         +"<div class=\"log-meta\">"
         +"<span class=\"log-ts\">"+(e.tsFromPhoto?"📷 ":"")+highlightText(fts(e.ts),filterTxt)+"</span>"
         +"<span class=\"log-sev\" style=\"background:"+sm.bg+";color:"+sm.tx+"\">"+highlightText(sm.label,filterTxt)+"</span>"
@@ -940,6 +965,14 @@ function renderLogArea(){
           } else openMedia(img.data,"image",img.name);
         });
       });
+      // audio voice-note chips (appended as elements — chips need real handlers)
+      var audioAtt=(e.images||[]).filter(function(im){return im.type==="audio"});
+      if(audioAtt.length){
+        var body=div.querySelector(".log-body");
+        var ac=document.createElement("div");ac.className="thumbs";
+        audioAtt.forEach(function(im){ac.appendChild(audioChipEl(im,{editable:false,rerender:renderLogArea}))});
+        body.appendChild(ac);
+      }
       if(isOpen){
         var ea=div.querySelector("[data-act=edit]"),da=div.querySelector("[data-act=del]");
         if(ea)ea.addEventListener("click",function(){openEdit(e.id)});
@@ -1041,6 +1074,7 @@ function renderContent(){
         +"<div class=\"input-ctrl\">"
         +"<button class=\"btn-gold btn-sm\" id=\"btnAdd\">↵ Add</button>"
         +"<button class=\"btn-sm\" id=\"btnPhoto\">📷</button>"
+        +"<button class=\"btn-sm\" id=\"btnRec\" title=\"Record voice note\">🎙</button>"
         +"<input type=\"file\" id=\"fileIn\" accept=\"image/*,video/*\" multiple style=\"display:none\">"
         +"</div></div>"
         +"<textarea id=\"notesIn\" class=\"inp-notes\" placeholder=\"General notes for this session...\"></textarea>"
@@ -1076,6 +1110,7 @@ function renderContent(){
     ni.addEventListener("input",function(e){autoH(e.target);sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{notes:e.target.value}):s});scheduleSave()});
     $$("btnPhoto").addEventListener("click",function(){$$("fileIn").click()});
     $$("fileIn").addEventListener("change",function(e){handleFiles(e,false)});
+    $$("btnRec").addEventListener("click",function(){if(mediaRec&&!recIsEdit)stopRec();else if(!mediaRec)startRec(false)});
   }
 }
 
@@ -1101,6 +1136,10 @@ function retryUpload(img,isEdit){
 function rThumbs(){
   var c=$$("pThumbs");if(!c)return;c.innerHTML="";
   pImgs.forEach(function(img,i){
+    if(img.type==="audio"){
+      c.appendChild(audioChipEl(img,{editable:true,isEdit:false,textTargetId:"entIn",rerender:rThumbs,onDelete:function(){stopCurAudio();pImgs=pImgs.filter(function(_,j){return j!==i});rThumbs()}}));
+      return;
+    }
     var isVid=img.type==="video",src=isVid?(img.poster||""):img.data;
     var d=document.createElement("div");d.className="thumb";
     d.innerHTML=(src?"<img src=\""+src+"\" alt=\"\">":"<div class=\"thumb-ph\">"+(isVid?"🎬":"🖼")+"</div>")
@@ -1115,6 +1154,10 @@ function rThumbs(){
 function rEThumbs(){
   var c=$$("eThumbs");if(!c)return;c.innerHTML="";
   eImgs.forEach(function(img,i){
+    if(img.type==="audio"){
+      c.appendChild(audioChipEl(img,{editable:true,isEdit:true,textTargetId:"eText",rerender:rEThumbs,onDelete:function(){stopCurAudio();eImgs=eImgs.filter(function(_,j){return j!==i});rEThumbs()}}));
+      return;
+    }
     var isVid=img.type==="video",src=isVid?(img.poster||""):img.data;
     var d=document.createElement("div");d.className="thumb";
     d.innerHTML=(src?"<img src=\""+src+"\" alt=\"\">":"<div class=\"thumb-ph\">"+(isVid?"🎬":"🖼")+"</div>")
@@ -1131,7 +1174,7 @@ function rENames(){
   var list=$$("eFileNames");if(!list)return;list.innerHTML="";
   eImgs.forEach(function(img,i){
     var row=document.createElement("div");row.className="fname-row";
-    row.innerHTML="<span class=\"fi\">"+(img.type==="video"?"🎬":"📷")+"</span><input type=\"text\" value=\""+esc(img.name||"")+"\"><span class=\"fname-st\"></span>";
+    row.innerHTML="<span class=\"fi\">"+(img.type==="video"?"🎬":img.type==="audio"?"🎧":"📷")+"</span><input type=\"text\" value=\""+esc(img.name||"")+"\"><span class=\"fname-st\"></span>";
     var inp=row.querySelector("input"),st=row.querySelector(".fname-st");
     inp.addEventListener("change",function(){
       var n=inp.value.trim();if(!n||n===img.name)return;
@@ -1141,6 +1184,174 @@ function rENames(){
     });
     list.appendChild(row);
   });
+}
+
+// ── VOICE NOTES (record + on-device transcription) ────────────────────────────
+function fmtDur(s){s=Math.round(s||0);var m=Math.floor(s/60);return m+":"+("0"+(s%60)).slice(-2)}
+function audioSrc(img){return img.data||(img.driveId?driveStreamUrl(img.driveId):null)}
+function stopCurAudio(){if(curAudio){try{curAudio.pause()}catch(e){}}curAudio=null;curAudioImg=null}
+function upBadgeAc(img){
+  if(img.uploadStatus==="loading")return"<span class=\"ac-badge\" style=\"color:var(--blue)\">⟳</span>";
+  if(img.uploadStatus==="err")return"<span class=\"ac-badge err\" title=\"Upload failed — tap to retry\" style=\"color:var(--red);cursor:pointer\">!</span>";
+  if(img.uploadStatus==="ok")return"<span class=\"ac-badge\" style=\"color:var(--green)\">✓</span>";
+  return"";
+}
+function playAudioToggle(img,btn){
+  var src=audioSrc(img);
+  if(!src){alert("This voice note is stored on Drive. Sign in to play it.");return}
+  if(curAudioImg===img&&curAudio&&!curAudio.paused){curAudio.pause();btn.textContent="▶";return}
+  stopCurAudio();
+  var a=new Audio(src);curAudio=a;curAudioImg=img;
+  a.addEventListener("ended",function(){btn.textContent="▶";if(curAudioImg===img){curAudio=null;curAudioImg=null}});
+  a.addEventListener("pause",function(){btn.textContent="▶"});
+  a.addEventListener("play",function(){btn.textContent="⏸"});
+  a.play().catch(function(){alert("Could not play this voice note.")});
+}
+// cfg: { editable, isEdit, textTargetId, rerender, onDelete }
+function audioChipEl(img,cfg){
+  cfg=cfg||{};
+  var el=document.createElement("div");el.className="audio-chip";
+  var hasTr=!!(img.transcript&&img.transcript.trim());
+  el.innerHTML="<button class=\"ac-play\" title=\"Play / pause\">▶</button>"
+    +"<span class=\"ac-dur\">🎧 "+fmtDur(img.duration)+"</span>"
+    +(cfg.editable?upBadgeAc(img):"")
+    +"<button class=\"ac-btn ac-transcribe\">"+(hasTr?"📝 Re-transcribe":"📝 Transcribe")+"</button>"
+    +(cfg.editable?"<button class=\"ac-del\" title=\"Remove\">✕</button>":"")
+    +"<div class=\"ac-tr"+(hasTr?"":" empty")+"\">"+(hasTr?highlightText(img.transcript,filterTxt):"No transcription yet")+"</div>";
+  el.querySelector(".ac-play").addEventListener("click",function(){playAudioToggle(img,el.querySelector(".ac-play"))});
+  var tb=el.querySelector(".ac-transcribe");
+  tb.addEventListener("click",function(){transcribeAudioAttachment(img,cfg,tb)});
+  var db=el.querySelector(".ac-del");if(db)db.addEventListener("click",function(){if(cfg.onDelete)cfg.onDelete()});
+  var eb=el.querySelector(".ac-badge.err");if(eb)eb.addEventListener("click",function(){retryUpload(img,cfg.isEdit)});
+  return el;
+}
+// ── recording ──
+function pickAudioMime(){
+  var c=["audio/webm;codecs=opus","audio/webm","audio/mp4","audio/ogg;codecs=opus"];
+  for(var i=0;i<c.length;i++){if(window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(c[i]))return c[i]}
+  return"";
+}
+function renderRecUI(isEdit,active){
+  var btn=$$(isEdit?"eRec":"btnRec");
+  if(btn){
+    btn.textContent=isEdit?(active?"⏹ Stop recording":"🎙 Record voice note"):(active?"⏹":"🎙");
+    btn.title=active?"Stop recording":"Record voice note";
+    if(active)btn.classList.add("btn-danger");else btn.classList.remove("btn-danger");
+  }
+  var cont=$$(isEdit?"eThumbs":"pThumbs"),existing=$$(isEdit?"eRecLive":"pRecLive");
+  if(active&&cont&&!existing){
+    var d=document.createElement("div");d.className="rec-live";d.id=isEdit?"eRecLive":"pRecLive";
+    d.innerHTML="<span class=\"rec-dot\"></span><span>Recording…</span><span class=\"rec-time\" style=\"font-family:monospace;margin-left:auto\">0:00</span>";
+    cont.insertBefore(d,cont.firstChild);
+  } else if(!active&&existing){existing.remove()}
+}
+function recTick(){recSeconds++;var el=$$(recIsEdit?"eRecLive":"pRecLive");if(el){var t=el.querySelector(".rec-time");if(t)t.textContent=fmtDur(recSeconds)}}
+async function startRec(isEdit){
+  if(mediaRec)return;
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){alert("Voice recording is not supported on this browser.");return}
+  try{recStream=await navigator.mediaDevices.getUserMedia({audio:true})}
+  catch(e){alert("Microphone access denied or unavailable.");return}
+  recIsEdit=isEdit;recChunks=[];recSeconds=0;
+  var mime=pickAudioMime();
+  try{mediaRec=mime?new MediaRecorder(recStream,{mimeType:mime}):new MediaRecorder(recStream)}
+  catch(e){try{mediaRec=new MediaRecorder(recStream)}catch(e2){alert("Recording not supported.");recStream.getTracks().forEach(function(t){t.stop()});recStream=null;return}}
+  mediaRec.ondataavailable=function(ev){if(ev.data&&ev.data.size)recChunks.push(ev.data)};
+  mediaRec.onstop=onRecStop;
+  mediaRec.start();
+  recTimer=setInterval(recTick,1000);
+  renderRecUI(isEdit,true);
+}
+function stopRec(){if(!mediaRec)return;try{mediaRec.stop()}catch(e){}if(recTimer){clearInterval(recTimer);recTimer=null}}
+function onRecStop(){
+  var type=((mediaRec&&mediaRec.mimeType)||"audio/webm").split(";")[0];
+  var blob=new Blob(recChunks,{type:type}),dur=recSeconds,isEdit=recIsEdit;
+  if(recStream){recStream.getTracks().forEach(function(t){t.stop()});recStream=null}
+  mediaRec=null;recChunks=[];
+  renderRecUI(isEdit,false);
+  if(blob.size)buildAudioAttachment(blob,dur,isEdit);
+}
+function uploadAudio(sess,blob,name){return uploadMedia(sess,new File([blob],name,{type:blob.type||"audio/webm"}),"audio")}
+function buildAudioAttachment(blob,dur,isEdit){
+  var active=sessions.find(function(s){return s.id===aid});
+  var ext=/mp4/.test(blob.type)?"m4a":/ogg/.test(blob.type)?"ogg":"webm";
+  var name="voice_"+fnameStamp()+"."+ext;
+  var img={type:"audio",data:null,name:name,duration:dur,uploadStatus:(active&&isLoggedIn)?"loading":"",transcript:""};
+  fileCache.set(img,blob);
+  var fr=new FileReader();
+  fr.onload=function(ev){
+    img.data=ev.target.result;
+    if(isEdit){eImgs.push(img);rEThumbs()}else{pImgs.push(img);rThumbs()}
+    if(active&&isLoggedIn)uploadAudio(active,blob,name).then(function(r){
+      if(r){img.driveId=r.driveId;img.name=r.name;img.uploadStatus="ok"}else img.uploadStatus="err";
+      if(isEdit)rEThumbs();else rThumbs();scheduleSave();
+    });
+  };
+  fr.readAsDataURL(blob);
+}
+// ── transcription (Whisper via transformers.js in a module worker) ──
+function ensureWhisperWorker(){
+  if(whisperWorker)return whisperWorker;
+  var src=[
+    "import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';",
+    "env.allowLocalModels=false;",
+    "let tr=null;",
+    "self.onmessage=async(e)=>{",
+    "  const{id,audio}=e.data;",
+    "  try{",
+    "    if(!tr){self.postMessage({id,type:'status',msg:'Loading model'});",
+    "      tr=await pipeline('automatic-speech-recognition','Xenova/whisper-tiny',{progress_callback:(p)=>{if(p&&p.status==='progress')self.postMessage({id,type:'progress',pct:Math.round(p.progress||0)});}});}",
+    "    self.postMessage({id,type:'status',msg:'Transcribing'});",
+    "    const out=await tr(audio,{chunk_length_s:30,stride_length_s:5});",
+    "    self.postMessage({id,type:'result',text:(out&&out.text||'').trim()});",
+    "  }catch(err){self.postMessage({id,type:'error',error:String(err&&err.message||err)});}",
+    "};"
+  ].join("\n");
+  try{whisperWorker=new Worker(URL.createObjectURL(new Blob([src],{type:"text/javascript"})),{type:"module"})}
+  catch(e){whisperWorker=null;return null}
+  whisperWorker.onmessage=function(e){
+    var d=e.data,cb=whisperCbs[d.id];if(!cb)return;
+    if(d.type==="status"||d.type==="progress"){if(cb.onstatus)cb.onstatus(d)}
+    else if(d.type==="result"){cb.resolve(d.text);delete whisperCbs[d.id]}
+    else if(d.type==="error"){cb.reject(new Error(d.error));delete whisperCbs[d.id]}
+  };
+  return whisperWorker;
+}
+function runWhisper(pcm,onstatus){
+  return new Promise(function(resolve,reject){
+    var w=ensureWhisperWorker();
+    if(!w){reject(new Error("Transcription not supported on this browser."));return}
+    var id=++whisperJobId;whisperCbs[id]={resolve:resolve,reject:reject,onstatus:onstatus};
+    w.postMessage({id:id,audio:pcm},[pcm.buffer]);
+  });
+}
+async function audioBlobToPCM16k(blob){
+  var buf=await blob.arrayBuffer();
+  var AC=window.AudioContext||window.webkitAudioContext;
+  var ctx=new AC();
+  var decoded=await ctx.decodeAudioData(buf.slice(0));
+  try{ctx.close()}catch(e){}
+  var rate=16000;
+  var off=new OfflineAudioContext(1,Math.max(1,Math.ceil(decoded.duration*rate)),rate);
+  var sn=off.createBufferSource();sn.buffer=decoded;sn.connect(off.destination);sn.start(0);
+  var rendered=await off.startRendering();
+  return rendered.getChannelData(0);
+}
+async function transcribeAudioAttachment(img,cfg,btn){
+  if(typeof Worker==="undefined"){alert("Transcription needs a modern browser with Web Worker support.");return}
+  var blob=fileCache.get(img)||(img.data?dataUrlToBlob(img.data):null);
+  if(!blob){alert("Original audio is not available on this device to transcribe.");return}
+  if(btn){btn.disabled=true;btn.textContent="…"}
+  try{
+    var pcm=await audioBlobToPCM16k(blob);
+    var text=await runWhisper(pcm,function(d){if(btn)btn.textContent=d.type==="progress"?("⬇ "+d.pct+"%"):"…"});
+    img.transcript=text||"";
+    if(cfg&&cfg.textTargetId){var ta=$$(cfg.textTargetId);if(ta){ta.value=(ta.value.trim()?ta.value.trim()+"\n":"")+text;autoH(ta)}}
+    scheduleSave();
+    if(cfg&&cfg.rerender)cfg.rerender();
+  }catch(e){
+    alert("Transcription failed: "+((e&&e.message)||e));
+    if(btn){btn.disabled=false;btn.textContent="📝 Transcribe"}
+  }
 }
 
 // ── FILE HANDLING ─────────────────────────────────────────────────────────────
@@ -1191,11 +1402,12 @@ function handleFiles(e,isEdit){
 // ── ADD / EDIT / DELETE ENTRY ─────────────────────────────────────────────────
 function earliestTs(imgs){var d=(imgs||[]).map(function(i){return i.capturedAt}).filter(Boolean).sort();return d.length?d[0]:null}
 function addEntry(){
+  if(mediaRec&&!recIsEdit){alert("Stop the voice recording before adding the entry.");return}
   var entIn=$$("entIn");if(!entIn)return;
   var text=entIn.value.trim();
   if(!text&&!pImgs.length)return;
   var active=sessions.find(function(s){return s.id===aid});if(!active||active.status!=="open")return;
-  var captText=text||(pImgs.length?"[Photo/video — add description]":""),captSev=$$("sevSel").value,captTag=$$("tagIn").value.trim(),waited=0;
+  var captText=text||(pImgs.length?"[Media — add description]":""),captSev=$$("sevSel").value,captTag=$$("tagIn").value.trim(),waited=0;
   function tryAdd(){
     if(pExif>0&&waited<3000){var b=$$("btnAdd");if(b){b.disabled=true;b.textContent="Processing..."}waited+=150;setTimeout(tryAdd,150);return}
     var b2=$$("btnAdd");if(b2){b2.disabled=false;b2.innerHTML="↵ Add"}
@@ -1220,11 +1432,12 @@ function openEdit(entryId){
   setTimeout(function(){$$("eText").focus()},80);
 }
 function saveEdit(){
+  if(mediaRec&&recIsEdit){alert("Stop the voice recording before saving.");return}
   var text=$$("eText").value.trim();
   if(!text&&!eImgs.length){alert("Description cannot be empty.");return}
   if(!editingId)return;
   var entId=editingId,newSev=$$("eSev").value,newTag=$$("eTag").value.trim(),waited=0;
-  var captText=text||(eImgs.length?"[Photo/video — add description]":"");
+  var captText=text||(eImgs.length?"[Media — add description]":"");
   function tryS(){
     if(pExifEdit>0&&waited<3000){var b=$$("eSave");if(b){b.disabled=true;b.textContent="Processing..."}waited+=150;setTimeout(tryS,150);return}
     var b2=$$("eSave");if(b2){b2.disabled=false;b2.innerHTML="✓ Save changes"}
@@ -1232,7 +1445,7 @@ function saveEdit(){
     closeEdit();scheduleSave();renderAll();
   }tryS();
 }
-function closeEdit(){$$("editBack").style.display="none";editingId=null;eImgs=[]}
+function closeEdit(){if(mediaRec&&recIsEdit){stopRec();recChunks=[]}stopCurAudio();$$("editBack").style.display="none";editingId=null;eImgs=[]}
 function delEntry(entryId){
   if(!confirm("Delete this log entry? This cannot be undone."))return;
   sessions=sessions.map(function(s){if(s.id!==aid)return s;return Object.assign({},s,{entries:(s.entries||[]).filter(function(en){return en.id!==entryId})})});
@@ -1246,6 +1459,7 @@ $$("eSave").addEventListener("click",saveEdit);
 $$("eText").addEventListener("input",function(){autoH($$("eText"))});
 $$("eAddPhoto").addEventListener("click",function(){$$("eFileIn").click()});
 $$("eFileIn").addEventListener("change",function(e){handleFiles(e,true)});
+$$("eRec").addEventListener("click",function(){if(mediaRec&&recIsEdit)stopRec();else if(!mediaRec)startRec(true)});
 
 // ── DELETE SESSION MODAL ──────────────────────────────────────────────────────
 function openDelModal(s){
@@ -1393,6 +1607,11 @@ function buildReportHTML(s,forPrint){
         var lnk=(!forPrint&&img.driveId)?"<a href=\"https://drive.google.com/file/d/"+img.driveId+"/view\" target=\"_blank\" style=\"font-size:9px;color:#1d4ed8;display:block\">↗ Open in Drive</a>":"";
         return "<div style=\"margin:2px;display:inline-block;vertical-align:top\">"+ph+"<div style=\"font-size:9px;color:#6b7280;font-family:monospace;word-break:break-all\">▶ "+esc(img.name||"video")+"</div>"+lnk+"</div>";
       }
+      if(img.type==="audio"){
+        var alnk=(!forPrint&&img.driveId)?"<a href=\"https://drive.google.com/file/d/"+img.driveId+"/view\" target=\"_blank\" style=\"font-size:9px;color:#1d4ed8\">↗ Drive</a>":"";
+        var tr=img.transcript&&img.transcript.trim()?"<div style=\"font-size:11px;color:#111827;margin-top:2px\">"+esc(img.transcript)+"</div>":"<div style=\"font-size:9px;color:#9ca3af;font-style:italic;margin-top:2px\">(no transcription)</div>";
+        return "<div style=\"margin:2px 0;padding:6px 8px;background:#f9fafb;border-left:3px solid #f59e0b;border-radius:4px\"><div style=\"font-size:9px;color:#6b7280;font-family:monospace\">🎧 "+esc(img.name||"voice note")+" · "+fmtDur(img.duration)+" "+alnk+"</div>"+tr+"</div>";
+      }
       return "<div style=\"margin:2px;display:inline-block;vertical-align:top\"><img src=\""+img.data+"\" style=\"max-width:140px;max-height:100px;object-fit:cover;border-radius:4px;display:block\"><div style=\"font-size:9px;color:#6b7280;font-family:monospace;word-break:break-all\">"+esc(img.name||"photo")+"</div></div>";
     }).join("");
     return "<tr>"
@@ -1494,6 +1713,11 @@ function buildDocxDocument(D,s){
     var sm=SM[e.severity]||SM.info,sc=sm.tx.replace("#",""),fill=e.severity==="issue"?"FEF2F2":e.severity==="warning"?"FFF7ED":e.severity==="ok"?"F0FDF4":"FFFFFF";
     var att=[];
     (e.images||[]).forEach(function(img){
+      if(img.type==="audio"){
+        att.push(new D.Paragraph({spacing:{after:2},children:[new D.TextRun({text:"🎧 "+esc(img.name||"voice note")+" ("+fmtDur(img.duration)+")",size:14,font:"Courier New",color:"6B7280",italics:true})]}));
+        if(img.transcript&&img.transcript.trim())att.push(new D.Paragraph({spacing:{after:30},children:[new D.TextRun({text:img.transcript,size:18,font:"Arial",color:"111827"})]}));
+        return;
+      }
       var isVid=img.type==="video",src=isVid?img.poster:img.data;
       if(src){var id=toImg(src);if(id){try{att.push(new D.Paragraph({spacing:{after:4},children:[new D.ImageRun({data:id.bytes,type:id.type,transformation:{width:65,height:45}})]}));}catch(err){}}}
       att.push(new D.Paragraph({spacing:{after:30},children:[new D.TextRun({text:(isVid?"▶ ":"")+esc(img.name||"file"),size:14,font:"Courier New",color:"6B7280",italics:true})]}));

@@ -76,6 +76,17 @@ Field Service Log/
 - **Videos uploaded directly to Drive as Blob** — never loaded as base64
   (prevents "Aw, Snap!" memory crash on mobile)
 - Photos stored as base64 in JSON + uploaded to Drive in background
+- **Voice notes** — record audio via MediaRecorder (🎙 button); stored as base64
+  in the entry (offline-safe, like photos, NOT like video) + uploaded to Drive
+  `audio/` subfolder in background. Rendered as an "audio chip" (play, duration,
+  transcript, transcribe/delete) in pending / edit / log views.
+- **On-device transcription** — Whisper (`Xenova/whisper-tiny`, multilingual,
+  auto language detect) via transformers.js running in a module Web Worker
+  (built from a Blob, dynamic `import()` from jsdelivr). No backend, no API key,
+  works offline after the ~40 MB model caches on first use. Transcript is stored
+  on the attachment, inserted into the description (editable), searchable, and
+  shown in HTML/DOCX reports. Service Worker whitelist extended with
+  `huggingface.co|hf.co|cdn-lfs` so the model download isn't intercepted.
 - Edit entries (description, severity, tag, add/remove/rename attachments)
 - Delete entries
 - Close session / **Reopen session** (↺ button)

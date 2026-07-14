@@ -25,19 +25,25 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
 ## Architecture
 - **Single HTML file** — all CSS, JS, and assets inline. No build step, no npm.
 - **PWA** — installable on mobile and desktop, works offline
-- **Storage:** localStorage for sessions data + Google Drive for sync
-  - localStorage is ~5 MB; photos + voice notes are base64 inside `fsl_v6_data`,
-    so it can fill up. `saveLocal()` returns a bool and, on `QuotaExceededError`,
-    shows a persistent warning bar (`#storeBar`) with a **Download backup**
-    button (a JSON download never touches quota, so it always works) instead of
-    the old silent `catch(e){}` that could lose field work unnoticed. A softer
-    heads-up appears when the serialized size passes `STORE_SOFT_LIMIT`.
-    Raising the actual ceiling (IndexedDB migration) is a planned Phase 2.
-- **localStorage keys:**
-  - `fsl_v6_data` — sessions JSON array
+- **Storage:** IndexedDB for sessions data + Google Drive for sync
+  - Sessions (carrying base64 photos + voice notes) live in **IndexedDB**
+    (`fsl` db → `kv` store → key `sessions`), whose quota is hundreds of MB–GB
+    vs localStorage's ~5 MB, so the store no longer fills up in normal field
+    use. The in-memory `sessions` array stays the sync source of truth for
+    rendering; only load (startup) and save are async (`loadSessions()` /
+    `saveLocal()` are Promise-based; callers fire-and-forget).
+  - **Migration:** on first load with the new code, any existing
+    `localStorage['fsl_v6_data']` is copied into IndexedDB and then removed,
+    freeing the old ~5 MB. One-time and automatic.
+  - **Fallback:** if IndexedDB is unavailable (some private modes), it falls
+    back to localStorage via `saveLocalLS()`, keeping the Phase-1 quota
+    warning bar (`#storeBar`) + **Download backup** button + `STORE_SOFT_LIMIT`
+    heads-up. IndexedDB quota exhaustion also triggers the same warning.
+- **localStorage keys (small metadata only now):**
   - `fsl_v6_tok`  — OAuth token + driveFileId + rootFolderId
   - `fsl_v6_thm`  — theme preference (dark/light)
   - `fsl_v6_root` — cached Drive root folder ID
+  - `fsl_v6_data` — legacy sessions array; migrated to IndexedDB then removed
 
 ---
 

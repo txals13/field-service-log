@@ -385,20 +385,73 @@ function sanitize(s){return(s||"untitled").toString().trim().replace(/[\/:*?"<>|
 function mob(){return window.innerWidth<=640}
 
 // ── LOCAL STORAGE ───────────────────────────────────────────────────────────
+// Sessions (which carry base64 photos + voice notes) are persisted in
+// IndexedDB — quota there is hundreds of MB to GB vs localStorage's ~5 MB, so
+// the store no longer fills up in normal field use. The in-memory `sessions`
+// array stays the source of truth for rendering (kept synchronous); only
+// persistence (load at startup / save) is async. Falls back to localStorage
+// (with the quota warning) when IndexedDB is unavailable (e.g. some private
+// modes). Tokens / theme / root-id stay in localStorage — they're tiny.
+var idb=null;
+function idbOpen(){
+  return new Promise(function(res){
+    if(!window.indexedDB){res(null);return}
+    try{
+      var req=indexedDB.open("fsl",1);
+      req.onupgradeneeded=function(e){var db=e.target.result;if(!db.objectStoreNames.contains("kv"))db.createObjectStore("kv")};
+      req.onsuccess=function(e){res(e.target.result)};
+      req.onerror=function(){res(null)};
+      req.onblocked=function(){res(null)};
+    }catch(e){res(null)}
+  });
+}
+function idbGet(db,key){
+  return new Promise(function(res){
+    try{var r=db.transaction("kv","readonly").objectStore("kv").get(key);r.onsuccess=function(){res(r.result)};r.onerror=function(){res(undefined)}}
+    catch(e){res(undefined)}
+  });
+}
+function idbSet(db,key,val){
+  return new Promise(function(res,rej){
+    try{var t=db.transaction("kv","readwrite");t.objectStore("kv").put(val,key);t.oncomplete=function(){res(true)};t.onerror=function(){rej(t.error||new Error("idb write failed"))};t.onabort=function(){rej(t.error||new Error("idb aborted"))}}
+    catch(e){rej(e)}
+  });
+}
 function loadLocal(){try{return JSON.parse(localStorage.getItem(LS_DATA)||"[]")}catch(e){return[]}}
-// Returns true on success. On quota failure it no longer swallows the error
-// silently (which could lose field work unnoticed) — it surfaces a warning.
-function saveLocal(){
+// Loads sessions, opening IndexedDB and migrating any existing localStorage
+// data into it once (then freeing the localStorage copy).
+async function loadSessions(){
+  idb=await idbOpen();
+  if(idb){
+    var v=await idbGet(idb,"sessions");
+    if(Array.isArray(v))return v;
+    try{
+      var ls=localStorage.getItem(LS_DATA);
+      if(ls){var arr=JSON.parse(ls);try{await idbSet(idb,"sessions",arr);localStorage.removeItem(LS_DATA)}catch(e){}return Array.isArray(arr)?arr:[]}
+    }catch(e){}
+    return [];
+  }
+  return loadLocal();
+}
+// localStorage persistence (fallback path), with the Phase-1 quota warning.
+function saveLocalLS(){
   var str;try{str=JSON.stringify(sessions)}catch(e){str="[]"}
   try{
     localStorage.setItem(LS_DATA,str);
     if(str.length>STORE_SOFT_LIMIT){showStoreWarning(false)}
     else{storeDismissed=false;hideStoreWarning()}
     return true;
-  }catch(e){
-    showStoreWarning(true);
-    return false;
+  }catch(e){showStoreWarning(true);return false}
+}
+// Returns a Promise<bool>. Callers fire-and-forget; the in-memory sessions
+// stay authoritative, so not awaiting is fine. On failure it surfaces a
+// warning instead of silently losing data.
+async function saveLocal(){
+  if(idb){
+    try{await idbSet(idb,"sessions",sessions);storeDismissed=false;hideStoreWarning();return true}
+    catch(e){showStoreWarning(true);return false}
   }
+  return saveLocalLS();
 }
 function showStoreWarning(hard){
   var bar=$$("storeBar");if(!bar)return;
@@ -1796,8 +1849,8 @@ function renderAll(){renderSidebar();renderContent()}
 // feel stuck. Show a lightweight placeholder immediately (cheap, no parsing)
 // and defer the real load to right after the browser gets to paint it.
 $$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><div style=\"font-size:13px;color:var(--tx3)\">Loading sessions...</div></div>";
-setTimeout(function(){
-  sessions=loadLocal();
+(async function(){
+  sessions=await loadSessions();
   if(loadTok()&&accessToken&&Date.now()<tokenExp){
     isLoggedIn=true;
     loadFromDrive().then(function(){renderAll();scheduleSync()});
@@ -1805,7 +1858,7 @@ setTimeout(function(){
     renderAll();
   }
   updateAuthUI();
-},0);
+})();
 
 })();
 </script>

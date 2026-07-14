@@ -104,11 +104,7 @@ mark{background:var(--goldbg);color:var(--goldtx);padding:0 1px;border-radius:2p
 .audio-chip{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--br2);border-radius:8px;padding:6px 9px;width:100%;position:relative;font-size:12px;flex-wrap:wrap}
 .ac-play{flex-shrink:0;width:28px;height:28px;border-radius:50%;border:none;background:var(--gold);color:#000;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
 .ac-dur{font-family:monospace;color:var(--tx2);flex-shrink:0}
-.ac-tr{flex:1 1 100%;color:var(--tx1);line-height:1.4;min-width:120px;word-break:break-word}
-.ac-tr.empty{color:var(--tx3);font-style:italic}
-.ac-btn{flex-shrink:0;background:none;border:1px solid var(--br2);color:var(--tx2);font-size:11px;padding:3px 8px;border-radius:6px;cursor:pointer}
-.ac-btn:disabled{opacity:.5;cursor:default}
-.ac-del{flex-shrink:0;background:none;border:none;color:var(--tx3);font-size:12px;cursor:pointer;padding:2px 5px}
+.ac-del{flex-shrink:0;background:none;border:none;color:var(--tx3);font-size:12px;cursor:pointer;padding:2px 5px;margin-left:auto}
 .ac-badge{flex-shrink:0;font-size:10px}
 .rec-live{display:flex;align-items:center;gap:8px;background:var(--redbg);border:1px solid rgba(239,68,68,.4);border-radius:8px;padding:6px 10px;width:100%;font-size:12px;color:var(--red)}
 .rec-dot{width:10px;height:10px;border-radius:50%;background:var(--red);animation:pulse 1s ease-in-out infinite}
@@ -340,10 +336,9 @@ var isLoggedIn=false, saveTimer=null, isDirty=false;
 var editingId=null, eImgs=[], pendingDel=null, pendingDelFname=null, dInst=null;
 var authExpired=false, syncStarted=false;
 var fileCache=new WeakMap(); // img object -> raw File/Blob, kept in memory only, for upload retry
-// Voice-note recording + on-device transcription state
+// Voice-note recording state
 var mediaRec=null, recChunks=[], recTimer=null, recSeconds=0, recIsEdit=false, recStream=null;
 var curAudio=null, curAudioImg=null; // single shared <audio> so only one note plays at a time
-var whisperWorker=null, whisperJobId=0, whisperCbs={};
 
 // ── UTILS ───────────────────────────────────────────────────────────────────
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
@@ -369,8 +364,7 @@ function entryMatches(e,rawQuery){
     ||(e.tag||"").toLowerCase().includes(q)
     ||(e.severity||"").toLowerCase().includes(q)
     ||sm.label.toLowerCase().includes(q)
-    ||fts(e.ts).toLowerCase().includes(q) // "10/03/25 15:30:00" — same format shown on screen
-    ||(e.images||[]).some(function(im){return im.transcript&&im.transcript.toLowerCase().includes(q)});
+    ||fts(e.ts).toLowerCase().includes(q); // "10/03/25 15:30:00" — same format shown on screen
 }
 function $$(id){return document.getElementById(id)}
 function autoH(ta){if(!ta)return;ta.style.height="auto";ta.style.height=Math.min(ta.scrollHeight,200)+"px"}
@@ -822,7 +816,7 @@ $$("btnInstX").addEventListener("click",function(){$$("instBar").style.display="
 
 // ── SERVICE WORKER ───────────────────────────────────────────────────────────
 if("serviceWorker" in navigator){
-  var sw="self.addEventListener(\'install\',function(){self.skipWaiting()});self.addEventListener(\'activate\',function(e){self.clients.claim()});self.addEventListener(\'fetch\',function(e){if(/googleapis|accounts\\.google\\.com|unpkg\\.com|jsdelivr\\.net|cdnjs|huggingface\\.co|hf\\.co|cdn-lfs/.test(e.request.url))return;e.respondWith(fetch(e.request).catch(function(){return caches.match(e.request)}))});";
+  var sw="self.addEventListener(\'install\',function(){self.skipWaiting()});self.addEventListener(\'activate\',function(e){self.clients.claim()});self.addEventListener(\'fetch\',function(e){if(/googleapis|accounts\\.google\\.com|unpkg\\.com|jsdelivr\\.net|cdnjs/.test(e.request.url))return;e.respondWith(fetch(e.request).catch(function(){return caches.match(e.request)}))});";
   navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:"application/javascript"})),{scope:"./"}).catch(function(){});
 }
 
@@ -970,7 +964,7 @@ function renderLogArea(){
       if(audioAtt.length){
         var body=div.querySelector(".log-body");
         var ac=document.createElement("div");ac.className="thumbs";
-        audioAtt.forEach(function(im){ac.appendChild(audioChipEl(im,{editable:false,rerender:renderLogArea}))});
+        audioAtt.forEach(function(im){ac.appendChild(audioChipEl(im,{editable:false}))});
         body.appendChild(ac);
       }
       if(isOpen){
@@ -1137,7 +1131,7 @@ function rThumbs(){
   var c=$$("pThumbs");if(!c)return;c.innerHTML="";
   pImgs.forEach(function(img,i){
     if(img.type==="audio"){
-      c.appendChild(audioChipEl(img,{editable:true,isEdit:false,textTargetId:"entIn",rerender:rThumbs,onDelete:function(){stopCurAudio();pImgs=pImgs.filter(function(_,j){return j!==i});rThumbs()}}));
+      c.appendChild(audioChipEl(img,{editable:true,isEdit:false,onDelete:function(){stopCurAudio();pImgs=pImgs.filter(function(_,j){return j!==i});rThumbs()}}));
       return;
     }
     var isVid=img.type==="video",src=isVid?(img.poster||""):img.data;
@@ -1155,7 +1149,7 @@ function rEThumbs(){
   var c=$$("eThumbs");if(!c)return;c.innerHTML="";
   eImgs.forEach(function(img,i){
     if(img.type==="audio"){
-      c.appendChild(audioChipEl(img,{editable:true,isEdit:true,textTargetId:"eText",rerender:rEThumbs,onDelete:function(){stopCurAudio();eImgs=eImgs.filter(function(_,j){return j!==i});rEThumbs()}}));
+      c.appendChild(audioChipEl(img,{editable:true,isEdit:true,onDelete:function(){stopCurAudio();eImgs=eImgs.filter(function(_,j){return j!==i});rEThumbs()}}));
       return;
     }
     var isVid=img.type==="video",src=isVid?(img.poster||""):img.data;
@@ -1186,7 +1180,7 @@ function rENames(){
   });
 }
 
-// ── VOICE NOTES (record + on-device transcription) ────────────────────────────
+// ── VOICE NOTES (record + play back) ──────────────────────────────────────────
 function fmtDur(s){s=Math.round(s||0);var m=Math.floor(s/60);return m+":"+("0"+(s%60)).slice(-2)}
 function audioSrc(img){return img.data||(img.driveId?driveStreamUrl(img.driveId):null)}
 function stopCurAudio(){if(curAudio){try{curAudio.pause()}catch(e){}}curAudio=null;curAudioImg=null}
@@ -1207,20 +1201,15 @@ function playAudioToggle(img,btn){
   a.addEventListener("play",function(){btn.textContent="⏸"});
   a.play().catch(function(){alert("Could not play this voice note.")});
 }
-// cfg: { editable, isEdit, textTargetId, rerender, onDelete }
+// cfg: { editable, isEdit, onDelete }
 function audioChipEl(img,cfg){
   cfg=cfg||{};
   var el=document.createElement("div");el.className="audio-chip";
-  var hasTr=!!(img.transcript&&img.transcript.trim());
   el.innerHTML="<button class=\"ac-play\" title=\"Play / pause\">▶</button>"
     +"<span class=\"ac-dur\">🎧 "+fmtDur(img.duration)+"</span>"
     +(cfg.editable?upBadgeAc(img):"")
-    +"<button class=\"ac-btn ac-transcribe\">"+(hasTr?"📝 Re-transcribe":"📝 Transcribe")+"</button>"
-    +(cfg.editable?"<button class=\"ac-del\" title=\"Remove\">✕</button>":"")
-    +"<div class=\"ac-tr"+(hasTr?"":" empty")+"\">"+(hasTr?highlightText(img.transcript,filterTxt):"No transcription yet")+"</div>";
+    +(cfg.editable?"<button class=\"ac-del\" title=\"Remove\">✕</button>":"");
   el.querySelector(".ac-play").addEventListener("click",function(){playAudioToggle(img,el.querySelector(".ac-play"))});
-  var tb=el.querySelector(".ac-transcribe");
-  tb.addEventListener("click",function(){transcribeAudioAttachment(img,cfg,tb)});
   var db=el.querySelector(".ac-del");if(db)db.addEventListener("click",function(){if(cfg.onDelete)cfg.onDelete()});
   var eb=el.querySelector(".ac-badge.err");if(eb)eb.addEventListener("click",function(){retryUpload(img,cfg.isEdit)});
   return el;
@@ -1275,7 +1264,7 @@ function buildAudioAttachment(blob,dur,isEdit){
   var active=sessions.find(function(s){return s.id===aid});
   var ext=/mp4/.test(blob.type)?"m4a":/ogg/.test(blob.type)?"ogg":"webm";
   var name="voice_"+fnameStamp()+"."+ext;
-  var img={type:"audio",data:null,name:name,duration:dur,uploadStatus:(active&&isLoggedIn)?"loading":"",transcript:""};
+  var img={type:"audio",data:null,name:name,duration:dur,uploadStatus:(active&&isLoggedIn)?"loading":""};
   fileCache.set(img,blob);
   var fr=new FileReader();
   fr.onload=function(ev){
@@ -1288,72 +1277,6 @@ function buildAudioAttachment(blob,dur,isEdit){
   };
   fr.readAsDataURL(blob);
 }
-// ── transcription (Whisper via transformers.js in a module worker) ──
-function ensureWhisperWorker(){
-  if(whisperWorker)return whisperWorker;
-  var src=[
-    "import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';",
-    "env.allowLocalModels=false;",
-    "let tr=null;",
-    "self.onmessage=async(e)=>{",
-    "  const{id,audio}=e.data;",
-    "  try{",
-    "    if(!tr){self.postMessage({id,type:'status',msg:'Loading model'});",
-    "      tr=await pipeline('automatic-speech-recognition','Xenova/whisper-tiny',{progress_callback:(p)=>{if(p&&p.status==='progress')self.postMessage({id,type:'progress',pct:Math.round(p.progress||0)});}});}",
-    "    self.postMessage({id,type:'status',msg:'Transcribing'});",
-    "    const out=await tr(audio,{chunk_length_s:30,stride_length_s:5});",
-    "    self.postMessage({id,type:'result',text:(out&&out.text||'').trim()});",
-    "  }catch(err){self.postMessage({id,type:'error',error:String(err&&err.message||err)});}",
-    "};"
-  ].join("\n");
-  try{whisperWorker=new Worker(URL.createObjectURL(new Blob([src],{type:"text/javascript"})),{type:"module"})}
-  catch(e){whisperWorker=null;return null}
-  whisperWorker.onmessage=function(e){
-    var d=e.data,cb=whisperCbs[d.id];if(!cb)return;
-    if(d.type==="status"||d.type==="progress"){if(cb.onstatus)cb.onstatus(d)}
-    else if(d.type==="result"){cb.resolve(d.text);delete whisperCbs[d.id]}
-    else if(d.type==="error"){cb.reject(new Error(d.error));delete whisperCbs[d.id]}
-  };
-  return whisperWorker;
-}
-function runWhisper(pcm,onstatus){
-  return new Promise(function(resolve,reject){
-    var w=ensureWhisperWorker();
-    if(!w){reject(new Error("Transcription not supported on this browser."));return}
-    var id=++whisperJobId;whisperCbs[id]={resolve:resolve,reject:reject,onstatus:onstatus};
-    w.postMessage({id:id,audio:pcm},[pcm.buffer]);
-  });
-}
-async function audioBlobToPCM16k(blob){
-  var buf=await blob.arrayBuffer();
-  var AC=window.AudioContext||window.webkitAudioContext;
-  var ctx=new AC();
-  var decoded=await ctx.decodeAudioData(buf.slice(0));
-  try{ctx.close()}catch(e){}
-  var rate=16000;
-  var off=new OfflineAudioContext(1,Math.max(1,Math.ceil(decoded.duration*rate)),rate);
-  var sn=off.createBufferSource();sn.buffer=decoded;sn.connect(off.destination);sn.start(0);
-  var rendered=await off.startRendering();
-  return rendered.getChannelData(0);
-}
-async function transcribeAudioAttachment(img,cfg,btn){
-  if(typeof Worker==="undefined"){alert("Transcription needs a modern browser with Web Worker support.");return}
-  var blob=fileCache.get(img)||(img.data?dataUrlToBlob(img.data):null);
-  if(!blob){alert("Original audio is not available on this device to transcribe.");return}
-  if(btn){btn.disabled=true;btn.textContent="…"}
-  try{
-    var pcm=await audioBlobToPCM16k(blob);
-    var text=await runWhisper(pcm,function(d){if(btn)btn.textContent=d.type==="progress"?("⬇ "+d.pct+"%"):"…"});
-    img.transcript=text||"";
-    if(cfg&&cfg.textTargetId){var ta=$$(cfg.textTargetId);if(ta){ta.value=(ta.value.trim()?ta.value.trim()+"\n":"")+text;autoH(ta)}}
-    scheduleSave();
-    if(cfg&&cfg.rerender)cfg.rerender();
-  }catch(e){
-    alert("Transcription failed: "+((e&&e.message)||e));
-    if(btn){btn.disabled=false;btn.textContent="📝 Transcribe"}
-  }
-}
-
 // ── FILE HANDLING ─────────────────────────────────────────────────────────────
 function isVidFile(f){return f.type.startsWith("video")||/\.(mp4|mov|m4v)$/i.test(f.name||"")}
 function handleFiles(e,isEdit){
@@ -1609,8 +1532,7 @@ function buildReportHTML(s,forPrint){
       }
       if(img.type==="audio"){
         var alnk=(!forPrint&&img.driveId)?"<a href=\"https://drive.google.com/file/d/"+img.driveId+"/view\" target=\"_blank\" style=\"font-size:9px;color:#1d4ed8\">↗ Drive</a>":"";
-        var tr=img.transcript&&img.transcript.trim()?"<div style=\"font-size:11px;color:#111827;margin-top:2px\">"+esc(img.transcript)+"</div>":"<div style=\"font-size:9px;color:#9ca3af;font-style:italic;margin-top:2px\">(no transcription)</div>";
-        return "<div style=\"margin:2px 0;padding:6px 8px;background:#f9fafb;border-left:3px solid #f59e0b;border-radius:4px\"><div style=\"font-size:9px;color:#6b7280;font-family:monospace\">🎧 "+esc(img.name||"voice note")+" · "+fmtDur(img.duration)+" "+alnk+"</div>"+tr+"</div>";
+        return "<div style=\"margin:2px 0;padding:6px 8px;background:#f9fafb;border-left:3px solid #f59e0b;border-radius:4px\"><div style=\"font-size:9px;color:#6b7280;font-family:monospace\">🎧 "+esc(img.name||"voice note")+" · "+fmtDur(img.duration)+" "+alnk+"</div></div>";
       }
       return "<div style=\"margin:2px;display:inline-block;vertical-align:top\"><img src=\""+img.data+"\" style=\"max-width:140px;max-height:100px;object-fit:cover;border-radius:4px;display:block\"><div style=\"font-size:9px;color:#6b7280;font-family:monospace;word-break:break-all\">"+esc(img.name||"photo")+"</div></div>";
     }).join("");
@@ -1714,8 +1636,7 @@ function buildDocxDocument(D,s){
     var att=[];
     (e.images||[]).forEach(function(img){
       if(img.type==="audio"){
-        att.push(new D.Paragraph({spacing:{after:2},children:[new D.TextRun({text:"🎧 "+esc(img.name||"voice note")+" ("+fmtDur(img.duration)+")",size:14,font:"Courier New",color:"6B7280",italics:true})]}));
-        if(img.transcript&&img.transcript.trim())att.push(new D.Paragraph({spacing:{after:30},children:[new D.TextRun({text:img.transcript,size:18,font:"Arial",color:"111827"})]}));
+        att.push(new D.Paragraph({spacing:{after:30},children:[new D.TextRun({text:"🎧 "+esc(img.name||"voice note")+" ("+fmtDur(img.duration)+")",size:14,font:"Courier New",color:"6B7280",italics:true})]}));
         return;
       }
       var isVid=img.type==="video",src=isVid?img.poster:img.data;

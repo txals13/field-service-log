@@ -120,6 +120,9 @@ mark{background:var(--goldbg);color:var(--goldtx);padding:0 1px;border-radius:2p
 .sync-bar{padding:4px 12px;background:var(--goldbg);border-bottom:1px solid rgba(245,158,11,.2);font-size:11px;color:var(--goldtx);display:flex;align-items:center;gap:6px;flex-shrink:0}
 /* auth expired bar */
 .auth-bar{padding:6px 12px;background:var(--redbg);border-bottom:1px solid rgba(239,68,68,.3);font-size:12px;color:var(--red);display:flex;align-items:center;gap:8px;flex-shrink:0}
+/* storage-full bar */
+.store-bar{padding:6px 12px;background:var(--orangebg);border-bottom:1px solid rgba(249,115,22,.4);font-size:12px;color:var(--orange);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.store-bar.hard{background:var(--redbg);border-color:rgba(239,68,68,.4);color:var(--red)}
 /* install bar */
 .inst-bar{background:var(--goldbg);border-bottom:1px solid rgba(245,158,11,.3);padding:6px 12px;display:flex;align-items:center;gap:8px;font-size:12px;flex-shrink:0;color:var(--goldtx)}
 /* export dropdown */
@@ -195,6 +198,11 @@ textarea{resize:none;line-height:1.4}
   <div id="authBar" class="auth-bar" style="display:none">
     <span style="flex:1">&#9888; Drive session expired — changes are saved locally only</span>
     <button class="btn-sm" id="btnReconnect" style="background:var(--red);color:#fff;border-color:var(--red)">Reconnect</button>
+  </div>
+  <div id="storeBar" class="store-bar" style="display:none">
+    <span style="flex:1" id="storeMsg">&#9888; Device storage is almost full</span>
+    <button class="btn-sm" id="btnStoreBackup" style="background:var(--gold);color:#000;border-color:var(--golddim);font-weight:700">&#8681; Download backup</button>
+    <button class="btn-g btn-sm" id="btnStoreX">&#10005;</button>
   </div>
   <div class="topbar">
     <button class="btn-g" id="btnSide" style="font-size:20px;padding:4px 8px">&#9776;</button>
@@ -314,6 +322,10 @@ var LS_ROOT    = "fsl_v6_root";
 var DATA_FILE  = "field_service_log_data.json";
 var ROOT_NAME  = "Field Service Log";
 var OUT_NAME   = "Outputs";
+// localStorage is ~5 MB (UTF-16). Warn well before that so the user can back up
+// or sign in to Drive before a save actually fails. This is an approximate
+// heads-up, not an exact quota — the real wall is the QuotaExceededError catch.
+var STORE_SOFT_LIMIT = 2200000; // characters of the serialized sessions JSON
 
 // ── TYPE / SEVERITY MAPS ────────────────────────────────────────────────────
 var TM = {
@@ -339,6 +351,7 @@ var fileCache=new WeakMap(); // img object -> raw File/Blob, kept in memory only
 // Voice-note recording state
 var mediaRec=null, recChunks=[], recTimer=null, recSeconds=0, recIsEdit=false, recStream=null;
 var curAudio=null, curAudioImg=null; // single shared <audio> so only one note plays at a time
+var storeDismissed=false; // user dismissed the soft storage warning
 
 // ── UTILS ───────────────────────────────────────────────────────────────────
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
@@ -373,7 +386,39 @@ function mob(){return window.innerWidth<=640}
 
 // ── LOCAL STORAGE ───────────────────────────────────────────────────────────
 function loadLocal(){try{return JSON.parse(localStorage.getItem(LS_DATA)||"[]")}catch(e){return[]}}
-function saveLocal(){try{localStorage.setItem(LS_DATA,JSON.stringify(sessions))}catch(e){}}
+// Returns true on success. On quota failure it no longer swallows the error
+// silently (which could lose field work unnoticed) — it surfaces a warning.
+function saveLocal(){
+  var str;try{str=JSON.stringify(sessions)}catch(e){str="[]"}
+  try{
+    localStorage.setItem(LS_DATA,str);
+    if(str.length>STORE_SOFT_LIMIT){showStoreWarning(false)}
+    else{storeDismissed=false;hideStoreWarning()}
+    return true;
+  }catch(e){
+    showStoreWarning(true);
+    return false;
+  }
+}
+function showStoreWarning(hard){
+  var bar=$$("storeBar");if(!bar)return;
+  if(hard)storeDismissed=false; // a possible-data-loss warning can't stay dismissed
+  else if(storeDismissed)return;
+  bar.classList.toggle("hard",!!hard);
+  $$("storeMsg").innerHTML=hard
+    ?"&#9888; Device storage is full — "+(isLoggedIn?"changes still sync to Google Drive, but this device's local copy may be incomplete.":"recent changes may not be saved and could be lost. Sign in to Drive or download a backup now.")
+    :"&#9888; Device storage is almost full — "+(isLoggedIn?"consider backing up; your data is also on Google Drive.":"download a backup or sign in to Drive to avoid losing data.");
+  bar.style.display="flex";
+}
+function hideStoreWarning(){var bar=$$("storeBar");if(bar)bar.style.display="none"}
+// A backup download never touches storage quota, so it always works even when
+// localStorage is full — the safe escape hatch for the storage warning.
+function exportAllBackup(){
+  try{
+    var str=JSON.stringify(sessions,null,2);
+    dlBlob(new Blob([str],{type:"application/json;charset=utf-8"}),"field_service_log_backup_"+fnameStamp()+".json");
+  }catch(e){alert("Could not build backup: "+((e&&e.message)||e))}
+}
 function saveTok(){try{localStorage.setItem(LS_TOKEN,JSON.stringify({accessToken,tokenExp,driveFileId,rootFolderId}))}catch(e){}}
 function loadTok(){try{var t=JSON.parse(localStorage.getItem(LS_TOKEN)||"null");if(!t)return false;accessToken=t.accessToken;tokenExp=t.tokenExp||0;driveFileId=t.driveFileId||null;rootFolderId=t.rootFolderId||null;return true}catch(e){return false}}
 function clearTok(){accessToken=null;tokenExp=0;driveFileId=null;rootFolderId=null;try{localStorage.removeItem(LS_TOKEN)}catch(e){}}
@@ -792,6 +837,8 @@ $$("btnReconnect").addEventListener("click",async function(){
   if(!t)return;
   await finishLogin();
 });
+$$("btnStoreBackup").addEventListener("click",exportAllBackup);
+$$("btnStoreX").addEventListener("click",function(){storeDismissed=true;hideStoreWarning()});
 $$("btnLoginTop").addEventListener("click",async function(){
   var btn=$$("btnLoginTop");btn.disabled=true;btn.textContent="Connecting...";
   var t=await googleLogin();

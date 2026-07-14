@@ -26,6 +26,13 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
 - **Single HTML file** — all CSS, JS, and assets inline. No build step, no npm.
 - **PWA** — installable on mobile and desktop, works offline
 - **Storage:** localStorage for sessions data + Google Drive for sync
+  - localStorage is ~5 MB; photos + voice notes are base64 inside `fsl_v6_data`,
+    so it can fill up. `saveLocal()` returns a bool and, on `QuotaExceededError`,
+    shows a persistent warning bar (`#storeBar`) with a **Download backup**
+    button (a JSON download never touches quota, so it always works) instead of
+    the old silent `catch(e){}` that could lose field work unnoticed. A softer
+    heads-up appears when the serialized size passes `STORE_SOFT_LIMIT`.
+    Raising the actual ceiling (IndexedDB migration) is a planned Phase 2.
 - **localStorage keys:**
   - `fsl_v6_data` — sessions JSON array
   - `fsl_v6_tok`  — OAuth token + driveFileId + rootFolderId

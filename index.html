@@ -344,7 +344,7 @@ var SM = {
 var sessions=[], aid=null, pImgs=[], filterTxt="", sessFilterTxt="";
 var pExif=0, pExifEdit=0;
 var accessToken=null, tokenExp=0, driveFileId=null, rootFolderId=null;
-var isLoggedIn=false, saveTimer=null, isDirty=false;
+var isLoggedIn=false, saveTimer=null, isDirty=false, savingDrive=false, savePending=false;
 var editingId=null, eImgs=[], pendingDel=null, pendingDelFname=null, dInst=null;
 var authExpired=false, syncStarted=false;
 var fileCache=new WeakMap(); // img object -> raw File/Blob, kept in memory only, for upload retry
@@ -809,8 +809,15 @@ async function loadFromDrive(){
     if(r.ok){
       var data=await r.json();
       if(Array.isArray(data)){
+        // Merge: for a session present both remotely and locally, keep whichever
+        // was modified more recently (session.updatedAt, ISO strings sort
+        // chronologically) instead of blindly letting remote win — otherwise a
+        // manual/​reconnect sync could discard a just-made local edit. Remote-only
+        // and local-only sessions are both preserved.
+        var localById={};sessions.forEach(function(s){localById[s.id]=s});
+        var merged=data.map(function(rs){var ls=localById[rs.id];return(ls&&(ls.updatedAt||"")>(rs.updatedAt||""))?ls:rs});
         var remIds=new Set(data.map(function(s){return s.id}));
-        sessions=data.concat(sessions.filter(function(s){return !remIds.has(s.id)}));
+        sessions=merged.concat(sessions.filter(function(s){return !remIds.has(s.id)}));
         saveLocal();
       }
       setSyncSt("ok","Synced ✓");
@@ -819,29 +826,39 @@ async function loadFromDrive(){
   }catch(e){setSyncSt("error","Offline (local data)")}
 }
 async function saveToDrive(){
-  var token=await ensureToken();if(!token){saveLocal();return}
-  setSyncSt("loading","Saving...");
+  // Serialize: two concurrent saves both seeing driveFileId===null would each
+  // create a DATA_FILE, leaving a duplicate that findDataFile could later pick
+  // stale. Coalesce overlapping calls into one trailing re-run.
+  if(savingDrive){savePending=true;return}
+  savingDrive=true;
   try{
-    var body=JSON.stringify(sessions),r;
-    if(driveFileId){
-      r=await fetch("https://www.googleapis.com/upload/drive/v3/files/"+driveFileId+"?uploadType=media",{method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:body});
-      if(r.status===404){driveFileId=null;saveTok()} // deleted in Drive — recreate below from the sessions already loaded
-    }
-    if(!driveFileId){
-      var rootId=await getRootId(token);
-      var meta=JSON.stringify({name:DATA_FILE,mimeType:"application/json",parents:rootId?[rootId]:[]});
-      var bnd="fsl_d_"+Date.now();
-      var mp="--"+bnd+"\r\nContent-Type: application/json\r\n\r\n"+meta+"\r\n--"+bnd+"\r\nContent-Type: application/json\r\n\r\n"+body+"\r\n--"+bnd+"--";
-      r=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"multipart/related; boundary="+bnd},body:mp});
-      if(r&&r.ok){driveFileId=(await r.json()).id;saveTok()}
-    }
-    if(r&&r.ok){isDirty=false;saveLocal();setSyncSt("ok","Saved ✓ "+fts(now()).slice(12))}
-    else{saveLocal();setSyncSt("error","Save error")}
-  }catch(e){saveLocal();setSyncSt("error","Offline (saved locally)")}
+    var token=await ensureToken();if(!token){saveLocal();return}
+    setSyncSt("loading","Saving...");
+    try{
+      var body=JSON.stringify(sessions),r;
+      if(driveFileId){
+        r=await fetch("https://www.googleapis.com/upload/drive/v3/files/"+driveFileId+"?uploadType=media",{method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:body});
+        if(r.status===404){driveFileId=null;saveTok()} // deleted in Drive — recreate below from the sessions already loaded
+      }
+      if(!driveFileId){
+        var rootId=await getRootId(token);
+        var meta=JSON.stringify({name:DATA_FILE,mimeType:"application/json",parents:rootId?[rootId]:[]});
+        var bnd="fsl_d_"+Date.now();
+        var mp="--"+bnd+"\r\nContent-Type: application/json\r\n\r\n"+meta+"\r\n--"+bnd+"\r\nContent-Type: application/json\r\n\r\n"+body+"\r\n--"+bnd+"--";
+        r=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"multipart/related; boundary="+bnd},body:mp});
+        if(r&&r.ok){driveFileId=(await r.json()).id;saveTok()}
+      }
+      if(r&&r.ok){isDirty=false;saveLocal();setSyncSt("ok","Saved ✓ "+fts(now()).slice(12))}
+      else{saveLocal();setSyncSt("error","Save error")}
+    }catch(e){saveLocal();setSyncSt("error","Offline (saved locally)")}
+  }finally{
+    savingDrive=false;
+    if(savePending){savePending=false;saveToDrive()}
+  }
 }
-function scheduleSave(){isDirty=true;saveLocal();if(saveTimer)clearTimeout(saveTimer);saveTimer=setTimeout(function(){if(isDirty&&isLoggedIn)saveToDrive()},2000)}
+function scheduleSave(){if(aid)sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{updatedAt:now()}):s});isDirty=true;saveLocal();if(saveTimer)clearTimeout(saveTimer);saveTimer=setTimeout(function(){if(isDirty&&isLoggedIn)saveToDrive()},2000)}
 function scheduleSync(){if(syncStarted)return;syncStarted=true;setInterval(function(){if(isLoggedIn&&!isDirty&&!hasUnsaved())loadFromDrive().then(renderAll)},30000)}
-function hasUnsaved(){if(mediaRec)return true;var e=$$("entIn");if(e&&e.value.trim())return true;if(pImgs.length)return true;if(editingId)return true;return false}
+function hasUnsaved(){if(mediaRec)return true;var a=document.activeElement;if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return true;var e=$$("entIn");if(e&&e.value.trim())return true;if(pImgs.length)return true;if(editingId)return true;return false}
 function setSyncSt(state,msg){
   var bar=$$("syncBar"),st=$$("syncSt");
   if(state==="loading"){bar.style.display="flex";$$("syncMsg").textContent=msg;st.innerHTML="<span class=\"spinner\"></span>"}
@@ -945,7 +962,7 @@ function buildSitem(s,applyFilter){
     +"<div class=\"sitem-sub\">"+highlightText(s.machine||"",sessFilterTxt)+"</div>"
     +"<div class=\"sitem-sub\" style=\"margin-top:2px\">"+(s.status==="open"?"🟢 Open":"🔴 Closed")+" · "+(s.entries||[]).length+" entries</div>"
     +"<button class=\"sitem-del\" title=\"Delete\">✕</button>";
-  div.addEventListener("click",function(){aid=s.id;filterTxt=applyFilter||"";if(mob())closeSide();renderAll()});
+  div.addEventListener("click",function(){if(aid!==s.id)stopCurAudio();aid=s.id;filterTxt=applyFilter||"";if(mob())closeSide();renderAll()});
   div.querySelector(".sitem-del").addEventListener("click",function(e){e.stopPropagation();openDelModal(s)});
   return div;
 }
@@ -980,7 +997,7 @@ function renderSidebar(){
       var hit=document.createElement("div");
       hit.className="sitem-hit";
       hit.innerHTML="<span style=\"color:"+sm.dc+"\">"+sm.dot+"</span> <span style=\"font-size:9px;color:"+sm.tx+";font-family:monospace\">"+highlightText(sm.label,sessFilterTxt)+"</span> "+highlightText((e.text||"").slice(0,50),sessFilterTxt)+(e.tag?" <span class=\"log-tag\" style=\"font-size:9px;vertical-align:1px\">"+highlightText(e.tag,sessFilterTxt)+"</span>":"");
-      hit.addEventListener("click",function(){aid=r.s.id;filterTxt=sessFilterTxt;if(mob())closeSide();renderAll()});
+      hit.addEventListener("click",function(){if(aid!==r.s.id)stopCurAudio();aid=r.s.id;filterTxt=sessFilterTxt;if(mob())closeSide();renderAll()});
       list.appendChild(hit);
     });
     if(r.hits.length>5){

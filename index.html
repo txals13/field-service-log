@@ -339,6 +339,13 @@ var SM = {
   warning:{label:"WARNING",dot:"▲",dc:"#f97316",bg:"rgba(249,115,22,.1)",tx:"#f97316"},
   issue:  {label:"ISSUE",  dot:"■",dc:"#ef4444",bg:"rgba(239,68,68,.1)",tx:"#ef4444"}
 };
+// Tally of entry severities — shared by the sidebar badge, the status bar and
+// both report formats (previously four copies of the same filter().length trio).
+function severityCounts(entries){
+  var c={issue:0,warning:0,ok:0};
+  (entries||[]).forEach(function(e){if(e&&c.hasOwnProperty(e.severity))c[e.severity]++});
+  return c;
+}
 
 // ── STATE ───────────────────────────────────────────────────────────────────
 var sessions=[], aid=null, pImgs=[], filterTxt="", sessFilterTxt="";
@@ -953,7 +960,7 @@ $$("overlay").addEventListener("click",closeSide);
 // matched by its entries lands you already filtered to those entries.
 function buildSitem(s,applyFilter){
   var tm=TM[s.type]||TM.commissioning;
-  var issues=(s.entries||[]).filter(function(e){return e.severity==="issue"}).length;
+  var issues=severityCounts(s.entries).issue;
   var div=document.createElement("div");
   div.className="sitem"+(s.id===aid?" active":"");
   div.innerHTML="<span class=\"sitem-badge\" style=\"background:"+tm.bg+";color:"+tm.tx+"\">"+tm.abbr+"</span>"
@@ -1137,9 +1144,7 @@ function renderContent(){
   var tm=TM[active.type]||TM.commissioning;
   var entries=active.entries||[];
   var filtered=filterTxt?entries.filter(function(e){return entryMatches(e,filterTxt)}):entries;
-  var errs=entries.filter(function(e){return e.severity==="issue"}).length;
-  var warns=entries.filter(function(e){return e.severity==="warning"}).length;
-  var oks=entries.filter(function(e){return e.severity==="ok"}).length;
+  var cnt=severityCounts(entries),errs=cnt.issue,warns=cnt.warning,oks=cnt.ok;
   var isOpen=active.status==="open";
 
   mc.innerHTML="<div style=\"display:flex;flex:1;flex-direction:column;overflow:hidden\">"
@@ -1244,11 +1249,15 @@ function retryUpload(img,isEdit){
     scheduleSave();
   });
 }
-function rThumbs(){
-  var c=$$("pThumbs");if(!c)return;c.innerHTML="";
-  pImgs.forEach(function(img,i){
+// Shared renderer for the pending-attachments strip (pImgs) and the edit
+// modal's attachments (eImgs) — previously two near-identical functions.
+// cfg: { container, get:()->arr, set:(arr)->void, isEdit, after? }
+function renderThumbs(cfg){
+  var c=$$(cfg.container);if(!c)return;c.innerHTML="";
+  cfg.get().forEach(function(img,i){
+    function removeAt(){cfg.set(cfg.get().filter(function(_,j){return j!==i}));renderThumbs(cfg)}
     if(img.type==="audio"){
-      c.appendChild(audioChipEl(img,{editable:true,isEdit:false,onDelete:function(){stopCurAudio();pImgs=pImgs.filter(function(_,j){return j!==i});rThumbs()}}));
+      c.appendChild(audioChipEl(img,{editable:true,isEdit:cfg.isEdit,onDelete:function(){stopCurAudio();removeAt()}}));
       return;
     }
     var isVid=img.type==="video",src=isVid?(img.poster||""):img.data;
@@ -1257,30 +1266,14 @@ function rThumbs(){
       +(isVid?"<div class=\"thumb-play\">▶</div>":"")
       +upBadge(img)
       +"<button class=\"thumb-del\">✕</button>";
-    var up=d.querySelector(".thumb-up.err");if(up)up.addEventListener("click",function(ev){ev.stopPropagation();retryUpload(img,false)});
-    d.querySelector(".thumb-del").addEventListener("click",function(){pImgs=pImgs.filter(function(_,j){return j!==i});rThumbs()});
+    var up=d.querySelector(".thumb-up.err");if(up)up.addEventListener("click",function(ev){ev.stopPropagation();retryUpload(img,cfg.isEdit)});
+    d.querySelector(".thumb-del").addEventListener("click",removeAt);
     c.appendChild(d);
   });
+  if(cfg.after)cfg.after();
 }
-function rEThumbs(){
-  var c=$$("eThumbs");if(!c)return;c.innerHTML="";
-  eImgs.forEach(function(img,i){
-    if(img.type==="audio"){
-      c.appendChild(audioChipEl(img,{editable:true,isEdit:true,onDelete:function(){stopCurAudio();eImgs=eImgs.filter(function(_,j){return j!==i});rEThumbs()}}));
-      return;
-    }
-    var isVid=img.type==="video",src=isVid?(img.poster||""):img.data;
-    var d=document.createElement("div");d.className="thumb";
-    d.innerHTML=(src?"<img src=\""+src+"\" alt=\"\">":"<div class=\"thumb-ph\">"+(isVid?"🎬":"🖼")+"</div>")
-      +(isVid?"<div class=\"thumb-play\">▶</div>":"")
-      +upBadge(img)
-      +"<button class=\"thumb-del\">✕</button>";
-    var up=d.querySelector(".thumb-up.err");if(up)up.addEventListener("click",function(ev){ev.stopPropagation();retryUpload(img,true)});
-    d.querySelector(".thumb-del").addEventListener("click",function(){eImgs=eImgs.filter(function(_,j){return j!==i});rEThumbs();rENames()});
-    c.appendChild(d);
-  });
-  rENames();
-}
+function rThumbs(){renderThumbs({container:"pThumbs",get:function(){return pImgs},set:function(v){pImgs=v},isEdit:false})}
+function rEThumbs(){renderThumbs({container:"eThumbs",get:function(){return eImgs},set:function(v){eImgs=v},isEdit:true,after:rENames})}
 function rENames(){
   var list=$$("eFileNames");if(!list)return;list.innerHTML="";
   eImgs.forEach(function(img,i){
@@ -1636,9 +1629,7 @@ function dlBlob(blob,filename){var url=URL.createObjectURL(blob);var a=document.
 function buildReportHTML(s,forPrint){
   var tm=TM[s.type]||TM.commissioning;
   var entries=s.entries||[];
-  var errs=entries.filter(function(e){return e.severity==="issue"}).length;
-  var warns=entries.filter(function(e){return e.severity==="warning"}).length;
-  var oks=entries.filter(function(e){return e.severity==="ok"}).length;
+  var cnt=severityCounts(entries),errs=cnt.issue,warns=cnt.warning,oks=cnt.ok;
   var rows=entries.map(function(e){
     var sm=SM[e.severity]||SM.info;
     var imgCell=(e.images||[]).map(function(img){
@@ -1742,9 +1733,7 @@ async function exportDOCX(s,base){
 }
 function buildDocxDocument(D,s){
   var tm=TM[s.type]||TM.commissioning,entries=s.entries||[];
-  var errs=entries.filter(function(e){return e.severity==="issue"}).length;
-  var warns=entries.filter(function(e){return e.severity==="warning"}).length;
-  var oks=entries.filter(function(e){return e.severity==="ok"}).length;
+  var cnt=severityCounts(entries),errs=cnt.issue,warns=cnt.warning,oks=cnt.ok;
   var br={style:D.BorderStyle.SINGLE,size:1,color:"E5E7EB"},borders={top:br,bottom:br,left:br,right:br},mg={top:80,bottom:80,left:120,right:120};
   function hdrCell(t){return new D.TableCell({borders:borders,margins:mg,shading:{fill:"111827",type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:t,bold:true,color:"FFFFFF",size:18,font:"Arial"})]})]})}
   function toImg(url){try{var b64=url.split(",")[1],bin=atob(b64),arr=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);var m=/^data:image\/([a-zA-Z+]+);/.exec(url);return{bytes:arr,type:(m&&m[1].includes("png"))?"png":"jpg"}}catch(e){return null}}

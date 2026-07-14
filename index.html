@@ -559,6 +559,33 @@ function genThumb(file){
     }catch(e){res(null)}
   });
 }
+// Downscales a photo to a max dimension for LOCAL storage/display (the full-res
+// original is still uploaded to Drive). Big win for mobile memory + storage,
+// since the on-screen thumbnails and reports don't need multi-MB originals.
+// Already-small images keep their original bytes (no recompression); any
+// failure falls back to the full data URL so a photo is never lost.
+var LOCAL_IMG_MAXDIM=1600, LOCAL_IMG_QUALITY=0.85;
+function readAsDataURL(file){return new Promise(function(res){var fr=new FileReader();fr.onload=function(e){res(e.target.result)};fr.onerror=function(){res(null)};fr.readAsDataURL(file)})}
+function makeLocalImageData(file){
+  return new Promise(function(res){
+    if(!/^image\//.test(file.type||"")){readAsDataURL(file).then(res);return}
+    var url=URL.createObjectURL(file),im=new Image();
+    im.onload=function(){
+      try{
+        var w=im.naturalWidth||0,h=im.naturalHeight||0,mx=Math.max(w,h)||1;
+        var scale=Math.min(1,LOCAL_IMG_MAXDIM/mx);
+        if(scale>=1){URL.revokeObjectURL(url);readAsDataURL(file).then(res);return} // already small — keep original bytes
+        var cw=Math.max(1,Math.round(w*scale)),ch=Math.max(1,Math.round(h*scale));
+        var c=document.createElement("canvas");c.width=cw;c.height=ch;
+        c.getContext("2d").drawImage(im,0,0,cw,ch);
+        URL.revokeObjectURL(url);
+        res(c.toDataURL("image/jpeg",LOCAL_IMG_QUALITY));
+      }catch(e){URL.revokeObjectURL(url);readAsDataURL(file).then(res)}
+    };
+    im.onerror=function(){URL.revokeObjectURL(url);readAsDataURL(file).then(res)};
+    im.src=url;
+  });
+}
 
 // ── GOOGLE AUTH ──────────────────────────────────────────────────────────────
 function loadGIS(){return new Promise(function(res){if(window.google&&window.google.accounts){res();return}var s=document.createElement("script");s.src="https://accounts.google.com/gsi/client";s.onload=res;s.onerror=res;document.head.appendChild(s)})}
@@ -1421,18 +1448,20 @@ function handleFiles(e,isEdit){
         dec();if(isEdit)rEThumbs();else rThumbs();scheduleSave();
       });
     } else {
-      var r2=new FileReader();
-      r2.onload=function(ev){
-        var img2={data:ev.target.result,type:"image",name:file.name,uploadStatus:(active&&isLoggedIn)?"loading":""};
-        fileCache.set(img2,file);
-        if(isEdit){eImgs.push(img2);rEThumbs()}else{pImgs.push(img2);rThumbs()}
-        if(isEdit)pExifEdit++;else pExif++;
-        getFileTs(file).then(function(ts){img2.capturedAt=ts;if(isEdit)pExifEdit--;else pExif--;if(isEdit)rEThumbs();else rThumbs()});
-        if(active&&isLoggedIn)uploadMedia(active,file,"photos").then(function(r3){
-          if(r3){img2.driveId=r3.driveId;img2.name=r3.name;img2.uploadStatus="ok"}else img2.uploadStatus="err";
-          if(isEdit)rEThumbs();else rThumbs();scheduleSave();
-        });
-      };r2.readAsDataURL(file);
+      // Store a downscaled copy locally (fast to render, small to store); the
+      // full-res original still goes to Drive. fileCache keeps the original
+      // File for the Drive upload + retry.
+      var img2={data:null,type:"image",name:file.name,uploadStatus:(active&&isLoggedIn)?"loading":""};
+      fileCache.set(img2,file);
+      if(isEdit){eImgs.push(img2);rEThumbs()}else{pImgs.push(img2);rThumbs()}
+      if(isEdit)pExifEdit++;else pExif++;
+      makeLocalImageData(file).then(function(d){img2.data=d;if(isEdit)pExifEdit--;else pExif--;if(isEdit)rEThumbs();else rThumbs()});
+      if(isEdit)pExifEdit++;else pExif++;
+      getFileTs(file).then(function(ts){img2.capturedAt=ts;if(isEdit)pExifEdit--;else pExif--;if(isEdit)rEThumbs();else rThumbs()});
+      if(active&&isLoggedIn)uploadMedia(active,file,"photos").then(function(r3){
+        if(r3){img2.driveId=r3.driveId;img2.name=r3.name;img2.uploadStatus="ok"}else img2.uploadStatus="err";
+        if(isEdit)rEThumbs();else rThumbs();scheduleSave();
+      });
     }
   });
   e.target.value="";

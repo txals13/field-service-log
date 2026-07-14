@@ -88,7 +88,13 @@ Field Service Log/
 - Video thumbnail generation via canvas (frame at ~0.5s)
 - **Videos uploaded directly to Drive as Blob** — never loaded as base64
   (prevents "Aw, Snap!" memory crash on mobile)
-- Photos stored as base64 in JSON + uploaded to Drive in background
+- Photos: a **downscaled** copy (max 1600px, JPEG 0.85, via `makeLocalImageData`)
+  is stored locally as base64 for display/reports/offline; the **full-res
+  original** is uploaded to Drive (via the original File in `fileCache`). Big
+  mobile memory/storage win. Already-small images keep their original bytes;
+  any failure falls back to the full data URL. Note: the base64-recovery path
+  in `syncSessionToDrive` can only re-upload the downscaled copy if the
+  original upload failed and the original File is no longer in memory.
 - **Voice notes** — record audio via MediaRecorder (🎙 button); stored as base64
   in the entry (offline-safe, like photos, NOT like video) + uploaded to Drive
   `audio/` subfolder in background. Rendered as an "audio chip" (play, duration,

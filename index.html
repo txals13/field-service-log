@@ -390,6 +390,12 @@ function $$(id){return document.getElementById(id)}
 function autoH(ta){if(!ta)return;ta.style.height="auto";ta.style.height=Math.min(ta.scrollHeight,200)+"px"}
 function sanitize(s){return(s||"untitled").toString().trim().replace(/[\/:*?"<>|]/g,"_").replace(/\s+/g,"_").slice(0,60)||"untitled"}
 function mob(){return window.innerWidth<=640}
+// Coalesce bursts of calls (e.g. filter keystrokes) into one trailing run,
+// so a heavy re-render (log entries with base64 images) fires once the user
+// pauses instead of on every keypress — a big win on mobile.
+function debounce(fn,ms){var t;return function(){var a=arguments,c=this;clearTimeout(t);t=setTimeout(function(){fn.apply(c,a)},ms)}}
+var debLogRender=debounce(function(){renderLogArea()},180);
+var debSidebarRender=debounce(function(){renderSidebar()},180);
 
 // ── LOCAL STORAGE ───────────────────────────────────────────────────────────
 // Sessions (which carry base64 photos + voice notes) are persisted in
@@ -952,7 +958,7 @@ $$("btnSide").addEventListener("click",function(){
   else $$("sidebar").classList.toggle("collapsed");
 });
 $$("btnSideX").addEventListener("click",closeSide);
-$$("sessFiltIn").addEventListener("input",function(e){sessFilterTxt=e.target.value;renderSidebar()});
+$$("sessFiltIn").addEventListener("input",function(e){sessFilterTxt=e.target.value;debSidebarRender()});
 $$("overlay").addEventListener("click",closeSide);
 
 // applyFilter: filterTxt to carry into the session's own log view when
@@ -1217,7 +1223,7 @@ function renderContent(){
   }
   var btnSy=$$("btnSync");if(btnSy)btnSy.addEventListener("click",function(){loadFromDrive().then(renderAll)});
   var btnSS=$$("btnSessSync");if(btnSS)btnSS.addEventListener("click",syncActiveSessionToDrive);
-  var fi=$$("filtIn");if(fi)fi.addEventListener("input",function(e){filterTxt=e.target.value;renderLogArea()});
+  var fi=$$("filtIn");if(fi)fi.addEventListener("input",function(e){filterTxt=e.target.value;debLogRender()});
   if(isOpen){
     var ni=$$("notesIn");ni.value=active.notes||"";autoH(ni);
     rThumbs();

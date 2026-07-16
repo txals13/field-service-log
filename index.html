@@ -455,7 +455,7 @@ var isLoggedIn=false, saveTimer=null, isDirty=false, savingDrive=false, savePend
 var editingId=null, eImgs=[], eParts=[], pendingDel=null, pendingDelFname=null, dInst=null;
 var manuals=[], mfPdfFile=null, mfJsonFile=null, mfParsed=null;
 var pdfjsReadyP=null, viewerDoc=null, viewerNumPages=0, viewerPage=1, viewerPdfId=null, viewerRenderTask=null, viewerZoom=1;
-var viewerPickMode=false, viewerRows=[], viewerPickItems=[], pickReturnEdit=false;
+var viewerPickMode=false, viewerRows=[], viewerGrups=[], viewerPickItems=[], pickReturnEdit=false;
 var authExpired=false, syncStarted=false;
 var fileCache=new WeakMap(); // img object -> raw File/Blob, kept in memory only, for upload retry
 // Voice-note recording state
@@ -1196,8 +1196,8 @@ async function openDrawings(targetPage,pickMode){
   $$("drawBack").style.display="flex";
   try{
     var lib=await loadPdfjs();
-    if(viewerPickMode){try{viewerRows=flattenCatalogRows(await getManualCatalog(ref.jsonId))}catch(e){viewerRows=[];setDrawStatus("Could not load the catalog — tapping won't resolve parts.")}}
-    else viewerRows=[];
+    if(viewerPickMode){try{var vc=buildViewerCatalog(await getManualCatalog(ref.jsonId));viewerRows=vc.rows;viewerGrups=vc.grups}catch(e){viewerRows=[];viewerGrups=[];setDrawStatus("Could not load the catalog — tapping won't resolve parts.")}}
+    else {viewerRows=[];viewerGrups=[]}
     if(viewerDoc&&viewerPdfId===ref.pdfId){$$("drawStatus").textContent="";renderViewerPage(targetPage||viewerPage);return}
     var buf=await getManualPdfBytes(ref.pdfId);
     var doc=await lib.getDocument({data:new Uint8Array(buf.slice(0))}).promise;
@@ -1247,12 +1247,22 @@ async function getManualCatalog(jsonId){
   if(idb){try{await idbSet(idb,key,data)}catch(e){}}
   return data;
 }
-function flattenCatalogRows(cat){
-  var out=[],conjunts=(cat&&cat.conjunts)||(cat&&cat.conjunt?[cat.conjunt]:[]);
-  conjunts.forEach(function(c){(c.grups||[]).forEach(function(g){(g.subgrups||[]).forEach(function(sg){(sg.rows||[]).forEach(function(r){
-    out.push({pos:r.pos,ref:r.ref,cant:r.cant,denominacio:r.denominacio,page:r.page,conjunt:c.name,grup:g.name});
-  })})})});
-  return out;
+// Build both a flat row list and per-grup groups. Each grup (= one drawing)
+// carries the set of PDF pages it covers (its own g.pages plus any page a row
+// was extracted from), so a tapped number can be scoped to the drawing on
+// screen instead of the whole catalog.
+function buildViewerCatalog(cat){
+  var grups=[],flat=[],conjunts=(cat&&cat.conjunts)||(cat&&cat.conjunt?[cat.conjunt]:[]);
+  conjunts.forEach(function(c){(c.grups||[]).forEach(function(g){
+    var rows=[];
+    (g.subgrups||[]).forEach(function(sg){(sg.rows||[]).forEach(function(r){
+      var row={pos:r.pos,ref:r.ref,cant:r.cant,denominacio:r.denominacio,page:r.page,conjunt:c.name,grup:g.name,subgrup:sg.name};
+      rows.push(row);flat.push(row);
+    })});
+    var pages={};(g.pages||[]).forEach(function(p){pages[p]=1});rows.forEach(function(r){if(r.page!=null)pages[r.page]=1});
+    grups.push({name:g.name,pages:pages,rows:rows});
+  })});
+  return {grups:grups,rows:flat};
 }
 // pdf.js text items -> boxes in the render viewport's bitmap-pixel space
 function buildPickItems(tc,viewport){
@@ -1296,16 +1306,21 @@ function confirmAndAdd(r){
   if(!confirm("Add this spare part to the entry?\n\n"+label)){setDrawStatus("");return}
   addResolvedPart(r);
 }
-// Never silently pick a part from another page: an exact page+pos match is used
-// directly; otherwise the user chooses among the catalog rows with that pos.
+// Scope candidates to the drawing on screen — never the whole catalog:
+//   1) rows on this exact page, then
+//   2) rows of the grup(s) that cover this page (a drawing can span sheets).
+// If the pos isn't in the current drawing's list, say so (no wrong pick).
 function resolvePartByPos(pos){
-  if(!viewerRows.length){setDrawStatus("Catalog not loaded — tapping can't resolve parts.");return}
+  if(!viewerGrups.length){setDrawStatus("Catalog not loaded — tapping can't resolve parts.");return}
   var onPage=viewerRows.filter(function(r){return String(r.page)===String(viewerPage)&&String(r.pos)===String(pos)});
   if(onPage.length===1){confirmAndAdd(onPage[0]);return}
   if(onPage.length>1){showPickChoices(pos,onPage,false);return}
-  var others=viewerRows.filter(function(r){return String(r.pos)===String(pos)});
-  if(!others.length){setDrawStatus("Pos "+pos+" not found in the catalog.");return}
-  showPickChoices(pos,others,true);
+  var owning=viewerGrups.filter(function(g){return g.pages[viewerPage]});
+  var scope=[];owning.forEach(function(g){scope=scope.concat(g.rows)});
+  var cand=scope.filter(function(r){return String(r.pos)===String(pos)});
+  if(cand.length===1){confirmAndAdd(cand[0]);return}
+  if(cand.length>1){showPickChoices(pos,cand,false);return}
+  setDrawStatus(owning.length?("Pos "+pos+" isn't in this drawing's parts list."):("This page isn't a parts drawing in the catalog."));
 }
 function showPickChoices(pos,rows,offPage){
   var box=$$("drawChoices");if(!box)return;

@@ -313,6 +313,28 @@ textarea{resize:none;line-height:1.4}
     </div>
   </div>
 
+  <!-- Drawings viewer (linked manual PDF) -->
+  <div class="modal-back" id="drawBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,1100px);width:96vw;padding:14px;display:flex;flex-direction:column;overflow:hidden">
+      <div class="modal-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <span>&#128208; Drawings</span>
+        <span id="drawManual" style="font-size:11px;color:var(--tx3);font-weight:400"></span>
+        <button class="btn-g btn-sm" id="drawClose" style="margin-left:auto">&#10005;</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="btn-sm" id="drawPrev">&#9664;</button>
+        <span id="drawPageLbl" style="font-size:12px;font-family:monospace"></span>
+        <button class="btn-sm" id="drawNext">&#9654;</button>
+        <input type="text" id="drawGoto" placeholder="page" style="width:60px;font-size:12px;padding:4px 6px">
+        <button class="btn-sm" id="drawGotoBtn">Go</button>
+        <span id="drawStatus" style="font-size:11px;color:var(--tx3)"></span>
+      </div>
+      <div id="drawWrap" style="flex:1;min-height:200px;overflow:auto;background:#0a0b0e;border-radius:6px;display:flex;align-items:flex-start;justify-content:center">
+        <canvas id="drawCanvas" style="max-width:100%;height:auto;display:block"></canvas>
+      </div>
+    </div>
+  </div>
+
   <!-- Edit entry modal -->
   <div class="modal-back" id="editBack" style="display:none">
     <div class="modal">
@@ -424,6 +446,7 @@ var accessToken=null, tokenExp=0, driveFileId=null, rootFolderId=null;
 var isLoggedIn=false, saveTimer=null, isDirty=false, savingDrive=false, savePending=false;
 var editingId=null, eImgs=[], eParts=[], pendingDel=null, pendingDelFname=null, dInst=null;
 var manuals=[], mfPdfFile=null, mfJsonFile=null, mfParsed=null;
+var pdfjsReadyP=null, viewerDoc=null, viewerNumPages=0, viewerPage=1, viewerPdfId=null, viewerRenderTask=null;
 var authExpired=false, syncStarted=false;
 var fileCache=new WeakMap(); // img object -> raw File/Blob, kept in memory only, for upload retry
 // Voice-note recording state
@@ -1101,6 +1124,79 @@ function setSessionManual(m){
 $$("linkClose").addEventListener("click",closeLinkModal);
 $$("linkBack").addEventListener("click",function(e){if(e.target===$$("linkBack"))closeLinkModal()});
 
+// -- Drawings viewer (Pas 4): render the linked manual's PDF with pdf.js. The
+//    PDF is downloaded from Drive once (by manualRef.pdfId) and cached in
+//    IndexedDB (key "pdf_<id>") for offline use; only the requested page is
+//    rendered at a time (mobile memory). --
+function drawingsChipHTML(sess){
+  if(!sess.manualRef)return"";
+  return "<span id=\"drawingsChip\" style=\"cursor:pointer\" title=\"Open the linked manual's drawings\">📐 Drawings</span>";
+}
+function loadPdfjs(){
+  if(pdfjsReadyP)return pdfjsReadyP;
+  pdfjsReadyP=new Promise(function(res,rej){
+    if(window.pdfjsLib){res(window.pdfjsLib);return}
+    function tryLoad(urls){
+      if(!urls.length){rej(new Error("could not load pdf.js"));return}
+      var sc=document.createElement("script");sc.src=urls[0];
+      sc.onload=function(){try{window.pdfjsLib.GlobalWorkerOptions.workerSrc=urls[0].replace("pdf.min.js","pdf.worker.min.js")}catch(e){}res(window.pdfjsLib)};
+      sc.onerror=function(){tryLoad(urls.slice(1))};
+      document.head.appendChild(sc);
+    }
+    tryLoad(["https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js","https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"]);
+  });
+  return pdfjsReadyP;
+}
+async function getManualPdfBytes(pdfId){
+  var key="pdf_"+pdfId;
+  if(idb){try{var cached=await idbGet(idb,key);if(cached)return cached}catch(e){}}
+  var token=await ensureToken();if(!token)throw new Error("not signed in");
+  var r=await fetch("https://www.googleapis.com/drive/v3/files/"+pdfId+"?alt=media",{headers:{Authorization:"Bearer "+token}});
+  if(!r.ok)throw new Error("could not download the PDF ("+r.status+")");
+  var buf=await r.arrayBuffer();
+  if(idb){try{await idbSet(idb,key,buf)}catch(e){}}
+  return buf;
+}
+async function openDrawings(targetPage){
+  var sess=sessions.find(function(s){return s.id===aid});
+  if(!sess||!sess.manualRef){alert("Link a spare-parts manual to this session first.");return}
+  if(!isLoggedIn){alert("Sign in with Google to open the drawings.");return}
+  var ref=sess.manualRef;
+  $$("drawManual").textContent=ref.base||ref.serial||"";
+  $$("drawStatus").textContent="Loading…";
+  $$("drawBack").style.display="flex";
+  try{
+    var lib=await loadPdfjs();
+    if(viewerDoc&&viewerPdfId===ref.pdfId){$$("drawStatus").textContent="";renderViewerPage(targetPage||viewerPage);return}
+    var buf=await getManualPdfBytes(ref.pdfId);
+    var doc=await lib.getDocument({data:new Uint8Array(buf.slice(0))}).promise;
+    viewerDoc=doc;viewerNumPages=doc.numPages;viewerPdfId=ref.pdfId;
+    $$("drawStatus").textContent="";
+    renderViewerPage(targetPage||1);
+  }catch(e){$$("drawStatus").textContent="";alert("Could not open drawings: "+((e&&e.message)||e));closeDrawings()}
+}
+function renderViewerPage(n){
+  if(!viewerDoc)return;
+  n=Math.max(1,Math.min(n||1,viewerNumPages));viewerPage=n;
+  $$("drawPageLbl").textContent="Page "+n+" / "+viewerNumPages;
+  viewerDoc.getPage(n).then(function(pg){
+    var wrap=$$("drawWrap"),cv=$$("drawCanvas");
+    var vp0=pg.getViewport({scale:1});
+    var maxW=Math.max(280,(wrap.clientWidth||600));
+    var vp=pg.getViewport({scale:maxW/vp0.width});
+    cv.width=vp.width;cv.height=vp.height;
+    if(viewerRenderTask){try{viewerRenderTask.cancel()}catch(e){}}
+    viewerRenderTask=pg.render({canvasContext:cv.getContext("2d"),viewport:vp});
+  }).catch(function(){});
+}
+function closeDrawings(){$$("drawBack").style.display="none"}
+$$("drawClose").addEventListener("click",closeDrawings);
+$$("drawBack").addEventListener("click",function(e){if(e.target===$$("drawBack"))closeDrawings()});
+$$("drawPrev").addEventListener("click",function(){renderViewerPage(viewerPage-1)});
+$$("drawNext").addEventListener("click",function(){renderViewerPage(viewerPage+1)});
+$$("drawGotoBtn").addEventListener("click",function(){var v=parseInt($$("drawGoto").value,10);if(v)renderViewerPage(v)});
+$$("drawGoto").addEventListener("keydown",function(e){if(e.key==="Enter"){var v=parseInt($$("drawGoto").value,10);if(v)renderViewerPage(v)}});
+
 // ── DRIVE SYNC ───────────────────────────────────────────────────────────────
 async function findDataFile(token){
   var rootId=await getRootId(token);
@@ -1480,6 +1576,7 @@ function renderContent(){
     +(active.tech?"<span>👤 "+esc(active.tech)+"</span>":"")
     +"<span>🕐 "+fts(active.createdAt)+"</span>"
     +manualChipHTML(active)
+    +drawingsChipHTML(active)
     +"</div></div>"
     // filter
     +"<div class=\"filter-row\">"
@@ -1522,6 +1619,7 @@ function renderContent(){
   // Wire up controls
   var btnEd=$$("btnEditSess");if(btnEd)btnEd.addEventListener("click",function(){openNewModal(active)});
   var mChip=$$("manualChip");if(mChip)mChip.addEventListener("click",openLinkModal);
+  var dChip=$$("drawingsChip");if(dChip)dChip.addEventListener("click",function(){openDrawings()});
   var btnC=$$("btnClose");if(btnC)btnC.addEventListener("click",function(){if(confirm("Close this session? You can reopen it later.")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"closed",closedAt:now()}):s});scheduleSave();renderAll()}});
   var btnR=$$("btnReopen");if(btnR)btnR.addEventListener("click",function(){if(confirm("Reopen this session?")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"open",closedAt:null}):s});scheduleSave();renderAll()}});
   var btnEx=$$("btnExp");if(btnEx){

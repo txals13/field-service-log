@@ -183,6 +183,18 @@ textarea{resize:none;line-height:1.4}
 .spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(245,158,11,.3);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:var(--br2);border-radius:2px}
+/* spare parts */
+.log-parts{display:flex;flex-direction:column;gap:3px;margin-top:6px}
+.part-row{display:flex;align-items:center;gap:6px;font-size:12px;background:var(--bg2);border:1px solid var(--br2);border-left:3px solid #3b82f6;border-radius:6px;padding:5px 8px}
+.part-row .pp{font-family:monospace;font-weight:700;color:#3b82f6;flex-shrink:0}
+.part-row .pd{flex:1;min-width:0;color:var(--tx2)}
+.part-row .pq{font-family:monospace;color:var(--tx3);flex-shrink:0}
+.part-row .pc{font-size:10px;color:var(--tx3);flex-shrink:0}
+.part-row .part-del{background:none;border:none;color:var(--tx3);cursor:pointer;font-size:12px;padding:0 2px;flex-shrink:0}
+.part-form{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;padding:8px;background:var(--bg2);border:1px solid var(--br2);border-radius:8px}
+.part-form input{font-size:12px;padding:5px 7px}
+.part-form .pf-pos{width:64px}.part-form .pf-ref{width:110px}.part-form .pf-cant{width:56px}
+.part-form .pf-den{flex:1;min-width:140px}
 </style>
 </head>
 <body>
@@ -274,6 +286,19 @@ textarea{resize:none;line-height:1.4}
         <button class="btn-sm" id="eRec" title="Record voice note" style="margin-top:6px">&#127897; Record voice note</button>
         <input type="file" id="eFileIn" accept="image/*,video/*" multiple style="display:none">
       </div>
+      <div class="field">
+        <label>Spare parts</label>
+        <div id="eParts" class="log-parts"></div>
+        <button class="btn-sm" id="ePartAdd" style="margin-top:6px">&#128295; Add spare part</button>
+        <div id="ePartForm" class="part-form" style="display:none">
+          <input type="text" class="pf-pos" id="pfPos" placeholder="Pos.">
+          <input type="text" class="pf-ref" id="pfRef" placeholder="Ref.">
+          <input type="text" class="pf-cant" id="pfCant" placeholder="Cant.">
+          <input type="text" class="pf-den" id="pfDen" placeholder="Denomination">
+          <button class="btn-sm btn-gold" id="pfSave">Add</button>
+          <button class="btn-sm" id="pfCancel">Cancel</button>
+        </div>
+      </div>
       <div class="modal-actions">
         <button id="eCancel">Cancel</button>
         <button class="btn-gold" id="eSave">&#10003; Save changes</button>
@@ -352,7 +377,7 @@ var sessions=[], aid=null, pImgs=[], filterTxt="", sessFilterTxt="";
 var pExif=0, pExifEdit=0;
 var accessToken=null, tokenExp=0, driveFileId=null, rootFolderId=null;
 var isLoggedIn=false, saveTimer=null, isDirty=false, savingDrive=false, savePending=false;
-var editingId=null, eImgs=[], pendingDel=null, pendingDelFname=null, dInst=null;
+var editingId=null, eImgs=[], eParts=[], pendingDel=null, pendingDelFname=null, dInst=null;
 var authExpired=false, syncStarted=false;
 var fileCache=new WeakMap(); // img object -> raw File/Blob, kept in memory only, for upload retry
 // Voice-note recording state
@@ -365,6 +390,34 @@ function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 function now(){return new Date().toISOString()}
 function fts(iso){var d=new Date(iso);return d.toLocaleDateString("en-GB",{day:"2-digit",month:"2-digit",year:"2-digit"})+" "+d.toTimeString().slice(0,8)}
 function esc(s){if(!s)return"";var d=document.createElement("div");d.textContent=s;return d.innerHTML}
+// -- Spare parts (entry.parts = [{pos,ref,cant,denominacio,conjunt,grup,page}]) --
+function partCtx(p){return[p.conjunt,p.grup].filter(Boolean).join(" › ")}
+// on-screen log view (uses the app's themed .log-parts/.part-row classes)
+function partsBlockHTML(parts){
+  if(!parts||!parts.length)return"";
+  return "<div class=\"log-parts\">"+parts.map(function(p){
+    var ctx=partCtx(p);
+    return "<div class=\"part-row\">"
+      +"<span class=\"pp\">"+esc(p.pos||"?")+(p.ref?" · "+esc(p.ref):"")+"</span>"
+      +"<span class=\"pd\">"+esc(p.denominacio||"")+(ctx?" <span class=\"pc\">("+esc(ctx)+")</span>":"")+"</span>"
+      +(p.cant?"<span class=\"pq\">×"+esc(p.cant)+"</span>":"")
+      +"</div>";
+  }).join("")+"</div>";
+}
+// standalone HTML/PDF report (inline styles — the report has none of the app CSS)
+function partsReportHTML(parts){
+  if(!parts||!parts.length)return"";
+  var rows=parts.map(function(p){
+    var ctx=partCtx(p);
+    return "<div style=\"font-size:11px;padding:3px 6px;margin-top:3px;background:#eff6ff;border-left:3px solid #3b82f6;border-radius:3px\">"
+      +"<span style=\"font-family:monospace;font-weight:700;color:#1d4ed8\">Pos "+esc(p.pos||"?")+(p.ref?" · "+esc(p.ref):"")+"</span> "
+      +esc(p.denominacio||"")
+      +(p.cant?" <span style=\"font-family:monospace;color:#6b7280\">×"+esc(p.cant)+"</span>":"")
+      +(ctx?"<span style=\"color:#9ca3af\"> ("+esc(ctx)+")</span>":"")
+      +"</div>";
+  }).join("");
+  return "<div style=\"margin-top:6px\"><div style=\"font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:#9ca3af;font-weight:600\">Spare parts</div>"+rows+"</div>";
+}
 function highlightText(text,query){
   var e=esc(text);
   var q=(query||"").trim();
@@ -1091,6 +1144,7 @@ function renderLogArea(){
         +(e.editedAt?"<span class=\"log-edited\">edited</span>":"")
         +"</div>"
         +"<div class=\"log-text\">"+highlightText(e.text||"",filterTxt)+"</div>"
+        +partsBlockHTML(e.parts)
         +imgs+"</div>"
         +(isOpen?"<div class=\"log-actions\"><button class=\"log-act\" data-act=\"edit\" title=\"Edit\">✎</button><button class=\"log-act\" data-act=\"del\" title=\"Delete\">✕</button></div>":"");
       // thumb clicks
@@ -1307,6 +1361,22 @@ function renderThumbs(cfg){
 }
 function rThumbs(){renderThumbs({container:"pThumbs",get:function(){return pImgs},set:function(v){pImgs=v},isEdit:false})}
 function rEThumbs(){renderThumbs({container:"eThumbs",get:function(){return eImgs},set:function(v){eImgs=v},isEdit:true,after:rENames})}
+// spare parts list inside the edit modal (each row removable)
+function rEParts(){
+  var box=$$("eParts");if(!box)return;
+  box.innerHTML="";
+  eParts.forEach(function(p,idx){
+    var ctx=partCtx(p);
+    var row=document.createElement("div");row.className="part-row";
+    row.innerHTML="<span class=\"pp\">"+esc(p.pos||"?")+(p.ref?" · "+esc(p.ref):"")+"</span>"
+      +"<span class=\"pd\">"+esc(p.denominacio||"")+(ctx?" <span class=\"pc\">("+esc(ctx)+")</span>":"")+"</span>"
+      +(p.cant?"<span class=\"pq\">×"+esc(p.cant)+"</span>":"")
+      +"<button class=\"part-del\" title=\"Remove\">&#10005;</button>";
+    row.querySelector(".part-del").addEventListener("click",function(){eParts.splice(idx,1);rEParts()});
+    box.appendChild(row);
+  });
+}
+function clearPartForm(){["pfPos","pfRef","pfCant","pfDen"].forEach(function(id){var el=$$(id);if(el)el.value=""});var f=$$("ePartForm");if(f)f.style.display="none"}
 function rENames(){
   var list=$$("eFileNames");if(!list)return;list.innerHTML="";
   eImgs.forEach(function(img,i){
@@ -1492,10 +1562,11 @@ function openEdit(entryId){
   var active=sessions.find(function(s){return s.id===aid});if(!active)return;
   var entry=(active.entries||[]).find(function(x){return x.id===entryId});if(!entry)return;
   editingId=entryId;eImgs=(entry.images||[]).slice();
+  eParts=(entry.parts||[]).map(function(p){return Object.assign({},p)});
   $$("eSev").value=entry.severity||"info";
   $$("eTag").value=entry.tag||"";
   $$("eText").value=entry.text||"";
-  autoH($$("eText"));rEThumbs();
+  autoH($$("eText"));rEThumbs();rEParts();clearPartForm();
   $$("editBack").style.display="flex";
   setTimeout(function(){$$("eText").focus()},80);
 }
@@ -1509,11 +1580,11 @@ function saveEdit(){
   function tryS(){
     if(pExifEdit>0&&waited<3000){var b=$$("eSave");if(b){b.disabled=true;b.textContent="Processing..."}waited+=150;setTimeout(tryS,150);return}
     var b2=$$("eSave");if(b2){b2.disabled=false;b2.innerHTML="✓ Save changes"}
-    sessions=sessions.map(function(s){if(s.id!==aid)return s;return Object.assign({},s,{entries:(s.entries||[]).map(function(en){if(en.id!==entId)return en;return Object.assign({},en,{text:captText,severity:newSev,tag:newTag,images:eImgs.slice(),editedAt:now()})})})});
+    sessions=sessions.map(function(s){if(s.id!==aid)return s;return Object.assign({},s,{entries:(s.entries||[]).map(function(en){if(en.id!==entId)return en;return Object.assign({},en,{text:captText,severity:newSev,tag:newTag,images:eImgs.slice(),parts:eParts.slice(),editedAt:now()})})})});
     closeEdit();scheduleSave();renderAll();
   }tryS();
 }
-function closeEdit(){if(mediaRec&&recIsEdit){stopRec();recChunks=[]}stopCurAudio();$$("editBack").style.display="none";editingId=null;eImgs=[]}
+function closeEdit(){if(mediaRec&&recIsEdit){stopRec();recChunks=[]}stopCurAudio();$$("editBack").style.display="none";editingId=null;eImgs=[];eParts=[];clearPartForm()}
 function delEntry(entryId){
   if(!confirm("Delete this log entry? This cannot be undone."))return;
   sessions=sessions.map(function(s){if(s.id!==aid)return s;return Object.assign({},s,{entries:(s.entries||[]).filter(function(en){return en.id!==entryId})})});
@@ -1528,6 +1599,15 @@ $$("eText").addEventListener("input",function(){autoH($$("eText"))});
 $$("eAddPhoto").addEventListener("click",function(){$$("eFileIn").click()});
 $$("eFileIn").addEventListener("change",function(e){handleFiles(e,true)});
 $$("eRec").addEventListener("click",function(){if(mediaRec&&recIsEdit)stopRec();else if(!mediaRec)startRec(true)});
+$$("ePartAdd").addEventListener("click",function(){var f=$$("ePartForm");f.style.display="flex";$$("pfPos").focus()});
+$$("pfCancel").addEventListener("click",clearPartForm);
+$$("pfSave").addEventListener("click",function(){
+  var pos=$$("pfPos").value.trim(),ref=$$("pfRef").value.trim(),cant=$$("pfCant").value.trim(),den=$$("pfDen").value.trim();
+  if(!pos&&!ref&&!den){alert("Enter at least a position, reference or denomination.");return}
+  eParts.push({pos:pos,ref:ref,cant:cant,denominacio:den});
+  clearPartForm();rEParts();
+});
+$$("pfDen").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();$$("pfSave").click()}});
 
 // ── DELETE SESSION MODAL ──────────────────────────────────────────────────────
 function openDelModal(s){
@@ -1683,7 +1763,7 @@ function buildReportHTML(s,forPrint){
       +"<td style=\"font-family:monospace;font-size:11px;white-space:nowrap;padding:5px 8px;border:1px solid #e5e7eb;color:#6b7280\">"+(e.tsFromPhoto?"📷 ":"")+fts(e.ts)+"</td>"
       +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:11px;font-weight:700;color:"+sm.tx+"\">"+sm.label+"</td>"
       +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:11px;font-family:monospace;color:#1d4ed8\">"+esc(e.tag||"")+"</td>"
-      +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:13px\">"+esc(e.text||"")+(e.editedAt?"<em style=\"color:#9ca3af;font-size:11px\"> (edited)</em>":"")+"</td>"
+      +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:13px\">"+esc(e.text||"")+(e.editedAt?"<em style=\"color:#9ca3af;font-size:11px\"> (edited)</em>":"")+partsReportHTML(e.parts)+"</td>"
       +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb\">"+imgCell+"</td>"
       +"</tr>";
   }).join("");
@@ -1785,11 +1865,19 @@ function buildDocxDocument(D,s){
       att.push(new D.Paragraph({spacing:{after:30},children:[new D.TextRun({text:(isVid?"▶ ":"")+esc(img.name||"file"),size:14,font:"Courier New",color:"6B7280",italics:true})]}));
     });
     if(!att.length)att.push(new D.Paragraph({children:[new D.TextRun({text:"",size:18})]}));
+    var descCh=[new D.Paragraph({children:[new D.TextRun({text:e.text||"",size:20,font:"Arial"})]})];
+    (e.parts||[]).forEach(function(p){
+      var ctx=partCtx(p),runs=[new D.TextRun({text:"Pos "+(p.pos||"?")+(p.ref?" · "+p.ref:""),bold:true,size:16,font:"Courier New",color:"1D4ED8"})];
+      if(p.denominacio)runs.push(new D.TextRun({text:"  "+p.denominacio,size:16,font:"Arial"}));
+      if(p.cant)runs.push(new D.TextRun({text:"  ×"+p.cant,size:16,font:"Courier New",color:"6B7280"}));
+      if(ctx)runs.push(new D.TextRun({text:"  ("+ctx+")",size:14,font:"Arial",color:"9CA3AF"}));
+      descCh.push(new D.Paragraph({spacing:{before:20},children:runs}));
+    });
     return new D.TableRow({children:[
       new D.TableCell({borders:borders,margins:mg,width:{size:1700,type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:(e.tsFromPhoto?"[photo] ":"")+fts(e.ts),size:16,font:"Courier New",color:"6B7280"})]})]}) ,
       new D.TableCell({borders:borders,margins:mg,width:{size:900,type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:sm.label,bold:true,size:18,color:sc,font:"Arial"})]})]}) ,
       new D.TableCell({borders:borders,margins:mg,width:{size:900,type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:e.tag||"",size:18,font:"Courier New",color:"1D4ED8"})]})]}) ,
-      new D.TableCell({borders:borders,margins:mg,width:{size:4626,type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:e.text||"",size:20,font:"Arial"})]})]}) ,
+      new D.TableCell({borders:borders,margins:mg,width:{size:4626,type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:descCh}) ,
       new D.TableCell({borders:borders,margins:mg,width:{size:1100,type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:att})
     ]});
   });

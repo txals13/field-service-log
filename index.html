@@ -302,6 +302,17 @@ textarea{resize:none;line-height:1.4}
     </div>
   </div>
 
+  <!-- Link a manual to the active session -->
+  <div class="modal-back" id="linkBack" style="display:none">
+    <div class="modal">
+      <div class="modal-title">&#128218; Link a manual to this session</div>
+      <div id="linkList" style="max-height:52vh;overflow:auto"></div>
+      <div class="modal-actions">
+        <button id="linkClose">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Edit entry modal -->
   <div class="modal-back" id="editBack" style="display:none">
     <div class="modal">
@@ -1033,6 +1044,63 @@ $$("mfPdfIn").addEventListener("change",function(e){var f=e.target.files[0];if(f
 $$("mfJsonIn").addEventListener("change",function(e){var f=e.target.files[0];if(f)onJsonPick(f);e.target.value=""});
 $$("mfUpload").addEventListener("click",uploadManual);
 
+// -- Link a manual to a session (session.manualRef = {id,base,serial,folderId,
+//    pdfId,pdfName,jsonId,jsonName}). Suggested by matching the session's
+//    free-text machine field against the catalog's model / serial / base. --
+function manualChipHTML(sess){
+  var ref=sess.manualRef;
+  if(ref)return "<span id=\"manualChip\" style=\"cursor:pointer\" title=\"Linked spare-parts manual — click to change\">📚 "+esc(ref.base||ref.serial||"manual")+"</span>";
+  return "<span id=\"manualChip\" style=\"cursor:pointer;color:var(--tx3)\" title=\"Link a spare-parts manual\">📚 Link manual</span>";
+}
+function normStr(s){return (s||"").toString().toLowerCase().replace(/[^a-z0-9]+/g," ").trim()}
+function manualMatchScore(sess,m){
+  var mach=normStr(sess.machine);if(!mach)return 0;
+  var mt=mach.split(" "),score=0;
+  [m.serial,m.model,m.base,m.client].forEach(function(f){
+    var nf=normStr(f);if(!nf)return;
+    if(mach.indexOf(nf)>=0||nf.indexOf(mach)>=0)score+=2;
+    nf.split(" ").forEach(function(t){if(t.length>=2&&mt.indexOf(t)>=0)score+=1});
+  });
+  return score;
+}
+function openLinkModal(){
+  if(!isLoggedIn){alert("Sign in with Google to use spare-parts manuals.");return}
+  renderLinkList();
+  $$("linkBack").style.display="flex";
+  loadManualsIndex().then(renderLinkList);
+}
+function closeLinkModal(){$$("linkBack").style.display="none"}
+function renderLinkList(){
+  var box=$$("linkList");if(!box)return;
+  var sess=sessions.find(function(s){return s.id===aid});if(!sess){box.innerHTML="";return}
+  box.innerHTML="";
+  if(sess.manualRef){
+    var u=document.createElement("div");u.className="manual-row";u.style.cursor="pointer";
+    u.innerHTML="<div class=\"mr-info\"><div class=\"mr-name\">✕ Unlink current manual</div><div class=\"mr-meta\">"+esc(sess.manualRef.base||"")+"</div></div>";
+    u.addEventListener("click",function(){setSessionManual(null)});
+    box.appendChild(u);
+  }
+  if(!manuals.length){var e=document.createElement("div");e.className="manuals-empty";e.textContent="No manuals uploaded yet — add one via 📚 Spare-parts manuals.";box.appendChild(e);return}
+  var best=-1,bestScore=0;
+  manuals.forEach(function(m,i){var sc=manualMatchScore(sess,m);if(sc>bestScore){bestScore=sc;best=i}});
+  manuals.forEach(function(m,idx){
+    var row=document.createElement("div");row.className="manual-row";row.style.cursor="pointer";
+    var linked=sess.manualRef&&(sess.manualRef.id===m.id||sess.manualRef.folderId===m.folderId);
+    var meta=[];if(m.model)meta.push(esc(m.model));if(m.serial)meta.push("S/N "+esc(m.serial));meta.push((m.parts||0)+" parts");
+    var badges=(idx===best&&bestScore>0?"<span style=\"color:var(--gold)\"> · suggested</span>":"")+(linked?"<span style=\"color:var(--green)\"> · linked</span>":"");
+    row.innerHTML="<div class=\"mr-info\"><div class=\"mr-name\">"+esc(m.base||m.serial||"manual")+badges+"</div><div class=\"mr-meta\">"+meta.join(" · ")+"</div></div>";
+    row.addEventListener("click",function(){setSessionManual(m)});
+    box.appendChild(row);
+  });
+}
+function setSessionManual(m){
+  var ref=m?{id:m.id,base:m.base,serial:m.serial,folderId:m.folderId,pdfId:m.pdfId,pdfName:m.pdfName,jsonId:m.jsonId,jsonName:m.jsonName}:null;
+  sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{manualRef:ref}):s});
+  scheduleSave();closeLinkModal();renderAll();
+}
+$$("linkClose").addEventListener("click",closeLinkModal);
+$$("linkBack").addEventListener("click",function(e){if(e.target===$$("linkBack"))closeLinkModal()});
+
 // ── DRIVE SYNC ───────────────────────────────────────────────────────────────
 async function findDataFile(token){
   var rootId=await getRootId(token);
@@ -1411,6 +1479,7 @@ function renderContent(){
     +(active.location?"<span>📍 "+esc(active.location)+"</span>":"")
     +(active.tech?"<span>👤 "+esc(active.tech)+"</span>":"")
     +"<span>🕐 "+fts(active.createdAt)+"</span>"
+    +manualChipHTML(active)
     +"</div></div>"
     // filter
     +"<div class=\"filter-row\">"
@@ -1452,6 +1521,7 @@ function renderContent(){
 
   // Wire up controls
   var btnEd=$$("btnEditSess");if(btnEd)btnEd.addEventListener("click",function(){openNewModal(active)});
+  var mChip=$$("manualChip");if(mChip)mChip.addEventListener("click",openLinkModal);
   var btnC=$$("btnClose");if(btnC)btnC.addEventListener("click",function(){if(confirm("Close this session? You can reopen it later.")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"closed",closedAt:now()}):s});scheduleSave();renderAll()}});
   var btnR=$$("btnReopen");if(btnR)btnR.addEventListener("click",function(){if(confirm("Reopen this session?")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"open",closedAt:null}):s});scheduleSave();renderAll()}});
   var btnEx=$$("btnExp");if(btnEx){

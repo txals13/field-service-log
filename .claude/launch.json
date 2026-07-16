@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "static",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8420"],
+      "port": 8420
+    },
+    {
+      "name": "recanvis-splitter",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8744", "--directory", "C:\\Users\\usuari\\OneDrive\\P\\Prodec\\Drawings data for field application"],
+      "port": 8744
+    }
+  ]
+}

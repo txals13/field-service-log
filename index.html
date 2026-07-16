@@ -195,6 +195,14 @@ textarea{resize:none;line-height:1.4}
 .part-form input{font-size:12px;padding:5px 7px}
 .part-form .pf-pos{width:64px}.part-form .pf-ref{width:110px}.part-form .pf-cant{width:56px}
 .part-form .pf-den{flex:1;min-width:140px}
+/* manuals manager */
+.manual-row{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--br2);border-radius:8px;padding:8px 10px;margin-bottom:6px}
+.manual-row .mr-info{flex:1;min-width:0}
+.manual-row .mr-name{font-size:13px;font-weight:600;word-break:break-word}
+.manual-row .mr-meta{font-size:11px;color:var(--tx3);margin-top:2px}
+.manual-row .mr-del{background:none;border:none;color:var(--tx3);cursor:pointer;font-size:13px;flex-shrink:0}
+.manual-row .mr-del:hover{color:var(--red)}
+.manuals-empty{font-size:12px;color:var(--tx3);font-family:monospace;padding:14px 0;text-align:center}
 </style>
 </head>
 <body>
@@ -240,6 +248,9 @@ textarea{resize:none;line-height:1.4}
       <div style="padding:6px 10px;border-bottom:1px solid var(--br);flex-shrink:0">
         <input type="text" id="sessFiltIn" placeholder="Filter sessions..." style="font-size:12px;padding:5px 8px">
       </div>
+      <div style="padding:6px 10px;border-bottom:1px solid var(--br);flex-shrink:0">
+        <button class="btn-g btn-sm" id="btnManuals" style="width:100%;font-size:12px" title="Spare-parts manuals stored on Drive">&#128218; Spare-parts manuals</button>
+      </div>
       <div class="s-list" id="sList"></div>
     </div>
     <div class="overlay" id="overlay"></div>
@@ -265,6 +276,28 @@ textarea{resize:none;line-height:1.4}
       <div class="modal-actions">
         <button id="nCancel">Cancel</button>
         <button class="btn-gold" id="nSave">&#10003; Create session</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Spare-parts manuals modal -->
+  <div class="modal-back" id="manualsBack" style="display:none">
+    <div class="modal">
+      <div class="modal-title">&#128218; Spare-parts manuals</div>
+      <div id="manualsList" style="max-height:44vh;overflow:auto"></div>
+      <div class="field" style="margin-top:12px;border-top:1px solid var(--br);padding-top:12px">
+        <label>Add a manual (drawings PDF + catalog JSON)</label>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div class="fname-row"><span class="fi">&#128196; PDF</span><span id="mfPdfName" style="flex:1;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">&mdash; no file &mdash;</span><button class="btn-sm" id="mfPdfBtn">Choose</button></div>
+          <div class="fname-row"><span class="fi">&#128209; JSON</span><span id="mfJsonName" style="flex:1;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">&mdash; no file &mdash;</span><button class="btn-sm" id="mfJsonBtn">Choose</button></div>
+          <input type="file" id="mfPdfIn" accept="application/pdf,.pdf" style="display:none">
+          <input type="file" id="mfJsonIn" accept="application/json,.json" style="display:none">
+        </div>
+        <div id="mfInfo" style="font-size:12px;color:var(--tx3);margin-top:8px"></div>
+      </div>
+      <div class="modal-actions">
+        <button id="manualsClose">Close</button>
+        <button class="btn-gold" id="mfUpload" disabled>&#8679; Upload to Drive</button>
       </div>
     </div>
   </div>
@@ -347,6 +380,7 @@ var LS_ROOT    = "fsl_v6_root";
 var DATA_FILE  = "field_service_log_data.json";
 var ROOT_NAME  = "Field Service Log";
 var OUT_NAME   = "Outputs";
+var MANUALS_NAME = "Manuals";
 // localStorage is ~5 MB (UTF-16). Warn well before that so the user can back up
 // or sign in to Drive before a save actually fails. This is an approximate
 // heads-up, not an exact quota — the real wall is the QuotaExceededError catch.
@@ -378,6 +412,7 @@ var pExif=0, pExifEdit=0;
 var accessToken=null, tokenExp=0, driveFileId=null, rootFolderId=null;
 var isLoggedIn=false, saveTimer=null, isDirty=false, savingDrive=false, savePending=false;
 var editingId=null, eImgs=[], eParts=[], pendingDel=null, pendingDelFname=null, dInst=null;
+var manuals=[], mfPdfFile=null, mfJsonFile=null, mfParsed=null;
 var authExpired=false, syncStarted=false;
 var fileCache=new WeakMap(); // img object -> raw File/Blob, kept in memory only, for upload retry
 // Voice-note recording state
@@ -878,6 +913,126 @@ async function driveRename(driveId,name){
   try{var r=await fetch("https://www.googleapis.com/drive/v3/files/"+driveId,{method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({name:name})});return r.ok}catch(e){return false}
 }
 
+// ── SPARE-PARTS MANUALS ──────────────────────────────────────────────────────
+// A manual = the machine's drawings PDF + its catalog JSON, uploaded THROUGH
+// this app (so the drive.file scope can read them back) into
+// Field Service Log/Manuals/<serial>/. A small manuals_index.json in the root
+// lists them for quick display without downloading each catalog.
+function catalogCounts(data){
+  var conjunts=(data&&data.conjunts)||(data&&data.conjunt?[data.conjunt]:[]);
+  var np=0;
+  conjunts.forEach(function(c){(c.grups||[]).forEach(function(g){(g.subgrups||[]).forEach(function(sg){np+=(sg.rows||[]).length})})});
+  return {conjunts:conjunts.length,parts:np};
+}
+async function getManualsFolder(token){
+  var rootId=await getRootId(token);if(!rootId)return null;
+  return await driveFolder(token,MANUALS_NAME,rootId);
+}
+async function loadManualsIndex(){
+  try{
+    var token=await getToken();if(!token)return;
+    var rootId=await getRootId(token);if(!rootId)return;
+    var id=await driveFind(token,"manuals_index.json",rootId,"application/json");
+    if(!id){manuals=[];return}
+    var r=await fetch("https://www.googleapis.com/drive/v3/files/"+id+"?alt=media",{headers:{Authorization:"Bearer "+token}});
+    if(!r.ok)return;
+    var data=await r.json();
+    manuals=Array.isArray(data)?data:(data&&data.manuals)||[];
+  }catch(e){}
+}
+async function saveManualsIndex(token){
+  var rootId=await getRootId(token);if(!rootId)return;
+  var content=JSON.stringify(manuals,null,2);
+  var id=await driveFind(token,"manuals_index.json",rootId,"application/json");
+  if(id){await fetch("https://www.googleapis.com/upload/drive/v3/files/"+id+"?uploadType=media",{method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json; charset=UTF-8"},body:content})}
+  else{await uploadTextFile(token,"manuals_index.json",content,"application/json",rootId)}
+}
+function openManuals(){
+  if(!isLoggedIn){alert("Sign in with Google to manage manuals on Drive.");return}
+  mfPdfFile=null;mfJsonFile=null;mfParsed=null;
+  $$("mfPdfName").innerHTML="&mdash; no file &mdash;";
+  $$("mfJsonName").innerHTML="&mdash; no file &mdash;";
+  $$("mfInfo").textContent="";$$("mfUpload").disabled=true;
+  renderManualsList();
+  $$("manualsBack").style.display="flex";
+  loadManualsIndex().then(renderManualsList);
+}
+function closeManuals(){$$("manualsBack").style.display="none"}
+function renderManualsList(){
+  var box=$$("manualsList");if(!box)return;
+  if(!manuals.length){box.innerHTML="<div class=\"manuals-empty\">No manuals uploaded yet.</div>";return}
+  box.innerHTML="";
+  manuals.forEach(function(m,idx){
+    var row=document.createElement("div");row.className="manual-row";
+    var meta=[];
+    if(m.model)meta.push(esc(m.model));
+    if(m.serial)meta.push("S/N "+esc(m.serial));
+    meta.push((m.conjunts||0)+" conjunts");meta.push((m.parts||0)+" parts");
+    row.innerHTML="<div class=\"mr-info\"><div class=\"mr-name\">"+esc(m.base||m.serial||"manual")+"</div>"
+      +"<div class=\"mr-meta\">"+meta.join(" · ")+"</div></div>"
+      +"<button class=\"mr-del\" title=\"Remove from list\">&#10005;</button>";
+    row.querySelector(".mr-del").addEventListener("click",function(){deleteManual(idx)});
+    box.appendChild(row);
+  });
+}
+function mfRefresh(){
+  $$("mfPdfName").textContent=mfPdfFile?mfPdfFile.name:"— no file —";
+  $$("mfJsonName").textContent=mfJsonFile?mfJsonFile.name:"— no file —";
+  $$("mfUpload").disabled=!(mfPdfFile&&mfJsonFile&&mfParsed);
+  if(mfParsed){
+    var c=catalogCounts(mfParsed),mac=mfParsed.machine||{};
+    $$("mfInfo").textContent="Catalog: "+(mac.model||"—")+(mac.serial?" · S/N "+mac.serial:"")+" · "+c.conjunts+" conjunts · "+c.parts+" parts";
+  } else if(mfJsonFile){$$("mfInfo").textContent="Reading JSON…"}
+  else $$("mfInfo").textContent="";
+}
+function onJsonPick(file){
+  mfJsonFile=file;mfParsed=null;mfRefresh();
+  var r=new FileReader();
+  r.onload=function(e){try{mfParsed=JSON.parse(e.target.result)}catch(err){mfParsed=null;mfRefresh();$$("mfInfo").textContent="⚠ Not a valid JSON file.";return}mfRefresh()};
+  r.onerror=function(){mfParsed=null;mfRefresh();$$("mfInfo").textContent="⚠ Could not read the JSON."};
+  r.readAsText(file);
+}
+async function uploadManual(){
+  if(!mfPdfFile||!mfJsonFile||!mfParsed)return;
+  var token=await ensureToken();if(!token){alert("Could not authenticate with Drive.");return}
+  var btn=$$("mfUpload"),lbl=btn.innerHTML;btn.disabled=true;btn.textContent="Uploading…";
+  try{
+    var mac=mfParsed.machine||{};
+    var base=mfPdfFile.name.replace(/\.pdf$/i,"");
+    var folderName=(mac.serial||base).toString().trim()||base;
+    var manualsId=await getManualsFolder(token);if(!manualsId)throw new Error("could not open the Manuals folder");
+    var folderId=await driveFolder(token,folderName,manualsId);if(!folderId)throw new Error("could not create the manual folder");
+    var pdfRes=await driveUploadBlob(token,mfPdfFile,mfPdfFile.name,"application/pdf",folderId);
+    if(!pdfRes)throw new Error("PDF upload failed");
+    var jsonName=base+".json";
+    var jsonId=await uploadTextFile(token,jsonName,JSON.stringify(mfParsed),"application/json",folderId);
+    if(!jsonId)throw new Error("JSON upload failed");
+    var c=catalogCounts(mfParsed);
+    var entry={id:uid(),base:base,serial:mac.serial||"",model:mac.model||"",client:mac.client||"",folderId:folderId,pdfId:pdfRes.id,pdfName:pdfRes.name,jsonId:jsonId,jsonName:jsonName,conjunts:c.conjunts,parts:c.parts,uploadedAt:now()};
+    var ex=manuals.findIndex(function(m){return m.folderId===folderId||m.base===base});
+    if(ex>=0)manuals[ex]=entry;else manuals.push(entry);
+    await saveManualsIndex(token);
+    mfPdfFile=null;mfJsonFile=null;mfParsed=null;
+    renderManualsList();mfRefresh();
+    $$("mfInfo").textContent="✓ Uploaded "+base+".";
+  }catch(e){alert("Upload failed: "+((e&&e.message)||e))}
+  finally{btn.innerHTML=lbl;btn.disabled=!(mfPdfFile&&mfJsonFile&&mfParsed)}
+}
+async function deleteManual(idx){
+  var m=manuals[idx];if(!m)return;
+  if(!confirm("Remove \""+(m.base||"this manual")+"\" from the list?\nThe files stay in your Drive Manuals folder."))return;
+  manuals.splice(idx,1);renderManualsList();
+  var token=await ensureToken();if(token){try{await saveManualsIndex(token)}catch(e){}}
+}
+$$("btnManuals").addEventListener("click",openManuals);
+$$("manualsClose").addEventListener("click",closeManuals);
+$$("manualsBack").addEventListener("click",function(e){if(e.target===$$("manualsBack"))closeManuals()});
+$$("mfPdfBtn").addEventListener("click",function(){$$("mfPdfIn").click()});
+$$("mfJsonBtn").addEventListener("click",function(){$$("mfJsonIn").click()});
+$$("mfPdfIn").addEventListener("change",function(e){var f=e.target.files[0];if(f){mfPdfFile=f;mfRefresh()}e.target.value=""});
+$$("mfJsonIn").addEventListener("change",function(e){var f=e.target.files[0];if(f)onJsonPick(f);e.target.value=""});
+$$("mfUpload").addEventListener("click",uploadManual);
+
 // ── DRIVE SYNC ───────────────────────────────────────────────────────────────
 async function findDataFile(token){
   var rootId=await getRootId(token);
@@ -990,6 +1145,7 @@ async function finishLogin(){
   isLoggedIn=true;hideAuthExpired();updateAuthUI();
   await loadFromDrive();
   await saveToDrive(); // push any sessions created locally before signing in
+  loadManualsIndex(); // fire-and-forget: populate the manuals list in the background
   renderAll();
   scheduleSync();
 }

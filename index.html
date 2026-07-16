@@ -1036,19 +1036,32 @@ async function uploadManual(){
     var folderName=(mac.serial||base).toString().trim()||base;
     var manualsId=await getManualsFolder(token);if(!manualsId)throw new Error("could not open the Manuals folder");
     var folderId=await driveFolder(token,folderName,manualsId);if(!folderId)throw new Error("could not create the manual folder");
-    var pdfRes=await driveUploadBlob(token,mfPdfFile,mfPdfFile.name,"application/pdf",folderId);
-    if(!pdfRes)throw new Error("PDF upload failed");
-    var jsonName=base+".json";
-    var jsonId=await uploadTextFile(token,jsonName,JSON.stringify(mfParsed),"application/json",folderId);
-    if(!jsonId)throw new Error("JSON upload failed");
+    // Reuse a file that's already in this manual's Drive folder (same name)
+    // instead of uploading it again.
+    var pdfName=mfPdfFile.name, pdfId, pdfReused=false;
+    var existingPdf=await driveFind(token,pdfName,folderId,"application/pdf");
+    if(existingPdf){pdfId=existingPdf;pdfReused=true}
+    else{
+      var pdfRes=await driveUploadBlob(token,mfPdfFile,pdfName,"application/pdf",folderId);
+      if(!pdfRes)throw new Error("PDF upload failed");
+      pdfId=pdfRes.id;pdfName=pdfRes.name;
+    }
+    var jsonName=base+".json", jsonId, jsonReused=false;
+    var existingJson=await driveFind(token,jsonName,folderId,"application/json");
+    if(existingJson){jsonId=existingJson;jsonReused=true}
+    else{
+      jsonId=await uploadTextFile(token,jsonName,JSON.stringify(mfParsed),"application/json",folderId);
+      if(!jsonId)throw new Error("JSON upload failed");
+    }
     var c=catalogCounts(mfParsed);
-    var entry={id:uid(),base:base,serial:mac.serial||"",model:mac.model||"",client:mac.client||"",folderId:folderId,pdfId:pdfRes.id,pdfName:pdfRes.name,jsonId:jsonId,jsonName:jsonName,conjunts:c.conjunts,parts:c.parts,uploadedAt:now()};
+    var entry={id:uid(),base:base,serial:mac.serial||"",model:mac.model||"",client:mac.client||"",folderId:folderId,pdfId:pdfId,pdfName:pdfName,jsonId:jsonId,jsonName:jsonName,conjunts:c.conjunts,parts:c.parts,uploadedAt:now()};
     var ex=manuals.findIndex(function(m){return m.folderId===folderId||m.base===base});
     if(ex>=0)manuals[ex]=entry;else manuals.push(entry);
     await saveManualsIndex(token);
     mfPdfFile=null;mfJsonFile=null;mfParsed=null;
     renderManualsList();mfRefresh();
-    $$("mfInfo").textContent="✓ Uploaded "+base+".";
+    var reused=[pdfReused?"PDF":null,jsonReused?"JSON":null].filter(Boolean).join(" + ");
+    $$("mfInfo").textContent="✓ "+base+" saved."+(reused?" ("+reused+" already on Drive — reused.)":"");
   }catch(e){alert("Upload failed: "+((e&&e.message)||e))}
   finally{btn.innerHTML=lbl;btn.disabled=!(mfPdfFile&&mfJsonFile&&mfParsed)}
 }

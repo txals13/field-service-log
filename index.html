@@ -335,6 +335,7 @@ textarea{resize:none;line-height:1.4}
         <span id="drawStatus" style="font-size:11px;color:var(--tx3);width:100%"></span>
       </div>
       <div id="drawPickHint" style="display:none;font-size:12px;background:var(--gold);color:#000;border-radius:6px;padding:6px 10px;margin-bottom:8px">&#127919; Tap a position number on the drawing to add that spare part to the entry.</div>
+      <div id="drawChoices" style="display:none"></div>
       <div id="drawWrap" style="flex:1;min-height:200px;overflow:auto;background:#0a0b0e;border-radius:6px;touch-action:pan-x pan-y">
         <canvas id="drawCanvas" style="display:block;margin:0 auto"></canvas>
       </div>
@@ -454,7 +455,7 @@ var isLoggedIn=false, saveTimer=null, isDirty=false, savingDrive=false, savePend
 var editingId=null, eImgs=[], eParts=[], pendingDel=null, pendingDelFname=null, dInst=null;
 var manuals=[], mfPdfFile=null, mfJsonFile=null, mfParsed=null;
 var pdfjsReadyP=null, viewerDoc=null, viewerNumPages=0, viewerPage=1, viewerPdfId=null, viewerRenderTask=null, viewerZoom=1;
-var viewerPickMode=false, viewerRows=[], viewerPickItems=[];
+var viewerPickMode=false, viewerRows=[], viewerPickItems=[], pickReturnEdit=false;
 var authExpired=false, syncStarted=false;
 var fileCache=new WeakMap(); // img object -> raw File/Blob, kept in memory only, for upload retry
 // Voice-note recording state
@@ -1185,6 +1186,10 @@ async function openDrawings(targetPage,pickMode){
   var ref=sess.manualRef;
   viewerPickMode=!!pickMode;viewerPickItems=[];
   $$("drawPickHint").style.display=viewerPickMode?"block":"none";
+  // pick-from-edit: hide the edit modal so the drawing is on top (editBack sits
+  // above drawBack in the DOM); closeDrawings restores it. Only after the guards
+  // above pass, so a failed open never leaves the editor hidden.
+  if(viewerPickMode&&editingId){pickReturnEdit=true;$$("editBack").style.display="none"}
   $$("drawManual").textContent=ref.base||ref.serial||"";
   $$("drawStatus").textContent="Loading…";
   viewerZoom=1;updateZoomLabel();
@@ -1206,6 +1211,7 @@ function renderViewerPage(n){
   n=Math.max(1,Math.min(n||1,viewerNumPages));viewerPage=n;
   $$("drawPageLbl").textContent="Page "+n+" / "+viewerNumPages;
   var cv=$$("drawCanvas");cv.style.transform=""; // clear any live pinch preview
+  var dc=$$("drawChoices");if(dc)dc.style.display="none";
   viewerDoc.getPage(n).then(function(pg){
     var wrap=$$("drawWrap");
     var vp0=pg.getViewport({scale:1});
@@ -1280,19 +1286,53 @@ function attemptPick(clientX,clientY){
   if(!posTok){setDrawStatus("That's not a position number.");return}
   resolvePartByPos(posTok);
 }
-function resolvePartByPos(pos){
-  var onPage=viewerRows.filter(function(r){return String(r.page)===String(viewerPage)&&String(r.pos)===String(pos)});
-  var rows=onPage.length?onPage:viewerRows.filter(function(r){return String(r.pos)===String(pos)});
-  if(!rows.length){setDrawStatus("Pos "+pos+" not found in the catalog"+(viewerRows.length?"":" (catalog not loaded)")+".");return}
-  var r=rows[0];
-  var label="Pos "+r.pos+(r.ref?" · "+r.ref:"")+(r.denominacio?"\n"+r.denominacio:"")+(r.cant?"\nQty: "+r.cant:"");
-  if(!confirm("Add this spare part to the entry?\n\n"+label)){setDrawStatus("");return}
+function addResolvedPart(r){
   eParts.push({pos:r.pos,ref:r.ref,cant:r.cant,denominacio:r.denominacio,conjunt:r.conjunt,grup:r.grup,page:r.page});
   rEParts();
   setDrawStatus("✓ Added Pos "+r.pos+". Tap another, or Close to return.");
 }
+function confirmAndAdd(r){
+  var label="Pos "+r.pos+(r.ref?" · "+r.ref:"")+(r.denominacio?"\n"+r.denominacio:"")+(r.cant?"\nQty: "+r.cant:"");
+  if(!confirm("Add this spare part to the entry?\n\n"+label)){setDrawStatus("");return}
+  addResolvedPart(r);
+}
+// Never silently pick a part from another page: an exact page+pos match is used
+// directly; otherwise the user chooses among the catalog rows with that pos.
+function resolvePartByPos(pos){
+  if(!viewerRows.length){setDrawStatus("Catalog not loaded — tapping can't resolve parts.");return}
+  var onPage=viewerRows.filter(function(r){return String(r.page)===String(viewerPage)&&String(r.pos)===String(pos)});
+  if(onPage.length===1){confirmAndAdd(onPage[0]);return}
+  if(onPage.length>1){showPickChoices(pos,onPage,false);return}
+  var others=viewerRows.filter(function(r){return String(r.pos)===String(pos)});
+  if(!others.length){setDrawStatus("Pos "+pos+" not found in the catalog.");return}
+  showPickChoices(pos,others,true);
+}
+function showPickChoices(pos,rows,offPage){
+  var box=$$("drawChoices");if(!box)return;
+  box.innerHTML="";
+  box.style.cssText="display:block;background:var(--bg1);border:1px solid var(--br2);border-radius:8px;padding:8px;margin-bottom:8px;max-height:38vh;overflow:auto";
+  var title=document.createElement("div");
+  title.style.cssText="font-size:12px;color:var(--tx2);margin-bottom:6px";
+  title.textContent=offPage?("Pos "+pos+" isn't in this page's list — pick the right one:"):("Pos "+pos+" — pick one:");
+  box.appendChild(title);
+  rows.forEach(function(r){
+    var b=document.createElement("button");b.className="btn-sm";
+    b.style.cssText="display:block;width:100%;text-align:left;margin-bottom:4px";
+    b.innerHTML="<strong>Pos "+esc(r.pos)+(r.ref?" · "+esc(r.ref):"")+"</strong> "+esc(r.denominacio||"")+" <span style=\"color:var(--tx3)\">(p."+esc(r.page)+(r.grup?" · "+esc(r.grup):"")+")</span>";
+    b.addEventListener("click",function(){box.style.display="none";addResolvedPart(r)});
+    box.appendChild(b);
+  });
+  var cancel=document.createElement("button");cancel.className="btn-sm";cancel.textContent="Cancel";
+  cancel.addEventListener("click",function(){box.style.display="none"});
+  box.appendChild(cancel);
+}
 $$("drawCanvas").addEventListener("click",function(e){if(viewerPickMode)attemptPick(e.clientX,e.clientY)});
-function closeDrawings(){$$("drawBack").style.display="none";viewerPickMode=false;$$("drawPickHint").style.display="none"}
+function closeDrawings(){
+  $$("drawBack").style.display="none";viewerPickMode=false;
+  $$("drawPickHint").style.display="none";
+  var dc=$$("drawChoices");if(dc)dc.style.display="none";
+  if(pickReturnEdit){pickReturnEdit=false;if(editingId){$$("editBack").style.display="flex";rEParts()}}
+}
 $$("drawClose").addEventListener("click",closeDrawings);
 $$("drawBack").addEventListener("click",function(e){if(e.target===$$("drawBack"))closeDrawings()});
 $$("drawPrev").addEventListener("click",function(){renderViewerPage(viewerPage-1)});

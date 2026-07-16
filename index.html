@@ -334,8 +334,8 @@ textarea{resize:none;line-height:1.4}
         </span>
         <span id="drawStatus" style="font-size:11px;color:var(--tx3);width:100%"></span>
       </div>
-      <div id="drawWrap" style="flex:1;min-height:200px;overflow:auto;background:#0a0b0e;border-radius:6px;display:flex;align-items:flex-start;justify-content:center;touch-action:pan-x pan-y">
-        <canvas id="drawCanvas" style="max-width:100%;height:auto;display:block"></canvas>
+      <div id="drawWrap" style="flex:1;min-height:200px;overflow:auto;background:#0a0b0e;border-radius:6px;touch-action:pan-x pan-y">
+        <canvas id="drawCanvas" style="display:block;margin:0 auto"></canvas>
       </div>
     </div>
   </div>
@@ -1202,9 +1202,15 @@ function renderViewerPage(n){
   viewerDoc.getPage(n).then(function(pg){
     var wrap=$$("drawWrap");
     var vp0=pg.getViewport({scale:1});
-    var maxW=Math.max(280,(wrap.clientWidth||600));
-    var vp=pg.getViewport({scale:(maxW/vp0.width)*viewerZoom}); // fit-width * zoom
-    cv.width=vp.width;cv.height=vp.height;
+    var fitW=Math.max(280,(wrap.clientWidth||600));
+    var cssW=fitW*viewerZoom;                       // on-screen width: grows with zoom (overflows -> the wrap scrolls)
+    var dpr=window.devicePixelRatio||1;
+    var renderScale=(cssW/vp0.width)*dpr;           // bitmap at device resolution (crisp text on retina)
+    var big=Math.max(vp0.width,vp0.height)*renderScale, MAXPX=4096;
+    if(big>MAXPX)renderScale*=MAXPX/big;            // stay under the browser's canvas-size limit
+    var vp=pg.getViewport({scale:renderScale});
+    cv.width=vp.width;cv.height=vp.height;           // bitmap size (device px)
+    cv.style.width=cssW+"px";cv.style.height="auto"; // display size (CSS px) — fixed, independent of the bitmap
     if(viewerRenderTask){try{viewerRenderTask.cancel()}catch(e){}}
     viewerRenderTask=pg.render({canvasContext:cv.getContext("2d"),viewport:vp});
   }).catch(function(){});

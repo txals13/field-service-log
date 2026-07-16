@@ -334,6 +334,7 @@ textarea{resize:none;line-height:1.4}
         </span>
         <span id="drawStatus" style="font-size:11px;color:var(--tx3);width:100%"></span>
       </div>
+      <div id="drawPickHint" style="display:none;font-size:12px;background:var(--gold);color:#000;border-radius:6px;padding:6px 10px;margin-bottom:8px">&#127919; Tap a position number on the drawing to add that spare part to the entry.</div>
       <div id="drawWrap" style="flex:1;min-height:200px;overflow:auto;background:#0a0b0e;border-radius:6px;touch-action:pan-x pan-y">
         <canvas id="drawCanvas" style="display:block;margin:0 auto"></canvas>
       </div>
@@ -361,6 +362,7 @@ textarea{resize:none;line-height:1.4}
         <label>Spare parts</label>
         <div id="eParts" class="log-parts"></div>
         <button class="btn-sm" id="ePartAdd" style="margin-top:6px">&#128295; Add spare part</button>
+        <button class="btn-sm" id="ePickDraw" style="margin-top:6px;display:none">&#128208; Pick from drawing</button>
         <div id="ePartForm" class="part-form" style="display:none">
           <input type="text" class="pf-pos" id="pfPos" placeholder="Pos.">
           <input type="text" class="pf-ref" id="pfRef" placeholder="Ref.">
@@ -452,6 +454,7 @@ var isLoggedIn=false, saveTimer=null, isDirty=false, savingDrive=false, savePend
 var editingId=null, eImgs=[], eParts=[], pendingDel=null, pendingDelFname=null, dInst=null;
 var manuals=[], mfPdfFile=null, mfJsonFile=null, mfParsed=null;
 var pdfjsReadyP=null, viewerDoc=null, viewerNumPages=0, viewerPage=1, viewerPdfId=null, viewerRenderTask=null, viewerZoom=1;
+var viewerPickMode=false, viewerRows=[], viewerPickItems=[];
 var authExpired=false, syncStarted=false;
 var fileCache=new WeakMap(); // img object -> raw File/Blob, kept in memory only, for upload retry
 // Voice-note recording state
@@ -1175,17 +1178,21 @@ async function getManualPdfBytes(pdfId){
   if(idb){try{await idbSet(idb,key,buf)}catch(e){}}
   return buf;
 }
-async function openDrawings(targetPage){
+async function openDrawings(targetPage,pickMode){
   var sess=sessions.find(function(s){return s.id===aid});
   if(!sess||!sess.manualRef){alert("Link a spare-parts manual to this session first.");return}
   if(!isLoggedIn){alert("Sign in with Google to open the drawings.");return}
   var ref=sess.manualRef;
+  viewerPickMode=!!pickMode;viewerPickItems=[];
+  $$("drawPickHint").style.display=viewerPickMode?"block":"none";
   $$("drawManual").textContent=ref.base||ref.serial||"";
   $$("drawStatus").textContent="Loading…";
   viewerZoom=1;updateZoomLabel();
   $$("drawBack").style.display="flex";
   try{
     var lib=await loadPdfjs();
+    if(viewerPickMode){try{viewerRows=flattenCatalogRows(await getManualCatalog(ref.jsonId))}catch(e){viewerRows=[];setDrawStatus("Could not load the catalog — tapping won't resolve parts.")}}
+    else viewerRows=[];
     if(viewerDoc&&viewerPdfId===ref.pdfId){$$("drawStatus").textContent="";renderViewerPage(targetPage||viewerPage);return}
     var buf=await getManualPdfBytes(ref.pdfId);
     var doc=await lib.getDocument({data:new Uint8Array(buf.slice(0))}).promise;
@@ -1213,11 +1220,79 @@ function renderViewerPage(n){
     cv.style.width=cssW+"px";cv.style.height="auto"; // display size (CSS px) — fixed, independent of the bitmap
     if(viewerRenderTask){try{viewerRenderTask.cancel()}catch(e){}}
     viewerRenderTask=pg.render({canvasContext:cv.getContext("2d"),viewport:vp});
+    // text-item geometry (in bitmap px) for tap-to-pick, matching this render's viewport
+    viewerPickItems=[];
+    if(viewerPickMode){pg.getTextContent().then(function(tc){viewerPickItems=buildPickItems(tc,vp)}).catch(function(){})}
   }).catch(function(){});
 }
 function updateZoomLabel(){var b=$$("drawZoomLbl");if(b)b.textContent=Math.round(viewerZoom*100)+"%"}
 function setViewerZoom(z){viewerZoom=Math.max(0.5,Math.min(6,z));updateZoomLabel();renderViewerPage(viewerPage)}
-function closeDrawings(){$$("drawBack").style.display="none"}
+// -- Pas 5: tap a Pos number on the drawing -> resolve the catalog row -> add to
+//    the entry being edited. The catalog JSON is downloaded from Drive by
+//    manualRef.jsonId (cached in IndexedDB) and flattened to rows carrying
+//    conjunt/grup context + the source page. --
+async function getManualCatalog(jsonId){
+  var key="cat_"+jsonId;
+  if(idb){try{var c=await idbGet(idb,key);if(c)return c}catch(e){}}
+  var token=await ensureToken();if(!token)throw new Error("not signed in");
+  var r=await fetch("https://www.googleapis.com/drive/v3/files/"+jsonId+"?alt=media",{headers:{Authorization:"Bearer "+token}});
+  if(!r.ok)throw new Error("could not download the catalog ("+r.status+")");
+  var data=await r.json();
+  if(idb){try{await idbSet(idb,key,data)}catch(e){}}
+  return data;
+}
+function flattenCatalogRows(cat){
+  var out=[],conjunts=(cat&&cat.conjunts)||(cat&&cat.conjunt?[cat.conjunt]:[]);
+  conjunts.forEach(function(c){(c.grups||[]).forEach(function(g){(g.subgrups||[]).forEach(function(sg){(sg.rows||[]).forEach(function(r){
+    out.push({pos:r.pos,ref:r.ref,cant:r.cant,denominacio:r.denominacio,page:r.page,conjunt:c.name,grup:g.name});
+  })})})});
+  return out;
+}
+// pdf.js text items -> boxes in the render viewport's bitmap-pixel space
+function buildPickItems(tc,viewport){
+  var items=[];
+  tc.items.forEach(function(it){
+    if(!it.str||!it.str.trim())return;
+    var t=pdfjsLib.Util.transform(viewport.transform,it.transform);
+    var fh=Math.hypot(t[2],t[3])||12,w=(it.width||0)*viewport.scale;
+    items.push({x:t[4],y:t[5]-fh,w:w,h:fh*1.25,str:it.str.trim()});
+  });
+  return items;
+}
+function setDrawStatus(msg){var el=$$("drawStatus");if(!el)return;el.textContent=msg||"";clearTimeout(setDrawStatus._t);if(msg)setDrawStatus._t=setTimeout(function(){el.textContent=""},3500)}
+function itemDist2(it,bx,by){var cx=it.x+it.w/2,cy=it.y+it.h/2;return(cx-bx)*(cx-bx)+(cy-by)*(cy-by)}
+function attemptPick(clientX,clientY){
+  if(!viewerPickMode)return;
+  var cv=$$("drawCanvas"),rect=cv.getBoundingClientRect();
+  if(!rect.width||!rect.height)return;
+  var bx=(clientX-rect.left)*(cv.width/rect.width),by=(clientY-rect.top)*(cv.height/rect.height);
+  var tol=Math.max(8,cv.width*0.012);
+  var hits=viewerPickItems.filter(function(it){return /\d/.test(it.str)&&bx>=it.x-tol&&bx<=it.x+it.w+tol&&by>=it.y-tol&&by<=it.y+it.h+tol});
+  var item=null;
+  if(hits.length){hits.sort(function(a,b){return itemDist2(a,bx,by)-itemDist2(b,bx,by)});item=hits[0]}
+  else{ // nearest bare number within a small radius
+    var R=Math.max(28,cv.width*0.03),best=null,bd=R*R;
+    viewerPickItems.forEach(function(it){if(!/^\d+$/.test(it.str))return;var d=itemDist2(it,bx,by);if(d<bd){bd=d;best=it}});
+    item=best;
+  }
+  if(!item){setDrawStatus("No number there — tap right on a position number.");return}
+  var posTok=(item.str.match(/\d+/)||[])[0];
+  if(!posTok){setDrawStatus("That's not a position number.");return}
+  resolvePartByPos(posTok);
+}
+function resolvePartByPos(pos){
+  var onPage=viewerRows.filter(function(r){return String(r.page)===String(viewerPage)&&String(r.pos)===String(pos)});
+  var rows=onPage.length?onPage:viewerRows.filter(function(r){return String(r.pos)===String(pos)});
+  if(!rows.length){setDrawStatus("Pos "+pos+" not found in the catalog"+(viewerRows.length?"":" (catalog not loaded)")+".");return}
+  var r=rows[0];
+  var label="Pos "+r.pos+(r.ref?" · "+r.ref:"")+(r.denominacio?"\n"+r.denominacio:"")+(r.cant?"\nQty: "+r.cant:"");
+  if(!confirm("Add this spare part to the entry?\n\n"+label)){setDrawStatus("");return}
+  eParts.push({pos:r.pos,ref:r.ref,cant:r.cant,denominacio:r.denominacio,conjunt:r.conjunt,grup:r.grup,page:r.page});
+  rEParts();
+  setDrawStatus("✓ Added Pos "+r.pos+". Tap another, or Close to return.");
+}
+$$("drawCanvas").addEventListener("click",function(e){if(viewerPickMode)attemptPick(e.clientX,e.clientY)});
+function closeDrawings(){$$("drawBack").style.display="none";viewerPickMode=false;$$("drawPickHint").style.display="none"}
 $$("drawClose").addEventListener("click",closeDrawings);
 $$("drawBack").addEventListener("click",function(e){if(e.target===$$("drawBack"))closeDrawings()});
 $$("drawPrev").addEventListener("click",function(){renderViewerPage(viewerPage-1)});
@@ -1264,9 +1339,11 @@ $$("drawWrap").addEventListener("wheel",function(e){
     if(pinch){cv.style.transform="";if(pinch.pending)setViewerZoom(pinch.pending);pinch=null;return}
     if(!swipe)return;
     var ct=e.changedTouches[0],dx=ct.clientX-swipe.x,dy=ct.clientY-swipe.y;
-    if(Math.abs(dx)<10&&Math.abs(dy)<10){ // a tap — check for double-tap
-      var t=Date.now();
-      if(t-lastTap<300){setViewerZoom(viewerZoom>1?1:2.2);lastTap=0}else lastTap=t;
+    if(Math.abs(dx)<10&&Math.abs(dy)<10){ // a tap
+      if(!viewerPickMode){ // double-tap zooms (in pick mode the synthetic click picks instead)
+        var t=Date.now();
+        if(t-lastTap<300){setViewerZoom(viewerZoom>1?1:2.2);lastTap=0}else lastTap=t;
+      }
     } else if(viewerZoom<=1.01&&Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5){
       renderViewerPage(viewerPage+(dx<0?1:-1)); // swipe pages only when not zoomed (else you pan)
     }
@@ -1968,6 +2045,8 @@ function openEdit(entryId){
   $$("eTag").value=entry.tag||"";
   $$("eText").value=entry.text||"";
   autoH($$("eText"));rEThumbs();rEParts();clearPartForm();
+  var sessR=sessions.find(function(s){return s.id===aid});
+  $$("ePickDraw").style.display=(sessR&&sessR.manualRef)?"inline-block":"none";
   $$("editBack").style.display="flex";
   setTimeout(function(){$$("eText").focus()},80);
 }
@@ -2009,6 +2088,7 @@ $$("pfSave").addEventListener("click",function(){
   clearPartForm();rEParts();
 });
 $$("pfDen").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();$$("pfSave").click()}});
+$$("ePickDraw").addEventListener("click",function(){openDrawings(undefined,true)});
 
 // ── DELETE SESSION MODAL ──────────────────────────────────────────────────────
 function openDelModal(s){

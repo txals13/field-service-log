@@ -1247,22 +1247,39 @@ async function getManualCatalog(jsonId){
   if(idb){try{await idbSet(idb,key,data)}catch(e){}}
   return data;
 }
-// Build a flat row list plus per-SUBGRUP groups. Each subgrup is one drawing
-// (its own parts list with its own Pos numbering) and owns the set of PDF pages
-// its rows sit on. Scoping a tapped Pos to the subgrup that owns the current
-// page pins it to the exact drawing on screen — pages ranges come from the
-// extraction, so no unreliable title-block "Nº" OCR is needed.
+// Build a flat row list plus per-SUBGRUP groups. Each subgrup is one drawing,
+// with its own Pos numbering. The manual lays each one out as: the drawing
+// sheet first, then its parts lists, until the next drawing starts. So a
+// subgrup owns the whole BLOCK — from just after the previous subgrup's last
+// list page through its own last list page — which is what makes the drawing
+// sheet (balloons, no list of its own) resolve to the right parts.
 function buildViewerCatalog(cat){
   var subgrups=[],flat=[],conjunts=(cat&&cat.conjunts)||(cat&&cat.conjunt?[cat.conjunt]:[]);
-  conjunts.forEach(function(c){(c.grups||[]).forEach(function(g){(g.subgrups||[]).forEach(function(sg){
-    var rows=[],pages={};
-    (sg.rows||[]).forEach(function(r){
-      var row={pos:r.pos,ref:r.ref,cant:r.cant,denominacio:r.denominacio,page:r.page,conjunt:c.name,grup:g.name,subgrup:sg.name};
-      rows.push(row);flat.push(row);
-      if(r.page!=null)pages[r.page]=1;
+  conjunts.forEach(function(c){(c.grups||[]).forEach(function(g){
+    var list=[];
+    (g.subgrups||[]).forEach(function(sg){
+      var rows=[],pmin=Infinity,pmax=-Infinity;
+      (sg.rows||[]).forEach(function(r){
+        var row={pos:r.pos,ref:r.ref,cant:r.cant,denominacio:r.denominacio,page:r.page,conjunt:c.name,grup:g.name,subgrup:sg.name};
+        rows.push(row);flat.push(row);
+        if(r.page!=null){if(r.page<pmin)pmin=r.page;if(r.page>pmax)pmax=r.page}
+      });
+      if(rows.length)list.push({name:sg.name,grup:g.name,rows:rows,pmin:(pmin===Infinity?null:pmin),pmax:(pmax===-Infinity?null:pmax)});
     });
-    subgrups.push({name:sg.name,grup:g.name,pages:pages,rows:rows});
-  })})});
+    list.sort(function(a,b){return (a.pmin==null?1e9:a.pmin)-(b.pmin==null?1e9:b.pmin)});
+    var gp=(g.pages||[]).slice().sort(function(a,b){return a-b});
+    var gStart=gp.length?gp[0]:null, cursor=null;
+    list.forEach(function(s){
+      var pages={};
+      if(s.pmin!=null){
+        var start=(cursor!=null)?cursor+1:(gStart!=null?Math.min(gStart,s.pmin):s.pmin);
+        if(start>s.pmin)start=s.pmin;
+        for(var p=start;p<=s.pmax;p++)pages[p]=1;
+        cursor=s.pmax;
+      }
+      subgrups.push({name:s.name,grup:s.grup,pages:pages,rows:s.rows});
+    });
+  })});
   return {subgrups:subgrups,rows:flat};
 }
 // pdf.js text items -> boxes in the render viewport's bitmap-pixel space

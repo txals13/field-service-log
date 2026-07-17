@@ -1253,31 +1253,40 @@ async function getManualCatalog(jsonId){
 // subgrup owns the whole BLOCK — from just after the previous subgrup's last
 // list page through its own last list page — which is what makes the drawing
 // sheet (balloons, no list of its own) resolve to the right parts.
+// Each subgrup is one drawing. Prefer the explicit page range marked in the
+// splitter (sg.pages) — a direct page → drawing → parts map, nothing inferred.
+// Only catalogs made before that field existed fall back to a derived block
+// (drawing sheet + its lists, up to the next drawing).
 function buildViewerCatalog(cat){
   var subgrups=[],flat=[],conjunts=(cat&&cat.conjunts)||(cat&&cat.conjunt?[cat.conjunt]:[]);
+  function subMin(s){ return s.explicit&&s.explicit.length?Math.min.apply(null,s.explicit):(s.pmin==null?1e9:s.pmin); }
   conjunts.forEach(function(c){(c.grups||[]).forEach(function(g){
     var list=[];
     (g.subgrups||[]).forEach(function(sg){
       var rows=[],pmin=Infinity,pmax=-Infinity;
       (sg.rows||[]).forEach(function(r){
-        var row={pos:r.pos,ref:r.ref,cant:r.cant,denominacio:r.denominacio,page:r.page,conjunt:c.name,grup:g.name,subgrup:sg.name};
+        var row={pos:r.pos,ref:r.ref,cant:r.cant,denominacio:r.denominacio,page:r.page,conjunt:c.name,grup:g.name,subgrup:sg.name,num:sg.num||''};
         rows.push(row);flat.push(row);
         if(r.page!=null){if(r.page<pmin)pmin=r.page;if(r.page>pmax)pmax=r.page}
       });
-      if(rows.length)list.push({name:sg.name,grup:g.name,rows:rows,pmin:(pmin===Infinity?null:pmin),pmax:(pmax===-Infinity?null:pmax)});
+      var explicit=(Array.isArray(sg.pages)&&sg.pages.length)?sg.pages.slice():null;
+      list.push({name:sg.name,grup:g.name,num:sg.num||'',rows:rows,explicit:explicit,pmin:(pmin===Infinity?null:pmin),pmax:(pmax===-Infinity?null:pmax)});
     });
-    list.sort(function(a,b){return (a.pmin==null?1e9:a.pmin)-(b.pmin==null?1e9:b.pmin)});
+    list.sort(function(a,b){return subMin(a)-subMin(b)});
     var gp=(g.pages||[]).slice().sort(function(a,b){return a-b});
     var gStart=gp.length?gp[0]:null, cursor=null;
     list.forEach(function(s){
       var pages={};
-      if(s.pmin!=null){
+      if(s.explicit){
+        s.explicit.forEach(function(p){pages[p]=1});
+        var mx=Math.max.apply(null,s.explicit); if(cursor==null||mx>cursor)cursor=mx;
+      } else if(s.pmin!=null){ // derived-block fallback (old catalogs)
         var start=(cursor!=null)?cursor+1:(gStart!=null?Math.min(gStart,s.pmin):s.pmin);
         if(start>s.pmin)start=s.pmin;
         for(var p=start;p<=s.pmax;p++)pages[p]=1;
         cursor=s.pmax;
       }
-      subgrups.push({name:s.name,grup:s.grup,pages:pages,rows:s.rows});
+      subgrups.push({name:s.name,grup:s.grup,num:s.num,pages:pages,rows:s.rows});
     });
   })});
   return {subgrups:subgrups,rows:flat};
@@ -1350,7 +1359,8 @@ function showPickChoices(pos,rows,offPage){
   rows.forEach(function(r){
     var b=document.createElement("button");b.className="btn-sm";
     b.style.cssText="display:block;width:100%;text-align:left;margin-bottom:4px";
-    b.innerHTML="<strong>Pos "+esc(r.pos)+(r.ref?" · "+esc(r.ref):"")+"</strong> "+esc(r.denominacio||"")+" <span style=\"color:var(--tx3)\">(p."+esc(r.page)+((r.subgrup||r.grup)?" · "+esc(r.subgrup||r.grup):"")+")</span>";
+    var ctx=(r.subgrup||r.grup||"")+(r.num?" · Nº "+r.num:"");
+    b.innerHTML="<strong>Pos "+esc(r.pos)+(r.ref?" · "+esc(r.ref):"")+"</strong> "+esc(r.denominacio||"")+" <span style=\"color:var(--tx3)\">(p."+esc(r.page)+(ctx?" · "+esc(ctx):"")+")</span>";
     b.addEventListener("click",function(){box.style.display="none";addResolvedPart(r)});
     box.appendChild(b);
   });

@@ -1055,13 +1055,20 @@ async function uploadManual(){
       if(!pdfRes)throw new Error("PDF upload failed");
       pdfId=pdfRes.id;pdfName=pdfRes.name;
     }
-    var jsonName=base+".json", jsonId, jsonReused=false;
+    // The catalog changes whenever it's re-marked, so ALWAYS write the JSON:
+    // update the existing file's content (not reuse it stale) or create it.
+    var jsonName=base+".json", jsonId, jsonUpdated=false;
     var existingJson=await driveFind(token,jsonName,folderId,"application/json");
-    if(existingJson){jsonId=existingJson;jsonReused=true}
-    else{
+    if(existingJson){
+      var pr=await fetch("https://www.googleapis.com/upload/drive/v3/files/"+existingJson+"?uploadType=media",{method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json; charset=UTF-8"},body:JSON.stringify(mfParsed)});
+      if(!pr.ok)throw new Error("JSON update failed ("+pr.status+")");
+      jsonId=existingJson;jsonUpdated=true;
+    }else{
       jsonId=await uploadTextFile(token,jsonName,JSON.stringify(mfParsed),"application/json",folderId);
       if(!jsonId)throw new Error("JSON upload failed");
     }
+    // keep the local catalog cache fresh — the drawings picker reads cat_<id>
+    if(idb){try{await idbSet(idb,"cat_"+jsonId,mfParsed)}catch(e){}}
     var c=catalogCounts(mfParsed);
     var entry={id:uid(),base:base,serial:mac.serial||"",model:mac.model||"",client:mac.client||"",folderId:folderId,pdfId:pdfId,pdfName:pdfName,jsonId:jsonId,jsonName:jsonName,conjunts:c.conjunts,parts:c.parts,uploadedAt:now()};
     var ex=manuals.findIndex(function(m){return m.folderId===folderId||m.base===base});
@@ -1069,8 +1076,7 @@ async function uploadManual(){
     await saveManualsIndex(token);
     mfPdfFile=null;mfJsonFile=null;mfParsed=null;
     renderManualsList();mfRefresh();
-    var reused=[pdfReused?"PDF":null,jsonReused?"JSON":null].filter(Boolean).join(" + ");
-    $$("mfInfo").textContent="✓ "+base+" saved."+(reused?" ("+reused+" already on Drive — reused.)":"");
+    $$("mfInfo").textContent="✓ "+base+(jsonUpdated?" updated.":" saved.")+(pdfReused?" (PDF already on Drive — reused.)":"");
   }catch(e){alert("Upload failed: "+((e&&e.message)||e))}
   finally{btn.innerHTML=lbl;btn.disabled=!(mfPdfFile&&mfJsonFile&&mfParsed)}
 }
@@ -1239,13 +1245,17 @@ function setViewerZoom(z){viewerZoom=Math.max(0.5,Math.min(6,z));updateZoomLabel
 //    conjunt/grup context + the source page. --
 async function getManualCatalog(jsonId){
   var key="cat_"+jsonId;
+  // The catalog changes whenever it's re-marked, so fetch fresh from Drive when
+  // online (updating the cache); fall back to the cached copy only offline.
+  var token=await getToken();
+  if(token){
+    try{
+      var r=await fetch("https://www.googleapis.com/drive/v3/files/"+jsonId+"?alt=media",{headers:{Authorization:"Bearer "+token}});
+      if(r.ok){var data=await r.json();if(idb){try{await idbSet(idb,key,data)}catch(e){}}return data;}
+    }catch(e){}
+  }
   if(idb){try{var c=await idbGet(idb,key);if(c)return c}catch(e){}}
-  var token=await ensureToken();if(!token)throw new Error("not signed in");
-  var r=await fetch("https://www.googleapis.com/drive/v3/files/"+jsonId+"?alt=media",{headers:{Authorization:"Bearer "+token}});
-  if(!r.ok)throw new Error("could not download the catalog ("+r.status+")");
-  var data=await r.json();
-  if(idb){try{await idbSet(idb,key,data)}catch(e){}}
-  return data;
+  throw new Error("could not load the catalog (offline and not cached)");
 }
 // Build a flat row list plus per-SUBGRUP groups. Each subgrup is one drawing,
 // with its own Pos numbering. The manual lays each one out as: the drawing

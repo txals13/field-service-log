@@ -1285,6 +1285,7 @@ function buildViewerCatalog(cat){
     list.sort(function(a,b){return subMin(a)-subMin(b)});
     var gp=(g.pages||[]).slice().sort(function(a,b){return a-b});
     var gStart=gp.length?gp[0]:null, cursor=null;
+    var gset={};gp.forEach(function(p){gset[p]=1}); // the grup's whole section, for nearest-subgrup fallback
     list.forEach(function(s){
       var pages={};
       if(s.explicit){
@@ -1296,19 +1297,32 @@ function buildViewerCatalog(cat){
         for(var p=start;p<=s.pmax;p++)pages[p]=1;
         cursor=s.pmax;
       }
-      subgrups.push({name:s.name,grup:s.grup,num:s.num,pages:pages,rows:s.rows});
+      subgrups.push({name:s.name,grup:s.grup,num:s.num,pages:pages,plist:Object.keys(pages).map(Number).sort(function(a,b){return a-b}),gset:gset,rows:s.rows});
     });
   })});
   return {subgrups:subgrups,rows:flat};
 }
 // pdf.js text items -> boxes in the render viewport's bitmap-pixel space
+// The hit box is the true bounding box of the glyph run — anchor plus the
+// advance vector (along the baseline) and the height vector — so ROTATED text
+// gets a correct hit area too. This manual's drawing sheets are rotated 90°:
+// the old horizontal-only box sat beside the real balloon, so taps missed.
 function buildPickItems(tc,viewport){
   var items=[];
   tc.items.forEach(function(it){
     if(!it.str||!it.str.trim())return;
     var t=pdfjsLib.Util.transform(viewport.transform,it.transform);
-    var fh=Math.hypot(t[2],t[3])||12,w=(it.width||0)*viewport.scale;
-    items.push({x:t[4],y:t[5]-fh,w:w,h:fh*1.25,str:it.str.trim()});
+    var fh=Math.hypot(t[2],t[3])||12;
+    var advLen=(it.width||0)*viewport.scale;
+    var al=Math.hypot(t[0],t[1])||1;
+    var ax=t[0]/al*advLen, ay=t[1]/al*advLen; // along the baseline
+    var hx=t[2], hy=t[3];                     // baseline -> cap height
+    var x0=Math.min(t[4],t[4]+ax,t[4]+hx,t[4]+ax+hx);
+    var x1=Math.max(t[4],t[4]+ax,t[4]+hx,t[4]+ax+hx);
+    var y0=Math.min(t[5],t[5]+ay,t[5]+hy,t[5]+ay+hy);
+    var y1=Math.max(t[5],t[5]+ay,t[5]+hy,t[5]+ay+hy);
+    var pad=fh*0.15;
+    items.push({x:x0-pad,y:y0-pad,w:(x1-x0)+pad*2,h:(y1-y0)+pad*2,str:it.str.trim()});
   });
   return items;
 }
@@ -1349,6 +1363,21 @@ function confirmAndAdd(r){
 function resolvePartByPos(pos){
   if(!viewerSubgrups.length){setDrawStatus("Catalog not loaded — tapping can't resolve parts.");return}
   var owning=viewerSubgrups.filter(function(s){return s.pages[viewerPage]});
+  if(!owning.length){
+    // Marked catalogs often list only the LIST pages, not the drawing sheet the
+    // balloons sit on. Fall back to the nearest subgrup within the same grup
+    // section — the drawing's own list normally follows it, so ties prefer the
+    // next page over the previous one.
+    var best=null,bd=Infinity;
+    viewerSubgrups.forEach(function(s){
+      if(!s.gset||!s.gset[viewerPage]||!s.plist||!s.plist.length)return;
+      s.plist.forEach(function(p){
+        var d=Math.abs(p-viewerPage)*2+(p<viewerPage?1:0);
+        if(d<bd){bd=d;best=s}
+      });
+    });
+    if(best)owning=[best];
+  }
   if(!owning.length){setDrawStatus("This page has no parts list in the catalog — open the drawing's detail sheet.");return}
   var scope=[];owning.forEach(function(s){scope=scope.concat(s.rows)});
   var cand=scope.filter(function(r){return String(r.pos)===String(pos)});

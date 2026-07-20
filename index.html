@@ -349,7 +349,9 @@ textarea{resize:none;line-height:1.4}
       <div class="field"><label>Severity</label>
         <select id="eSev"><option value="info">&#9675; Info</option><option value="ok">&#9679; OK</option><option value="warning">&#9650; Warning</option><option value="issue">&#9632; Issue</option></select>
       </div>
-      <div class="field"><label>Tag (optional)</label><input type="text" id="eTag" placeholder="e.g. ELEC, MECH, PLC" list="tagOptions"></div>
+      <div class="field"><label>Tag (optional)</label><input type="text" id="eTag" placeholder="e.g. ELEC, MECH, PLC" list="tagOptions">
+        <select id="eTagSel" style="margin-top:6px;display:none"></select>
+      </div>
       <datalist id="tagOptions"></datalist>
       <div class="field"><label>Description</label><textarea id="eText" rows="4" style="resize:vertical"></textarea></div>
       <div class="field">
@@ -1261,15 +1263,30 @@ async function getManualCatalog(jsonId){
 // -- Tag suggestions: the linked manual's grup names (machine sections) feed a
 //    datalist behind both Tag inputs. Cache-first (no network on every render);
 //    rebuilt only when the session or its manual changes. --
-var tagOptKey=null;
+var tagOptKey=null, tagNames=[];
+// The datalist autocompletes the entry bar; but a datalist FILTERS by the
+// field's current text, so on Edit (field already holding the old tag) it
+// looks empty — the edit modal gets a real <select> instead, filled from the
+// same names, that writes the chosen grup into the input.
+function fillTagTargets(){
+  var dl=$$("tagOptions");
+  if(dl)dl.innerHTML=tagNames.map(function(n){return "<option value=\""+esc(n)+"\"></option>"}).join("");
+  var sel=$$("eTagSel");
+  if(sel){
+    if(tagNames.length){
+      sel.style.display="";
+      sel.innerHTML="<option value=\"\">&#9662; Tria un grup del manual…</option>"
+        +tagNames.map(function(n){return "<option value=\""+esc(n)+"\">"+esc(n)+"</option>"}).join("");
+    }else{sel.style.display="none";sel.innerHTML=""}
+  }
+}
 async function populateTagOptions(){
-  var dl=$$("tagOptions");if(!dl)return;
   var sess=sessions.find(function(s){return s.id===aid});
   var ref=sess&&sess.manualRef;
   var key=ref?(sess.id+":"+ref.jsonId):null;
   if(key===tagOptKey)return;
   tagOptKey=key;
-  if(!ref){dl.innerHTML="";return}
+  if(!ref){tagNames=[];fillTagTargets();return}
   try{
     var cat=null;
     if(idb){try{cat=await idbGet(idb,"cat_"+ref.jsonId)}catch(e){}}
@@ -1279,7 +1296,8 @@ async function populateTagOptions(){
       var n=(g.name||"").trim();
       if(n&&names.indexOf(n)===-1)names.push(n);
     })});
-    dl.innerHTML=names.map(function(n){return "<option value=\""+esc(n)+"\"></option>"}).join("");
+    tagNames=names;
+    fillTagTargets();
   }catch(e){tagOptKey=null} // retry on a later render (e.g. once signed in)
 }
 // Build a flat row list plus per-SUBGRUP groups. Each subgrup is one drawing,
@@ -2194,6 +2212,7 @@ function openEdit(entryId){
   autoH($$("eText"));rEThumbs();rEParts();clearPartForm();
   var sessR=sessions.find(function(s){return s.id===aid});
   $$("ePickDraw").style.display=(sessR&&sessR.manualRef)?"inline-block":"none";
+  fillTagTargets();populateTagOptions(); // keep the grup dropdown fresh when the modal opens
   $$("editBack").style.display="flex";
   setTimeout(function(){$$("eText").focus()},80);
 }
@@ -2226,6 +2245,7 @@ $$("eText").addEventListener("input",function(){autoH($$("eText"))});
 $$("eAddPhoto").addEventListener("click",function(){$$("eFileIn").click()});
 $$("eFileIn").addEventListener("change",function(e){handleFiles(e,true)});
 $$("eRec").addEventListener("click",function(){if(mediaRec&&recIsEdit)stopRec();else if(!mediaRec)startRec(true)});
+$$("eTagSel").addEventListener("change",function(){if(this.value)$$("eTag").value=this.value;this.selectedIndex=0});
 $$("ePartAdd").addEventListener("click",function(){var f=$$("ePartForm");f.style.display="flex";$$("pfPos").focus()});
 $$("pfCancel").addEventListener("click",clearPartForm);
 $$("pfSave").addEventListener("click",function(){

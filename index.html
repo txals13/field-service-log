@@ -349,7 +349,8 @@ textarea{resize:none;line-height:1.4}
       <div class="field"><label>Severity</label>
         <select id="eSev"><option value="info">&#9675; Info</option><option value="ok">&#9679; OK</option><option value="warning">&#9650; Warning</option><option value="issue">&#9632; Issue</option></select>
       </div>
-      <div class="field"><label>Tag (optional)</label><input type="text" id="eTag" placeholder="e.g. ELEC, MECH, PLC"></div>
+      <div class="field"><label>Tag (optional)</label><input type="text" id="eTag" placeholder="e.g. ELEC, MECH, PLC" list="tagOptions"></div>
+      <datalist id="tagOptions"></datalist>
       <div class="field"><label>Description</label><textarea id="eText" rows="4" style="resize:vertical"></textarea></div>
       <div class="field">
         <label>Attachments</label>
@@ -1257,6 +1258,30 @@ async function getManualCatalog(jsonId){
   if(idb){try{var c=await idbGet(idb,key);if(c)return c}catch(e){}}
   throw new Error("could not load the catalog (offline and not cached)");
 }
+// -- Tag suggestions: the linked manual's grup names (machine sections) feed a
+//    datalist behind both Tag inputs. Cache-first (no network on every render);
+//    rebuilt only when the session or its manual changes. --
+var tagOptKey=null;
+async function populateTagOptions(){
+  var dl=$$("tagOptions");if(!dl)return;
+  var sess=sessions.find(function(s){return s.id===aid});
+  var ref=sess&&sess.manualRef;
+  var key=ref?(sess.id+":"+ref.jsonId):null;
+  if(key===tagOptKey)return;
+  tagOptKey=key;
+  if(!ref){dl.innerHTML="";return}
+  try{
+    var cat=null;
+    if(idb){try{cat=await idbGet(idb,"cat_"+ref.jsonId)}catch(e){}}
+    if(!cat)cat=await getManualCatalog(ref.jsonId);
+    var names=[],conjunts=(cat&&cat.conjunts)||(cat&&cat.conjunt?[cat.conjunt]:[]);
+    conjunts.forEach(function(c){(c.grups||[]).forEach(function(g){
+      var n=(g.name||"").trim();
+      if(n&&names.indexOf(n)===-1)names.push(n);
+    })});
+    dl.innerHTML=names.map(function(n){return "<option value=\""+esc(n)+"\"></option>"}).join("");
+  }catch(e){tagOptKey=null} // retry on a later render (e.g. once signed in)
+}
 // Build a flat row list plus per-SUBGRUP groups. Each subgrup is one drawing,
 // with its own Pos numbering. The manual lays each one out as: the drawing
 // sheet first, then its parts lists, until the next drawing starts. So a
@@ -1868,7 +1893,7 @@ function renderContent(){
         +"<div class=\"input-row\">"
         +"<div class=\"input-ctrl\">"
         +"<select id=\"sevSel\" class=\"sel-sev\"><option value=\"info\">○ Info</option><option value=\"ok\">● OK</option><option value=\"warning\">▲ Warning</option><option value=\"issue\">■ Issue</option></select>"
-        +"<input type=\"text\" id=\"tagIn\" placeholder=\"Tag...\" class=\"inp-tag\">"
+        +"<input type=\"text\" id=\"tagIn\" placeholder=\"Tag...\" class=\"inp-tag\" list=\"tagOptions\">"
         +"</div>"
         +"<textarea id=\"entIn\" rows=\"3\" placeholder=\"Description (optional if photo attached)... Ctrl+Enter to add\"></textarea>"
         +"<div class=\"input-ctrl\">"
@@ -1890,6 +1915,7 @@ function renderContent(){
     +"</div>";
 
   renderLogArea();
+  populateTagOptions(); // fill the Tag dropdown with the linked manual's grups
 
   // Wire up controls
   var btnEd=$$("btnEditSess");if(btnEd)btnEd.addEventListener("click",function(){openNewModal(active)});

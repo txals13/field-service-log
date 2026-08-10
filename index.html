@@ -1908,7 +1908,7 @@ function renderContent(){
       ?"<button class=\"btn-danger btn-sm\" id=\"btnClose\" style=\"margin-left:auto\">■ Close</button>"
       :"<span style=\"margin-left:auto;font-size:11px;color:var(--tx3)\">🔴 Closed</span><button class=\"btn-sm\" id=\"btnReopen\" style=\"font-size:11px\">↺ Reopen</button>")
     +"<div class=\"exp-wrap\"><button class=\"btn-sm\" id=\"btnExp\">↓ Report ▾</button>"
-    +"<div class=\"exp-menu\" id=\"expMenu\"><button data-fmt=\"pdf\">📄 PDF</button><button data-fmt=\"docx\">📄 DOCX</button><button data-fmt=\"html\">📄 HTML</button><button data-fmt=\"zip\">🗄 Drive ZIP</button></div></div>"
+    +"<div class=\"exp-menu\" id=\"expMenu\"><button data-fmt=\"pdf\">📄 PDF</button><button data-fmt=\"docx\">📄 DOCX</button><button data-fmt=\"html\">📄 HTML</button><button data-fmt=\"xlsx\">📊 Spare parts (Excel)</button><button data-fmt=\"zip\">🗄 Drive ZIP</button></div></div>"
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSync\" title=\"Sync now\">⟳</button>":"")
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSessSync\" title=\"Recreate Drive folders and upload any photo missing from Drive for this session\">&#9729; Save</button>":"")
     +"</div>"
@@ -2496,7 +2496,99 @@ function exportRep(s,fmt){
     uploadReportCopy(s,new Blob([buildReportHTML(s,false)],{type:"text/html;charset=utf-8"}),"report_"+base+"_"+fnameStamp()+".html","text/html");
   }
   else if(fmt==="docx"){exportDOCX(s,base)}
+  else if(fmt==="xlsx"){exportXLSX(s,base)}
   else if(fmt==="zip"){exportSessionZip(s)}
+}
+
+// ── SPARE PARTS → EXCEL ───────────────────────────────────────────────────────
+function loadXlsxLib(){
+  return new Promise(function(res){
+    if(window.XLSX){res(window.XLSX);return}
+    function tryLoad(urls){
+      if(!urls.length){res(null);return}
+      var sc=document.createElement("script");sc.src=urls[0];
+      sc.onload=function(){res(window.XLSX||null)};
+      sc.onerror=function(){tryLoad(urls.slice(1))};
+      document.head.appendChild(sc);
+    }
+    tryLoad(["https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js","https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"]);
+  });
+}
+// Every part picked across the session's entries, keeping which entry needed it.
+function collectSessionParts(s){
+  var out=[];
+  (s.entries||[]).forEach(function(e){
+    (e.parts||[]).forEach(function(p){
+      out.push({entry:e,part:p});
+    });
+  });
+  return out;
+}
+function qtyNum(v){var n=parseFloat(String(v==null?"":v).replace(",","."));return isNaN(n)?null:n}
+// Consolidates by reference (falling back to pos+denomination) and totals the
+// quantities — this is the sheet you hand to purchasing. Non-numeric quantities
+// can't be summed, so those rows report the raw values instead.
+function summarizeParts(items){
+  var map={},order=[];
+  items.forEach(function(it){
+    var p=it.part;
+    var key=(p.ref||"").trim().toLowerCase()||("pos:"+(p.pos||"")+"|"+(p.denominacio||"").trim().toLowerCase());
+    if(!map[key]){map[key]={ref:p.ref||"",pos:p.pos||"",denominacio:p.denominacio||"",conjunt:p.conjunt||"",grup:p.grup||"",total:0,raw:[],times:0};order.push(key)}
+    var m=map[key];
+    m.times++;
+    var n=qtyNum(p.cant);
+    if(n===null){if(String(p.cant||"").trim())m.raw.push(String(p.cant).trim())}
+    else m.total+=n;
+    if(!m.ref&&p.ref)m.ref=p.ref;
+    if(!m.denominacio&&p.denominacio)m.denominacio=p.denominacio;
+  });
+  return order.map(function(k){return map[k]});
+}
+async function exportXLSX(s,base){
+  var items=collectSessionParts(s);
+  if(!items.length){alert("No spare parts in this session yet.\n\nPick them from a drawing or add them by hand in an entry.");return}
+  var X=await loadXlsxLib();
+  if(!X){alert("Cannot load the Excel library. Check internet connection.");return}
+  var sm=function(e){return (SM[e.severity]||SM.info).label};
+
+  // Sheet 1 — consolidated, for ordering
+  var sum=summarizeParts(items);
+  var resum=[["Ref.","Pos.","Denominació","Quantitat","Conjunt","Grup / Dibuix","Entrades"]];
+  sum.forEach(function(m){
+    var qty=m.raw.length?((m.total?m.total+" + ":"")+m.raw.join(" + ")):(m.total||"");
+    resum.push([m.ref,m.pos,m.denominacio,qty,m.conjunt,m.grup,m.times]);
+  });
+  var wsR=X.utils.aoa_to_sheet(resum);
+  wsR["!cols"]=[{wch:18},{wch:7},{wch:44},{wch:11},{wch:26},{wch:26},{wch:9}];
+  wsR["!autofilter"]={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:resum.length-1,c:6}})};
+
+  // Sheet 2 — every occurrence, with the entry that needed it
+  var detall=[["Data","Severitat","Tag","Entrada","Ref.","Pos.","Quantitat","Denominació","Conjunt","Grup / Dibuix","Pàgina"]];
+  items.forEach(function(it){
+    var e=it.entry,p=it.part;
+    detall.push([fts(e.ts),sm(e),e.tag||"",e.text||"",p.ref||"",p.pos||"",qtyNum(p.cant)!==null?qtyNum(p.cant):(p.cant||""),p.denominacio||"",p.conjunt||"",p.grup||"",p.page||""]);
+  });
+  var wsD=X.utils.aoa_to_sheet(detall);
+  wsD["!cols"]=[{wch:17},{wch:10},{wch:12},{wch:40},{wch:18},{wch:7},{wch:10},{wch:44},{wch:24},{wch:24},{wch:8}];
+  wsD["!autofilter"]={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:detall.length-1,c:10}})};
+
+  // Sheet 3 — who/what/when this list belongs to
+  var info=[["Client",s.client||""],["Projecte",s.project||""],["Màquina",s.machine||""],["Ubicació",s.location||""],
+            ["Tècnic",s.tech||""],["Tipus",(TM[s.type]||TM.commissioning).label],["Inici",fts(s.createdAt)],
+            ["Estat",s.status==="open"?"Oberta":"Tancada"],["Manual",(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||""],
+            ["Generat",fts(new Date().toISOString())],["Recanvis (línies)",items.length],["Referències diferents",sum.length]];
+  var wsI=X.utils.aoa_to_sheet(info);
+  wsI["!cols"]=[{wch:22},{wch:46}];
+
+  var wb=X.utils.book_new();
+  X.utils.book_append_sheet(wb,wsR,"Resum");
+  X.utils.book_append_sheet(wb,wsD,"Detall");
+  X.utils.book_append_sheet(wb,wsI,"Sessió");
+  var out=X.write(wb,{bookType:"xlsx",type:"array"});
+  var mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  var blob=new Blob([out],{type:mime});
+  dlBlob(blob,"recanvis_"+base+".xlsx");
+  uploadReportCopy(s,blob,"recanvis_"+base+"_"+fnameStamp()+".xlsx",mime);
 }
 
 function loadDocxLib(){

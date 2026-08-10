@@ -36,6 +36,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-seri
 /* topbar */
 .topbar{display:flex;align-items:center;gap:6px;padding:0 10px;height:50px;border-bottom:1px solid var(--br);background:var(--bg1);flex-shrink:0}
 .logo{font-family:monospace;font-weight:700;color:var(--gold);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;letter-spacing:.3px}
+/* On a phone the signed-in topbar (sync, status, sign out, theme, import, new)
+   is wider than the screen and the last buttons fall off. Drop the two
+   decorative items — the app name (already the PWA's own title) and the session
+   badge (repeated in the session header right below) — and tighten the buttons,
+   so every control stays reachable instead of being cut off. */
+.topbar #btnTheme{font-size:16px;padding:5px 7px}
+@media(max-width:640px){
+  .topbar{gap:4px;padding:0 6px}
+  .topbar .logo{display:none}
+  .topbar #topBadge{display:none !important}
+  .topbar button{padding:6px 6px;font-size:12px}
+  .topbar #btnTheme{font-size:14px;padding:6px 6px}
+}
 /* layout */
 .body{display:flex;flex:1;overflow:hidden;position:relative}
 /* sidebar */
@@ -127,7 +140,8 @@ mark{background:var(--goldbg);color:var(--goldtx);padding:0 1px;border-radius:2p
 .inst-bar{background:var(--goldbg);border-bottom:1px solid rgba(245,158,11,.3);padding:6px 12px;display:flex;align-items:center;gap:8px;font-size:12px;flex-shrink:0;color:var(--goldtx)}
 /* export dropdown */
 .exp-wrap{position:relative;display:inline-block}
-.exp-menu{display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--bg1);border:1px solid var(--br2);border-radius:8px;min-width:130px;z-index:50;box-shadow:0 4px 16px rgba(0,0,0,.3);overflow:hidden}
+.exp-menu{display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--bg1);border:1px solid var(--br2);border-radius:8px;min-width:130px;max-width:calc(100vw - 16px);max-height:70vh;z-index:50;box-shadow:0 4px 16px rgba(0,0,0,.3);overflow:auto}
+.exp-menu button{white-space:nowrap}
 .exp-menu button{display:block;width:100%;text-align:left;background:none;border:none;border-radius:0;padding:9px 14px;font-size:13px;color:var(--tx1);cursor:pointer;border-bottom:1px solid var(--br)}
 .exp-menu button:last-child{border-bottom:none}
 .exp-menu button:hover{background:var(--bg2)}
@@ -234,7 +248,7 @@ textarea{resize:none;line-height:1.4}
       <button class="btn-g btn-sm" id="btnFullSync" style="display:none" title="Recreate Drive folders and upload any photo missing from Drive, across all sessions">&#9729; Sync all</button>
       <span id="syncSt" style="font-size:11px;color:var(--tx3);font-family:monospace;white-space:nowrap"></span>
       <button class="btn-g btn-sm" id="btnLogout" style="display:none" title="Sign out of Google Drive (local session data is kept)">Sign out</button>
-      <button class="btn-g btn-sm" id="btnTheme" style="font-size:16px;padding:5px 7px" title="Toggle theme">&#9788;</button>
+      <button class="btn-g btn-sm" id="btnTheme" title="Toggle theme">&#9788;</button>
       <button class="btn-g btn-sm" id="btnImport" title="Import JSON">&#8679; Import</button>
       <input type="file" id="importFile" accept=".json" style="display:none">
       <button class="btn-gold btn-sm" id="btnNew">+ New</button>
@@ -525,6 +539,20 @@ function $$(id){return document.getElementById(id)}
 function autoH(ta){if(!ta)return;ta.style.height="auto";ta.style.height=Math.min(ta.scrollHeight,200)+"px"}
 function sanitize(s){return(s||"untitled").toString().trim().replace(/[\/:*?"<>|]/g,"_").replace(/\s+/g,"_").slice(0,60)||"untitled"}
 function mob(){return window.innerWidth<=640}
+// Drops the export menu under its button but clamped inside the viewport. It
+// used to be absolutely positioned with right:0, which on a phone (where the
+// button sits far left after the header wraps) pushed the menu off the left
+// edge. Fixed positioning also frees it from any scrolling ancestor.
+function openExpMenu(btn,m){
+  m.style.display="block";
+  m.style.position="fixed";
+  m.style.right="auto";
+  var r=btn.getBoundingClientRect(),vw=document.documentElement.clientWidth,vh=document.documentElement.clientHeight;
+  var mw=m.offsetWidth,mh=m.offsetHeight,pad=8;
+  m.style.left=Math.round(Math.max(pad,Math.min(r.right-mw,vw-mw-pad)))+"px";
+  // flip above the button when there isn't room below
+  m.style.top=Math.round((r.bottom+4+mh<=vh-pad)?(r.bottom+4):Math.max(pad,r.top-4-mh))+"px";
+}
 // Coalesce bursts of calls (e.g. filter keystrokes) into one trailing run,
 // so a heavy re-render (log entries with base64 images) fires once the user
 // pauses instead of on every keypress — a big win on mobile.
@@ -1967,7 +1995,7 @@ function renderContent(){
   var btnC=$$("btnClose");if(btnC)btnC.addEventListener("click",function(){if(confirm("Close this session? You can reopen it later.")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"closed",closedAt:now()}):s});scheduleSave();renderAll()}});
   var btnR=$$("btnReopen");if(btnR)btnR.addEventListener("click",function(){if(confirm("Reopen this session?")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"open",closedAt:null}):s});scheduleSave();renderAll()}});
   var btnEx=$$("btnExp");if(btnEx){
-    btnEx.addEventListener("click",function(e){e.stopPropagation();var m=$$("expMenu");m.style.display=m.style.display==="block"?"none":"block"});
+    btnEx.addEventListener("click",function(e){e.stopPropagation();var m=$$("expMenu");if(m.style.display==="block")m.style.display="none";else openExpMenu(btnEx,m)});
     $$("expMenu").addEventListener("click",function(e){var f=e.target.dataset.fmt;if(f){$$("expMenu").style.display="none";exportRep(active,f)}});
   }
   var btnSy=$$("btnSync");if(btnSy)btnSy.addEventListener("click",function(){loadFromDrive().then(renderAll)});

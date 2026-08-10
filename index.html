@@ -188,7 +188,8 @@ textarea{resize:none;line-height:1.4}
 .part-row{display:flex;align-items:center;gap:6px;font-size:12px;background:var(--bg2);border:1px solid var(--br2);border-left:3px solid #3b82f6;border-radius:6px;padding:5px 8px}
 .part-row .pp{font-family:monospace;font-weight:700;color:#3b82f6;flex-shrink:0}
 .part-row .pd{flex:1;min-width:0;color:var(--tx2)}
-.part-row .pq{font-family:monospace;color:var(--tx3);flex-shrink:0}
+.part-row .pq{font-family:monospace;color:var(--tx3);flex-shrink:0;display:flex;align-items:center;gap:1px}
+.part-row .pq-in{width:38px;font-family:monospace;font-size:12px;padding:2px 4px;text-align:center;background:var(--bg1);border:1px solid var(--br2);border-radius:4px;color:var(--tx)}
 .part-row .pc{font-size:10px;color:var(--tx3);flex-shrink:0}
 .part-row .part-del{background:none;border:none;color:var(--tx3);cursor:pointer;font-size:12px;padding:0 2px;flex-shrink:0}
 .part-form{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;padding:8px;background:var(--bg2);border:1px solid var(--br2);border-radius:8px}
@@ -1390,15 +1391,39 @@ function attemptPick(clientX,clientY){
   if(!posTok){setDrawStatus("That's not a position number.");return}
   resolvePartByPos(posTok);
 }
-function addResolvedPart(r){
-  eParts.push({pos:r.pos,ref:r.ref,cant:r.cant,denominacio:r.denominacio,conjunt:r.conjunt,grup:r.grup,page:r.page});
+function addResolvedPart(r,qty){
+  var cant=(qty===undefined||qty===null)?r.cant:String(qty).trim();
+  eParts.push({pos:r.pos,ref:r.ref,cant:cant,denominacio:r.denominacio,conjunt:r.conjunt,grup:r.grup,page:r.page});
   rEParts();
-  setDrawStatus("✓ Added Pos "+r.pos+". Tap another, or Close to return.");
+  setDrawStatus("✓ Added Pos "+r.pos+(cant?" ×"+cant:"")+". Tap another, or Close to return.");
 }
+// Confirm panel with the catalog quantity pre-filled but editable — the list
+// says how many the drawing uses, the technician says how many are needed.
 function confirmAndAdd(r){
-  var label="Pos "+r.pos+(r.ref?" · "+r.ref:"")+(r.denominacio?"\n"+r.denominacio:"")+(r.cant?"\nQty: "+r.cant:"");
-  if(!confirm("Add this spare part to the entry?\n\n"+label)){setDrawStatus("");return}
-  addResolvedPart(r);
+  var box=$$("drawChoices");
+  if(!box){addResolvedPart(r);return} // no panel available: keep the old behaviour
+  box.innerHTML="";
+  box.style.cssText="display:block;background:var(--bg1);border:1px solid var(--br2);border-radius:8px;padding:10px;margin-bottom:8px";
+  var ctx=(r.subgrup||r.grup||"")+(r.num?" · Nº "+r.num:"");
+  var head=document.createElement("div");
+  head.style.cssText="font-size:12px;color:var(--tx2);margin-bottom:8px";
+  head.innerHTML="<strong>Pos "+esc(r.pos)+(r.ref?" · "+esc(r.ref):"")+"</strong> "+esc(r.denominacio||"")
+    +(ctx?" <span style=\"color:var(--tx3)\">("+esc(ctx)+")</span>":"");
+  box.appendChild(head);
+  var row=document.createElement("div");
+  row.style.cssText="display:flex;align-items:center;gap:8px;flex-wrap:wrap";
+  var lab=document.createElement("span");lab.style.cssText="font-size:12px;color:var(--tx3)";lab.textContent="Qty";
+  var inp=document.createElement("input");inp.type="text";inp.inputMode="numeric";
+  inp.value=r.cant||"";inp.style.cssText="width:70px;font-size:13px;padding:5px 7px;text-align:center";
+  var add=document.createElement("button");add.className="btn-sm btn-gold";add.textContent="✓ Add";
+  var cancel=document.createElement("button");cancel.className="btn-sm";cancel.textContent="Cancel";
+  function done(){box.style.display="none"}
+  add.addEventListener("click",function(){done();addResolvedPart(r,inp.value)});
+  cancel.addEventListener("click",function(){done();setDrawStatus("")});
+  inp.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();add.click()}});
+  row.appendChild(lab);row.appendChild(inp);row.appendChild(add);row.appendChild(cancel);
+  box.appendChild(row);
+  setTimeout(function(){inp.focus();inp.select()},30);
 }
 // Scope a tapped Pos to the SUBGRUP (drawing) that owns the current page — a
 // single drawing's Pos numbering is unique, so this resolves to exactly one
@@ -1443,7 +1468,7 @@ function showPickChoices(pos,rows,offPage){
     b.style.cssText="display:block;width:100%;text-align:left;margin-bottom:4px";
     var ctx=(r.subgrup||r.grup||"")+(r.num?" · Nº "+r.num:"");
     b.innerHTML="<strong>Pos "+esc(r.pos)+(r.ref?" · "+esc(r.ref):"")+"</strong> "+esc(r.denominacio||"")+" <span style=\"color:var(--tx3)\">(p."+esc(r.page)+(ctx?" · "+esc(ctx):"")+")</span>";
-    b.addEventListener("click",function(){box.style.display="none";addResolvedPart(r)});
+    b.addEventListener("click",function(){confirmAndAdd(r)}); // then confirm the quantity
     box.appendChild(b);
   });
   var cancel=document.createElement("button");cancel.className="btn-sm";cancel.textContent="Cancel";
@@ -2004,7 +2029,7 @@ function renderThumbs(cfg){
 }
 function rThumbs(){renderThumbs({container:"pThumbs",get:function(){return pImgs},set:function(v){pImgs=v},isEdit:false})}
 function rEThumbs(){renderThumbs({container:"eThumbs",get:function(){return eImgs},set:function(v){eImgs=v},isEdit:true,after:rENames})}
-// spare parts list inside the edit modal (each row removable)
+// spare parts list inside the edit modal (quantity editable, each row removable)
 function rEParts(){
   var box=$$("eParts");if(!box)return;
   box.innerHTML="";
@@ -2013,8 +2038,10 @@ function rEParts(){
     var row=document.createElement("div");row.className="part-row";
     row.innerHTML="<span class=\"pp\">"+esc(p.pos||"?")+(p.ref?" · "+esc(p.ref):"")+"</span>"
       +"<span class=\"pd\">"+esc(p.denominacio||"")+(ctx?" <span class=\"pc\">("+esc(ctx)+")</span>":"")+"</span>"
-      +(p.cant?"<span class=\"pq\">×"+esc(p.cant)+"</span>":"")
+      +"<span class=\"pq\">×<input type=\"text\" class=\"pq-in\" inputmode=\"numeric\" value=\""+esc(p.cant||"")+"\" title=\"Quantity\"></span>"
       +"<button class=\"part-del\" title=\"Remove\">&#10005;</button>";
+    // live edit, no re-render (that would steal focus mid-typing)
+    row.querySelector(".pq-in").addEventListener("input",function(){p.cant=this.value.trim()});
     row.querySelector(".part-del").addEventListener("click",function(){eParts.splice(idx,1);rEParts()});
     box.appendChild(row);
   });

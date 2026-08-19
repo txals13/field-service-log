@@ -1733,9 +1733,14 @@ $$("btnInstX").addEventListener("click",function(){$$("instBar").style.display="
 // from a blob: URL, which browsers reject outright ("The URL protocol of the
 // script ('blob:...') is not supported") — and the .catch() swallowed the error,
 // so the app silently had no worker and never worked offline despite claiming to.
+// updateViaCache:"none" keeps sw.js itself out of the HTTP cache; update() asks
+// for a fresh copy on every open. GitHub Pages sends max-age=600, so without
+// these a deploy could take 10 minutes to reach an already-open client.
 if("serviceWorker" in navigator){
   window.addEventListener("load",function(){
-    navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(function(){});
+    navigator.serviceWorker.register("./sw.js",{scope:"./",updateViaCache:"none"})
+      .then(function(reg){return reg.update()["catch"](function(){})})
+      ["catch"](function(){});
   });
 }
 

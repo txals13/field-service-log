@@ -1716,9 +1716,14 @@ $$("btnInst").addEventListener("click",function(){if(!dInst)return;dInst.prompt(
 $$("btnInstX").addEventListener("click",function(){$$("instBar").style.display="none"});
 
 // ── SERVICE WORKER ───────────────────────────────────────────────────────────
+// The worker must be a real file served over http(s). It used to be registered
+// from a blob: URL, which browsers reject outright ("The URL protocol of the
+// script ('blob:...') is not supported") — and the .catch() swallowed the error,
+// so the app silently had no worker and never worked offline despite claiming to.
 if("serviceWorker" in navigator){
-  var sw="self.addEventListener(\'install\',function(){self.skipWaiting()});self.addEventListener(\'activate\',function(e){self.clients.claim()});self.addEventListener(\'fetch\',function(e){if(/googleapis|accounts\\.google\\.com|unpkg\\.com|jsdelivr\\.net|cdnjs/.test(e.request.url))return;e.respondWith(fetch(e.request).catch(function(){return caches.match(e.request)}))});";
-  navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:"application/javascript"})),{scope:"./"}).catch(function(){});
+  window.addEventListener("load",function(){
+    navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(function(){});
+  });
 }
 
 // ── SIDEBAR ──────────────────────────────────────────────────────────────────

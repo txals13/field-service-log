@@ -24,7 +24,11 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
 
 ## Architecture
 - **Single HTML file** — all CSS, JS, and assets inline. No build step, no npm.
-- **PWA** — installable on mobile and desktop, works offline
+- **PWA** — installable on mobile and desktop, works offline via `sw.js`
+  (network-first with a 3s timeout, cache fallback; Google auth/Drive requests
+  are never intercepted). Until 2026-08-19 this line was **false**: the worker
+  was registered from a `blob:` URL, which browsers reject outright, and the
+  `.catch()` swallowed the error — there was no worker and no offline support.
 - **Storage:** IndexedDB for sessions data + Google Drive for sync
   - Sessions (carrying base64 photos + voice notes) live in **IndexedDB**
     (`fsl` db → `kv` store → key `sessions`), whose quota is hundreds of MB–GB

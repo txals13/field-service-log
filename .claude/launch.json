@@ -16,7 +16,7 @@
     {
       "name": "calendari",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8521", "--directory", "C:\\Users\\usuari\\OneDrive\\P\\Prodec\\Calendari laboral"],
+      "runtimeArgs": ["-m", "http.server", "8521", "--directory", "C:\\Users\\usuari\\OneDrive\\P\\Prodec\\Calendari-laboral"],
       "port": 8521
     }
   ]

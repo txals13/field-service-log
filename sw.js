@@ -5,13 +5,13 @@
    Estratègia: xarxa primer amb 3 s de paciència, còpia local si no arriba.
    Així sempre tens l'última versió quan hi ha cobertura, i l'app obre igual
    en un avió o en un client sense senyal. */
-const CACHE = "fsl-v1";
+const CACHE = "fsl-v2";
 const SHELL = ["./", "./index.html"];
 
 self.addEventListener("install", e => {
   e.waitUntil(
     caches.open(CACHE)
-      .then(c => c.addAll(SHELL))
+      .then(c => c.addAll(SHELL.map(u => new Request(u, {cache:"no-store"}))))
       .catch(() => {})            /* si un recurs falla, no bloquegem la instal·lació */
       .then(() => self.skipWaiting())
   );
@@ -28,7 +28,11 @@ self.addEventListener("activate", e => {
 async function respon(req){
   const cache = await caches.open(CACHE);
   const copia = await cache.match(req);
-  const xarxa = fetch(req).then(res => {
+  /* `no-store` és imprescindible: sense això el fetch passa per la memòria cau
+     HTTP del navegador i, com que GitHub Pages envia max-age=600, la "xarxa"
+     ens tornaria la còpia vella durant 10 minuts després de cada publicació
+     —i encara la desaríem. Amb no-store, xarxa primer vol dir xarxa de debò. */
+  const xarxa = fetch(req, {cache:"no-store"}).then(res => {
     if(res && res.ok && res.type === "basic") cache.put(req, res.clone());
     return res;
   });
@@ -37,8 +41,10 @@ async function respon(req){
   if(!copia){
     try{ return await xarxa; }
     catch(e){
-      /* sense còpia d'aquest recurs: si és una navegació, servim l'app sencera */
-      const home = await cache.match("./index.html");
+      /* sense còpia d'aquest recurs: si és una navegació, servim l'app sencera.
+         Provem les dues formes perquè segons com hi arribis la clau és una o
+         l'altra ("/" en obrir l'app, "/index.html" si t'hi apunten directament). */
+      const home = (await cache.match("./index.html")) || (await cache.match("./"));
       return home || new Response("Sense connexió", {status:503, headers:{"Content-Type":"text/plain;charset=utf-8"}});
     }
   }

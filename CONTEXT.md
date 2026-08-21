@@ -110,7 +110,13 @@ Field Service Log/
 - Edit entries (description, severity, tag, add/remove/rename attachments)
 - Delete entries
 - Close session / **Reopen session** (↺ button)
-- Delete session with automatic backup (local download + Drive upload)
+- Delete session: **no backup is written**. It used to drop a JSON in Downloads
+  and another at the Drive root every time, and neither carried the photos or
+  videos — so the modal points at the Drive ZIP export instead, which does. The
+  session's Drive folder is moved to the **Drive trash** (it used to be left
+  behind for good), keeping the media recoverable there. Looked up with
+  `driveFind`, not `getSessionFolder`, which is find-or-create and would make an
+  empty folder just to bin it.
 - Import JSON **or a session ZIP** (↑ Import button in topbar and on empty screen).
   A ZIP restores the media too: photos and voice notes ride along inside
   session.json as base64, but a video is only ever a thumbnail + a Drive id, and

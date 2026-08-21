@@ -161,6 +161,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
 textarea,input[type=text],select{background:var(--bg2);border:1px solid var(--br2);border-radius:6px;color:var(--tx1);font-family:inherit;font-size:13px;padding:7px 10px;outline:none;width:100%;-webkit-appearance:none;transition:border-color .15s}
 textarea:focus,input[type=text]:focus,select:focus{border-color:var(--gold)}
 textarea{resize:none;line-height:1.4}
+#eText{min-height:72px} /* ~3 lines: comfortable to read and edit even when short */
 .sel-sev{width:110px;font-size:12px;padding:6px 8px;cursor:pointer}
 .inp-tag{font-size:12px;padding:6px 8px;width:110px}
 .inp-notes{font-size:12px;padding:5px 9px;min-height:28px;resize:vertical}
@@ -536,7 +537,19 @@ function entryMatches(e,rawQuery){
     ||fts(e.ts).toLowerCase().includes(q); // "10/03/25 15:30:00" — same format shown on screen
 }
 function $$(id){return document.getElementById(id)}
-function autoH(ta){if(!ta)return;ta.style.height="auto";ta.style.height=Math.min(ta.scrollHeight,200)+"px"}
+// Grows a textarea to fit its text. Two traps: a hidden element measures 0
+// (which used to collapse the box to 0px and clip the line), and with
+// box-sizing:border-box the borders sit inside the height, so scrollHeight
+// alone leaves the last line 2px short.
+function autoH(ta){
+  if(!ta)return;
+  ta.style.height="auto";
+  var sh=ta.scrollHeight;
+  if(!sh)return; // not visible yet — the caller re-runs this once it is
+  var cs=getComputedStyle(ta);
+  var bw=(parseFloat(cs.borderTopWidth)||0)+(parseFloat(cs.borderBottomWidth)||0);
+  ta.style.height=Math.min(sh+bw,200)+"px";
+}
 function sanitize(s){return(s||"untitled").toString().trim().replace(/[\/:*?"<>|]/g,"_").replace(/\s+/g,"_").slice(0,60)||"untitled"}
 function mob(){return window.innerWidth<=640}
 // Drops the export menu under its button but clamped inside the viewport. It
@@ -2269,11 +2282,12 @@ function openEdit(entryId){
   $$("eSev").value=entry.severity||"info";
   $$("eTag").value=entry.tag||"";
   $$("eText").value=entry.text||"";
-  autoH($$("eText"));rEThumbs();rEParts();clearPartForm();
+  rEThumbs();rEParts();clearPartForm();
   var sessR=sessions.find(function(s){return s.id===aid});
   $$("ePickDraw").style.display=(sessR&&sessR.manualRef)?"inline-block":"none";
   fillTagTargets();populateTagOptions(); // keep the grup dropdown fresh when the modal opens
   $$("editBack").style.display="flex";
+  autoH($$("eText")); // only once visible — a hidden textarea measures 0 and would collapse
   setTimeout(function(){$$("eText").focus()},80);
 }
 function saveEdit(){

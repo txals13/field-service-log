@@ -112,7 +112,11 @@ Field Service Log/
 - Close session / **Reopen session** (↺ button)
 - Delete session: **no backup is written**. It used to drop a JSON in Downloads
   and another at the Drive root every time, and neither carried the photos or
-  videos — so the modal points at the Drive ZIP export instead, which does. The
+  videos. Instead the dialog checks whether a Drive ZIP exists **for the session
+  as it stands**: exporting one stamps `session.zipAt`, and the dialog compares
+  it with `updatedAt`. Up to date → a green note and a plain Delete; otherwise a
+  warning, an **Export ZIP first** button (runs the export right there and
+  re-checks) and Delete anyway. The
   session's Drive folder is moved to the **Drive trash** (it used to be left
   behind for good), keeping the media recoverable there. Looked up with
   `driveFind`, not `getSessionFolder`, which is find-or-create and would make an

@@ -2938,11 +2938,15 @@ async function exportSessionZip(s){
     var pdfBlob=await buildPdfBlob(s); if(pdfBlob)zip.file("report_"+base+".pdf",pdfBlob);
     var docxBlob=await buildDocxBlob(s); if(docxBlob)zip.file("report_"+base+".docx",docxBlob);
     var xlsxBlob=await buildXlsxBlob(s); if(xlsxBlob)zip.file("recanvis_"+base+".xlsx",xlsxBlob);
+    // Built too, not copied: Drive only gets a session.json when the technician
+    // presses Save, so a session that was never synced had none at all.
+    zip.file("session.json",new Blob([sessionToJson(s)],{type:"application/json;charset=utf-8"}));
 
-    // From Drive keep only the media subfolders (photos/, videos/, audio/) and
-    // session.json — anything loose at the root is an old report copy.
+    // From Drive take only the media subfolders (photos/, videos/, audio/):
+    // anything loose at the root is an old report copy or a stale session.json,
+    // and the current ones were just built above.
     if(btn)btn.textContent="Media...";
-    var media=files.filter(function(f){return f.path.indexOf("/")>=0||f.path==="session.json"});
+    var media=files.filter(function(f){return f.path.indexOf("/")>=0});
     for(var i=0;i<media.length;i++){
       var f=media[i];
       var r=await fetch("https://www.googleapis.com/drive/v3/files/"+f.id+"?alt=media",{headers:{Authorization:"Bearer "+token}});

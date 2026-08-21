@@ -405,13 +405,13 @@ textarea{resize:none;line-height:1.4}
       <div class="modal-title" style="color:var(--red)">&#9888; Delete Service Visit</div>
       <p id="delDesc" style="font-size:13px;color:var(--tx2);margin-bottom:14px;line-height:1.6"></p>
       <div style="background:var(--bg2);border:1px solid var(--br);border-radius:6px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--tx2)">
-        <div style="margin-bottom:5px">&#128190; <strong>A backup JSON will be saved automatically:</strong></div>
-        <div id="delFile" style="font-family:monospace;font-size:11px;color:var(--gold);word-break:break-all"></div>
-        <div style="margin-top:5px;color:var(--tx3)">Saved to <strong>Downloads</strong> and to <strong>Field Service Log/</strong> on Drive if connected. Re-importable with &#8679; Import.</div>
+        <div style="margin-bottom:5px">&#128465; <strong>No backup is made.</strong></div>
+        <div id="delFile" style="color:var(--tx3)"></div>
+        <div style="margin-top:6px;color:var(--gold)">Need to keep it? Cancel and export <strong>&#128452; Drive ZIP</strong> first — that file can be imported back complete, photos and videos included.</div>
       </div>
       <div class="modal-actions">
         <button id="delCancel">Cancel</button>
-        <button class="btn-danger" id="delConfirm">&#128190; Backup &amp; Delete</button>
+        <button class="btn-danger" id="delConfirm">&#128465; Delete</button>
       </div>
     </div>
   </div>
@@ -471,7 +471,7 @@ var sessions=[], aid=null, pImgs=[], filterTxt="", sessFilterTxt="";
 var pExif=0, pExifEdit=0;
 var accessToken=null, tokenExp=0, driveFileId=null, rootFolderId=null;
 var isLoggedIn=false, saveTimer=null, isDirty=false, savingDrive=false, savePending=false;
-var editingId=null, eImgs=[], eParts=[], pendingDel=null, pendingDelFname=null, dInst=null;
+var editingId=null, eImgs=[], eParts=[], pendingDel=null, dInst=null;
 var manuals=[], mfPdfFile=null, mfJsonFile=null, mfParsed=null;
 var pdfjsReadyP=null, viewerDoc=null, viewerNumPages=0, viewerPage=1, viewerPdfId=null, viewerRenderTask=null, viewerZoom=1;
 var viewerPickMode=false, viewerRows=[], viewerSubgrups=[], viewerPickItems=[], pickReturnEdit=false;
@@ -2348,39 +2348,45 @@ $$("ePickDraw").addEventListener("click",function(){openDrawings(undefined,true)
 // ── DELETE SESSION MODAL ──────────────────────────────────────────────────────
 function openDelModal(s){
   pendingDel=s;
-  pendingDelFname="backup_"+(s.client||"session").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,40)+"_"+fnameStamp()+".json";
-  $$("delDesc").innerHTML="You are about to permanently delete <strong>"+esc(s.client||"this session")+"</strong>"+(s.machine?" — "+esc(s.machine):"")+".<br>This cannot be undone.";
-  $$("delFile").textContent=pendingDelFname;
+  var n=(s.entries||[]).length;
+  $$("delDesc").innerHTML="You are about to delete <strong>"+esc(s.client||"this session")+"</strong>"+(s.machine?" — "+esc(s.machine):"")
+    +(n?" with its "+n+" entr"+(n===1?"y":"ies"):"")+".";
+  $$("delFile").textContent=isLoggedIn
+    ? "Its Drive folder (photos, videos, reports) goes to the Drive trash, where you can restore it."
+    : "You are signed out, so any Drive folder for this session is left untouched.";
   $$("delBack").style.display="flex";
 }
-function closeDelModal(){$$("delBack").style.display="none";pendingDel=null;pendingDelFname=null}
+function closeDelModal(){$$("delBack").style.display="none";pendingDel=null}
 $$("delCancel").addEventListener("click",closeDelModal);
 $$("delBack").addEventListener("click",function(e){if(e.target===$$("delBack"))closeDelModal()});
 $$("delConfirm").addEventListener("click",async function(){
   var s=pendingDel;if(!s){closeDelModal();return}
-  var fname=pendingDelFname||("backup_"+(s.client||"session").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,40)+"_"+fnameStamp()+".json");
-  var jsonStr=sessionToJson(s);
-  // local download
-  var blob=new Blob([jsonStr],{type:"application/json;charset=utf-8"});
-  var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=fname;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
-  // delete
+  // No backup is written any more: it dropped a JSON in Downloads and another
+  // at the Drive root on every delete, and neither carried the photos or
+  // videos anyway — the Drive ZIP export does, and the modal points at it.
   sessions=sessions.filter(function(x){return x.id!==s.id});
   if(aid===s.id)aid=null;
   closeDelModal();scheduleSave();renderAll();
-  // drive backup: a timestamped copy at the Drive root (safety net), plus a
-  // final refresh of session.json inside the session's own folder so it
-  // stays a complete, self-contained package after the session is gone.
+  // The session's Drive folder used to be left behind for good. Send it to the
+  // Drive trash instead: the media goes with it and stays recoverable there.
   if(isLoggedIn){
     var token=await ensureToken();
     if(token){
-      setSyncSt("loading","Uploading backup...");
+      setSyncSt("loading","Moving Drive folder to trash...");
       try{
+        // look the folder up WITHOUT creating it — getSessionFolder() is
+        // find-or-create and would conjure an empty folder just to bin it
         var rootId=await getRootId(token);
-        if(rootId)await uploadTextFile(token,fname,jsonStr,"application/json",rootId);
-        var folderId=await getSessionFolder(token,s);
-        if(folderId)await saveSessionJsonToDrive(token,s,folderId);
-        setSyncSt("ok","Backup saved ✓")
-      }catch(e){setSyncSt("error","Drive backup failed")}
+        var outId=rootId?await driveFind(token,OUT_NAME,rootId,FOLDER_MIME):null;
+        var fname=sanitize(s.client)+"_"+sanitize(s.machine)+"_"+sanitize(s.tech||"tech");
+        var folderId=outId?await driveFind(token,fname,outId,FOLDER_MIME):null;
+        if(folderId){
+          var r=await fetch("https://www.googleapis.com/drive/v3/files/"+folderId,
+            {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({trashed:true})});
+          if(!r.ok)throw new Error("Drive replied "+r.status);
+        }
+        setSyncSt("ok","");
+      }catch(e){setSyncSt("error","Could not move the Drive folder to trash")}
     }
   }
 });

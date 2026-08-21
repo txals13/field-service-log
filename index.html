@@ -405,12 +405,12 @@ textarea{resize:none;line-height:1.4}
       <div class="modal-title" style="color:var(--red)">&#9888; Delete Service Visit</div>
       <p id="delDesc" style="font-size:13px;color:var(--tx2);margin-bottom:14px;line-height:1.6"></p>
       <div style="background:var(--bg2);border:1px solid var(--br);border-radius:6px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--tx2)">
-        <div style="margin-bottom:5px">&#128465; <strong>No backup is made.</strong></div>
+        <div id="delZipSt" style="margin-bottom:5px"></div>
         <div id="delFile" style="color:var(--tx3)"></div>
-        <div style="margin-top:6px;color:var(--gold)">Need to keep it? Cancel and export <strong>&#128452; Drive ZIP</strong> first — that file can be imported back complete, photos and videos included.</div>
       </div>
       <div class="modal-actions">
         <button id="delCancel">Cancel</button>
+        <button id="delZipNow" style="display:none">&#128452; Export ZIP first</button>
         <button class="btn-danger" id="delConfirm">&#128465; Delete</button>
       </div>
     </div>
@@ -2346,16 +2346,44 @@ $$("pfDen").addEventListener("keydown",function(e){if(e.key==="Enter"){e.prevent
 $$("ePickDraw").addEventListener("click",function(){openDrawings(undefined,true)});
 
 // ── DELETE SESSION MODAL ──────────────────────────────────────────────────────
-function openDelModal(s){
-  pendingDel=s;
+// A session counts as backed up when a Drive ZIP was exported at or after its
+// last change — that ZIP is the only file carrying the photos and videos.
+function zipIsCurrent(s){
+  if(!s.zipAt)return false;
+  var changed=s.updatedAt||s.createdAt;
+  return !changed||s.zipAt>=changed;
+}
+function renderDelModal(){
+  var s=pendingDel;if(!s)return;
   var n=(s.entries||[]).length;
   $$("delDesc").innerHTML="You are about to delete <strong>"+esc(s.client||"this session")+"</strong>"+(s.machine?" — "+esc(s.machine):"")
     +(n?" with its "+n+" entr"+(n===1?"y":"ies"):"")+".";
+  var ok=zipIsCurrent(s);
+  $$("delZipSt").innerHTML=ok
+    ? "<span style=\"color:var(--green)\">&#10003; <strong>Drive ZIP exported "+esc(fts(s.zipAt))+"</strong>, after the last change — a full copy exists.</span>"
+    : "<span style=\"color:var(--gold)\">&#9888; <strong>No Drive ZIP since the last change"+(s.zipAt?" (last one: "+esc(fts(s.zipAt))+")":"")
+      +".</strong> Only that file carries the photos and videos, and it can be imported back complete.</span>";
+  $$("delZipNow").style.display=ok?"none":"";
+  $$("delConfirm").innerHTML=ok?"&#128465; Delete":"&#128465; Delete anyway";
   $$("delFile").textContent=isLoggedIn
     ? "Its Drive folder (photos, videos, reports) goes to the Drive trash, where you can restore it."
     : "You are signed out, so any Drive folder for this session is left untouched.";
+}
+function openDelModal(s){
+  pendingDel=s;
+  renderDelModal();
   $$("delBack").style.display="flex";
 }
+// Export the ZIP straight from the dialog, then re-check instead of making the
+// technician cancel, export and start over.
+$$("delZipNow").addEventListener("click",async function(){
+  var s=pendingDel;if(!s)return;
+  var btn=this,lbl=btn.innerHTML;btn.disabled=true;btn.textContent="Exporting…";
+  try{await exportSessionZip(s)}catch(e){}
+  btn.disabled=false;btn.innerHTML=lbl;
+  pendingDel=sessions.find(function(x){return x.id===s.id})||s; // pick up the new zipAt
+  renderDelModal();
+});
 function closeDelModal(){$$("delBack").style.display="none";pendingDel=null}
 $$("delCancel").addEventListener("click",closeDelModal);
 $$("delBack").addEventListener("click",function(e){if(e.target===$$("delBack"))closeDelModal()});
@@ -3043,6 +3071,11 @@ async function exportSessionZip(s){
     if(btn)btn.textContent="Zipping...";
     var zipBlob=await zip.generateAsync({type:"blob"});
     dlBlob(zipBlob,sanitize(s.client)+"_"+sanitize(s.machine)+"_drive_export.zip");
+    // Remember it: the delete dialog checks this against updatedAt to tell
+    // whether a complete copy exists for the session as it stands now.
+    var t=now();
+    sessions=sessions.map(function(x){return x.id===s.id?Object.assign({},x,{zipAt:t,updatedAt:t}):x});
+    saveLocal();isDirty=true;
   }catch(e){alert("ZIP export failed: "+((e&&e.message)||e))}
   finally{var b2=$$("btnExp");if(b2){b2.disabled=false;b2.innerHTML="↓ Report ▾"}}
 }

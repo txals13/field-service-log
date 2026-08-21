@@ -111,7 +111,14 @@ Field Service Log/
 - Delete entries
 - Close session / **Reopen session** (↺ button)
 - Delete session with automatic backup (local download + Drive upload)
-- Import JSON (↑ Import button in topbar and on empty screen)
+- Import JSON **or a session ZIP** (↑ Import button in topbar and on empty screen).
+  A ZIP restores the media too: photos and voice notes ride along inside
+  session.json as base64, but a video is only ever a thumbnail + a Drive id, and
+  an id from another account is useless — so every file under photos/, videos/
+  and audio/ is re-uploaded to this account's Drive (matched to its entry by file
+  name) and the entries are re-pointed at the new copies. Signed out, the session
+  still imports and the stale ids are cleared, with a message saying the videos
+  need a re-import once signed in.
 - Export: HTML (video playable), PDF (jsPDF + autoTable), DOCX (via docx lib CDN),
   XLSX (spare parts, via SheetJS)
 - Reports fully in English, filenames shown under each photo/video

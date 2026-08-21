@@ -112,7 +112,8 @@ Field Service Log/
 - Close session / **Reopen session** (↺ button)
 - Delete session with automatic backup (local download + Drive upload)
 - Import JSON (↑ Import button in topbar and on empty screen)
-- Export: HTML (video playable), PDF (via window.print()), DOCX (via docx lib CDN)
+- Export: HTML (video playable), PDF (jsPDF + autoTable), DOCX (via docx lib CDN),
+  XLSX (spare parts, via SheetJS)
 - Reports fully in English, filenames shown under each photo/video
 - Dark/light theme toggle (☀/☽)
 - Sync indicator (● Drive green / ● Local red)
@@ -123,7 +124,16 @@ Field Service Log/
 
 ## Export / Report details
 - **HTML:** videos embedded with `<video controls>`, photo+video filenames shown
-- **PDF:** `window.print()` on a new window — videos show thumbnail + filename
+- **PDF:** real file via `jspdf@2.5.1` + `jspdf-autotable@3.8.2` (unpkg, fallback
+  jsdelivr). Printing was dropped: it can't hand the bytes back to JS, so no PDF
+  ever reached Drive (an HTML copy was uploaded instead) and it was awkward on a
+  phone. Entries go in an autoTable (spare parts appended inside the description
+  cell); photos follow in a 3-up appendix so table rows keep a sane height.
+- **One report per format per session on Drive:** report copies are uploaded
+  under a fixed name (`report_<base>.pdf|html|docx`, `recanvis_<base>.xlsx`) and
+  overwrite the previous one. They used to carry a timestamp, so every export
+  added another file — a session had piled up 9 xlsx and 4 html, all of which
+  ended up in the Drive ZIP.
 - **DOCX:** via `docx@8.5.0` library loaded from unpkg.com (fallback: jsdelivr.net)
   - Images embedded as Uint8Array (not base64 string)
   - Video thumbnails embedded + filename shown in italic monospace

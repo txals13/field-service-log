@@ -981,11 +981,20 @@ function sessionToJson(sess){return JSON.stringify([sess],null,2)}
 // Saves a copy of a manually generated report into the session's Drive
 // folder, in the background. Always uploads as a new file (timestamped
 // name) — never overwrites or deletes a previous export.
+// Keeps ONE report per format in the session's Drive folder: a new export
+// overwrites the file of the same name instead of adding another timestamped
+// copy (folders were piling up — one session had 9 xlsx and 4 html).
 async function uploadReportCopy(sess,blob,fname,mime){
   if(!isLoggedIn)return;
   var token=await ensureToken();if(!token)return;
   try{
     var folderId=await getSessionFolder(token,sess);if(!folderId)return;
+    var existing=await driveFind(token,fname,folderId,mime);
+    if(existing){
+      await fetch("https://www.googleapis.com/upload/drive/v3/files/"+existing+"?uploadType=media",
+        {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":mime},body:blob});
+      return;
+    }
     await driveUploadBlob(token,blob,fname,mime,folderId);
   }catch(e){}
 }
@@ -2537,19 +2546,150 @@ function exportRep(s,fmt){
   if(fmt==="html"){
     var htmlBlob=new Blob([buildReportHTML(s,false)],{type:"text/html;charset=utf-8"});
     dlBlob(htmlBlob,"report_"+base+".html");
-    uploadReportCopy(s,htmlBlob,"report_"+base+"_"+fnameStamp()+".html","text/html");
+    uploadReportCopy(s,htmlBlob,"report_"+base+".html","text/html");
   }
-  else if(fmt==="pdf"){
-    var w=window.open("","_blank");if(!w){alert("Allow pop-ups to generate PDF.");return}
-    w.document.write(buildReportHTML(s,true));w.document.close();
-    w.onload=function(){setTimeout(function(){w.print()},300)};
-    // The PDF itself is produced by the browser's print dialog, so we never
-    // get its bytes in JS — save the same-content HTML report to Drive instead.
-    uploadReportCopy(s,new Blob([buildReportHTML(s,false)],{type:"text/html;charset=utf-8"}),"report_"+base+"_"+fnameStamp()+".html","text/html");
-  }
+  else if(fmt==="pdf"){exportPDF(s,base)}
   else if(fmt==="docx"){exportDOCX(s,base)}
   else if(fmt==="xlsx"){exportXLSX(s,base)}
   else if(fmt==="zip"){exportSessionZip(s)}
+}
+
+// ── REPORT → PDF ──────────────────────────────────────────────────────────────
+// A real .pdf, not the browser print dialog: printing can't hand the bytes back
+// to JS, so the Drive copy used to be an HTML file and no PDF ever reached the
+// folder. It also spares the technician the print dance on a phone.
+function loadPdfLibs(){
+  return new Promise(function(res){
+    if(window.jspdf&&window.jspdf.jsPDF&&window.jspdf.jsPDF.API.autoTable){res(window.jspdf);return}
+    function load(urls,cb){
+      if(!urls.length){cb(false);return}
+      var sc=document.createElement("script");sc.src=urls[0];
+      sc.onload=function(){cb(true)};
+      sc.onerror=function(){load(urls.slice(1),cb)};
+      document.head.appendChild(sc);
+    }
+    load(["https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js","https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"],function(ok){
+      if(!ok){res(null);return}
+      load(["https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js","https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"],function(ok2){
+        res(ok2&&window.jspdf?window.jspdf:null);
+      });
+    });
+  });
+}
+function hexRgb(h){var m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h||"");return m?[parseInt(m[1],16),parseInt(m[2],16),parseInt(m[3],16)]:[17,24,39]}
+async function exportPDF(s,base){
+  var L=await loadPdfLibs();
+  if(!L){alert("Cannot load the PDF library. Check internet connection.");return}
+  var doc=new L.jsPDF({unit:"mm",format:"a4"});
+  var M=14,W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),CW=W-M*2;
+  var tm=TM[s.type]||TM.commissioning,entries=s.entries||[];
+  var cnt=severityCounts(entries);
+  var y=M;
+
+  // header
+  doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(17,24,39);
+  doc.text("Field Service Report",M,y+6);
+  doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(107,114,128);
+  doc.text(tm.label+"  ·  Generated on "+fts(new Date().toISOString()),M,y+12);
+  doc.setDrawColor(245,158,11);doc.setLineWidth(0.8);doc.line(M,y+15,W-M,y+15);
+  y+=21;
+
+  // metadata, two columns
+  var meta=[["Client",s.client||"—"],["Project Number",s.project||"—"],["Machine / Equipment",s.machine||"—"],
+            ["Location",s.location||"—"],["Technician",s.tech||"—"],["Start",fts(s.createdAt)],
+            ["Status",s.status==="open"?"Open":"Closed"],["Manual",(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||"—"]];
+  doc.setFontSize(8.5);
+  meta.forEach(function(p,i){
+    var col=i%2,row=Math.floor(i/2),x=M+col*(CW/2),ry=y+row*6;
+    doc.setTextColor(156,163,175);doc.text(p[0].toUpperCase(),x,ry);
+    doc.setTextColor(17,24,39);doc.setFont("helvetica","bold");
+    doc.text(doc.splitTextToSize(String(p[1]),CW/2-6)[0],x+34,ry);
+    doc.setFont("helvetica","normal");
+  });
+  y+=Math.ceil(meta.length/2)*6+4;
+
+  // counters
+  doc.setFontSize(9);
+  var stats=[["Issues: "+cnt.issue,[220,38,38]],["Warnings: "+cnt.warning,[234,88,12]],["OK: "+cnt.ok,[22,163,74]],["Total: "+entries.length,[71,85,105]]];
+  var sx=M;
+  stats.forEach(function(st){doc.setTextColor(st[1][0],st[1][1],st[1][2]);doc.text(st[0],sx,y);sx+=doc.getTextWidth(st[0])+9});
+  y+=6;
+
+  // entries table (spare parts appended inside the description cell)
+  var body=entries.map(function(e){
+    var sm=SM[e.severity]||SM.info;
+    var desc=e.text||"";
+    (e.parts||[]).forEach(function(p){
+      desc+="\n• Pos "+(p.pos||"?")+(p.ref?" · "+p.ref:"")+(p.denominacio?"  "+p.denominacio:"")+(p.cant?"  ×"+p.cant:"");
+    });
+    var att=(e.images||[]).map(function(im){return (im.type==="video"?"▶ ":im.type==="audio"?"🎧 ":"")+(im.name||"file")}).join("\n");
+    return [{content:(e.tsFromPhoto?"[photo] ":"")+fts(e.ts)},
+            {content:sm.label,styles:{textColor:hexRgb(sm.tx),fontStyle:"bold"}},
+            e.tag||"",desc,att];
+  });
+  doc.autoTable({
+    startY:y,margin:{left:M,right:M},
+    head:[["Timestamp","Severity","Tag","Description","Attachments"]],
+    body:body.length?body:[[{content:"No entries",colSpan:5,styles:{halign:"center",textColor:[156,163,175]}}]],
+    styles:{fontSize:8,cellPadding:2,overflow:"linebreak",valign:"top"},
+    headStyles:{fillColor:[17,24,39],textColor:255,fontSize:7.5},
+    alternateRowStyles:{fillColor:[249,250,251]},
+    columnStyles:{0:{cellWidth:26},1:{cellWidth:17},2:{cellWidth:16},4:{cellWidth:34}}
+  });
+  y=doc.lastAutoTable.finalY+8;
+
+  // photo appendix — images stay out of the table so rows keep a sane height
+  var shots=[];
+  entries.forEach(function(e){
+    (e.images||[]).forEach(function(im){
+      var src=im.type==="video"?im.poster:(im.type==="audio"?null:im.data);
+      if(src)shots.push({src:src,label:fts(e.ts)+" · "+(im.name||"")});
+    });
+  });
+  if(shots.length){
+    if(y>H-40){doc.addPage();y=M}
+    doc.setFont("helvetica","bold");doc.setFontSize(11);doc.setTextColor(17,24,39);
+    doc.text("Photos",M,y);y+=5;
+    doc.setFont("helvetica","normal");doc.setFontSize(6.5);
+    var cols=3,gap=4,iw=(CW-gap*(cols-1))/cols,ih=iw*0.72;
+    shots.forEach(function(sh,i){
+      var c=i%cols;
+      if(c===0&&y+ih+8>H-M){doc.addPage();y=M}
+      var x=M+c*(iw+gap);
+      try{doc.addImage(sh.src,x,y,iw,ih,undefined,"FAST")}catch(err){}
+      doc.setTextColor(107,114,128);
+      doc.text(doc.splitTextToSize(sh.label,iw)[0],x,y+ih+3);
+      if(c===cols-1)y+=ih+8;
+    });
+    if(shots.length%cols)y+=ih+8;
+  }
+
+  // notes + signatures
+  if(s.notes){
+    if(y>H-30){doc.addPage();y=M}
+    doc.setFont("helvetica","bold");doc.setFontSize(9);doc.setTextColor(17,24,39);doc.text("General notes",M,y);y+=4;
+    doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(55,65,81);
+    var nl=doc.splitTextToSize(s.notes,CW);doc.text(nl,M,y);y+=nl.length*4+4;
+  }
+  if(y>H-32){doc.addPage();y=M}
+  y=Math.max(y+14,H-32);
+  doc.setDrawColor(107,114,128);doc.setLineWidth(0.2);
+  doc.line(M,y,M+CW/2-10,y);doc.line(M+CW/2+10,y,W-M,y);
+  doc.setFontSize(8);doc.setTextColor(107,114,128);
+  doc.text("Technician signature"+(s.tech?" — "+s.tech:""),M,y+4);
+  doc.text("Client / Recipient signature",M+CW/2+10,y+4);
+
+  // page numbers
+  var n=doc.internal.getNumberOfPages();
+  for(var p=1;p<=n;p++){
+    doc.setPage(p);doc.setFontSize(7.5);doc.setTextColor(156,163,175);
+    doc.text("ID: "+s.id,M,H-6);
+    doc.text(p+" / "+n,W-M,H-6,{align:"right"});
+  }
+
+  var blob=doc.output("blob");
+  dlBlob(blob,"report_"+base+".pdf");
+  uploadReportCopy(s,blob,"report_"+base+".pdf","application/pdf");
 }
 
 // ── SPARE PARTS → EXCEL ───────────────────────────────────────────────────────
@@ -2640,7 +2780,7 @@ async function exportXLSX(s,base){
   var mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
   var blob=new Blob([out],{type:mime});
   dlBlob(blob,"recanvis_"+base+".xlsx");
-  uploadReportCopy(s,blob,"recanvis_"+base+"_"+fnameStamp()+".xlsx",mime);
+  uploadReportCopy(s,blob,"recanvis_"+base+".xlsx",mime);
 }
 
 function loadDocxLib(){
@@ -2662,7 +2802,7 @@ async function exportDOCX(s,base){
   var doc=buildDocxDocument(D,s);
   D.Packer.toBlob(doc).then(function(blob){
     dlBlob(blob,"report_"+base+".docx");
-    uploadReportCopy(s,blob,"report_"+base+"_"+fnameStamp()+".docx","application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    uploadReportCopy(s,blob,"report_"+base+".docx","application/vnd.openxmlformats-officedocument.wordprocessingml.document");
   }).catch(function(err){alert("DOCX error: "+err.message)});
 }
 function buildDocxDocument(D,s){

@@ -2578,8 +2578,15 @@ function loadPdfLibs(){
 }
 function hexRgb(h){var m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h||"");return m?[parseInt(m[1],16),parseInt(m[2],16),parseInt(m[3],16)]:[17,24,39]}
 async function exportPDF(s,base){
+  var blob=await buildPdfBlob(s);
+  if(!blob){alert("Cannot load the PDF library. Check internet connection.");return}
+  dlBlob(blob,"report_"+base+".pdf");
+  uploadReportCopy(s,blob,"report_"+base+".pdf","application/pdf");
+}
+// Returns the report as PDF bytes so both the download and the ZIP can use it.
+async function buildPdfBlob(s){
   var L=await loadPdfLibs();
-  if(!L){alert("Cannot load the PDF library. Check internet connection.");return}
+  if(!L)return null;
   var doc=new L.jsPDF({unit:"mm",format:"a4"});
   var M=14,W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),CW=W-M*2;
   var tm=TM[s.type]||TM.commissioning,entries=s.entries||[];
@@ -2687,9 +2694,7 @@ async function exportPDF(s,base){
     doc.text(p+" / "+n,W-M,H-6,{align:"right"});
   }
 
-  var blob=doc.output("blob");
-  dlBlob(blob,"report_"+base+".pdf");
-  uploadReportCopy(s,blob,"report_"+base+".pdf","application/pdf");
+  return doc.output("blob");
 }
 
 // ── SPARE PARTS → EXCEL ───────────────────────────────────────────────────────
@@ -2736,11 +2741,21 @@ function summarizeParts(items){
   });
   return order.map(function(k){return map[k]});
 }
+var XLSX_MIME="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 async function exportXLSX(s,base){
+  if(!collectSessionParts(s).length){alert("No spare parts in this session yet.\n\nPick them from a drawing or add them by hand in an entry.");return}
+  var blob=await buildXlsxBlob(s);
+  if(!blob){alert("Cannot load the Excel library. Check internet connection.");return}
+  dlBlob(blob,"recanvis_"+base+".xlsx");
+  uploadReportCopy(s,blob,"recanvis_"+base+".xlsx",XLSX_MIME);
+}
+// Returns the spare-parts workbook, or null when the library fails or there are
+// no parts (the ZIP just leaves it out then, without nagging).
+async function buildXlsxBlob(s){
   var items=collectSessionParts(s);
-  if(!items.length){alert("No spare parts in this session yet.\n\nPick them from a drawing or add them by hand in an entry.");return}
+  if(!items.length)return null;
   var X=await loadXlsxLib();
-  if(!X){alert("Cannot load the Excel library. Check internet connection.");return}
+  if(!X)return null;
   var sm=function(e){return (SM[e.severity]||SM.info).label};
 
   // Sheet 1 — consolidated, for ordering
@@ -2777,10 +2792,7 @@ async function exportXLSX(s,base){
   X.utils.book_append_sheet(wb,wsD,"Detall");
   X.utils.book_append_sheet(wb,wsI,"Sessió");
   var out=X.write(wb,{bookType:"xlsx",type:"array"});
-  var mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-  var blob=new Blob([out],{type:mime});
-  dlBlob(blob,"recanvis_"+base+".xlsx");
-  uploadReportCopy(s,blob,"recanvis_"+base+".xlsx",mime);
+  return new Blob([out],{type:XLSX_MIME});
 }
 
 function loadDocxLib(){
@@ -2796,14 +2808,19 @@ function loadDocxLib(){
     tryLoad(["https://unpkg.com/docx@8.5.0/build/index.umd.js","https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"]);
   });
 }
-async function exportDOCX(s,base){
+var DOCX_MIME="application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+async function buildDocxBlob(s){
   var D=await loadDocxLib();
-  if(!D){alert("Cannot load DOCX library. Check internet connection.");return}
-  var doc=buildDocxDocument(D,s);
-  D.Packer.toBlob(doc).then(function(blob){
+  if(!D)return null;
+  return await D.Packer.toBlob(buildDocxDocument(D,s));
+}
+async function exportDOCX(s,base){
+  try{
+    var blob=await buildDocxBlob(s);
+    if(!blob){alert("Cannot load DOCX library. Check internet connection.");return}
     dlBlob(blob,"report_"+base+".docx");
-    uploadReportCopy(s,blob,"report_"+base+".docx","application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-  }).catch(function(err){alert("DOCX error: "+err.message)});
+    uploadReportCopy(s,blob,"report_"+base+".docx",DOCX_MIME);
+  }catch(err){alert("DOCX error: "+err.message)}
 }
 function buildDocxDocument(D,s){
   var tm=TM[s.type]||TM.commissioning,entries=s.entries||[];
@@ -2909,14 +2926,30 @@ async function exportSessionZip(s){
     if(!JSZipLib){alert("Cannot load ZIP library. Check internet connection.");return}
     var files=[];
     await collectDriveFiles(token,folderId,"",files);
-    if(!files.length){alert("This session's Drive folder is empty.");return}
     var zip=new JSZipLib();
-    for(var i=0;i<files.length;i++){
-      var f=files[i];
+    var base=(s.client||"session").replace(/\s+/g,"_")+"_"+s.createdAt.slice(0,10);
+
+    // The reports are BUILT here rather than copied from Drive: the folder only
+    // holds whichever formats happened to be exported (and, from before the
+    // fixed-name fix, a pile of timestamped leftovers). Building them means the
+    // ZIP always carries one current copy of each — pdf, xlsx, html and docx.
+    if(btn)btn.textContent="Reports...";
+    zip.file("report_"+base+".html",new Blob([buildReportHTML(s,false)],{type:"text/html;charset=utf-8"}));
+    var pdfBlob=await buildPdfBlob(s); if(pdfBlob)zip.file("report_"+base+".pdf",pdfBlob);
+    var docxBlob=await buildDocxBlob(s); if(docxBlob)zip.file("report_"+base+".docx",docxBlob);
+    var xlsxBlob=await buildXlsxBlob(s); if(xlsxBlob)zip.file("recanvis_"+base+".xlsx",xlsxBlob);
+
+    // From Drive keep only the media subfolders (photos/, videos/, audio/) and
+    // session.json — anything loose at the root is an old report copy.
+    if(btn)btn.textContent="Media...";
+    var media=files.filter(function(f){return f.path.indexOf("/")>=0||f.path==="session.json"});
+    for(var i=0;i<media.length;i++){
+      var f=media[i];
       var r=await fetch("https://www.googleapis.com/drive/v3/files/"+f.id+"?alt=media",{headers:{Authorization:"Bearer "+token}});
       if(!r.ok)continue;
       zip.file(f.path,await r.blob());
     }
+    if(btn)btn.textContent="Zipping...";
     var zipBlob=await zip.generateAsync({type:"blob"});
     dlBlob(zipBlob,sanitize(s.client)+"_"+sanitize(s.machine)+"_drive_export.zip");
   }catch(e){alert("ZIP export failed: "+((e&&e.message)||e))}

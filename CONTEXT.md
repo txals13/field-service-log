@@ -129,6 +129,13 @@ Field Service Log/
   name) and the entries are re-pointed at the new copies. Signed out, the session
   still imports and the stale ids are cleared, with a message saying the videos
   need a re-import once signed in.
+- Spare parts render as **columns, not prose**: quantity first (right-aligned,
+  the number you act on), then reference, then name — one CSS grid per entry so
+  every row lines up. On screen that's it; reports add a header row (QTY / REF. /
+  SPARE PART) since they're read by someone outside the app. The balloon position
+  and the conjunt › grup context are deliberately not shown — the position means
+  nothing away from its drawing and the context repeats the tag. PDF and DOCX
+  can't nest a table inside a cell, so they keep the same column ORDER as lines.
 - Picking from a drawing has two purposes, same tap, different result
   (`viewerPickPurpose`): **"Pick from drawing"** attaches a structured spare part
   (quantity panel, lands in `entry.parts[]`), while **"Insert part name from

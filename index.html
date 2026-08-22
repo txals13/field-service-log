@@ -2944,14 +2944,16 @@ async function buildXlsxBlob(s){
 
   // Sheet 1 — consolidated, for ordering
   var sum=summarizeParts(items);
-  var resum=[["Ref.","Pos.","Denominació","Quantitat","Conjunt","Grup / Dibuix","Entrades"]];
+  // Just what you need to order material: how many, of which reference, of what.
+  // Everything else (position, conjunt, which entries) lives in the Detall sheet.
+  var resum=[["Quantitat","Ref.","Denominació"]];
   sum.forEach(function(m){
     var qty=m.raw.length?((m.total?m.total+" + ":"")+m.raw.join(" + ")):(m.total||"");
-    resum.push([m.ref,m.pos,m.denominacio,qty,m.conjunt,m.grup,m.times]);
+    resum.push([qty,m.ref,m.denominacio]);
   });
   var wsR=X.utils.aoa_to_sheet(resum);
   wsR["!cols"]=autoCols(resum);
-  wsR["!autofilter"]={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:resum.length-1,c:6}})};
+  wsR["!autofilter"]={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:resum.length-1,c:2}})};
 
   // Sheet 2 — every occurrence, with the entry that needed it
   var detall=[["Data","Severitat","Tag","Entrada","Ref.","Pos.","Quantitat","Denominació","Conjunt","Grup / Dibuix","Pàgina"]];

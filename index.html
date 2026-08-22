@@ -369,7 +369,9 @@ textarea{resize:none;line-height:1.4}
         <select id="eTagSel" style="margin-top:6px;display:none"></select>
       </div>
       <datalist id="tagOptions"></datalist>
-      <div class="field"><label>Description</label><textarea id="eText" rows="4" style="resize:vertical"></textarea></div>
+      <div class="field"><label>Description</label><textarea id="eText" rows="4" style="resize:vertical"></textarea>
+        <button class="btn-sm" id="eTextPickDraw" style="margin-top:6px;display:none" title="Tap a position number on the drawing to write its name and reference into the text">&#128208; Insert part name from drawing</button>
+      </div>
       <div class="field">
         <label>Attachments</label>
         <div id="eThumbs" class="thumbs"></div>
@@ -475,6 +477,9 @@ var editingId=null, eImgs=[], eParts=[], pendingDel=null, dInst=null;
 var manuals=[], mfPdfFile=null, mfJsonFile=null, mfParsed=null;
 var pdfjsReadyP=null, viewerDoc=null, viewerNumPages=0, viewerPage=1, viewerPdfId=null, viewerRenderTask=null, viewerZoom=1;
 var viewerPickMode=false, viewerRows=[], viewerSubgrups=[], viewerPickItems=[], pickReturnEdit=false;
+// What a tapped number does: attach a spare part, or write its name into the
+// description. Picking from the drawing is the same, only the result differs.
+var viewerPickPurpose="part", textPickCaret=null;
 var authExpired=false, syncStarted=false;
 var fileCache=new WeakMap(); // img object -> raw File/Blob, kept in memory only, for upload retry
 // Voice-note recording state
@@ -1239,13 +1244,17 @@ async function getManualPdfBytes(pdfId){
   if(idb){try{await idbSet(idb,key,buf)}catch(e){}}
   return buf;
 }
-async function openDrawings(targetPage,pickMode){
+async function openDrawings(targetPage,pickMode,purpose){
+  viewerPickPurpose=purpose||"part";
   var sess=sessions.find(function(s){return s.id===aid});
   if(!sess||!sess.manualRef){alert("Link a spare-parts manual to this session first.");return}
   if(!isLoggedIn){alert("Sign in with Google to open the drawings.");return}
   var ref=sess.manualRef;
   viewerPickMode=!!pickMode;viewerPickItems=[];
   $$("drawPickHint").style.display=viewerPickMode?"block":"none";
+  $$("drawPickHint").innerHTML=(viewerPickPurpose==="text")
+    ? "&#127919; Tap a position number to write its name into the description."
+    : "&#127919; Tap a position number on the drawing to add that spare part to the entry.";
   // pick-from-edit: hide the edit modal so the drawing is on top (editBack sits
   // above drawBack in the DOM); closeDrawings restores it. Only after the guards
   // above pass, so a failed open never leaves the editor hidden.
@@ -1447,9 +1456,28 @@ function addResolvedPart(r,qty){
   rEParts();
   setDrawStatus("✓ Added Pos "+r.pos+(cant?" ×"+cant:"")+". Tap another, or Close to return.");
 }
+// Writes "<denomination> - <reference>" into the description at the caret the
+// field had when picking started, keeping single spaces around it. The edit
+// modal is hidden while the viewer is up, so the caret is remembered rather
+// than read from the live selection.
+function insertPartText(r){
+  var ta=$$("eText");if(!ta)return;
+  var name=(r.denominacio||"").trim(),ref=(r.ref||"").trim();
+  var ins=name+(name&&ref?" - ":"")+ref;
+  if(!ins){setDrawStatus("That row has no name or reference to insert.");return}
+  var v=ta.value,at=(textPickCaret==null?v.length:Math.min(textPickCaret,v.length));
+  var before=v.slice(0,at),after=v.slice(at);
+  var pre=(before&&!/\s$/.test(before))?" ":"";
+  var post=(after&&!/^[\s.,;:]/.test(after))?" ":"";
+  ta.value=before+pre+ins+post+after;
+  textPickCaret=(before+pre+ins).length; // next pick lands after this one
+  autoH(ta);
+  setDrawStatus("✓ Inserted \""+ins+"\". Tap another, or Close to return.");
+}
 // Confirm panel with the catalog quantity pre-filled but editable — the list
 // says how many the drawing uses, the technician says how many are needed.
 function confirmAndAdd(r){
+  if(viewerPickPurpose==="text"){insertPartText(r);return}
   var box=$$("drawChoices");
   if(!box){addResolvedPart(r);return} // no panel available: keep the old behaviour
   box.innerHTML="";
@@ -1530,7 +1558,15 @@ function closeDrawings(){
   $$("drawBack").style.display="none";viewerPickMode=false;
   $$("drawPickHint").style.display="none";
   var dc=$$("drawChoices");if(dc)dc.style.display="none";
-  if(pickReturnEdit){pickReturnEdit=false;if(editingId){$$("editBack").style.display="flex";rEParts()}}
+  viewerPickPurpose="part";
+  if(pickReturnEdit){
+    pickReturnEdit=false;
+    if(editingId){
+      $$("editBack").style.display="flex";rEParts();
+      autoH($$("eText")); // text inserted while hidden couldn't be measured
+      if(textPickCaret!=null){var ta=$$("eText");try{ta.focus();ta.setSelectionRange(textPickCaret,textPickCaret)}catch(e){}textPickCaret=null}
+    }
+  }
 }
 $$("drawClose").addEventListener("click",closeDrawings);
 $$("drawBack").addEventListener("click",function(e){if(e.target===$$("drawBack"))closeDrawings()});
@@ -2298,7 +2334,9 @@ function openEdit(entryId){
   $$("eText").value=entry.text||"";
   rEThumbs();rEParts();clearPartForm();
   var sessR=sessions.find(function(s){return s.id===aid});
-  $$("ePickDraw").style.display=(sessR&&sessR.manualRef)?"inline-block":"none";
+  var hasManual=!!(sessR&&sessR.manualRef);
+  $$("ePickDraw").style.display=hasManual?"inline-block":"none";
+  $$("eTextPickDraw").style.display=hasManual?"inline-block":"none";
   fillTagTargets();populateTagOptions(); // keep the grup dropdown fresh when the modal opens
   $$("editBack").style.display="flex";
   autoH($$("eText")); // only once visible — a hidden textarea measures 0 and would collapse
@@ -2344,6 +2382,11 @@ $$("pfSave").addEventListener("click",function(){
 });
 $$("pfDen").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();$$("pfSave").click()}});
 $$("ePickDraw").addEventListener("click",function(){openDrawings(undefined,true)});
+$$("eTextPickDraw").addEventListener("click",function(){
+  var ta=$$("eText");
+  textPickCaret=(ta&&typeof ta.selectionStart==="number")?ta.selectionStart:(ta?ta.value.length:0);
+  openDrawings(undefined,true,"text");
+});
 
 // ── DELETE SESSION MODAL ──────────────────────────────────────────────────────
 // A session counts as backed up when a Drive ZIP was exported at or after its

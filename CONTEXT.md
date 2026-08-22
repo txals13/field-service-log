@@ -129,6 +129,13 @@ Field Service Log/
   name) and the entries are re-pointed at the new copies. Signed out, the session
   still imports and the stale ids are cleared, with a message saying the videos
   need a re-import once signed in.
+- Picking from a drawing has two purposes, same tap, different result
+  (`viewerPickPurpose`): **"Pick from drawing"** attaches a structured spare part
+  (quantity panel, lands in `entry.parts[]`), while **"Insert part name from
+  drawing"** under Description writes `"<denomination> - <reference>"` straight
+  into the text. The edit modal is hidden while the viewer is up, so the caret is
+  remembered in `textPickCaret` rather than read live; spacing is added only
+  where needed (never before `.,;:`) and the box is re-measured on return.
 - Export: HTML (video playable), PDF (jsPDF + autoTable), DOCX (via docx lib CDN),
   XLSX (spare parts, via SheetJS)
 - Reports fully in English, filenames shown under each photo/video

@@ -1329,22 +1329,29 @@ async function getManualCatalog(jsonId){
 // -- Tag suggestions: the linked manual's grup names (machine sections) feed a
 //    datalist behind both Tag inputs. Cache-first (no network on every render);
 //    rebuilt only when the session or its manual changes. --
-var tagOptKey=null, tagNames=[];
+var tagOptKey=null, tagOpts=[];
+// You pick a conjunt by its NAME but the tag stores its NUMBER: "ZO" is a
+// usable tag, "A1 .1 .- ZÓCALO (ZO). - (BASTIDOR)" is not. Both controls put
+// the option's value (the number) into the field while showing the name.
 // The datalist autocompletes the entry bar; but a datalist FILTERS by the
 // field's current text, so on Edit (field already holding the old tag) it
-// looks empty — the edit modal gets a real <select> instead, filled from the
-// same names, that writes the chosen grup into the input.
+// looks empty — the edit modal gets a real <select> instead.
 function fillTagTargets(){
+  var opts=tagOpts.map(function(o){return "<option value=\""+esc(o.v)+"\">"+esc(o.l)+"</option>"}).join("");
   var dl=$$("tagOptions");
-  if(dl)dl.innerHTML=tagNames.map(function(n){return "<option value=\""+esc(n)+"\"></option>"}).join("");
+  if(dl)dl.innerHTML=opts;
   var sel=$$("eTagSel");
   if(sel){
-    if(tagNames.length){
+    if(tagOpts.length){
       sel.style.display="";
-      sel.innerHTML="<option value=\"\">&#9662; Tria un grup del manual…</option>"
-        +tagNames.map(function(n){return "<option value=\""+esc(n)+"\">"+esc(n)+"</option>"}).join("");
+      sel.innerHTML="<option value=\"\">&#9662; Tria un conjunt del manual…</option>"+opts;
     }else{sel.style.display="none";sel.innerHTML=""}
   }
+}
+// "A1 .1 .- ZÓCALO (ZO). - (BASTIDOR)" -> "ZÓCALO (ZO) - (BASTIDOR)": the
+// manual's own numbering prefix is noise in a dropdown.
+function cleanConjuntName(s){
+  return (s||"").replace(/^\s*[A-Z]?\d+(?:\s*\.\s*\d+)*\s*\.?\s*-\s*/,"").replace(/\s*\.\s*-\s*/g," - ").replace(/\s*\.+\s*$/,"").replace(/\s+/g," ").trim();
 }
 async function populateTagOptions(){
   var sess=sessions.find(function(s){return s.id===aid});
@@ -1352,17 +1359,23 @@ async function populateTagOptions(){
   var key=ref?(sess.id+":"+ref.jsonId):null;
   if(key===tagOptKey)return;
   tagOptKey=key;
-  if(!ref){tagNames=[];fillTagTargets();return}
+  if(!ref){tagOpts=[];fillTagTargets();return}
   try{
     var cat=null;
     if(idb){try{cat=await idbGet(idb,"cat_"+ref.jsonId)}catch(e){}}
     if(!cat)cat=await getManualCatalog(ref.jsonId);
-    var names=[],conjunts=(cat&&cat.conjunts)||(cat&&cat.conjunt?[cat.conjunt]:[]);
-    conjunts.forEach(function(c){(c.grups||[]).forEach(function(g){
-      var n=(g.name||"").trim();
-      if(n&&names.indexOf(n)===-1)names.push(n);
-    })});
-    tagNames=names;
+    var opts=[],seen={},conjunts=(cat&&cat.conjunts)||(cat&&cat.conjunt?[cat.conjunt]:[]);
+    conjunts.forEach(function(c){
+      var label=cleanConjuntName(c.name)||(c.num||"").trim();
+      var value=(c.num||"").trim()||label; // no number in the catalog: tag by name
+      if(!value||seen[value])return;
+      seen[value]=1;
+      // most names already carry the code, e.g. "ZÓCALO (ZO) - (BASTIDOR)" —
+      // only spell it out when it isn't in there already
+      var shown=new RegExp("(^|[^A-Za-z0-9])"+value.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"([^A-Za-z0-9]|$)","i").test(label);
+      opts.push({v:value,l:(!label||label===value)?value:(shown?label:label+"  ("+value+")")});
+    });
+    tagOpts=opts;
     fillTagTargets();
   }catch(e){tagOptKey=null} // retry on a later render (e.g. once signed in)
 }

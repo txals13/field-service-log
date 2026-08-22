@@ -2766,17 +2766,22 @@ async function buildPdfBlob(s){
   y+=21;
 
   // metadata, two columns
-  var meta=[["Client",s.client||"—"],["Project Number",s.project||"—"],["Machine / Equipment",s.machine||"—"],
+  var meta=[["Client",s.client||"—"],["Project Number",s.project||"—"],["Machine",s.machine||"—"],
             ["Location",s.location||"—"],["Technician",s.tech||"—"],["Start",fts(s.createdAt)],
             ["Status",s.status==="open"?"Open":"Closed"],["Manual",(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||"—"]];
-  doc.setFontSize(8.5);
+  doc.setFont("helvetica","normal");doc.setFontSize(8.5);
+  // Values used to sit at a fixed x, which the widest label ran straight into.
+  // Measure the labels and start the values past the longest one.
+  var valX=0;
+  meta.forEach(function(p){valX=Math.max(valX,doc.getTextWidth(p[0].toUpperCase()))});
+  valX+=4;
   meta.forEach(function(p,i){
     var col=i%2,row=Math.floor(i/2),x=M+col*(CW/2),ry=y+row*6;
-    doc.setTextColor(156,163,175);doc.text(p[0].toUpperCase(),x,ry);
+    doc.setTextColor(156,163,175);doc.setFont("helvetica","normal");doc.text(p[0].toUpperCase(),x,ry);
     doc.setTextColor(17,24,39);doc.setFont("helvetica","bold");
-    doc.text(doc.splitTextToSize(String(p[1]),CW/2-6)[0],x+34,ry);
-    doc.setFont("helvetica","normal");
+    doc.text(doc.splitTextToSize(String(p[1]),CW/2-valX-4)[0],x+valX,ry);
   });
+  doc.setFont("helvetica","normal");
   y+=Math.ceil(meta.length/2)*6+4;
 
   // counters

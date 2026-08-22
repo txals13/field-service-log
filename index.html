@@ -199,14 +199,20 @@ textarea{resize:none;line-height:1.4}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:var(--br2);border-radius:2px}
 /* spare parts */
-.log-parts{display:flex;flex-direction:column;gap:3px;margin-top:6px}
-.part-row{display:flex;align-items:center;gap:6px;font-size:12px;background:var(--bg2);border:1px solid var(--br2);border-left:3px solid #3b82f6;border-radius:6px;padding:5px 8px}
-.part-row .pp{font-family:monospace;font-weight:700;color:#3b82f6;flex-shrink:0}
-.part-row .pd{flex:1;min-width:0;color:var(--tx2)}
-.part-row .pq{font-family:monospace;color:var(--tx3);flex-shrink:0;display:flex;align-items:center;gap:1px}
-.part-row .pq-in{width:38px;font-family:monospace;font-size:12px;padding:2px 4px;text-align:center;background:var(--bg1);border:1px solid var(--br2);border-radius:4px;color:var(--tx)}
-.part-row .pc{font-size:10px;color:var(--tx3);flex-shrink:0}
-.part-row .part-del{background:none;border:none;color:var(--tx3);cursor:pointer;font-size:12px;padding:0 2px;flex-shrink:0}
+/* Spare parts are tabular data, so they're laid out as columns: quantity first
+   (the number you act on) right-aligned so a list scans vertically, then the
+   reference, then the name. One grid per entry aligns every row. */
+.log-parts{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:3px 10px;align-items:baseline;margin-top:6px;font-size:12px;border-left:2px solid var(--blue);padding-left:10px}
+.log-parts .pq{font-family:monospace;color:var(--gold);text-align:right;white-space:nowrap}
+.log-parts .pr{font-family:monospace;color:var(--tx2);white-space:nowrap}
+.log-parts .pn{color:var(--tx1);min-width:0}
+/* same columns in the edit modal, with an editable quantity and a remove button */
+.eparts{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;gap:5px 10px;align-items:center;font-size:12px}
+.eparts .pq-in{width:46px;font-family:monospace;font-size:12px;padding:3px 5px;text-align:right;background:var(--bg1);border:1px solid var(--br2);border-radius:4px;color:var(--tx1)}
+.eparts .pr{font-family:monospace;color:var(--tx2);white-space:nowrap}
+.eparts .pn{color:var(--tx1);min-width:0;overflow:hidden;text-overflow:ellipsis}
+.eparts .part-del{background:none;border:none;color:var(--tx3);cursor:pointer;font-size:12px;padding:0 2px}
+.eparts .part-del:hover{color:var(--red)}
 .part-form{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;padding:8px;background:var(--bg2);border:1px solid var(--br2);border-radius:8px}
 .part-form input{font-size:12px;padding:5px 7px}
 .part-form .pf-pos{width:64px}.part-form .pf-ref{width:110px}.part-form .pf-cant{width:56px}
@@ -493,32 +499,32 @@ function now(){return new Date().toISOString()}
 function fts(iso){var d=new Date(iso);return d.toLocaleDateString("en-GB",{day:"2-digit",month:"2-digit",year:"2-digit"})+" "+d.toTimeString().slice(0,8)}
 function esc(s){if(!s)return"";var d=document.createElement("div");d.textContent=s;return d.innerHTML}
 // -- Spare parts (entry.parts = [{pos,ref,cant,denominacio,conjunt,grup,page}]) --
-function partCtx(p){return[p.conjunt,p.grup].filter(Boolean).join(" › ")}
-// on-screen log view (uses the app's themed .log-parts/.part-row classes)
+// on-screen log view (uses the app's themed .log-parts grid)
 function partsBlockHTML(parts){
   if(!parts||!parts.length)return"";
   return "<div class=\"log-parts\">"+parts.map(function(p){
-    var ctx=partCtx(p);
-    return "<div class=\"part-row\">"
-      +"<span class=\"pp\">"+esc(p.pos||"?")+(p.ref?" · "+esc(p.ref):"")+"</span>"
-      +"<span class=\"pd\">"+esc(p.denominacio||"")+(ctx?" <span class=\"pc\">("+esc(ctx)+")</span>":"")+"</span>"
-      +(p.cant?"<span class=\"pq\">×"+esc(p.cant)+"</span>":"")
-      +"</div>";
+    return "<span class=\"pq\">"+(p.cant?esc(p.cant)+"×":"")+"</span>"
+      +"<span class=\"pr\">"+esc(p.ref||"")+"</span>"
+      +"<span class=\"pn\">"+esc(p.denominacio||"")+"</span>";
   }).join("")+"</div>";
 }
 // standalone HTML/PDF report (inline styles — the report has none of the app CSS)
+// Same column order as on screen, but with a header row: a printed report is
+// read by someone who doesn't know the app (client, purchasing).
 function partsReportHTML(parts){
   if(!parts||!parts.length)return"";
+  var th="padding:2px 6px;text-align:left;font-size:8px;letter-spacing:.6px;color:#6b7280;font-weight:600;background:#f3f4f6;border:none";
+  var td="padding:2px 6px;font-size:10px;border:none;vertical-align:top";
   var rows=parts.map(function(p){
-    var ctx=partCtx(p);
-    return "<div style=\"font-size:11px;padding:3px 6px;margin-top:3px;background:#eff6ff;border-left:3px solid #3b82f6;border-radius:3px\">"
-      +"<span style=\"font-family:monospace;font-weight:700;color:#1d4ed8\">Pos "+esc(p.pos||"?")+(p.ref?" · "+esc(p.ref):"")+"</span> "
-      +esc(p.denominacio||"")
-      +(p.cant?" <span style=\"font-family:monospace;color:#6b7280\">×"+esc(p.cant)+"</span>":"")
-      +(ctx?"<span style=\"color:#9ca3af\"> ("+esc(ctx)+")</span>":"")
-      +"</div>";
+    return "<tr>"
+      +"<td style=\""+td+";font-family:monospace;color:#b45309;text-align:right;white-space:nowrap\">"+(p.cant?esc(p.cant)+"×":"")+"</td>"
+      +"<td style=\""+td+";font-family:monospace;color:#1d4ed8;white-space:nowrap\">"+esc(p.ref||"")+"</td>"
+      +"<td style=\""+td+";color:#111827\">"+esc(p.denominacio||"")+"</td>"
+      +"</tr>";
   }).join("");
-  return "<div style=\"margin-top:6px\"><div style=\"font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:#9ca3af;font-weight:600\">Spare parts</div>"+rows+"</div>";
+  return "<table style=\"margin-top:6px;border-collapse:collapse;width:100%;border:1px solid #e5e7eb\">"
+    +"<thead><tr><th style=\""+th+";text-align:right\">QTY</th><th style=\""+th+"\">REF.</th><th style=\""+th+"\">SPARE PART</th></tr></thead>"
+    +"<tbody>"+rows+"</tbody></table>";
 }
 function highlightText(text,query){
   var e=esc(text);
@@ -2129,17 +2135,17 @@ function rEThumbs(){renderThumbs({container:"eThumbs",get:function(){return eImg
 function rEParts(){
   var box=$$("eParts");if(!box)return;
   box.innerHTML="";
+  box.className="eparts";
   eParts.forEach(function(p,idx){
-    var ctx=partCtx(p);
-    var row=document.createElement("div");row.className="part-row";
-    row.innerHTML="<span class=\"pp\">"+esc(p.pos||"?")+(p.ref?" · "+esc(p.ref):"")+"</span>"
-      +"<span class=\"pd\">"+esc(p.denominacio||"")+(ctx?" <span class=\"pc\">("+esc(ctx)+")</span>":"")+"</span>"
-      +"<span class=\"pq\">×<input type=\"text\" class=\"pq-in\" inputmode=\"numeric\" value=\""+esc(p.cant||"")+"\" title=\"Quantity\"></span>"
-      +"<button class=\"part-del\" title=\"Remove\">&#10005;</button>";
+    var qi=document.createElement("input");
+    qi.type="text";qi.className="pq-in";qi.inputMode="numeric";qi.value=p.cant||"";qi.title="Quantity";
     // live edit, no re-render (that would steal focus mid-typing)
-    row.querySelector(".pq-in").addEventListener("input",function(){p.cant=this.value.trim()});
-    row.querySelector(".part-del").addEventListener("click",function(){eParts.splice(idx,1);rEParts()});
-    box.appendChild(row);
+    qi.addEventListener("input",function(){p.cant=this.value.trim()});
+    var ref=document.createElement("span");ref.className="pr";ref.textContent=p.ref||"";
+    var nm=document.createElement("span");nm.className="pn";nm.textContent=p.denominacio||"";nm.title=p.denominacio||"";
+    var del=document.createElement("button");del.className="part-del";del.title="Remove";del.innerHTML="&#10005;";
+    del.addEventListener("click",function(){eParts.splice(idx,1);rEParts()});
+    box.appendChild(qi);box.appendChild(ref);box.appendChild(nm);box.appendChild(del);
   });
 }
 function clearPartForm(){["pfPos","pfRef","pfCant","pfDen"].forEach(function(id){var el=$$(id);if(el)el.value=""});var f=$$("ePartForm");if(f)f.style.display="none"}
@@ -2784,8 +2790,10 @@ async function buildPdfBlob(s){
   var body=entries.map(function(e){
     var sm=SM[e.severity]||SM.info;
     var desc=e.text||"";
+    // autoTable can't nest a table in a cell, so the parts keep the report's
+    // column ORDER (quantity, reference, name) as lines instead
     (e.parts||[]).forEach(function(p){
-      desc+="\n• Pos "+(p.pos||"?")+(p.ref?" · "+p.ref:"")+(p.denominacio?"  "+p.denominacio:"")+(p.cant?"  ×"+p.cant:"");
+      desc+="\n"+(p.cant?p.cant+"× ":"")+(p.ref||"")+(p.denominacio?"  "+p.denominacio:"");
     });
     var att=(e.images||[]).map(function(im){return (im.type==="video"?"▶ ":im.type==="audio"?"🎧 ":"")+(im.name||"file")}).join("\n");
     return [{content:(e.tsFromPhoto?"[photo] ":"")+fts(e.ts)},
@@ -3000,11 +3008,12 @@ function buildDocxDocument(D,s){
     });
     if(!att.length)att.push(new D.Paragraph({children:[new D.TextRun({text:"",size:18})]}));
     var descCh=[new D.Paragraph({children:[new D.TextRun({text:e.text||"",size:20,font:"Arial"})]})];
+    // quantity, reference, name — the report's column order, as lines
     (e.parts||[]).forEach(function(p){
-      var ctx=partCtx(p),runs=[new D.TextRun({text:"Pos "+(p.pos||"?")+(p.ref?" · "+p.ref:""),bold:true,size:16,font:"Courier New",color:"1D4ED8"})];
-      if(p.denominacio)runs.push(new D.TextRun({text:"  "+p.denominacio,size:16,font:"Arial"}));
-      if(p.cant)runs.push(new D.TextRun({text:"  ×"+p.cant,size:16,font:"Courier New",color:"6B7280"}));
-      if(ctx)runs.push(new D.TextRun({text:"  ("+ctx+")",size:14,font:"Arial",color:"9CA3AF"}));
+      var runs=[];
+      if(p.cant)runs.push(new D.TextRun({text:p.cant+"× ",bold:true,size:16,font:"Courier New",color:"B45309"}));
+      if(p.ref)runs.push(new D.TextRun({text:p.ref+"  ",size:16,font:"Courier New",color:"1D4ED8"}));
+      if(p.denominacio)runs.push(new D.TextRun({text:p.denominacio,size:16,font:"Arial"}));
       descCh.push(new D.Paragraph({spacing:{before:20},children:runs}));
     });
     return new D.TableRow({children:[

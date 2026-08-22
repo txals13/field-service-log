@@ -2913,6 +2913,19 @@ function summarizeParts(items){
   return order.map(function(k){return map[k]});
 }
 var XLSX_MIME="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+// Fit every column to its widest cell instead of guessing fixed widths — part
+// names run from a few characters to very long ones. Capped so one long
+// denomination can't push a column off the screen.
+function autoCols(rows,min,max){
+  var w=[];
+  rows.forEach(function(r){
+    r.forEach(function(v,i){
+      var len=String(v==null?"":v).length;
+      if(!w[i]||len>w[i])w[i]=len;
+    });
+  });
+  return w.map(function(len){return {wch:Math.min(max||55,Math.max(min||6,(len||0)+2))}});
+}
 async function exportXLSX(s,base){
   if(!collectSessionParts(s).length){alert("No spare parts in this session yet.\n\nPick them from a drawing or add them by hand in an entry.");return}
   var blob=await buildXlsxBlob(s);
@@ -2937,7 +2950,7 @@ async function buildXlsxBlob(s){
     resum.push([m.ref,m.pos,m.denominacio,qty,m.conjunt,m.grup,m.times]);
   });
   var wsR=X.utils.aoa_to_sheet(resum);
-  wsR["!cols"]=[{wch:18},{wch:7},{wch:44},{wch:11},{wch:26},{wch:26},{wch:9}];
+  wsR["!cols"]=autoCols(resum);
   wsR["!autofilter"]={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:resum.length-1,c:6}})};
 
   // Sheet 2 — every occurrence, with the entry that needed it
@@ -2947,7 +2960,7 @@ async function buildXlsxBlob(s){
     detall.push([fts(e.ts),sm(e),e.tag||"",e.text||"",p.ref||"",p.pos||"",qtyNum(p.cant)!==null?qtyNum(p.cant):(p.cant||""),p.denominacio||"",p.conjunt||"",p.grup||"",p.page||""]);
   });
   var wsD=X.utils.aoa_to_sheet(detall);
-  wsD["!cols"]=[{wch:17},{wch:10},{wch:12},{wch:40},{wch:18},{wch:7},{wch:10},{wch:44},{wch:24},{wch:24},{wch:8}];
+  wsD["!cols"]=autoCols(detall);
   wsD["!autofilter"]={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:detall.length-1,c:10}})};
 
   // Sheet 3 — who/what/when this list belongs to
@@ -2956,12 +2969,12 @@ async function buildXlsxBlob(s){
             ["Estat",s.status==="open"?"Oberta":"Tancada"],["Manual",(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||""],
             ["Generat",fts(new Date().toISOString())],["Recanvis (línies)",items.length],["Referències diferents",sum.length]];
   var wsI=X.utils.aoa_to_sheet(info);
-  wsI["!cols"]=[{wch:22},{wch:46}];
+  wsI["!cols"]=autoCols(info);
 
   var wb=X.utils.book_new();
-  X.utils.book_append_sheet(wb,wsR,"Resum");
-  X.utils.book_append_sheet(wb,wsD,"Detall");
   X.utils.book_append_sheet(wb,wsI,"Sessió");
+  X.utils.book_append_sheet(wb,wsD,"Detall");
+  X.utils.book_append_sheet(wb,wsR,"Resum");
   var out=X.write(wb,{bookType:"xlsx",type:"array"});
   return new Blob([out],{type:XLSX_MIME});
 }

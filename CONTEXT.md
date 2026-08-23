@@ -171,6 +171,19 @@ Field Service Log/
     places it at its own aspect ratio, sitting on the line; unsigned, the same
     empty line prints for signing on paper.
   - **Three languages**, chosen per session: EN / ES / CA (`TSL`).
+  - **The columns are chosen per sheet** — chips over the day table toggle any
+    of the eleven (`TSCOLS`); Date is locked, since a signed row has to say
+    which day it is. Every toggle writes the set to
+    `localStorage['fsl_v6_tscols']`, so it becomes the default for the next
+    sheet, and **Reset** brings all eleven back. A sheet that has been saved
+    keeps the columns it was signed with in `session.timesheet.cols`, even
+    after the default changes. The PDF builds its head, widths and totals row
+    from that set: drop Destination and the remaining widths scale up to fill
+    the page; drop every figure column and the TOTAL label spans the table
+    with the day count. Note **Total h stays the day's total (travel + work)**
+    whatever is on screen — a total that silently changed meaning with the
+    visible columns is the last thing a signed sheet needs. For a
+    presence-only sheet, untick Total h and leave Work h as the figure.
   - Exports as `timesheet_<base>.pdf`, uploaded to the session's Drive folder
     under that fixed name like the other reports, and **built into the Drive
     ZIP** alongside them.

@@ -192,6 +192,17 @@ textarea{resize:none;line-height:1.4}
 .fname-row .fi{flex-shrink:0;color:var(--tx3)}
 .fname-row input{flex:1;font-size:12px;padding:4px 8px}
 .fname-st{font-size:11px;width:14px;text-align:center;flex-shrink:0}
+/* timesheet */
+.ts-tbl{width:100%;border-collapse:collapse;font-size:11px;font-family:monospace}
+.ts-tbl th{text-align:left;font-size:9.5px;color:var(--tx3);font-weight:600;padding:5px 5px;border-bottom:1px solid var(--br2);text-transform:uppercase;letter-spacing:.4px;position:sticky;top:0;background:var(--bg1);white-space:nowrap}
+.ts-tbl td{padding:4px 5px;border-bottom:1px solid var(--br);color:var(--tx2);white-space:nowrap}
+.ts-tbl tr.off td{opacity:.35}
+.ts-tbl td.num{text-align:right}
+.ts-tbl input[type=checkbox]{width:17px;height:17px;accent-color:var(--gold);margin:0}
+.ts-sig{border:1px dashed var(--br2);border-radius:8px;background:#fff;touch-action:none;width:100%;height:110px;display:block;cursor:crosshair}
+.ts-note{font-size:11px;color:var(--tx3)}
+#tsSigGrid{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:620px){#tsSigGrid{grid-template-columns:1fr 1fr}}
 /* misc */
 .no-ent{font-family:monospace;font-size:12px;color:var(--tx3);padding:24px 0;text-align:center}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -331,6 +342,46 @@ textarea{resize:none;line-height:1.4}
       <div id="linkList" style="max-height:52vh;overflow:auto"></div>
       <div class="modal-actions">
         <button id="linkClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timesheet — hours clocked in the Calendari laboral app, for the client to sign -->
+  <div class="modal-back" id="tsBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,780px)">
+      <div class="modal-title">&#128339; Timesheet</div>
+      <div id="tsSrc" class="ts-note" style="margin-bottom:10px">&mdash;</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px">
+        <div class="field" style="margin:0"><label>From</label><input type="date" id="tsFrom" style="width:auto"></div>
+        <div class="field" style="margin:0"><label>To</label><input type="date" id="tsTo" style="width:auto"></div>
+        <div class="field" style="margin:0"><label>Language</label><select id="tsLang" style="width:auto"><option value="en">English</option><option value="es">Castellano</option><option value="ca">Catal&agrave;</option></select></div>
+        <button class="btn-sm" id="tsReload" title="Fetch the calendar again from Drive">&#8635; Reload</button>
+        <button class="btn-sm" id="tsImportBtn" title="Use a JSON exported from the Calendari laboral app (&#9881; Exporta c&ograve;pia)">&#8593; Import JSON</button>
+        <input type="file" id="tsImportIn" accept="application/json,.json" style="display:none">
+      </div>
+      <div id="tsRows" style="max-height:36vh;overflow:auto;border:1px solid var(--br);border-radius:8px"></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap">
+        <button class="btn-xs" id="tsAll">Select all</button><button class="btn-xs" id="tsNone">None</button>
+        <span id="tsTot" style="font-family:monospace;font-size:12px;color:var(--tx2);margin-left:auto"></span>
+      </div>
+      <div class="field" style="margin-top:12px"><label>Remarks (printed on the sheet)</label><textarea id="tsRem" rows="2" class="inp-notes"></textarea></div>
+      <div style="border-top:1px solid var(--br);margin-top:12px;padding-top:12px">
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap"><strong style="font-size:12px;color:var(--tx2)">Signatures</strong><span class="ts-note">sign with a finger or stylus &mdash; leave blank to print empty lines</span></div>
+        <div id="tsSigGrid">
+          <div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:11px;color:var(--tx3);flex-shrink:0">Technician</span><input type="text" id="tsTechName" placeholder="Name" style="flex:1;font-size:12px;padding:4px 8px"><button class="btn-xs" id="tsTechClr">Clear</button></div>
+            <canvas class="ts-sig" id="tsTechSig"></canvas>
+          </div>
+          <div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:11px;color:var(--tx3);flex-shrink:0">Client</span><input type="text" id="tsCliName" placeholder="Name / position" style="flex:1;font-size:12px;padding:4px 8px"><button class="btn-xs" id="tsCliClr">Clear</button></div>
+            <canvas class="ts-sig" id="tsCliSig"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="tsCancel">Cancel</button>
+        <button class="btn-sm" id="tsSave">&#10003; Save</button>
+        <button class="btn-gold" id="tsPdf">&#128196; Save &amp; PDF</button>
       </div>
     </div>
   </div>
@@ -2023,7 +2074,7 @@ function renderContent(){
       ?"<button class=\"btn-danger btn-sm\" id=\"btnClose\" style=\"margin-left:auto\">■ Close</button>"
       :"<span style=\"margin-left:auto;font-size:11px;color:var(--tx3)\">🔴 Closed</span><button class=\"btn-sm\" id=\"btnReopen\" style=\"font-size:11px\">↺ Reopen</button>")
     +"<div class=\"exp-wrap\"><button class=\"btn-sm\" id=\"btnExp\">↓ Report ▾</button>"
-    +"<div class=\"exp-menu\" id=\"expMenu\"><button data-fmt=\"pdf\">📄 PDF</button><button data-fmt=\"docx\">📄 DOCX</button><button data-fmt=\"html\">📄 HTML</button><button data-fmt=\"xlsx\">📊 Spare parts (Excel)</button><button data-fmt=\"zip\">🗄 Drive ZIP</button></div></div>"
+    +"<div class=\"exp-menu\" id=\"expMenu\"><button data-fmt=\"pdf\">📄 PDF</button><button data-fmt=\"docx\">📄 DOCX</button><button data-fmt=\"html\">📄 HTML</button><button data-fmt=\"xlsx\">📊 Spare parts (Excel)</button><button data-fmt=\"timesheet\">🧾 Timesheet (PDF)</button><button data-fmt=\"zip\">🗄 Drive ZIP</button></div></div>"
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSync\" title=\"Sync now\">⟳</button>":"")
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSessSync\" title=\"Recreate Drive folders and upload any photo missing from Drive for this session\">&#9729; Save</button>":"")
     +"</div>"
@@ -2035,6 +2086,7 @@ function renderContent(){
     +"<span>🕐 "+fts(active.createdAt)+"</span>"
     +manualChipHTML(active)
     +drawingsChipHTML(active)
+    +tsChipHTML(active)
     +"</div></div>"
     // filter
     +"<div class=\"filter-row\">"
@@ -2079,6 +2131,7 @@ function renderContent(){
   var btnEd=$$("btnEditSess");if(btnEd)btnEd.addEventListener("click",function(){openNewModal(active)});
   var mChip=$$("manualChip");if(mChip)mChip.addEventListener("click",openLinkModal);
   var dChip=$$("drawingsChip");if(dChip)dChip.addEventListener("click",function(){openDrawings()});
+  var tChip=$$("tsChip");if(tChip)tChip.addEventListener("click",openTimesheet);
   var btnC=$$("btnClose");if(btnC)btnC.addEventListener("click",function(){if(confirm("Close this session? You can reopen it later.")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"closed",closedAt:now()}):s});scheduleSave();renderAll()}});
   var btnR=$$("btnReopen");if(btnR)btnR.addEventListener("click",function(){if(confirm("Reopen this session?")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"open",closedAt:null}):s});scheduleSave();renderAll()}});
   var btnEx=$$("btnExp");if(btnEx){
@@ -2728,7 +2781,449 @@ function exportRep(s,fmt){
   else if(fmt==="pdf"){exportPDF(s,base)}
   else if(fmt==="docx"){exportDOCX(s,base)}
   else if(fmt==="xlsx"){exportXLSX(s,base)}
+  else if(fmt==="timesheet"){exportTimesheet(s,base)}
   else if(fmt==="zip"){exportSessionZip(s)}
+}
+
+// ── TIMESHEET ─────────────────────────────────────────────────────────────────
+// The hours come from the OTHER app — Calendari laboral — where the technician
+// already clocks every day (leave home → arrive on site → leave site → arrive
+// hotel, less the break). Retyping them here would only create a second set of
+// numbers to disagree with the first, so this reads that app's Drive file.
+//
+// It can, even though they are two separate sites: Drive's `drive.file` scope
+// authorises per (user, file, OAuth client), and both apps ship the SAME
+// client id. If the read fails — never synced, signed out, no coverage — a
+// cached copy or a hand-imported JSON (⚙️ Exporta còpia over there) stands in.
+var CAL_FILE="calendari_laboral_data.json";
+var LS_CAL="fsl_v6_cal";
+var calCache=null;   // {at, src, db}
+
+function loadCalCache(){
+  if(calCache)return calCache;
+  try{calCache=JSON.parse(localStorage.getItem(LS_CAL)||"null")}catch(e){calCache=null}
+  return calCache;
+}
+function saveCalCache(db,src){
+  calCache={at:now(),src:src,db:db};
+  try{localStorage.setItem(LS_CAL,JSON.stringify(calCache))}catch(e){}
+}
+async function fetchCalendarDB(){
+  if(!isLoggedIn)return null;
+  var token=await ensureToken();if(!token)return null;
+  var id=await driveFind(token,CAL_FILE,null,"application/json");
+  if(!id)return null;
+  var r=await fetch("https://www.googleapis.com/drive/v3/files/"+id+"?alt=media",{headers:{Authorization:"Bearer "+token}});
+  if(!r.ok)return null;
+  var db=await r.json();
+  if(!db||!db.years)return null;
+  saveCalCache(db,"Drive");
+  return db;
+}
+
+// Reading a day exactly as the calendar app does, so the two never disagree:
+// vi→i is the outbound leg, i→f the time at the customer's site (less the
+// break), f→vf the way back. A day clocked only vi→vf is one door-to-door
+// journey, not time on site. Times may cross midnight.
+function tsHm(s){var m=/^(\d{1,2}):(\d{2})$/.exec(String(s||"").trim());return m?(+m[1])+(+m[2])/60:null}
+function tsDur(a,b){var x=tsHm(a),y=tsHm(b);if(x==null||y==null)return null;var d=y-x;if(d<0)d+=24;return d}
+function tsR2(n){return Math.round((n+Number.EPSILON)*100)/100}
+function tsLegs(r){
+  if(!r)return null;
+  var out=tsDur(r.vi,r.i),site=tsDur(r.i,r.f),back=tsDur(r.f,r.vf);
+  if(out==null&&site==null&&back==null&&r.vi&&r.vf)out=tsDur(r.vi,r.vf);
+  if(out==null&&site==null&&back==null)return null;
+  var travel=tsR2((out||0)+(back||0)),work=Math.max(0,tsR2((site||0)-(+r.p||0)));
+  return {travel:travel,work:work,total:tsR2(travel+work)};
+}
+function tsDayRow(date,r){
+  var L=tsLegs(r),travel,work,total;
+  if(L){travel=L.travel;work=L.work;total=L.total}
+  else{total=tsR2(+r.h||0);travel=Math.min(tsR2(+r.v||0),total);work=tsR2(total-travel)}
+  return {date:date,vi:r.vi||"",i:r.i||"",f:r.f||"",vf:r.vf||"",p:tsR2(+r.p||0),
+          travel:travel,work:work,total:total,state:r.s||"",dest:r.d||"",note:r.n||""};
+}
+function tsPad2(n){return String(n).padStart(2,"0")}
+function tsIso(d){return d.getFullYear()+"-"+tsPad2(d.getMonth()+1)+"-"+tsPad2(d.getDate())}
+// Every clocked day in the range. Days marked as holiday or time off in the
+// calendar are skipped: nobody signs for a day nobody worked.
+function tsCollect(db,from,to){
+  var out=[];
+  if(!db||!db.years||!from||!to)return out;
+  var d=new Date(from+"T00:00:00"),end=new Date(to+"T00:00:00");
+  if(isNaN(d.getTime())||isNaN(end.getTime())||d>end)return out;
+  for(;d<=end;d.setDate(d.getDate()+1)){
+    var y=db.years[d.getFullYear()];
+    var r=y&&y.days&&y.days[tsIso(d)];
+    if(!r||r.del)continue;
+    if(["VAC","LD","DC","POS"].indexOf(r.s)>=0)continue;
+    var row=tsDayRow(tsIso(d),r);
+    if(row.total<=0)continue;
+    out.push(row);
+  }
+  return out;
+}
+// The window the visit actually covers: first to last logged entry, falling
+// back to the session's own dates when nothing is logged yet.
+function tsRange(s){
+  var ds=(s.entries||[]).map(function(e){return (e.ts||"").slice(0,10)}).filter(Boolean).sort();
+  return {from:ds.length?ds[0]:(s.createdAt||now()).slice(0,10),
+          to:ds.length?ds[ds.length-1]:(s.closedAt||s.updatedAt||s.createdAt||now()).slice(0,10)};
+}
+
+var TSL={
+  en:{title:"Timesheet",gen:"Generated on",period:"Period",daysN:"Days",
+      meta:["Client","Project Number","Machine","Location","Technician","Period"],
+      date:"Date",day:"Day",dep:"Depart",arr:"On site",lv:"Off site",ret:"Back",brk:"Break",
+      trav:"Travel h",work:"Work h",total:"Total h",dest:"Destination",tot:"TOTAL",
+      rem:"Remarks",sigT:"Technician",sigC:"Client / Recipient",sigNote:"Signature",dt:"Date",
+      wd:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],none:"No days selected"},
+  es:{title:"Hoja de horas",gen:"Generada el",period:"Periodo",daysN:"D\u00edas",
+      meta:["Cliente","N\u00famero de proyecto","M\u00e1quina","Ubicaci\u00f3n","T\u00e9cnico","Periodo"],
+      date:"Fecha",day:"D\u00eda",dep:"Salida",arr:"Llegada",lv:"Fin",ret:"Regreso",brk:"Pausa",
+      trav:"H. viaje",work:"H. trabajo",total:"Total h",dest:"Destino",tot:"TOTAL",
+      rem:"Observaciones",sigT:"T\u00e9cnico",sigC:"Cliente / Receptor",sigNote:"Firma",dt:"Fecha",
+      wd:["dom","lun","mar","mi\u00e9","jue","vie","s\u00e1b"],none:"Ning\u00fan d\u00eda seleccionado"},
+  ca:{title:"Full d'hores",gen:"Generat el",period:"Per\u00edode",daysN:"Dies",
+      meta:["Client","N\u00famero de projecte","M\u00e0quina","Ubicaci\u00f3","T\u00e8cnic","Per\u00edode"],
+      date:"Data",day:"Dia",dep:"Sortida",arr:"Arribada",lv:"Fi",ret:"Tornada",brk:"Pausa",
+      trav:"H. viatge",work:"H. treball",total:"Total h",dest:"Destinaci\u00f3",tot:"TOTAL",
+      rem:"Observacions",sigT:"T\u00e8cnic",sigC:"Client / Receptor",sigNote:"Signatura",dt:"Data",
+      wd:["dg","dl","dt","dc","dj","dv","ds"],none:"Cap dia seleccionat"}
+};
+function tsWd(t,iso){return t.wd[new Date(iso+"T00:00:00").getDay()]}
+function tsN(n){return n?n.toFixed(2):"—"}
+function tsDMY(iso){var p=iso.split("-");return p[2]+"/"+p[1]+"/"+p[0].slice(2)}
+function tsSum(rows,k){return tsR2(rows.reduce(function(a,r){return a+(+r[k]||0)},0))}
+function tsChipHTML(sess){
+  var T=sess.timesheet;
+  if(T&&T.rows&&T.rows.length)
+    return "<span id=\"tsChip\" style=\"cursor:pointer\" title=\"Timesheet — click to review, re-sign or change the days\">&#129534; "
+      +T.rows.length+"d · "+tsSum(T.rows,"total").toFixed(2)+"h"+((T.cliSig||T.techSig)?" &#9997;":"")+"</span>";
+  return "<span id=\"tsChip\" style=\"cursor:pointer;color:var(--tx3)\" title=\"Build a timesheet from the hours clocked in Calendari laboral\">&#129534; Timesheet</span>";
+}
+
+// ── TIMESHEET · modal ─────────────────────────────────────────────────────────
+var tsSess=null,tsAll=[],tsPick=null,tsPads={},tsWired=false;
+
+// The pad is drawn white and kept white: it goes straight into the PDF as an
+// image, where a transparent background would come out as a black smear.
+function tsInitPad(id,dataUrl){
+  var cv=$$(id);if(!cv)return null;
+  var box=cv.getBoundingClientRect();
+  var dpr=Math.min(2,window.devicePixelRatio||1);
+  cv.width=Math.max(1,Math.round((box.width||300)*dpr));
+  cv.height=Math.max(1,Math.round((box.height||110)*dpr));
+  var ctx=cv.getContext("2d");
+  var pad={cv:cv,ctx:ctx,dirty:false};
+  pad.clear=function(){ctx.fillStyle="#ffffff";ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.lineWidth=2.2*dpr;ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle="#111827";pad.dirty=false};
+  // Cropped to the ink, not handed over as the whole pad: a signature stretched
+  // to fill a fixed box comes out distorted, and the empty white margin is most
+  // of the PNG's weight in a file that rides along in every Drive ZIP.
+  pad.data=function(){
+    if(!pad.dirty)return "";
+    var d;try{d=ctx.getImageData(0,0,cv.width,cv.height).data}catch(e){return cv.toDataURL("image/png")}
+    var x0=cv.width,y0=cv.height,x1=-1,y1=-1;
+    for(var y=0;y<cv.height;y++)for(var x=0;x<cv.width;x++){
+      var i=(y*cv.width+x)*4;
+      if(d[i+3]>128&&(d[i]+d[i+1]+d[i+2])/3<200){
+        if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;
+      }
+    }
+    if(x1<0)return "";
+    var pd=Math.round(4*dpr);
+    x0=Math.max(0,x0-pd);y0=Math.max(0,y0-pd);
+    x1=Math.min(cv.width-1,x1+pd);y1=Math.min(cv.height-1,y1+pd);
+    var w=x1-x0+1,h=y1-y0+1;
+    var oc=document.createElement("canvas");oc.width=w;oc.height=h;
+    var octx=oc.getContext("2d");
+    octx.fillStyle="#ffffff";octx.fillRect(0,0,w,h);
+    octx.drawImage(cv,x0,y0,w,h,0,0,w,h);
+    return oc.toDataURL("image/png");
+  };
+  pad.clear();
+  if(dataUrl){var im=new Image();im.onload=function(){ctx.drawImage(im,0,0,cv.width,cv.height);pad.dirty=true};im.src=dataUrl}
+  var down=false;
+  function at(e){var b=cv.getBoundingClientRect();return[(e.clientX-b.left)*(cv.width/b.width),(e.clientY-b.top)*(cv.height/b.height)]}
+  cv.addEventListener("pointerdown",function(e){
+    e.preventDefault();try{cv.setPointerCapture(e.pointerId)}catch(err){}
+    down=true;pad.dirty=true;var q=at(e);ctx.beginPath();ctx.moveTo(q[0],q[1]);ctx.lineTo(q[0]+0.1,q[1]);ctx.stroke();
+  });
+  cv.addEventListener("pointermove",function(e){if(!down)return;e.preventDefault();var q=at(e);ctx.lineTo(q[0],q[1]);ctx.stroke()});
+  ["pointerup","pointercancel","pointerleave"].forEach(function(ev){cv.addEventListener(ev,function(){down=false})});
+  return pad;
+}
+
+function tsSetSrc(msg){var e=$$("tsSrc");if(e)e.innerHTML=msg}
+function tsCacheLabel(){var c=loadCalCache();return c?esc(c.src)+" · "+esc(fts(c.at)):""}
+
+// Loads the days for the current range. Drive first when signed in, otherwise
+// whatever copy is cached here, so a timesheet can still be put together on a
+// plant floor with no coverage.
+async function tsLoad(force){
+  var from=$$("tsFrom").value,to=$$("tsTo").value;
+  tsSetSrc("<span class=\"spinner\"></span> Reading the calendar…");
+  var db=null,src="";
+  if(isLoggedIn&&(force||!loadCalCache())){
+    try{db=await fetchCalendarDB()}catch(e){db=null}
+  }
+  if(db)src="Calendari laboral · Drive · "+esc(fts(now()));
+  else{
+    var c=loadCalCache();
+    if(c&&c.db){db=c.db;src="Calendari laboral · "+tsCacheLabel()}
+  }
+  if(!db){
+    tsSetSrc("<span style=\"color:var(--orange)\">&#9888; Could not read the Calendari laboral file."
+      +(isLoggedIn?" It may never have been synced from that app."
+                  :" Sign in with Google, or")
+      +" use &#8593; Import JSON with a copy exported there (&#9881; Exporta còpia).</span>");
+    tsAll=[];tsRenderRows();return;
+  }
+  tsSetSrc(src);
+  tsAll=tsCollect(db,from,to);
+  // Keep whatever is already ticked; tick everything on a first look, or
+  // re-tick exactly the days a saved timesheet used.
+  if(tsPick===null){
+    var saved=tsSess&&tsSess.timesheet&&tsSess.timesheet.rows;
+    tsPick={};
+    if(saved&&saved.length)saved.forEach(function(r){tsPick[r.date]=true});
+    else tsAll.forEach(function(r){tsPick[r.date]=true});
+  } else {
+    tsAll.forEach(function(r){if(!(r.date in tsPick))tsPick[r.date]=true});
+  }
+  tsRenderRows();
+}
+function tsRenderRows(){
+  var box=$$("tsRows"),t=TSL[$$("tsLang").value]||TSL.en;
+  if(!tsAll.length){
+    box.innerHTML="<div class=\"ts-note\" style=\"padding:16px;text-align:center\">No clocked days in this range.</div>";
+    $$("tsTot").textContent="";return;
+  }
+  var h="<table class=\"ts-tbl\"><thead><tr><th></th><th>"+t.date+"</th><th>"+t.day+"</th>"
+    +"<th>"+t.dep+"</th><th>"+t.arr+"</th><th>"+t.lv+"</th><th>"+t.ret+"</th><th>"+t.brk+"</th>"
+    +"<th style=\"text-align:right\">"+t.trav+"</th><th style=\"text-align:right\">"+t.work+"</th>"
+    +"<th style=\"text-align:right\">"+t.total+"</th><th>"+t.dest+"</th></tr></thead><tbody>";
+  tsAll.forEach(function(r){
+    var on=!!tsPick[r.date];
+    h+="<tr class=\""+(on?"":"off")+"\">"
+      +"<td><input type=\"checkbox\" data-d=\""+r.date+"\""+(on?" checked":"")+"></td>"
+      +"<td>"+tsDMY(r.date)+"</td><td>"+tsWd(t,r.date)+"</td>"
+      +"<td>"+(r.vi||"—")+"</td><td>"+(r.i||"—")+"</td><td>"+(r.f||"—")+"</td><td>"+(r.vf||"—")+"</td>"
+      +"<td>"+(r.p?r.p.toFixed(2):"—")+"</td>"
+      +"<td class=\"num\">"+tsN(r.travel)+"</td><td class=\"num\">"+tsN(r.work)+"</td>"
+      +"<td class=\"num\" style=\"color:var(--tx1);font-weight:700\">"+tsN(r.total)+"</td>"
+      +"<td>"+esc(r.dest||r.note||"")+"</td></tr>";
+  });
+  box.innerHTML=h+"</tbody></table>";
+  Array.prototype.forEach.call(box.querySelectorAll("input[type=checkbox]"),function(cb){
+    cb.addEventListener("change",function(){
+      tsPick[cb.dataset.d]=cb.checked;
+      var tr=cb.parentNode.parentNode;if(tr)tr.className=cb.checked?"":"off";
+      tsTotals();
+    });
+  });
+  tsTotals();
+}
+function tsChosen(){return tsAll.filter(function(r){return tsPick&&tsPick[r.date]})}
+function tsTotals(){
+  var rows=tsChosen(),t=TSL[$$("tsLang").value]||TSL.en;
+  $$("tsTot").textContent=rows.length
+    ?rows.length+" "+t.daysN.toLowerCase()+" · "+t.trav+" "+tsSum(rows,"travel").toFixed(2)
+      +" · "+t.work+" "+tsSum(rows,"work").toFixed(2)+" · "+t.total+" "+tsSum(rows,"total").toFixed(2)
+    :t.none;
+}
+function openTimesheet(){
+  var active=sessions.find(function(s){return s.id===aid});
+  if(!active)return;
+  tsSess=active;tsPick=null;tsAll=[];
+  var T=active.timesheet||{},R=tsRange(active);
+  $$("tsFrom").value=T.from||R.from;
+  $$("tsTo").value=T.to||R.to;
+  $$("tsLang").value=T.lang||"en";
+  $$("tsRem").value=T.remarks||"";
+  $$("tsTechName").value=T.techName||active.tech||"";
+  $$("tsCliName").value=T.cliName||"";
+  $$("tsBack").style.display="flex";
+  // The canvases have no size until the modal is laid out — but reading a
+  // rect inside tsInitPad flushes the pending layout, so this is safe right
+  // here. requestAnimationFrame would have been the reflex; it never fires
+  // in a backgrounded tab, and the pads would stay unusable.
+  tsPads.tech=tsInitPad("tsTechSig",T.techSig||"");
+  tsPads.cli=tsInitPad("tsCliSig",T.cliSig||"");
+  if(!tsWired){
+    tsWired=true;
+    $$("tsCancel").addEventListener("click",closeTimesheet);
+    $$("tsBack").addEventListener("click",function(e){if(e.target===$$("tsBack"))closeTimesheet()});
+    $$("tsReload").addEventListener("click",function(){tsLoad(true)});
+    $$("tsFrom").addEventListener("change",function(){tsPick=null;tsLoad(false)});
+    $$("tsTo").addEventListener("change",function(){tsPick=null;tsLoad(false)});
+    $$("tsLang").addEventListener("change",tsRenderRows);
+    $$("tsAll").addEventListener("click",function(){tsAll.forEach(function(r){tsPick[r.date]=true});tsRenderRows()});
+    $$("tsNone").addEventListener("click",function(){tsAll.forEach(function(r){tsPick[r.date]=false});tsRenderRows()});
+    $$("tsTechClr").addEventListener("click",function(){if(tsPads.tech)tsPads.tech.clear()});
+    $$("tsCliClr").addEventListener("click",function(){if(tsPads.cli)tsPads.cli.clear()});
+    $$("tsImportBtn").addEventListener("click",function(){$$("tsImportIn").click()});
+    $$("tsImportIn").addEventListener("change",tsImportFile);
+    $$("tsSave").addEventListener("click",function(){if(tsCommit())closeTimesheet()});
+    $$("tsPdf").addEventListener("click",function(){
+      if(!tsCommit())return;
+      var id=tsSess.id;
+      closeTimesheet();
+      exportTimesheet(sessions.find(function(x){return x.id===id}));
+    });
+  }
+  tsLoad(undefined);
+}
+function closeTimesheet(){$$("tsBack").style.display="none";tsSess=null}
+function tsImportFile(e){
+  var f=e.target.files&&e.target.files[0];e.target.value="";
+  if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    var db=null;
+    try{db=JSON.parse(rd.result)}catch(err){}
+    if(!db||!db.years){alert("That is not a Calendari laboral export — no \"years\" in it.");return}
+    saveCalCache(db,"imported file");
+    tsPick=null;tsLoad(false);
+  };
+  rd.readAsText(f);
+}
+// Freezes the chosen days INTO the session. Once the client has signed, the
+// sheet must not change under them because a day was edited in the calendar
+// afterwards; it also means the PDF rebuilds offline and rides along in the
+// Drive ZIP like the other reports.
+function tsCommit(){
+  var rows=tsChosen();
+  if(!rows.length){alert("Pick at least one day for the timesheet.");return false}
+  var T={
+    from:$$("tsFrom").value,to:$$("tsTo").value,lang:$$("tsLang").value,
+    remarks:$$("tsRem").value.trim(),
+    techName:$$("tsTechName").value.trim(),cliName:$$("tsCliName").value.trim(),
+    techSig:tsPads.tech?tsPads.tech.data():"",cliSig:tsPads.cli?tsPads.cli.data():"",
+    rows:rows.map(function(r){return Object.assign({},r)}),
+    generatedAt:now()
+  };
+  var id=tsSess.id;
+  sessions=sessions.map(function(s){return s.id===id?Object.assign({},s,{timesheet:T}):s});
+  scheduleSave();renderAll();
+  return true;
+}
+
+// ── TIMESHEET · PDF ───────────────────────────────────────────────────────────
+// Built from the session's own frozen copy, never from the calendar: the sheet
+// a client signed has to keep saying what they signed.
+async function buildTimesheetBlob(s){
+  var T=s&&s.timesheet;
+  if(!T||!T.rows||!T.rows.length)return null;
+  var L=await loadPdfLibs();
+  if(!L)return null;
+  var t=TSL[T.lang]||TSL.en;
+  var doc=new L.jsPDF({unit:"mm",format:"a4"});
+  var M=14,W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),CW=W-M*2;
+  var y=M;
+
+  // header
+  doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(17,24,39);
+  doc.text(t.title,M,y+6);
+  doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(107,114,128);
+  doc.text(t.gen+" "+fts(T.generatedAt||now()),M,y+12);
+  doc.setDrawColor(245,158,11);doc.setLineWidth(0.8);doc.line(M,y+15,W-M,y+15);
+  y+=21;
+
+  // metadata, two columns — same measured-label layout as the service report
+  var period=tsDMY(T.rows[0].date)+" – "+tsDMY(T.rows[T.rows.length-1].date);
+  var meta=[[t.meta[0],s.client||"—"],[t.meta[1],s.project||"—"],[t.meta[2],s.machine||"—"],
+            [t.meta[3],s.location||"—"],[t.meta[4],T.techName||s.tech||"—"],[t.meta[5],period]];
+  doc.setFontSize(8.5);
+  var valX=0;
+  meta.forEach(function(p){valX=Math.max(valX,doc.getTextWidth(p[0].toUpperCase()))});
+  valX+=4;
+  meta.forEach(function(p,i){
+    var col=i%2,row=Math.floor(i/2),x=M+col*(CW/2),ry=y+row*6;
+    doc.setTextColor(156,163,175);doc.setFont("helvetica","normal");doc.text(p[0].toUpperCase(),x,ry);
+    doc.setTextColor(17,24,39);doc.setFont("helvetica","bold");
+    doc.text(doc.splitTextToSize(String(p[1]),CW/2-valX-4)[0],x+valX,ry);
+  });
+  doc.setFont("helvetica","normal");
+  y+=Math.ceil(meta.length/2)*6+4;
+
+  var body=T.rows.map(function(r){
+    return [tsDMY(r.date),tsWd(t,r.date),r.vi||"—",r.i||"—",r.f||"—",r.vf||"—",
+            r.p?r.p.toFixed(2):"—",tsN(r.travel),tsN(r.work),r.total.toFixed(2),r.dest||r.note||""];
+  });
+  // One TOTAL label spanning the descriptive half — as separate cells it lands
+  // in the 9mm Day column and comes out as "TOT" / "AL".
+  var foot=[[{content:t.tot,colSpan:7,styles:{halign:"right"}},
+             tsSum(T.rows,"travel").toFixed(2),tsSum(T.rows,"work").toFixed(2),
+             tsSum(T.rows,"total").toFixed(2),T.rows.length+" "+t.daysN.toLowerCase()]];
+  doc.autoTable({
+    startY:y,margin:{left:M,right:M},
+    head:[[t.date,t.day,t.dep,t.arr,t.lv,t.ret,t.brk,t.trav,t.work,t.total,t.dest]],
+    body:body,foot:foot,
+    styles:{fontSize:7.5,cellPadding:1.8,overflow:"linebreak",valign:"middle"},
+    // Tight side padding on the head only: the widest headings ("H. trabajo",
+    // "H. treball") otherwise wrap mid-word inside their column.
+    headStyles:{fillColor:[17,24,39],textColor:255,fontSize:7,halign:"center",
+                cellPadding:{top:2,bottom:2,left:0.8,right:0.8}},
+    footStyles:{fillColor:[243,244,246],textColor:[17,24,39],fontStyle:"bold",fontSize:7.5},
+    alternateRowStyles:{fillColor:[249,250,251]},
+    columnStyles:{0:{cellWidth:16},1:{cellWidth:9,halign:"center"},
+                  2:{cellWidth:13,halign:"center"},3:{cellWidth:13,halign:"center"},
+                  4:{cellWidth:13,halign:"center"},5:{cellWidth:13,halign:"center"},
+                  6:{cellWidth:11,halign:"center"},
+                  7:{cellWidth:15,halign:"right"},8:{cellWidth:15,halign:"right"},
+                  9:{cellWidth:15,halign:"right",fontStyle:"bold"}}
+  });
+  y=doc.lastAutoTable.finalY+8;
+
+  if(T.remarks){
+    if(y>H-40){doc.addPage();y=M}
+    doc.setFont("helvetica","bold");doc.setFontSize(9);doc.setTextColor(17,24,39);doc.text(t.rem,M,y);y+=4;
+    doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(55,65,81);
+    var rl=doc.splitTextToSize(T.remarks,CW);doc.text(rl,M,y);y+=rl.length*4+4;
+  }
+
+  // signature boxes — the on-device signature if there is one, otherwise the
+  // same empty line the sheet has always had, for signing on paper
+  var boxH=26;
+  if(y>H-(boxH+22)){doc.addPage();y=M}
+  y=Math.max(y+8,H-(boxH+22));
+  var bw=CW/2-6;
+  [[t.sigT,T.techName||s.tech||"",T.techSig,M],
+   [t.sigC,T.cliName||"",T.cliSig,M+CW/2+6]].forEach(function(b){
+    var x=b[3];
+    if(b[2])try{
+      // Sit the signature ON the line at its own proportions — stretched to
+      // the box it would read as a different hand than the one that signed.
+      var pr=doc.getImageProperties(b[2]);
+      var iw=bw,ih=iw*pr.height/pr.width;
+      if(ih>boxH){ih=boxH;iw=ih*pr.width/pr.height}
+      doc.addImage(b[2],"PNG",x,y+boxH-ih,iw,ih);
+    }catch(err){}
+    doc.setDrawColor(107,114,128);doc.setLineWidth(0.2);
+    doc.line(x,y+boxH,x+bw,y+boxH);
+    doc.setFontSize(8);doc.setTextColor(107,114,128);
+    doc.text(b[0]+(b[1]?" — "+b[1]:""),x,y+boxH+4);
+    doc.text(t.dt+": "+(b[2]?tsDMY((T.generatedAt||now()).slice(0,10)):""),x,y+boxH+8);
+  });
+
+  var n=doc.internal.getNumberOfPages();
+  for(var p=1;p<=n;p++){
+    doc.setPage(p);doc.setFontSize(7.5);doc.setTextColor(156,163,175);
+    doc.text("ID: "+s.id,M,H-6);
+    doc.text(p+" / "+n,W-M,H-6,{align:"right"});
+  }
+  return doc.output("blob");
+}
+async function exportTimesheet(s,base){
+  if(!s)return;
+  if(!s.timesheet||!s.timesheet.rows||!s.timesheet.rows.length){openTimesheet();return}
+  base=base||(s.client||"session").replace(/\s+/g,"_")+"_"+s.createdAt.slice(0,10);
+  var blob=await buildTimesheetBlob(s);
+  if(!blob){alert("Cannot load the PDF library. Check internet connection.");return}
+  dlBlob(blob,"timesheet_"+base+".pdf");
+  uploadReportCopy(s,blob,"timesheet_"+base+".pdf","application/pdf");
 }
 
 // ── REPORT → PDF ──────────────────────────────────────────────────────────────
@@ -3138,6 +3633,7 @@ async function exportSessionZip(s){
     var pdfBlob=await buildPdfBlob(s); if(pdfBlob)zip.file("report_"+base+".pdf",pdfBlob);
     var docxBlob=await buildDocxBlob(s); if(docxBlob)zip.file("report_"+base+".docx",docxBlob);
     var xlsxBlob=await buildXlsxBlob(s); if(xlsxBlob)zip.file("recanvis_"+base+".xlsx",xlsxBlob);
+    var tsBlob=await buildTimesheetBlob(s); if(tsBlob)zip.file("timesheet_"+base+".pdf",tsBlob);
     // Built too, not copied: Drive only gets a session.json when the technician
     // presses Save, so a session that was never synced had none at all.
     zip.file("session.json",new Blob([sessionToJson(s)],{type:"application/json;charset=utf-8"}));

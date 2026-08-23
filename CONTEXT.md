@@ -143,6 +143,41 @@ Field Service Log/
   into the text. The edit modal is hidden while the viewer is up, so the caret is
   remembered in `textPickCaret` rather than read live; spacing is added only
   where needed (never before `.,;:`) and the box is re-measured on return.
+- **Timesheet (`full d'hores`) for the client to sign** — the hours are NOT
+  retyped here: they come from the *other* app, **Calendari laboral**
+  (`https://txals13.github.io/Calendari-laboral/`), where every day is already
+  clocked. The 🧾 chip in the session header (and `↓ Report ▾ → Timesheet`)
+  opens a picker of the days clocked between the first and last log entry;
+  tick the ones the client signs for.
+  - **How it reads the other app's file:** `drive.file` authorises per
+    (user, file, OAuth client), and both apps ship the **same CLIENT_ID**, so
+    `driveFind(token,"calendari_laboral_data.json",null,"application/json")`
+    finds and reads it with no extra scope. A copy is cached in
+    `localStorage['fsl_v6_cal']` for offline, and `↑ Import JSON` takes a file
+    exported from that app (⚙️ Exporta còpia) if Drive is unavailable.
+  - **Day maths ported verbatim** (`tsLegs`) so the two apps never disagree:
+    `vi→i` outbound leg, `i→f` on site less the break `p`, `f→vf` back. A day
+    clocked only `vi→vf` is one door-to-door journey — all travel, no work.
+    Days marked VAC / LD / DC / POS are skipped: nobody signs for a day nobody
+    worked.
+  - **The chosen days are frozen into `session.timesheet`** (`rows`, `lang`,
+    `remarks`, names, signatures, `from`/`to`). Once the client has signed, the
+    sheet must not change under them because a day was later edited in the
+    calendar — and it means the PDF rebuilds offline.
+  - **Signatures are captured on the device** (pointer events on a canvas,
+    technician + client). `pad.data()` crops to the ink bounding box: a
+    signature stretched to a fixed box reads as a different hand, and the white
+    margin was most of the PNG's weight (274 KB → 114 KB per PDF). The PDF
+    places it at its own aspect ratio, sitting on the line; unsigned, the same
+    empty line prints for signing on paper.
+  - **Three languages**, chosen per session: EN / ES / CA (`TSL`).
+  - Exports as `timesheet_<base>.pdf`, uploaded to the session's Drive folder
+    under that fixed name like the other reports, and **built into the Drive
+    ZIP** alongside them.
+  - Note: the signature pads are sized **synchronously** right after the modal
+    is shown — reading `getBoundingClientRect()` flushes layout. The reflex
+    `requestAnimationFrame` never fires in a backgrounded tab and left the pads
+    at the default 300×150 and unusable.
 - Export: HTML (video playable), PDF (jsPDF + autoTable), DOCX (via docx lib CDN),
   XLSX (spare parts, via SheetJS)
 - Reports fully in English, filenames shown under each photo/video

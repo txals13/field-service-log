@@ -239,6 +239,21 @@ if(parentId) q += " and " + JSON.stringify(parentId) + " in parents";
 var q = "name='" + name + "' and trashed=false";
 ```
 
+### autoTable: footStyles beats columnStyles
+`columnStyles[i].halign` styles the BODY cells; head and foot rows take
+`headStyles` / `footStyles`, which win. `footStyles` has no alignment of its
+own, so a totals row falls back to **left** underneath a right-aligned column
+of figures — which reads as a broken table, and is what happened to the
+timesheet's TOTAL row. Put the alignment on the foot cell itself:
+```js
+// WRONG — the column's halign never reaches the foot
+columnStyles:{7:{halign:"right"}}, footStyles:{fontStyle:"bold"}
+// CORRECT — every foot cell carries its own
+foot:[[{content:"173.25",styles:{halign:"right"}}]]
+```
+Verified by reading the placement back out of the PDF: the figure was drawn at
+x=392.5 in a cell spanning 387.4–471.5 (left) instead of x=443.7 (right).
+
 ### Video memory management
 Never load video files as base64 / data URLs — this causes mobile browser crashes.
 Pattern used:

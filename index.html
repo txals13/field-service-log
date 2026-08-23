@@ -3249,9 +3249,14 @@ async function buildTimesheetBlob(s){
   if(firstSum<1){
     foot=[[{content:t.tot+" · "+days,colSpan:cols.length,styles:{halign:"right"}}]];
   } else {
+    // Each total carries its own halign: autoTable gives footStyles priority
+    // over columnStyles, and footStyles has no alignment of its own, so left
+    // is what the figures fall back to — under a right-aligned column of
+    // body figures, which reads as a broken table.
     foot=[[{content:t.tot,colSpan:firstSum,styles:{halign:"right"}}].concat(
       cols.slice(firstSum).map(function(k){
-        return TSCOL_SUM[k]?tsSum(T.rows,k).toFixed(2):(k==="dest"?days:"");
+        return {content:TSCOL_SUM[k]?tsSum(T.rows,k).toFixed(2):(k==="dest"?days:""),
+                styles:{halign:tsColMeta(k).al}};
       }))];
     // Nowhere to put the day count if the sheet has no Destination column.
     if(cols.indexOf("dest")<0)foot[0][0].content=t.tot+" · "+days;

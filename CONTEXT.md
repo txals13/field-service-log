@@ -184,6 +184,12 @@ Field Service Log/
     whatever is on screen — a total that silently changed meaning with the
     visible columns is the last thing a signed sheet needs. For a
     presence-only sheet, untick Total h and leave Work h as the figure.
+  - **The menu entry opens the composer, it does not export.** Alone among
+    the formats this one is composed rather than rendered, so `↓ Report ▾ →
+    Timesheet…` opens the modal with everything prefilled and `Save & PDF`
+    one tap away. It used to export straight off once a sheet existed,
+    which handed over the frozen sheet without showing what was in it and
+    left no way to redo one from the menu at all.
   - Exports as `timesheet_<base>.pdf`, uploaded to the session's Drive folder
     under that fixed name like the other reports, and **built into the Drive
     ZIP** alongside them.

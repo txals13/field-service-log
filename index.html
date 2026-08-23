@@ -2082,7 +2082,7 @@ function renderContent(){
       ?"<button class=\"btn-danger btn-sm\" id=\"btnClose\" style=\"margin-left:auto\">■ Close</button>"
       :"<span style=\"margin-left:auto;font-size:11px;color:var(--tx3)\">🔴 Closed</span><button class=\"btn-sm\" id=\"btnReopen\" style=\"font-size:11px\">↺ Reopen</button>")
     +"<div class=\"exp-wrap\"><button class=\"btn-sm\" id=\"btnExp\">↓ Report ▾</button>"
-    +"<div class=\"exp-menu\" id=\"expMenu\"><button data-fmt=\"pdf\">📄 PDF</button><button data-fmt=\"docx\">📄 DOCX</button><button data-fmt=\"html\">📄 HTML</button><button data-fmt=\"xlsx\">📊 Spare parts (Excel)</button><button data-fmt=\"timesheet\">🧾 Timesheet (PDF)</button><button data-fmt=\"zip\">🗄 Drive ZIP</button></div></div>"
+    +"<div class=\"exp-menu\" id=\"expMenu\"><button data-fmt=\"pdf\">📄 PDF</button><button data-fmt=\"docx\">📄 DOCX</button><button data-fmt=\"html\">📄 HTML</button><button data-fmt=\"xlsx\">📊 Spare parts (Excel)</button><button data-fmt=\"timesheet\">🧾 Timesheet…</button><button data-fmt=\"zip\">🗄 Drive ZIP</button></div></div>"
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSync\" title=\"Sync now\">⟳</button>":"")
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSessSync\" title=\"Recreate Drive folders and upload any photo missing from Drive for this session\">&#9729; Save</button>":"")
     +"</div>"
@@ -2789,7 +2789,12 @@ function exportRep(s,fmt){
   else if(fmt==="pdf"){exportPDF(s,base)}
   else if(fmt==="docx"){exportDOCX(s,base)}
   else if(fmt==="xlsx"){exportXLSX(s,base)}
-  else if(fmt==="timesheet"){exportTimesheet(s,base)}
+  // The timesheet is composed, not just rendered: which days, which columns,
+  // who signs. So the menu OPENS it — everything prefilled from last time,
+  // "Save & PDF" one tap away. It used to export straight off, which handed
+  // over the frozen sheet without showing what was in it and left no way to
+  // redo one from the menu at all.
+  else if(fmt==="timesheet"){openTimesheet()}
   else if(fmt==="zip"){exportSessionZip(s)}
 }
 
@@ -3319,6 +3324,8 @@ async function buildTimesheetBlob(s){
   }
   return doc.output("blob");
 }
+// Writes the file. Reached from the modal's "Save & PDF", never straight from
+// the menu — see exportRep.
 async function exportTimesheet(s,base){
   if(!s)return;
   if(!s.timesheet||!s.timesheet.rows||!s.timesheet.rows.length){openTimesheet();return}

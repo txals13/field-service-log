@@ -201,6 +201,9 @@ textarea{resize:none;line-height:1.4}
 .ts-tbl input[type=checkbox]{width:17px;height:17px;accent-color:var(--gold);margin:0}
 .ts-sig{border:1px dashed var(--br2);border-radius:8px;background:#fff;touch-action:none;width:100%;height:110px;display:block;cursor:crosshair}
 .ts-note{font-size:11px;color:var(--tx3)}
+.ts-col{font-size:11px;padding:3px 9px;border-radius:20px}
+.ts-col.on{background:var(--goldbg);border-color:var(--golddim);color:var(--goldtx);font-weight:700}
+.ts-col.lock{opacity:.5;cursor:default}
 #tsSigGrid{display:grid;grid-template-columns:1fr;gap:12px}
 @media(min-width:620px){#tsSigGrid{grid-template-columns:1fr 1fr}}
 /* misc */
@@ -358,6 +361,11 @@ textarea{resize:none;line-height:1.4}
         <button class="btn-sm" id="tsReload" title="Fetch the calendar again from Drive">&#8635; Reload</button>
         <button class="btn-sm" id="tsImportBtn" title="Use a JSON exported from the Calendari laboral app (&#9881; Exporta c&ograve;pia)">&#8593; Import JSON</button>
         <input type="file" id="tsImportIn" accept="application/json,.json" style="display:none">
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <span class="ts-note" style="flex-shrink:0">Columns</span>
+        <span id="tsColBar" style="display:flex;gap:5px;flex-wrap:wrap"></span>
+        <button class="btn-xs" id="tsColReset" title="Show every column again">Reset</button>
       </div>
       <div id="tsRows" style="max-height:36vh;overflow:auto;border:1px solid var(--br);border-radius:8px"></div>
       <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap">
@@ -2891,6 +2899,45 @@ var TSL={
       rem:"Observacions",sigT:"T\u00e8cnic",sigC:"Client / Receptor",sigNote:"Signatura",dt:"Data",
       wd:["dg","dl","dt","dc","dj","dv","ds"],none:"Cap dia seleccionat"}
 };
+// Which columns the sheet carries. `lab` indexes into TSL so the choice
+// survives a change of language; `w` is the PDF width in mm, and the one
+// column with w:0 soaks up whatever is left over.
+var TSCOLS=[
+  {k:"date",  lab:"date", w:16, al:"left"},
+  {k:"day",   lab:"day",  w:9,  al:"center"},
+  {k:"vi",    lab:"dep",  w:13, al:"center"},
+  {k:"i",     lab:"arr",  w:13, al:"center"},
+  {k:"f",     lab:"lv",   w:13, al:"center"},
+  {k:"vf",    lab:"ret",  w:13, al:"center"},
+  {k:"p",     lab:"brk",  w:11, al:"center"},
+  {k:"travel",lab:"trav", w:15, al:"right"},
+  {k:"work",  lab:"work", w:15, al:"right"},
+  {k:"total", lab:"total",w:15, al:"right"},
+  {k:"dest",  lab:"dest", w:0,  al:"left"}
+];
+var TSCOL_ALL=TSCOLS.map(function(c){return c.k});
+var TSCOL_SUM={travel:1,work:1,total:1};
+var LS_TSCOLS="fsl_v6_tscols";
+// The date is not negotiable — a signed row has to say which day it is.
+function tsColDef(){
+  var v=null;
+  try{v=JSON.parse(localStorage.getItem(LS_TSCOLS)||"null")}catch(e){}
+  if(!Array.isArray(v)||!v.length)return TSCOL_ALL.slice();
+  var keep=TSCOL_ALL.filter(function(k){return k==="date"||v.indexOf(k)>=0});
+  return keep.length?keep:TSCOL_ALL.slice();
+}
+function tsColSaveDef(cols){try{localStorage.setItem(LS_TSCOLS,JSON.stringify(cols))}catch(e){}}
+function tsColMeta(k){return TSCOLS.filter(function(c){return c.k===k})[0]}
+// One row's cells, in the chosen order.
+function tsCell(r,k,t){
+  if(k==="date")return tsDMY(r.date);
+  if(k==="day")return tsWd(t,r.date);
+  if(k==="p")return r.p?r.p.toFixed(2):"—";
+  if(k==="total")return r.total.toFixed(2);
+  if(k==="travel"||k==="work")return tsN(r[k]);
+  if(k==="dest")return r.dest||r.note||"";
+  return r[k]||"—";
+}
 function tsWd(t,iso){return t.wd[new Date(iso+"T00:00:00").getDay()]}
 function tsN(n){return n?n.toFixed(2):"—"}
 function tsDMY(iso){var p=iso.split("-");return p[2]+"/"+p[1]+"/"+p[0].slice(2)}
@@ -2904,7 +2951,7 @@ function tsChipHTML(sess){
 }
 
 // ── TIMESHEET · modal ─────────────────────────────────────────────────────────
-var tsSess=null,tsAll=[],tsPick=null,tsPads={},tsWired=false;
+var tsSess=null,tsAll=[],tsPick=null,tsPads={},tsWired=false,tsCols=TSCOL_ALL.slice();
 
 // The pad is drawn white and kept white: it goes straight into the PDF as an
 // image, where a transparent background would come out as a black smear.
@@ -2994,26 +3041,52 @@ async function tsLoad(force){
   }
   tsRenderRows();
 }
+// The chips drive both this table and the PDF, so what you tick is literally
+// what the client will be signing.
+function tsRenderColChips(){
+  var bar=$$("tsColBar"),t=TSL[$$("tsLang").value]||TSL.en;
+  bar.innerHTML=TSCOLS.map(function(c){
+    var on=tsCols.indexOf(c.k)>=0,lock=c.k==="date";
+    return "<button class=\"ts-col"+(on?" on":"")+(lock?" lock":"")+"\" data-k=\""+c.k+"\""
+      +(lock?" title=\"Every row has to say which day it is\"":"")+">"+esc(t[c.lab])+"</button>";
+  }).join("");
+  Array.prototype.forEach.call(bar.querySelectorAll("button"),function(b){
+    b.addEventListener("click",function(){
+      var k=b.dataset.k;
+      if(k==="date")return;
+      // Keep the order fixed: toggling a column back on must not send it to
+      // the end of the sheet.
+      var on=tsCols.indexOf(k)>=0;
+      var next=on?tsCols.filter(function(x){return x!==k}):tsCols.concat([k]);
+      tsCols=TSCOL_ALL.filter(function(x){return next.indexOf(x)>=0});
+      tsColSaveDef(tsCols);   // this choice becomes the default for the next sheet
+      tsRenderRows();
+    });
+  });
+}
 function tsRenderRows(){
   var box=$$("tsRows"),t=TSL[$$("tsLang").value]||TSL.en;
+  tsRenderColChips();
   if(!tsAll.length){
     box.innerHTML="<div class=\"ts-note\" style=\"padding:16px;text-align:center\">No clocked days in this range.</div>";
     $$("tsTot").textContent="";return;
   }
-  var h="<table class=\"ts-tbl\"><thead><tr><th></th><th>"+t.date+"</th><th>"+t.day+"</th>"
-    +"<th>"+t.dep+"</th><th>"+t.arr+"</th><th>"+t.lv+"</th><th>"+t.ret+"</th><th>"+t.brk+"</th>"
-    +"<th style=\"text-align:right\">"+t.trav+"</th><th style=\"text-align:right\">"+t.work+"</th>"
-    +"<th style=\"text-align:right\">"+t.total+"</th><th>"+t.dest+"</th></tr></thead><tbody>";
+  var h="<table class=\"ts-tbl\"><thead><tr><th></th>"
+    +tsCols.map(function(k){
+      var c=tsColMeta(k);
+      return "<th"+(c.al==="right"?" style=\"text-align:right\"":"")+">"+esc(t[c.lab])+"</th>";
+    }).join("")
+    +"</tr></thead><tbody>";
   tsAll.forEach(function(r){
     var on=!!tsPick[r.date];
     h+="<tr class=\""+(on?"":"off")+"\">"
       +"<td><input type=\"checkbox\" data-d=\""+r.date+"\""+(on?" checked":"")+"></td>"
-      +"<td>"+tsDMY(r.date)+"</td><td>"+tsWd(t,r.date)+"</td>"
-      +"<td>"+(r.vi||"—")+"</td><td>"+(r.i||"—")+"</td><td>"+(r.f||"—")+"</td><td>"+(r.vf||"—")+"</td>"
-      +"<td>"+(r.p?r.p.toFixed(2):"—")+"</td>"
-      +"<td class=\"num\">"+tsN(r.travel)+"</td><td class=\"num\">"+tsN(r.work)+"</td>"
-      +"<td class=\"num\" style=\"color:var(--tx1);font-weight:700\">"+tsN(r.total)+"</td>"
-      +"<td>"+esc(r.dest||r.note||"")+"</td></tr>";
+      +tsCols.map(function(k){
+        var c=tsColMeta(k),v=esc(tsCell(r,k,t));
+        if(k==="total")return "<td class=\"num\" style=\"color:var(--tx1);font-weight:700\">"+v+"</td>";
+        return "<td"+(c.al==="right"?" class=\"num\"":"")+">"+v+"</td>";
+      }).join("")
+      +"</tr>";
   });
   box.innerHTML=h+"</tbody></table>";
   Array.prototype.forEach.call(box.querySelectorAll("input[type=checkbox]"),function(cb){
@@ -3028,9 +3101,11 @@ function tsRenderRows(){
 function tsChosen(){return tsAll.filter(function(r){return tsPick&&tsPick[r.date]})}
 function tsTotals(){
   var rows=tsChosen(),t=TSL[$$("tsLang").value]||TSL.en;
+  var sums=tsCols.filter(function(k){return TSCOL_SUM[k]}).map(function(k){
+    return t[tsColMeta(k).lab]+" "+tsSum(rows,k).toFixed(2);
+  });
   $$("tsTot").textContent=rows.length
-    ?rows.length+" "+t.daysN.toLowerCase()+" · "+t.trav+" "+tsSum(rows,"travel").toFixed(2)
-      +" · "+t.work+" "+tsSum(rows,"work").toFixed(2)+" · "+t.total+" "+tsSum(rows,"total").toFixed(2)
+    ?[rows.length+" "+t.daysN.toLowerCase()].concat(sums).join(" · ")
     :t.none;
 }
 function openTimesheet(){
@@ -3041,6 +3116,10 @@ function openTimesheet(){
   $$("tsFrom").value=T.from||R.from;
   $$("tsTo").value=T.to||R.to;
   $$("tsLang").value=T.lang||"en";
+  // A saved sheet keeps the columns it was signed with; a new one starts from
+  // whatever was chosen last.
+  tsCols=(T.cols&&T.cols.length)?TSCOL_ALL.filter(function(k){return T.cols.indexOf(k)>=0}):tsColDef();
+  if(tsCols.indexOf("date")<0)tsCols.unshift("date");
   $$("tsRem").value=T.remarks||"";
   $$("tsTechName").value=T.techName||active.tech||"";
   $$("tsCliName").value=T.cliName||"";
@@ -3059,6 +3138,7 @@ function openTimesheet(){
     $$("tsFrom").addEventListener("change",function(){tsPick=null;tsLoad(false)});
     $$("tsTo").addEventListener("change",function(){tsPick=null;tsLoad(false)});
     $$("tsLang").addEventListener("change",tsRenderRows);
+    $$("tsColReset").addEventListener("click",function(){tsCols=TSCOL_ALL.slice();tsColSaveDef(tsCols);tsRenderRows()});
     $$("tsAll").addEventListener("click",function(){tsAll.forEach(function(r){tsPick[r.date]=true});tsRenderRows()});
     $$("tsNone").addEventListener("click",function(){tsAll.forEach(function(r){tsPick[r.date]=false});tsRenderRows()});
     $$("tsTechClr").addEventListener("click",function(){if(tsPads.tech)tsPads.tech.clear()});
@@ -3098,6 +3178,7 @@ function tsCommit(){
   if(!rows.length){alert("Pick at least one day for the timesheet.");return false}
   var T={
     from:$$("tsFrom").value,to:$$("tsTo").value,lang:$$("tsLang").value,
+    cols:tsCols.slice(),
     remarks:$$("tsRem").value.trim(),
     techName:$$("tsTechName").value.trim(),cliName:$$("tsCliName").value.trim(),
     techSig:tsPads.tech?tsPads.tech.data():"",cliSig:tsPads.cli?tsPads.cli.data():"",
@@ -3148,18 +3229,45 @@ async function buildTimesheetBlob(s){
   doc.setFont("helvetica","normal");
   y+=Math.ceil(meta.length/2)*6+4;
 
-  var body=T.rows.map(function(r){
-    return [tsDMY(r.date),tsWd(t,r.date),r.vi||"—",r.i||"—",r.f||"—",r.vf||"—",
-            r.p?r.p.toFixed(2):"—",tsN(r.travel),tsN(r.work),r.total.toFixed(2),r.dest||r.note||""];
+  // Only the columns this sheet was built with — the chips in the modal are
+  // the same list, so the printout matches what was reviewed on screen.
+  var cols=(T.cols&&T.cols.length)?TSCOL_ALL.filter(function(k){return T.cols.indexOf(k)>=0}):TSCOL_ALL.slice();
+  if(cols.indexOf("date")<0)cols.unshift("date");
+  var body=T.rows.map(function(r){return cols.map(function(k){return tsCell(r,k,t)})});
+
+  // One TOTAL label spanning the descriptive columns up to the first figure —
+  // as separate cells it lands in the 9mm Day column and comes out "TOT"/"AL".
+  var days=T.rows.length+" "+t.daysN.toLowerCase();
+  var firstSum=-1;
+  cols.forEach(function(k,i){if(firstSum<0&&TSCOL_SUM[k])firstSum=i});
+  var foot;
+  if(firstSum<1){
+    foot=[[{content:t.tot+" · "+days,colSpan:cols.length,styles:{halign:"right"}}]];
+  } else {
+    foot=[[{content:t.tot,colSpan:firstSum,styles:{halign:"right"}}].concat(
+      cols.slice(firstSum).map(function(k){
+        return TSCOL_SUM[k]?tsSum(T.rows,k).toFixed(2):(k==="dest"?days:"");
+      }))];
+    // Nowhere to put the day count if the sheet has no Destination column.
+    if(cols.indexOf("dest")<0)foot[0][0].content=t.tot+" · "+days;
+  }
+
+  // Fixed widths for everything but Destination, which takes the remainder.
+  // Drop Destination and they are scaled up instead, so the table still fills
+  // the page rather than trailing off half-width.
+  var fixed=cols.filter(function(k){return k!=="dest"}),sumW=0;
+  fixed.forEach(function(k){sumW+=tsColMeta(k).w});
+  var scale=cols.indexOf("dest")>=0?1:(sumW?CW/sumW:1);
+  var colStyles={};
+  cols.forEach(function(k,i){
+    var c=tsColMeta(k);
+    colStyles[i]={halign:c.al};
+    if(k!=="dest")colStyles[i].cellWidth=c.w*scale;
+    if(k==="total")colStyles[i].fontStyle="bold";
   });
-  // One TOTAL label spanning the descriptive half — as separate cells it lands
-  // in the 9mm Day column and comes out as "TOT" / "AL".
-  var foot=[[{content:t.tot,colSpan:7,styles:{halign:"right"}},
-             tsSum(T.rows,"travel").toFixed(2),tsSum(T.rows,"work").toFixed(2),
-             tsSum(T.rows,"total").toFixed(2),T.rows.length+" "+t.daysN.toLowerCase()]];
   doc.autoTable({
     startY:y,margin:{left:M,right:M},
-    head:[[t.date,t.day,t.dep,t.arr,t.lv,t.ret,t.brk,t.trav,t.work,t.total,t.dest]],
+    head:[cols.map(function(k){return t[tsColMeta(k).lab]})],
     body:body,foot:foot,
     styles:{fontSize:7.5,cellPadding:1.8,overflow:"linebreak",valign:"middle"},
     // Tight side padding on the head only: the widest headings ("H. trabajo",
@@ -3168,12 +3276,7 @@ async function buildTimesheetBlob(s){
                 cellPadding:{top:2,bottom:2,left:0.8,right:0.8}},
     footStyles:{fillColor:[243,244,246],textColor:[17,24,39],fontStyle:"bold",fontSize:7.5},
     alternateRowStyles:{fillColor:[249,250,251]},
-    columnStyles:{0:{cellWidth:16},1:{cellWidth:9,halign:"center"},
-                  2:{cellWidth:13,halign:"center"},3:{cellWidth:13,halign:"center"},
-                  4:{cellWidth:13,halign:"center"},5:{cellWidth:13,halign:"center"},
-                  6:{cellWidth:11,halign:"center"},
-                  7:{cellWidth:15,halign:"right"},8:{cellWidth:15,halign:"right"},
-                  9:{cellWidth:15,halign:"right",fontStyle:"bold"}}
+    columnStyles:colStyles
   });
   y=doc.lastAutoTable.finalY+8;
 

@@ -3299,9 +3299,14 @@ async function buildTimesheetBlob(s){
 
   // signature boxes — the on-device signature if there is one, otherwise the
   // same empty line the sheet has always had, for signing on paper
-  var boxH=26;
-  if(y>H-(boxH+22)){doc.addPage();y=M}
-  y=Math.max(y+8,H-(boxH+22));
+  // The block runs from y down to the date line at y+boxH+8, and has to stay
+  // clear of the page number at H-6. Two separate numbers on purpose: `rest`
+  // is where it sits when there is room, `need` is what it takes to fit at
+  // all. Tying them together would make raising the block start a new page
+  // earlier and waste a sheet.
+  var boxH=26,sigNeed=boxH+12,sigRest=H-(boxH+36);
+  if(y+sigNeed>H-10){doc.addPage();y=M}
+  y=Math.max(y+8,sigRest);
   var bw=CW/2-6;
   [[t.sigT,T.techName||s.tech||"",T.techSig,M],
    [t.sigC,T.cliName||"",T.cliSig,M+CW/2+6]].forEach(function(b){

@@ -112,7 +112,7 @@ Field Service Log/
 - Close session / **Reopen session** (↺ button)
 - Delete session: **no backup is written**. It used to drop a JSON in Downloads
   and another at the Drive root every time, and neither carried the photos or
-  videos. Instead the dialog checks whether a Drive ZIP exists **for the session
+  videos. Instead the dialog checks whether a **Project ZIP** exists **for the session
   as it stands**: exporting one stamps `session.zipAt`, and the dialog compares
   it with `updatedAt`. Up to date → a green note and a plain Delete; otherwise a
   warning, an **Export ZIP first** button (runs the export right there and
@@ -197,6 +197,20 @@ Field Service Log/
     is shown — reading `getBoundingClientRect()` flushes layout. The reflex
     `requestAnimationFrame` never fires in a backgrounded tab and left the pads
     at the default 300×150 and unusable.
+- **Two ZIP packs, two jobs** (`exportSessionZip(s, kind)`):
+  - **🗄 Project ZIP (archive)** — `<client>_<machine>_project.zip`. Every report
+    (html/pdf/docx/xlsx/timesheet), the media, and **`session.json`**, which is
+    what makes it importable again — this is the one you close a job with, and
+    the one the delete dialog means by "a complete copy exists". Only this kind
+    stamps `session.zipAt`.
+  - **📦 DOCX + media ZIP** — `<client>_<machine>_docx_media.zip`. The Word
+    report and every photo/video/voice note, nothing else. No `session.json`,
+    so importing it is refused with "this ZIP has no session.json" — deliberate,
+    so a hand-over pack can never be mistaken for an archive. It leaves `zipAt`
+    untouched for the same reason.
+  - Both take the media from Drive but **build** the reports fresh, and both skip
+    loose files at the root of the Drive folder (old report copies, a stale
+    `session.json`).
 - Export: HTML (video playable), PDF (jsPDF + autoTable), DOCX (via docx lib CDN),
   XLSX (spare parts, via SheetJS)
 - Reports fully in English, filenames shown under each photo/video

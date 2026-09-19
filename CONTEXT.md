@@ -43,6 +43,10 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
   so text written in Spanish also comes out right). The manual's data — part
   names, references — is never translated; neither are client/machine/location
   names, tags or file names.
+- Only text with at least one real word (3+ letters) is sent to the translator
+  (`worthTranslating`). A lone letter or a code gives it no context and it
+  guesses: a test entry "M" came back as "METRO" in Spanish. Such texts stay
+  as written, and a translation already cached for one is ignored.
 - Translations are cached on the session: `entry.tr[lang]` and
   `session.notesTr[lang]` = `{h: hash of the source text, t: translation}`. A
   re-export costs nothing and works offline; editing a text makes its hash stop

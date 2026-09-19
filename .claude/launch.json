@@ -18,6 +18,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8521", "--directory", "C:\\Users\\usuari\\OneDrive\\P\\Prodec\\Calendari-laboral"],
       "port": 8521
+    },
+    {
+      "name": "finances",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8530", "--directory", "C:\\Users\\usuari\\OneDrive\\F\\Finances\\app"],
+      "port": 8530
     }
   ]
 }

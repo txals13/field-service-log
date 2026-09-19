@@ -2808,6 +2808,11 @@ function setReportLang(id,lang){
 // API has to be enabled there and allowed on this key — see CONTEXT.md.
 var TR_KEY=PICKER_KEY, TR_URL="https://translation.googleapis.com/language/translate/v2";
 function txHash(str){var h=5381;for(var i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))|0;return (h>>>0).toString(36)+"."+str.length}
+// A lone letter or a code ("M", "OK", "ZO-003-04", "6208-2RS") gives the
+// translator nothing to go on and it guesses — "M" came back as "METRO". Only
+// text with at least one real word (3+ letters) is sent; the rest stays as
+// written, and any translation already cached for it is ignored.
+function worthTranslating(t){return /[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(t||"")}
 async function gTranslate(texts,target){
   var out=[],i=0;
   while(i<texts.length){
@@ -2831,12 +2836,12 @@ async function gTranslate(texts,target){
 async function localizeSession(s,lang){
   var jobs=[];
   (s.entries||[]).forEach(function(e){
-    var src=(e.text||"").trim();if(!src)return;
+    var src=(e.text||"").trim();if(!src||!worthTranslating(src))return;
     var c=e.tr&&e.tr[lang];
     if(!(c&&c.h===txHash(src)))jobs.push({id:e.id,src:src});
   });
   var nsrc=(s.notes||"").trim();
-  if(nsrc){var nc=s.notesTr&&s.notesTr[lang];if(!(nc&&nc.h===txHash(nsrc)))jobs.push({id:null,src:nsrc})}
+  if(nsrc&&worthTranslating(nsrc)){var nc=s.notesTr&&s.notesTr[lang];if(!(nc&&nc.h===txHash(nsrc)))jobs.push({id:null,src:nsrc})}
   if(jobs.length){
     var got=await gTranslate(jobs.map(function(j){return j.src}),lang);
     var byId={},notesT=null;
@@ -2852,7 +2857,7 @@ async function localizeSession(s,lang){
     s=sessions.find(function(x){return x.id===s.id})||s;
     saveLocal();isDirty=true;if(isLoggedIn)saveToDrive();
   }
-  function pick(src,c){src=(src||"").trim();return (src&&c&&c.h===txHash(src))?c.t:null}
+  function pick(src,c){src=(src||"").trim();return (src&&worthTranslating(src)&&c&&c.h===txHash(src))?c.t:null}
   return Object.assign({},s,{
     entries:(s.entries||[]).map(function(e){var t=pick(e.text,e.tr&&e.tr[lang]);return t==null?e:Object.assign({},e,{text:t})}),
     notes:(function(){var t=pick(s.notes,s.notesTr&&s.notesTr[lang]);return t==null?s.notes:t})()

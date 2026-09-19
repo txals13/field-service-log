@@ -19,6 +19,45 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
 - Auth method: Google Identity Services implicit token flow (no redirect URI needed)
 - Status: **Testing mode** — new users must be added manually to Google Cloud Console
   → APIs & Services → OAuth consent screen → Test users
+- The same PICKER_KEY also calls **Cloud Translation API v2** (`TR_KEY`) to
+  translate reports. For that, in project field-service-log-500615: enable
+  "Cloud Translation API", link a billing account (first 500 000 characters a
+  month are free), and on the key (APIs & Services → Credentials) add Cloud
+  Translation API to its API restrictions. Until then every export shows a
+  "couldn't translate" prompt and can still go out with the original texts.
+
+---
+
+## Languages
+- **The app is Catalan only.** No UI language switch — every UI string is written
+  in Catalan in the code (`<html lang="ca">`, TM/SM labels included).
+- **Reports go out in ca / es / en**, chosen in the ↓ Informe menu (top row,
+  CA · ES · EN) and remembered per session as `session.reportLang` (default ca).
+  Changing it does NOT bump `updatedAt` — it's a preference, and bumping would
+  make the delete dialog call the last project ZIP stale.
+- Fixed report labels live in `RPT[lang]` (HTML, PDF, DOCX, XLSX, parts table,
+  file-name prefixes `informe_/recanvis_`, `informe_/recambios_`,
+  `report_/spare_parts_`). File names end in `_<lang>`.
+- **The technician's own words are machine-translated**: entry descriptions and
+  the session's general notes, via Google Cloud Translation (source auto-detected,
+  so text written in Spanish also comes out right). The manual's data — part
+  names, references — is never translated; neither are client/machine/location
+  names, tags or file names.
+- Translations are cached on the session: `entry.tr[lang]` and
+  `session.notesTr[lang]` = `{h: hash of the source text, t: translation}`. A
+  re-export costs nothing and works offline; editing a text makes its hash stop
+  matching, so only that text is sent again. Also written without touching
+  `updatedAt`. The ORIGINAL texts are what's shown in the app and what
+  session.json (and the project ZIP) carry.
+- Every export funnels through `reportSession(s)` → `localizeSession(s, lang)`,
+  which returns a translated COPY for the builders; if the API fails the user is
+  asked whether to export with the texts as written.
+- The timesheet keeps its own language selector (it's frozen with the
+  signatures); it only defaults to the session's report language.
+- PDF severity column is sized to the longest severity label of the chosen
+  language — a fixed 17mm split "PROBLEMA" into "PROBLE"/"MA" (and "WARNING"
+  never fitted either). DOCX severity column widened to 1400 DXA for the same
+  reason.
 
 ---
 
@@ -213,7 +252,7 @@ Field Service Log/
     `session.json`).
 - Export: HTML (video playable), PDF (jsPDF + autoTable), DOCX (via docx lib CDN),
   XLSX (spare parts, via SheetJS)
-- Reports fully in English, filenames shown under each photo/video
+- Reports in Catalan, Spanish or English (see Languages), filenames shown under each photo/video
 - Dark/light theme toggle (☀/☽)
 - Sync indicator (● Drive green / ● Local red)
 - Auto-sync every 30s (skipped if user has unsaved input)

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ca">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
@@ -145,6 +145,10 @@ mark{background:var(--goldbg);color:var(--goldtx);padding:0 1px;border-radius:2p
 .exp-menu button{display:block;width:100%;text-align:left;background:none;border:none;border-radius:0;padding:9px 14px;font-size:13px;color:var(--tx1);cursor:pointer;border-bottom:1px solid var(--br)}
 .exp-menu button:last-child{border-bottom:none}
 .exp-menu button:hover{background:var(--bg2)}
+.exp-lang{display:flex;align-items:center;gap:4px;padding:7px 10px;border-bottom:1px solid var(--br);font-size:11px;color:var(--tx3);white-space:nowrap}
+.exp-lang span{margin-right:auto;padding-right:10px}
+.exp-menu .exp-lang button{display:inline-block;width:auto;padding:3px 8px;border:1px solid var(--br2);border-radius:5px;font-size:11px;font-family:monospace;color:var(--tx2)}
+.exp-menu .exp-lang button.on{background:var(--gold);border-color:var(--golddim);color:#000;font-weight:700}
 /* buttons */
 button{background:var(--bg2);border:1px solid var(--br2);border-radius:6px;color:var(--tx1);font-size:13px;padding:7px 12px;cursor:pointer;font-family:inherit;transition:background .15s,opacity .15s;white-space:nowrap;-webkit-appearance:none;line-height:1.2}
 button:hover{background:var(--br2)}
@@ -244,20 +248,20 @@ textarea{resize:none;line-height:1.4}
 <body>
 <div id="app">
   <div id="instBar" class="inst-bar" style="display:none">
-    <span style="flex:1">&#128242; Install the app for offline access</span>
-    <button class="btn-gold btn-sm" id="btnInst">Install</button>
+    <span style="flex:1">&#128242; Instal·la l'app per fer-la servir sense connexió</span>
+    <button class="btn-gold btn-sm" id="btnInst">Instal·la</button>
     <button class="btn-g btn-sm" id="btnInstX">&#10005;</button>
   </div>
   <div id="syncBar" class="sync-bar" style="display:none">
-    <span class="spinner"></span><span id="syncMsg">Syncing...</span>
+    <span class="spinner"></span><span id="syncMsg">Sincronitzant…</span>
   </div>
   <div id="authBar" class="auth-bar" style="display:none">
-    <span style="flex:1">&#9888; Drive session expired — changes are saved locally only</span>
-    <button class="btn-sm" id="btnReconnect" style="background:var(--red);color:#fff;border-color:var(--red)">Reconnect</button>
+    <span style="flex:1">&#9888; La sessió de Drive ha caducat — els canvis només es desen en aquest dispositiu</span>
+    <button class="btn-sm" id="btnReconnect" style="background:var(--red);color:#fff;border-color:var(--red)">Reconnecta</button>
   </div>
   <div id="storeBar" class="store-bar" style="display:none">
-    <span style="flex:1" id="storeMsg">&#9888; Device storage is almost full</span>
-    <button class="btn-sm" id="btnStoreBackup" style="background:var(--gold);color:#000;border-color:var(--golddim);font-weight:700">&#8681; Download backup</button>
+    <span style="flex:1" id="storeMsg">&#9888; L'emmagatzematge del dispositiu és gairebé ple</span>
+    <button class="btn-sm" id="btnStoreBackup" style="background:var(--gold);color:#000;border-color:var(--golddim);font-weight:700">&#8681; Descarrega una còpia</button>
     <button class="btn-g btn-sm" id="btnStoreX">&#10005;</button>
   </div>
   <div class="topbar">
@@ -265,14 +269,14 @@ textarea{resize:none;line-height:1.4}
     <span class="logo">&#9881; Field Service Log</span>
     <span id="topBadge" style="display:none;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;flex-shrink:1"></span>
     <div style="display:flex;align-items:center;gap:4px;margin-left:auto;flex-shrink:0">
-      <button class="btn-gold btn-sm" id="btnLoginTop" style="display:none" title="Sign in with Google to sync with Drive">Sign in</button>
-      <button class="btn-g btn-sm" id="btnFullSync" style="display:none" title="Recreate Drive folders and upload any photo missing from Drive, across all sessions">&#9729; Sync all</button>
+      <button class="btn-gold btn-sm" id="btnLoginTop" style="display:none" title="Inicia la sessió amb Google per sincronitzar amb Drive">Entra</button>
+      <button class="btn-g btn-sm" id="btnFullSync" style="display:none" title="Recrea les carpetes de Drive i puja-hi les fotos que hi faltin, de totes les sessions">&#9729; Sincronitza</button>
       <span id="syncSt" style="font-size:11px;color:var(--tx3);font-family:monospace;white-space:nowrap"></span>
-      <button class="btn-g btn-sm" id="btnLogout" style="display:none" title="Sign out of Google Drive (local session data is kept)">Sign out</button>
-      <button class="btn-g btn-sm" id="btnTheme" title="Toggle theme">&#9788;</button>
-      <button class="btn-g btn-sm" id="btnImport" title="Import a session: JSON, or a ZIP export to also recover its photos and videos">&#8679; Import</button>
+      <button class="btn-g btn-sm" id="btnLogout" style="display:none" title="Tanca la sessió de Google Drive (les dades d'aquest dispositiu es conserven)">Surt</button>
+      <button class="btn-g btn-sm" id="btnTheme" title="Canvia el tema">&#9788;</button>
+      <button class="btn-g btn-sm" id="btnImport" title="Importa una sessió: un JSON, o un ZIP exportat per recuperar-ne també les fotos i els vídeos">&#8679; Importa</button>
       <input type="file" id="importFile" accept=".json,.zip" style="display:none">
-      <button class="btn-gold btn-sm" id="btnNew">+ New</button>
+      <button class="btn-gold btn-sm" id="btnNew">+ Nova</button>
     </div>
   </div>
   <div class="body">
@@ -282,10 +286,10 @@ textarea{resize:none;line-height:1.4}
         <button class="btn-g btn-sm" id="btnSideX">&#10005;</button>
       </div>
       <div style="padding:6px 10px;border-bottom:1px solid var(--br);flex-shrink:0">
-        <input type="text" id="sessFiltIn" placeholder="Filter sessions..." style="font-size:12px;padding:5px 8px">
+        <input type="text" id="sessFiltIn" placeholder="Filtra les sessions…" style="font-size:12px;padding:5px 8px">
       </div>
       <div style="padding:6px 10px;border-bottom:1px solid var(--br);flex-shrink:0">
-        <button class="btn-g btn-sm" id="btnManuals" style="width:100%;font-size:12px" title="Spare-parts manuals stored on Drive">&#128218; Spare-parts manuals</button>
+        <button class="btn-g btn-sm" id="btnManuals" style="width:100%;font-size:12px" title="Manuals de recanvis guardats a Drive">&#128218; Manuals de recanvis</button>
       </div>
       <div class="s-list" id="sList"></div>
     </div>
@@ -296,22 +300,22 @@ textarea{resize:none;line-height:1.4}
   <!-- New session modal -->
   <div class="modal-back" id="newBack" style="display:none">
     <div class="modal">
-      <div class="modal-title" id="newModalTitle">&#9658; New Service Visit</div>
-      <div class="field"><label>Client / Company *</label><input type="text" id="nClient" placeholder="Client name"></div>
-      <div class="field"><label>Project Number</label><input type="text" id="nProject" placeholder="Project #"></div>
-      <div class="field"><label>Machine / Equipment *</label><input type="text" id="nMachine" placeholder="Model or reference"></div>
-      <div class="field"><label>Location</label><input type="text" id="nLoc" placeholder="Plant, line, address..."></div>
-      <div class="field"><label>Technician</label><input type="text" id="nTech" placeholder="Technician name"></div>
-      <div class="field"><label>Type</label>
+      <div class="modal-title" id="newModalTitle">&#9658; Nova visita de servei</div>
+      <div class="field"><label>Client / Empresa *</label><input type="text" id="nClient" placeholder="Nom del client"></div>
+      <div class="field"><label>Número de projecte</label><input type="text" id="nProject" placeholder="Núm. de projecte"></div>
+      <div class="field"><label>Màquina / Equip *</label><input type="text" id="nMachine" placeholder="Model o referència"></div>
+      <div class="field"><label>Ubicació</label><input type="text" id="nLoc" placeholder="Planta, línia, adreça…"></div>
+      <div class="field"><label>Tècnic</label><input type="text" id="nTech" placeholder="Nom del tècnic"></div>
+      <div class="field"><label>Tipus</label>
         <select id="nType">
-          <option value="commissioning">Commissioning (COM)</option>
-          <option value="maintenance">Maintenance (MNT)</option>
-          <option value="retrofit">Upgrade / Retrofit (RET)</option>
+          <option value="commissioning">Posada en marxa (COM)</option>
+          <option value="maintenance">Manteniment (MNT)</option>
+          <option value="retrofit">Millora / Retrofit (RET)</option>
         </select>
       </div>
       <div class="modal-actions">
-        <button id="nCancel">Cancel</button>
-        <button class="btn-gold" id="nSave">&#10003; Create session</button>
+        <button id="nCancel">Cancel·la</button>
+        <button class="btn-gold" id="nSave">&#10003; Crea la sessió</button>
       </div>
     </div>
   </div>
@@ -319,21 +323,21 @@ textarea{resize:none;line-height:1.4}
   <!-- Spare-parts manuals modal -->
   <div class="modal-back" id="manualsBack" style="display:none">
     <div class="modal">
-      <div class="modal-title">&#128218; Spare-parts manuals</div>
+      <div class="modal-title">&#128218; Manuals de recanvis</div>
       <div id="manualsList" style="max-height:44vh;overflow:auto"></div>
       <div class="field" style="margin-top:12px;border-top:1px solid var(--br);padding-top:12px">
-        <label>Add a manual (drawings PDF + catalog JSON)</label>
+        <label>Afegeix un manual (PDF dels dibuixos + catàleg JSON)</label>
         <div style="display:flex;flex-direction:column;gap:6px">
-          <div class="fname-row"><span class="fi">&#128196; PDF</span><span id="mfPdfName" style="flex:1;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">&mdash; no file &mdash;</span><button class="btn-sm" id="mfPdfBtn">Choose</button></div>
-          <div class="fname-row"><span class="fi">&#128209; JSON</span><span id="mfJsonName" style="flex:1;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">&mdash; no file &mdash;</span><button class="btn-sm" id="mfJsonBtn">Choose</button></div>
+          <div class="fname-row"><span class="fi">&#128196; PDF</span><span id="mfPdfName" style="flex:1;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">&mdash; cap fitxer &mdash;</span><button class="btn-sm" id="mfPdfBtn">Tria</button></div>
+          <div class="fname-row"><span class="fi">&#128209; JSON</span><span id="mfJsonName" style="flex:1;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">&mdash; cap fitxer &mdash;</span><button class="btn-sm" id="mfJsonBtn">Tria</button></div>
           <input type="file" id="mfPdfIn" accept="application/pdf,.pdf" style="display:none">
           <input type="file" id="mfJsonIn" accept="application/json,.json" style="display:none">
         </div>
         <div id="mfInfo" style="font-size:12px;color:var(--tx3);margin-top:8px"></div>
       </div>
       <div class="modal-actions">
-        <button id="manualsClose">Close</button>
-        <button class="btn-gold" id="mfUpload" disabled>&#8679; Upload to Drive</button>
+        <button id="manualsClose">Tanca</button>
+        <button class="btn-gold" id="mfUpload" disabled>&#8679; Puja a Drive</button>
       </div>
     </div>
   </div>
@@ -341,10 +345,10 @@ textarea{resize:none;line-height:1.4}
   <!-- Link a manual to the active session -->
   <div class="modal-back" id="linkBack" style="display:none">
     <div class="modal">
-      <div class="modal-title">&#128218; Link a manual to this session</div>
+      <div class="modal-title">&#128218; Vincula un manual a aquesta sessió</div>
       <div id="linkList" style="max-height:52vh;overflow:auto"></div>
       <div class="modal-actions">
-        <button id="linkClose">Close</button>
+        <button id="linkClose">Tanca</button>
       </div>
     </div>
   </div>
@@ -352,44 +356,44 @@ textarea{resize:none;line-height:1.4}
   <!-- Timesheet — hours clocked in the Calendari laboral app, for the client to sign -->
   <div class="modal-back" id="tsBack" style="display:none">
     <div class="modal" style="max-width:min(96vw,780px)">
-      <div class="modal-title">&#128339; Timesheet</div>
+      <div class="modal-title">&#128339; Full d'hores</div>
       <div id="tsSrc" class="ts-note" style="margin-bottom:10px">&mdash;</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px">
-        <div class="field" style="margin:0"><label>From</label><input type="date" id="tsFrom" style="width:auto"></div>
-        <div class="field" style="margin:0"><label>To</label><input type="date" id="tsTo" style="width:auto"></div>
-        <div class="field" style="margin:0"><label>Language</label><select id="tsLang" style="width:auto"><option value="en">English</option><option value="es">Castellano</option><option value="ca">Catal&agrave;</option></select></div>
-        <button class="btn-sm" id="tsReload" title="Fetch the calendar again from Drive">&#8635; Reload</button>
-        <button class="btn-sm" id="tsImportBtn" title="Use a JSON exported from the Calendari laboral app (&#9881; Exporta c&ograve;pia)">&#8593; Import JSON</button>
+        <div class="field" style="margin:0"><label>Des de</label><input type="date" id="tsFrom" style="width:auto"></div>
+        <div class="field" style="margin:0"><label>Fins a</label><input type="date" id="tsTo" style="width:auto"></div>
+        <div class="field" style="margin:0"><label>Idioma del full</label><select id="tsLang" style="width:auto"><option value="en">English</option><option value="es">Castellano</option><option value="ca">Catal&agrave;</option></select></div>
+        <button class="btn-sm" id="tsReload" title="Torna a llegir el calendari de Drive">&#8635; Recarrega</button>
+        <button class="btn-sm" id="tsImportBtn" title="Fes servir un JSON exportat des de l'app Calendari laboral (&#9881; Exporta c&ograve;pia)">&#8593; Importa JSON</button>
         <input type="file" id="tsImportIn" accept="application/json,.json" style="display:none">
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-        <span class="ts-note" style="flex-shrink:0">Columns</span>
+        <span class="ts-note" style="flex-shrink:0">Columnes</span>
         <span id="tsColBar" style="display:flex;gap:5px;flex-wrap:wrap"></span>
-        <button class="btn-xs" id="tsColReset" title="Show every column again">Reset</button>
+        <button class="btn-xs" id="tsColReset" title="Torna a mostrar totes les columnes">Restableix</button>
       </div>
       <div id="tsRows" style="max-height:36vh;overflow:auto;border:1px solid var(--br);border-radius:8px"></div>
       <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap">
-        <button class="btn-xs" id="tsAll">Select all</button><button class="btn-xs" id="tsNone">None</button>
+        <button class="btn-xs" id="tsAll">Tots</button><button class="btn-xs" id="tsNone">Cap</button>
         <span id="tsTot" style="font-family:monospace;font-size:12px;color:var(--tx2);margin-left:auto"></span>
       </div>
-      <div class="field" style="margin-top:12px"><label>Remarks (printed on the sheet)</label><textarea id="tsRem" rows="2" class="inp-notes"></textarea></div>
+      <div class="field" style="margin-top:12px"><label>Observacions (s'imprimeixen al full)</label><textarea id="tsRem" rows="2" class="inp-notes"></textarea></div>
       <div style="border-top:1px solid var(--br);margin-top:12px;padding-top:12px">
-        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap"><strong style="font-size:12px;color:var(--tx2)">Signatures</strong><span class="ts-note">sign with a finger or stylus &mdash; leave blank to print empty lines</span></div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap"><strong style="font-size:12px;color:var(--tx2)">Signatures</strong><span class="ts-note">signa amb el dit o amb un llapis tàctil &mdash; deixa-ho en blanc per imprimir línies buides</span></div>
         <div id="tsSigGrid">
           <div>
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:11px;color:var(--tx3);flex-shrink:0">Technician</span><input type="text" id="tsTechName" placeholder="Name" style="flex:1;font-size:12px;padding:4px 8px"><button class="btn-xs" id="tsTechClr">Clear</button></div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:11px;color:var(--tx3);flex-shrink:0">Tècnic</span><input type="text" id="tsTechName" placeholder="Nom" style="flex:1;font-size:12px;padding:4px 8px"><button class="btn-xs" id="tsTechClr">Esborra</button></div>
             <canvas class="ts-sig" id="tsTechSig"></canvas>
           </div>
           <div>
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:11px;color:var(--tx3);flex-shrink:0">Client</span><input type="text" id="tsCliName" placeholder="Name / position" style="flex:1;font-size:12px;padding:4px 8px"><button class="btn-xs" id="tsCliClr">Clear</button></div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:11px;color:var(--tx3);flex-shrink:0">Client</span><input type="text" id="tsCliName" placeholder="Nom / càrrec" style="flex:1;font-size:12px;padding:4px 8px"><button class="btn-xs" id="tsCliClr">Esborra</button></div>
             <canvas class="ts-sig" id="tsCliSig"></canvas>
           </div>
         </div>
       </div>
       <div class="modal-actions">
-        <button id="tsCancel">Cancel</button>
-        <button class="btn-sm" id="tsSave">&#10003; Save</button>
-        <button class="btn-gold" id="tsPdf">&#128196; Save &amp; PDF</button>
+        <button id="tsCancel">Cancel·la</button>
+        <button class="btn-sm" id="tsSave">&#10003; Desa</button>
+        <button class="btn-gold" id="tsPdf">&#128196; Desa i PDF</button>
       </div>
     </div>
   </div>
@@ -398,7 +402,7 @@ textarea{resize:none;line-height:1.4}
   <div class="modal-back" id="drawBack" style="display:none">
     <div class="modal" style="max-width:min(96vw,1100px);width:96vw;padding:14px;display:flex;flex-direction:column;overflow:hidden">
       <div class="modal-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-        <span>&#128208; Drawings</span>
+        <span>&#128208; Dibuixos</span>
         <span id="drawManual" style="font-size:11px;color:var(--tx3);font-weight:400"></span>
         <button class="btn-g btn-sm" id="drawClose" style="margin-left:auto">&#10005;</button>
       </div>
@@ -406,16 +410,16 @@ textarea{resize:none;line-height:1.4}
         <button class="btn-sm" id="drawPrev" style="padding:6px 14px;font-size:15px">&#9664;</button>
         <span id="drawPageLbl" style="font-size:12px;font-family:monospace"></span>
         <button class="btn-sm" id="drawNext" style="padding:6px 14px;font-size:15px">&#9654;</button>
-        <input type="text" id="drawGoto" placeholder="pg" style="width:48px;font-size:12px;padding:4px 6px" inputmode="numeric">
-        <button class="btn-sm" id="drawGotoBtn">Go</button>
+        <input type="text" id="drawGoto" placeholder="pàg" style="width:48px;font-size:12px;padding:4px 6px" inputmode="numeric">
+        <button class="btn-sm" id="drawGotoBtn">Vés</button>
         <span style="margin-left:auto;display:flex;gap:4px;align-items:center">
           <button class="btn-sm" id="drawZoomOut" style="padding:6px 12px;font-size:15px">&minus;</button>
-          <button class="btn-sm" id="drawZoomLbl" title="Reset zoom (fit width)" style="min-width:52px;font-size:12px">100%</button>
+          <button class="btn-sm" id="drawZoomLbl" title="Restableix el zoom (ajusta a l'amplada)" style="min-width:52px;font-size:12px">100%</button>
           <button class="btn-sm" id="drawZoomIn" style="padding:6px 12px;font-size:15px">+</button>
         </span>
         <span id="drawStatus" style="font-size:11px;color:var(--tx3);width:100%"></span>
       </div>
-      <div id="drawPickHint" style="display:none;font-size:12px;background:var(--gold);color:#000;border-radius:6px;padding:6px 10px;margin-bottom:8px">&#127919; Tap a position number on the drawing to add that spare part to the entry.</div>
+      <div id="drawPickHint" style="display:none;font-size:12px;background:var(--gold);color:#000;border-radius:6px;padding:6px 10px;margin-bottom:8px">&#127919; Toca un número de posició al dibuix per afegir aquell recanvi a l'entrada.</div>
       <div id="drawChoices" style="display:none"></div>
       <div id="drawWrap" style="flex:1;min-height:200px;overflow:auto;background:#0a0b0e;border-radius:6px;touch-action:pan-x pan-y">
         <canvas id="drawCanvas" style="display:block;margin:0 auto"></canvas>
@@ -426,42 +430,42 @@ textarea{resize:none;line-height:1.4}
   <!-- Edit entry modal -->
   <div class="modal-back" id="editBack" style="display:none">
     <div class="modal">
-      <div class="modal-title">&#9998; Edit Entry</div>
-      <div class="field"><label>Severity</label>
-        <select id="eSev"><option value="info">&#9675; Info</option><option value="ok">&#9679; OK</option><option value="warning">&#9650; Warning</option><option value="issue">&#9632; Issue</option></select>
+      <div class="modal-title">&#9998; Edita l'entrada</div>
+      <div class="field"><label>Gravetat</label>
+        <select id="eSev"><option value="info">&#9675; Info</option><option value="ok">&#9679; OK</option><option value="warning">&#9650; Avís</option><option value="issue">&#9632; Problema</option></select>
       </div>
-      <div class="field"><label>Tag (optional)</label><input type="text" id="eTag" placeholder="e.g. ELEC, MECH, PLC" list="tagOptions">
+      <div class="field"><label>Etiqueta (opcional)</label><input type="text" id="eTag" placeholder="p. ex. ELEC, MEC, PLC" list="tagOptions">
         <select id="eTagSel" style="margin-top:6px;display:none"></select>
       </div>
       <datalist id="tagOptions"></datalist>
-      <div class="field"><label>Description</label><textarea id="eText" rows="4" style="resize:vertical"></textarea>
-        <button class="btn-sm" id="eTextPickDraw" style="margin-top:6px;display:none" title="Tap a position number on the drawing to write its name and reference into the text">&#128208; Insert part name from drawing</button>
+      <div class="field"><label>Descripció</label><textarea id="eText" rows="4" style="resize:vertical"></textarea>
+        <button class="btn-sm" id="eTextPickDraw" style="margin-top:6px;display:none" title="Toca un número de posició al dibuix per escriure'n el nom i la referència al text">&#128208; Insereix un recanvi des del dibuix</button>
       </div>
       <div class="field">
-        <label>Attachments</label>
+        <label>Adjunts</label>
         <div id="eThumbs" class="thumbs"></div>
         <div id="eFileNames" class="fnames"></div>
-        <button class="btn-sm" id="eAddPhoto" style="margin-top:6px">&#128247; Add photo / video</button>
-        <button class="btn-sm" id="eRec" title="Record voice note" style="margin-top:6px">&#127897; Record voice note</button>
+        <button class="btn-sm" id="eAddPhoto" style="margin-top:6px">&#128247; Afegeix foto / vídeo</button>
+        <button class="btn-sm" id="eRec" title="Grava una nota de veu" style="margin-top:6px">&#127897; Grava una nota de veu</button>
         <input type="file" id="eFileIn" accept="image/*,video/*" multiple style="display:none">
       </div>
       <div class="field">
-        <label>Spare parts</label>
+        <label>Recanvis</label>
         <div id="eParts" class="log-parts"></div>
-        <button class="btn-sm" id="ePartAdd" style="margin-top:6px">&#128295; Add spare part</button>
-        <button class="btn-sm" id="ePickDraw" style="margin-top:6px;display:none">&#128208; Pick from drawing</button>
+        <button class="btn-sm" id="ePartAdd" style="margin-top:6px">&#128295; Afegeix un recanvi</button>
+        <button class="btn-sm" id="ePickDraw" style="margin-top:6px;display:none">&#128208; Tria des del dibuix</button>
         <div id="ePartForm" class="part-form" style="display:none">
           <input type="text" class="pf-pos" id="pfPos" placeholder="Pos.">
           <input type="text" class="pf-ref" id="pfRef" placeholder="Ref.">
-          <input type="text" class="pf-cant" id="pfCant" placeholder="Cant.">
-          <input type="text" class="pf-den" id="pfDen" placeholder="Denomination">
-          <button class="btn-sm btn-gold" id="pfSave">Add</button>
-          <button class="btn-sm" id="pfCancel">Cancel</button>
+          <input type="text" class="pf-cant" id="pfCant" placeholder="Qt.">
+          <input type="text" class="pf-den" id="pfDen" placeholder="Denominació">
+          <button class="btn-sm btn-gold" id="pfSave">Afegeix</button>
+          <button class="btn-sm" id="pfCancel">Cancel·la</button>
         </div>
       </div>
       <div class="modal-actions">
-        <button id="eCancel">Cancel</button>
-        <button class="btn-gold" id="eSave">&#10003; Save changes</button>
+        <button id="eCancel">Cancel·la</button>
+        <button class="btn-gold" id="eSave">&#10003; Desa els canvis</button>
       </div>
     </div>
   </div>
@@ -469,16 +473,16 @@ textarea{resize:none;line-height:1.4}
   <!-- Delete session modal -->
   <div class="modal-back" id="delBack" style="display:none">
     <div class="modal">
-      <div class="modal-title" style="color:var(--red)">&#9888; Delete Service Visit</div>
+      <div class="modal-title" style="color:var(--red)">&#9888; Elimina la visita de servei</div>
       <p id="delDesc" style="font-size:13px;color:var(--tx2);margin-bottom:14px;line-height:1.6"></p>
       <div style="background:var(--bg2);border:1px solid var(--br);border-radius:6px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--tx2)">
         <div id="delZipSt" style="margin-bottom:5px"></div>
         <div id="delFile" style="color:var(--tx3)"></div>
       </div>
       <div class="modal-actions">
-        <button id="delCancel">Cancel</button>
-        <button id="delZipNow" style="display:none">&#128452; Export ZIP first</button>
-        <button class="btn-danger" id="delConfirm">&#128465; Delete</button>
+        <button id="delCancel">Cancel·la</button>
+        <button id="delZipNow" style="display:none">&#128452; Primer exporta el ZIP</button>
+        <button class="btn-danger" id="delConfirm">&#128465; Elimina</button>
       </div>
     </div>
   </div>
@@ -515,15 +519,15 @@ var STORE_SOFT_LIMIT = 2200000; // characters of the serialized sessions JSON
 
 // ── TYPE / SEVERITY MAPS ────────────────────────────────────────────────────
 var TM = {
-  commissioning:{label:"Commissioning",abbr:"COM",bg:"rgba(59,130,246,.15)",tx:"#3b82f6",bd:"rgba(59,130,246,.5)"},
-  maintenance:  {label:"Maintenance",  abbr:"MNT",bg:"rgba(16,185,129,.12)",tx:"#10b981",bd:"rgba(16,185,129,.5)"},
-  retrofit:     {label:"Upgrade/Retrofit",abbr:"RET",bg:"rgba(245,158,11,.12)",tx:"#f59e0b",bd:"rgba(245,158,11,.5)"}
+  commissioning:{label:"Posada en marxa",abbr:"COM",bg:"rgba(59,130,246,.15)",tx:"#3b82f6",bd:"rgba(59,130,246,.5)"},
+  maintenance:  {label:"Manteniment",  abbr:"MNT",bg:"rgba(16,185,129,.12)",tx:"#10b981",bd:"rgba(16,185,129,.5)"},
+  retrofit:     {label:"Millora / Retrofit",abbr:"RET",bg:"rgba(245,158,11,.12)",tx:"#f59e0b",bd:"rgba(245,158,11,.5)"}
 };
 var SM = {
   info:   {label:"INFO",   dot:"○",dc:"#6b7280",bg:"transparent",tx:"#9ca3af"},
   ok:     {label:"OK",     dot:"●",dc:"#10b981",bg:"rgba(16,185,129,.1)",tx:"#10b981"},
-  warning:{label:"WARNING",dot:"▲",dc:"#f97316",bg:"rgba(249,115,22,.1)",tx:"#f97316"},
-  issue:  {label:"ISSUE",  dot:"■",dc:"#ef4444",bg:"rgba(239,68,68,.1)",tx:"#ef4444"}
+  warning:{label:"AVÍS",dot:"▲",dc:"#f97316",bg:"rgba(249,115,22,.1)",tx:"#f97316"},
+  issue:  {label:"PROBLEMA",  dot:"■",dc:"#ef4444",bg:"rgba(239,68,68,.1)",tx:"#ef4444"}
 };
 // Tally of entry severities — shared by the sidebar badge, the status bar and
 // both report formats (previously four copies of the same filter().length trio).
@@ -570,8 +574,9 @@ function partsBlockHTML(parts){
 // standalone HTML/PDF report (inline styles — the report has none of the app CSS)
 // Same column order as on screen, but with a header row: a printed report is
 // read by someone who doesn't know the app (client, purchasing).
-function partsReportHTML(parts){
+function partsReportHTML(parts,R){
   if(!parts||!parts.length)return"";
+  R=R||RPT.ca;
   var th="padding:2px 6px;text-align:left;font-size:8px;letter-spacing:.6px;color:#6b7280;font-weight:600;background:#f3f4f6;border:none";
   var td="padding:2px 6px;font-size:10px;border:none;vertical-align:top";
   var rows=parts.map(function(p){
@@ -582,7 +587,7 @@ function partsReportHTML(parts){
       +"</tr>";
   }).join("");
   return "<table style=\"margin-top:6px;border-collapse:collapse;width:100%;border:1px solid #e5e7eb\">"
-    +"<thead><tr><th style=\""+th+";text-align:right\">QTY</th><th style=\""+th+"\">REF.</th><th style=\""+th+"\">SPARE PART</th></tr></thead>"
+    +"<thead><tr><th style=\""+th+";text-align:right\">"+esc(R.qty)+"</th><th style=\""+th+"\">"+esc(R.ref)+"</th><th style=\""+th+"\">"+esc(R.part)+"</th></tr></thead>"
     +"<tbody>"+rows+"</tbody></table>";
 }
 function highlightText(text,query){
@@ -607,6 +612,8 @@ function entryMatches(e,rawQuery){
     ||fts(e.ts).toLowerCase().includes(q); // "10/03/25 15:30:00" — same format shown on screen
 }
 function $$(id){return document.getElementById(id)}
+// "1 entrada" / "3 entrades" — a count glued to a plural reads wrong in Catalan
+function pl(n,one,many){return n+" "+(n===1?one:many)}
 // Grows a textarea to fit its text. Two traps: a hidden element measures 0
 // (which used to collapse the box to 0px and clip the line), and with
 // box-sizing:border-box the borders sit inside the height, so scrollHeight
@@ -718,8 +725,8 @@ function showStoreWarning(hard){
   else if(storeDismissed)return;
   bar.classList.toggle("hard",!!hard);
   $$("storeMsg").innerHTML=hard
-    ?"&#9888; Device storage is full — "+(isLoggedIn?"changes still sync to Google Drive, but this device's local copy may be incomplete.":"recent changes may not be saved and could be lost. Sign in to Drive or download a backup now.")
-    :"&#9888; Device storage is almost full — "+(isLoggedIn?"consider backing up; your data is also on Google Drive.":"download a backup or sign in to Drive to avoid losing data.");
+    ?"&#9888; L'emmagatzematge del dispositiu és ple — "+(isLoggedIn?"els canvis continuen sincronitzant-se amb Google Drive, però la còpia d'aquest dispositiu pot quedar incompleta.":"és possible que els canvis recents no es desin i es perdin. Inicia la sessió a Drive o descarrega una còpia ara.")
+    :"&#9888; L'emmagatzematge del dispositiu és gairebé ple — "+(isLoggedIn?"fes-ne una còpia per si de cas; les dades també són a Google Drive.":"descarrega una còpia o inicia la sessió a Drive per no perdre dades.");
   bar.style.display="flex";
 }
 function hideStoreWarning(){var bar=$$("storeBar");if(bar)bar.style.display="none"}
@@ -729,7 +736,7 @@ function exportAllBackup(){
   try{
     var str=JSON.stringify(sessions,null,2);
     dlBlob(new Blob([str],{type:"application/json;charset=utf-8"}),"field_service_log_backup_"+fnameStamp()+".json");
-  }catch(e){alert("Could not build backup: "+((e&&e.message)||e))}
+  }catch(e){alert("No s'ha pogut crear la còpia: "+((e&&e.message)||e))}
 }
 function saveTok(){try{localStorage.setItem(LS_TOKEN,JSON.stringify({accessToken,tokenExp,driveFileId,rootFolderId}))}catch(e){}}
 function loadTok(){try{var t=JSON.parse(localStorage.getItem(LS_TOKEN)||"null");if(!t)return false;accessToken=t.accessToken;tokenExp=t.tokenExp||0;driveFileId=t.driveFileId||null;rootFolderId=t.rootFolderId||null;return true}catch(e){return false}}
@@ -837,7 +844,7 @@ function makeLocalImageData(file){
 function loadGIS(){return new Promise(function(res){if(window.google&&window.google.accounts){res();return}var s=document.createElement("script");s.src="https://accounts.google.com/gsi/client";s.onload=res;s.onerror=res;document.head.appendChild(s)})}
 async function googleLogin(){
   await loadGIS();
-  if(!window.google||!window.google.accounts){alert("Cannot load Google Sign-In. Check internet connection.");return null}
+  if(!window.google||!window.google.accounts){alert("No s'ha pogut carregar l'inici de sessió de Google. Comprova la connexió.");return null}
   // If the browser blocks the Google popup, requestAccessToken's callback
   // never fires and this would hang forever — race it against a timeout so
   // the caller always gets an answer and can show a useful message.
@@ -847,7 +854,7 @@ async function googleLogin(){
   });
   var timeout=new Promise(function(res){setTimeout(function(){res("timeout")},25000)});
   var result=await Promise.race([opened,timeout]);
-  if(result==="timeout"){alert("Sign-in didn't complete. If a Google pop-up was blocked, allow pop-ups for this site and try again.");return null}
+  if(result==="timeout"){alert("L'inici de sessió no s'ha completat. Si s'ha bloquejat una finestra emergent de Google, permet-les per a aquest lloc i torna-ho a provar.");return null}
   return result;
 }
 async function getToken(){
@@ -977,27 +984,27 @@ async function syncSessionToDrive(token,sess){
   return res;
 }
 function syncSummary(res,n){
-  return res.uploaded+" file(s) (photos / voice notes) uploaded"+(n?" across "+n+" session(s)":"")+"."
-    +(res.missingVideos?"\n"+res.missingVideos+" video(s) could not be recovered (the original file was never stored, only its thumbnail).":"");
+  return res.uploaded+" fitxer(s) pujat(s) (fotos / notes de veu)"+(n?" a "+n+" sessió(ns)":"")+"."
+    +(res.missingVideos?"\n"+res.missingVideos+" vídeo(s) no s'han pogut recuperar (el fitxer original no es va guardar mai, només la miniatura).":"");
 }
 async function syncActiveSessionToDrive(){
-  if(!isLoggedIn){alert("Sign in with Google first.");return}
+  if(!isLoggedIn){alert("Primer inicia la sessió amb Google.");return}
   var sess=sessions.find(function(s){return s.id===aid});if(!sess)return;
-  var token=await ensureToken();if(!token){alert("Could not authenticate with Drive.");return}
-  var btn=$$("btnSessSync");if(btn){btn.disabled=true;btn.textContent="Saving..."}
+  var token=await ensureToken();if(!token){alert("No s'ha pogut autenticar amb Drive.");return}
+  var btn=$$("btnSessSync");if(btn){btn.disabled=true;btn.textContent="Desant…"}
   try{
     var res=await syncSessionToDrive(token,sess);
     saveLocal();
     if(res.uploaded>0){isDirty=true;await saveToDrive()}
     renderAll();
-    alert("Session saved to Drive.\n"+syncSummary(res));
-  }catch(e){alert("Sync failed: "+((e&&e.message)||e))}
-  finally{var b2=$$("btnSessSync");if(b2){b2.disabled=false;b2.innerHTML="&#9729; Save"}}
+    alert("Sessió desada a Drive.\n"+syncSummary(res));
+  }catch(e){alert("La sincronització ha fallat: "+((e&&e.message)||e))}
+  finally{var b2=$$("btnSessSync");if(b2){b2.disabled=false;b2.innerHTML="&#9729; Desa"}}
 }
 async function syncAllToDrive(){
-  if(!isLoggedIn){alert("Sign in with Google first.");return}
-  var token=await ensureToken();if(!token){alert("Could not authenticate with Drive.");return}
-  var btn=$$("btnFullSync");if(btn){btn.disabled=true;btn.textContent="Syncing..."}
+  if(!isLoggedIn){alert("Primer inicia la sessió amb Google.");return}
+  var token=await ensureToken();if(!token){alert("No s'ha pogut autenticar amb Drive.");return}
+  var btn=$$("btnFullSync");if(btn){btn.disabled=true;btn.textContent="Sincronitzant…"}
   var total={uploaded:0,missingVideos:0};
   try{
     for(var i=0;i<sessions.length;i++){
@@ -1007,9 +1014,9 @@ async function syncAllToDrive(){
     saveLocal();
     if(total.uploaded>0){isDirty=true;await saveToDrive()}
     renderAll();
-    alert("Sync complete.\n"+syncSummary(total,sessions.length));
-  }catch(e){alert("Sync failed: "+((e&&e.message)||e))}
-  finally{var b2=$$("btnFullSync");if(b2){b2.disabled=false;b2.innerHTML="&#9729; Sync all"}}
+    alert("Sincronització completa.\n"+syncSummary(total,sessions.length));
+  }catch(e){alert("La sincronització ha fallat: "+((e&&e.message)||e))}
+  finally{var b2=$$("btnFullSync");if(b2){b2.disabled=false;b2.innerHTML="&#9729; Sincronitza"}}
 }
 $$("btnFullSync").addEventListener("click",syncAllToDrive);
 async function uploadTextFile(token,name,content,mime,parentId){
@@ -1115,10 +1122,10 @@ async function saveManualsIndex(token){
   else{await uploadTextFile(token,"manuals_index.json",content,"application/json",rootId)}
 }
 function openManuals(){
-  if(!isLoggedIn){alert("Sign in with Google to manage manuals on Drive.");return}
+  if(!isLoggedIn){alert("Inicia la sessió amb Google per gestionar els manuals a Drive.");return}
   mfPdfFile=null;mfJsonFile=null;mfParsed=null;
-  $$("mfPdfName").innerHTML="&mdash; no file &mdash;";
-  $$("mfJsonName").innerHTML="&mdash; no file &mdash;";
+  $$("mfPdfName").innerHTML="&mdash; cap fitxer &mdash;";
+  $$("mfJsonName").innerHTML="&mdash; cap fitxer &mdash;";
   $$("mfInfo").textContent="";$$("mfUpload").disabled=true;
   renderManualsList();
   $$("manualsBack").style.display="flex";
@@ -1127,48 +1134,48 @@ function openManuals(){
 function closeManuals(){$$("manualsBack").style.display="none"}
 function renderManualsList(){
   var box=$$("manualsList");if(!box)return;
-  if(!manuals.length){box.innerHTML="<div class=\"manuals-empty\">No manuals uploaded yet.</div>";return}
+  if(!manuals.length){box.innerHTML="<div class=\"manuals-empty\">Encara no s'ha pujat cap manual.</div>";return}
   box.innerHTML="";
   manuals.forEach(function(m,idx){
     var row=document.createElement("div");row.className="manual-row";
     var meta=[];
     if(m.model)meta.push(esc(m.model));
     if(m.serial)meta.push("S/N "+esc(m.serial));
-    meta.push((m.conjunts||0)+" conjunts");meta.push((m.parts||0)+" parts");
+    meta.push((m.conjunts||0)+" conjunts");meta.push((m.parts||0)+" recanvis");
     row.innerHTML="<div class=\"mr-info\"><div class=\"mr-name\">"+esc(m.base||m.serial||"manual")+"</div>"
       +"<div class=\"mr-meta\">"+meta.join(" · ")+"</div></div>"
-      +"<button class=\"mr-del\" title=\"Remove from list\">&#10005;</button>";
+      +"<button class=\"mr-del\" title=\"Treu de la llista\">&#10005;</button>";
     row.querySelector(".mr-del").addEventListener("click",function(){deleteManual(idx)});
     box.appendChild(row);
   });
 }
 function mfRefresh(){
-  $$("mfPdfName").textContent=mfPdfFile?mfPdfFile.name:"— no file —";
-  $$("mfJsonName").textContent=mfJsonFile?mfJsonFile.name:"— no file —";
+  $$("mfPdfName").textContent=mfPdfFile?mfPdfFile.name:"— cap fitxer —";
+  $$("mfJsonName").textContent=mfJsonFile?mfJsonFile.name:"— cap fitxer —";
   $$("mfUpload").disabled=!(mfPdfFile&&mfJsonFile&&mfParsed);
   if(mfParsed){
     var c=catalogCounts(mfParsed),mac=mfParsed.machine||{};
-    $$("mfInfo").textContent="Catalog: "+(mac.model||"—")+(mac.serial?" · S/N "+mac.serial:"")+" · "+c.conjunts+" conjunts · "+c.parts+" parts";
-  } else if(mfJsonFile){$$("mfInfo").textContent="Reading JSON…"}
+    $$("mfInfo").textContent="Catàleg: "+(mac.model||"—")+(mac.serial?" · S/N "+mac.serial:"")+" · "+c.conjunts+" conjunts · "+c.parts+" recanvis";
+  } else if(mfJsonFile){$$("mfInfo").textContent="Llegint el JSON…"}
   else $$("mfInfo").textContent="";
 }
 function onJsonPick(file){
   mfJsonFile=file;mfParsed=null;mfRefresh();
   var r=new FileReader();
-  r.onload=function(e){try{mfParsed=JSON.parse(e.target.result)}catch(err){mfParsed=null;mfRefresh();$$("mfInfo").textContent="⚠ Not a valid JSON file.";return}mfRefresh()};
-  r.onerror=function(){mfParsed=null;mfRefresh();$$("mfInfo").textContent="⚠ Could not read the JSON."};
+  r.onload=function(e){try{mfParsed=JSON.parse(e.target.result)}catch(err){mfParsed=null;mfRefresh();$$("mfInfo").textContent="⚠ No és un fitxer JSON vàlid.";return}mfRefresh()};
+  r.onerror=function(){mfParsed=null;mfRefresh();$$("mfInfo").textContent="⚠ No s'ha pogut llegir el JSON."};
   r.readAsText(file);
 }
 async function uploadManual(){
   if(!mfPdfFile||!mfJsonFile||!mfParsed)return;
-  var token=await ensureToken();if(!token){alert("Could not authenticate with Drive.");return}
-  var btn=$$("mfUpload"),lbl=btn.innerHTML;btn.disabled=true;btn.textContent="Uploading…";
+  var token=await ensureToken();if(!token){alert("No s'ha pogut autenticar amb Drive.");return}
+  var btn=$$("mfUpload"),lbl=btn.innerHTML;btn.disabled=true;btn.textContent="Pujant…";
   try{
     var mac=mfParsed.machine||{};
     var base=mfPdfFile.name.replace(/\.pdf$/i,"");
     var folderName=(mac.serial||base).toString().trim()||base;
-    var manualsId=await getManualsFolder(token);if(!manualsId)throw new Error("could not open the Manuals folder");
-    var folderId=await driveFolder(token,folderName,manualsId);if(!folderId)throw new Error("could not create the manual folder");
+    var manualsId=await getManualsFolder(token);if(!manualsId)throw new Error("no s'ha pogut obrir la carpeta Manuals");
+    var folderId=await driveFolder(token,folderName,manualsId);if(!folderId)throw new Error("no s'ha pogut crear la carpeta del manual");
     // Reuse a file that's already in this manual's Drive folder (same name)
     // instead of uploading it again.
     var pdfName=mfPdfFile.name, pdfId, pdfReused=false;
@@ -1176,7 +1183,7 @@ async function uploadManual(){
     if(existingPdf){pdfId=existingPdf;pdfReused=true}
     else{
       var pdfRes=await driveUploadBlob(token,mfPdfFile,pdfName,"application/pdf",folderId);
-      if(!pdfRes)throw new Error("PDF upload failed");
+      if(!pdfRes)throw new Error("no s'ha pogut pujar el PDF");
       pdfId=pdfRes.id;pdfName=pdfRes.name;
     }
     // The catalog changes whenever it's re-marked, so ALWAYS write the JSON:
@@ -1185,11 +1192,11 @@ async function uploadManual(){
     var existingJson=await driveFind(token,jsonName,folderId,"application/json");
     if(existingJson){
       var pr=await fetch("https://www.googleapis.com/upload/drive/v3/files/"+existingJson+"?uploadType=media",{method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json; charset=UTF-8"},body:JSON.stringify(mfParsed)});
-      if(!pr.ok)throw new Error("JSON update failed ("+pr.status+")");
+      if(!pr.ok)throw new Error("no s'ha pogut actualitzar el JSON ("+pr.status+")");
       jsonId=existingJson;jsonUpdated=true;
     }else{
       jsonId=await uploadTextFile(token,jsonName,JSON.stringify(mfParsed),"application/json",folderId);
-      if(!jsonId)throw new Error("JSON upload failed");
+      if(!jsonId)throw new Error("no s'ha pogut pujar el JSON");
     }
     // keep the local catalog cache fresh — the drawings picker reads cat_<id>
     if(idb){try{await idbSet(idb,"cat_"+jsonId,mfParsed)}catch(e){}}
@@ -1200,13 +1207,13 @@ async function uploadManual(){
     await saveManualsIndex(token);
     mfPdfFile=null;mfJsonFile=null;mfParsed=null;
     renderManualsList();mfRefresh();
-    $$("mfInfo").textContent="✓ "+base+(jsonUpdated?" updated.":" saved.")+(pdfReused?" (PDF already on Drive — reused.)":"");
-  }catch(e){alert("Upload failed: "+((e&&e.message)||e))}
+    $$("mfInfo").textContent="✓ "+base+(jsonUpdated?" actualitzat.":" desat.")+(pdfReused?" (el PDF ja era a Drive — s'ha reaprofitat.)":"");
+  }catch(e){alert("No s'ha pogut pujar: "+((e&&e.message)||e))}
   finally{btn.innerHTML=lbl;btn.disabled=!(mfPdfFile&&mfJsonFile&&mfParsed)}
 }
 async function deleteManual(idx){
   var m=manuals[idx];if(!m)return;
-  if(!confirm("Remove \""+(m.base||"this manual")+"\" from the list?\nThe files stay in your Drive Manuals folder."))return;
+  if(!confirm("Vols treure \""+(m.base||"aquest manual")+"\" de la llista?\nEls fitxers es queden a la carpeta Manuals del teu Drive."))return;
   manuals.splice(idx,1);renderManualsList();
   var token=await ensureToken();if(token){try{await saveManualsIndex(token)}catch(e){}}
 }
@@ -1224,8 +1231,8 @@ $$("mfUpload").addEventListener("click",uploadManual);
 //    free-text machine field against the catalog's model / serial / base. --
 function manualChipHTML(sess){
   var ref=sess.manualRef;
-  if(ref)return "<span id=\"manualChip\" style=\"cursor:pointer\" title=\"Linked spare-parts manual — click to change\">📚 "+esc(ref.base||ref.serial||"manual")+"</span>";
-  return "<span id=\"manualChip\" style=\"cursor:pointer;color:var(--tx3)\" title=\"Link a spare-parts manual\">📚 Link manual</span>";
+  if(ref)return "<span id=\"manualChip\" style=\"cursor:pointer\" title=\"Manual de recanvis vinculat — clica per canviar-lo\">📚 "+esc(ref.base||ref.serial||"manual")+"</span>";
+  return "<span id=\"manualChip\" style=\"cursor:pointer;color:var(--tx3)\" title=\"Vincula un manual de recanvis\">📚 Vincula manual</span>";
 }
 function normStr(s){return (s||"").toString().toLowerCase().replace(/[^a-z0-9]+/g," ").trim()}
 function manualMatchScore(sess,m){
@@ -1239,7 +1246,7 @@ function manualMatchScore(sess,m){
   return score;
 }
 function openLinkModal(){
-  if(!isLoggedIn){alert("Sign in with Google to use spare-parts manuals.");return}
+  if(!isLoggedIn){alert("Inicia la sessió amb Google per fer servir els manuals de recanvis.");return}
   renderLinkList();
   $$("linkBack").style.display="flex";
   loadManualsIndex().then(renderLinkList);
@@ -1251,18 +1258,18 @@ function renderLinkList(){
   box.innerHTML="";
   if(sess.manualRef){
     var u=document.createElement("div");u.className="manual-row";u.style.cursor="pointer";
-    u.innerHTML="<div class=\"mr-info\"><div class=\"mr-name\">✕ Unlink current manual</div><div class=\"mr-meta\">"+esc(sess.manualRef.base||"")+"</div></div>";
+    u.innerHTML="<div class=\"mr-info\"><div class=\"mr-name\">✕ Desvincula el manual actual</div><div class=\"mr-meta\">"+esc(sess.manualRef.base||"")+"</div></div>";
     u.addEventListener("click",function(){setSessionManual(null)});
     box.appendChild(u);
   }
-  if(!manuals.length){var e=document.createElement("div");e.className="manuals-empty";e.textContent="No manuals uploaded yet — add one via 📚 Spare-parts manuals.";box.appendChild(e);return}
+  if(!manuals.length){var e=document.createElement("div");e.className="manuals-empty";e.textContent="Encara no s'ha pujat cap manual — afegeix-ne un a 📚 Manuals de recanvis.";box.appendChild(e);return}
   var best=-1,bestScore=0;
   manuals.forEach(function(m,i){var sc=manualMatchScore(sess,m);if(sc>bestScore){bestScore=sc;best=i}});
   manuals.forEach(function(m,idx){
     var row=document.createElement("div");row.className="manual-row";row.style.cursor="pointer";
     var linked=sess.manualRef&&(sess.manualRef.id===m.id||sess.manualRef.folderId===m.folderId);
-    var meta=[];if(m.model)meta.push(esc(m.model));if(m.serial)meta.push("S/N "+esc(m.serial));meta.push((m.parts||0)+" parts");
-    var badges=(idx===best&&bestScore>0?"<span style=\"color:var(--gold)\"> · suggested</span>":"")+(linked?"<span style=\"color:var(--green)\"> · linked</span>":"");
+    var meta=[];if(m.model)meta.push(esc(m.model));if(m.serial)meta.push("S/N "+esc(m.serial));meta.push((m.parts||0)+" recanvis");
+    var badges=(idx===best&&bestScore>0?"<span style=\"color:var(--gold)\"> · suggerit</span>":"")+(linked?"<span style=\"color:var(--green)\"> · vinculat</span>":"");
     row.innerHTML="<div class=\"mr-info\"><div class=\"mr-name\">"+esc(m.base||m.serial||"manual")+badges+"</div><div class=\"mr-meta\">"+meta.join(" · ")+"</div></div>";
     row.addEventListener("click",function(){setSessionManual(m)});
     box.appendChild(row);
@@ -1282,14 +1289,14 @@ $$("linkBack").addEventListener("click",function(e){if(e.target===$$("linkBack")
 //    rendered at a time (mobile memory). --
 function drawingsChipHTML(sess){
   if(!sess.manualRef)return"";
-  return "<span id=\"drawingsChip\" style=\"cursor:pointer\" title=\"Open the linked manual's drawings\">📐 Drawings</span>";
+  return "<span id=\"drawingsChip\" style=\"cursor:pointer\" title=\"Obre els dibuixos del manual vinculat\">📐 Dibuixos</span>";
 }
 function loadPdfjs(){
   if(pdfjsReadyP)return pdfjsReadyP;
   pdfjsReadyP=new Promise(function(res,rej){
     if(window.pdfjsLib){res(window.pdfjsLib);return}
     function tryLoad(urls){
-      if(!urls.length){rej(new Error("could not load pdf.js"));return}
+      if(!urls.length){rej(new Error("no s'ha pogut carregar pdf.js"));return}
       var sc=document.createElement("script");sc.src=urls[0];
       sc.onload=function(){try{window.pdfjsLib.GlobalWorkerOptions.workerSrc=urls[0].replace("pdf.min.js","pdf.worker.min.js")}catch(e){}res(window.pdfjsLib)};
       sc.onerror=function(){tryLoad(urls.slice(1))};
@@ -1302,9 +1309,9 @@ function loadPdfjs(){
 async function getManualPdfBytes(pdfId){
   var key="pdf_"+pdfId;
   if(idb){try{var cached=await idbGet(idb,key);if(cached)return cached}catch(e){}}
-  var token=await ensureToken();if(!token)throw new Error("not signed in");
+  var token=await ensureToken();if(!token)throw new Error("no has iniciat la sessió");
   var r=await fetch("https://www.googleapis.com/drive/v3/files/"+pdfId+"?alt=media",{headers:{Authorization:"Bearer "+token}});
-  if(!r.ok)throw new Error("could not download the PDF ("+r.status+")");
+  if(!r.ok)throw new Error("no s'ha pogut descarregar el PDF ("+r.status+")");
   var buf=await r.arrayBuffer();
   if(idb){try{await idbSet(idb,key,buf)}catch(e){}}
   return buf;
@@ -1312,25 +1319,25 @@ async function getManualPdfBytes(pdfId){
 async function openDrawings(targetPage,pickMode,purpose){
   viewerPickPurpose=purpose||"part";
   var sess=sessions.find(function(s){return s.id===aid});
-  if(!sess||!sess.manualRef){alert("Link a spare-parts manual to this session first.");return}
-  if(!isLoggedIn){alert("Sign in with Google to open the drawings.");return}
+  if(!sess||!sess.manualRef){alert("Primer vincula un manual de recanvis a aquesta sessió.");return}
+  if(!isLoggedIn){alert("Inicia la sessió amb Google per obrir els dibuixos.");return}
   var ref=sess.manualRef;
   viewerPickMode=!!pickMode;viewerPickItems=[];
   $$("drawPickHint").style.display=viewerPickMode?"block":"none";
   $$("drawPickHint").innerHTML=(viewerPickPurpose==="text")
-    ? "&#127919; Tap a position number to write its name into the description."
-    : "&#127919; Tap a position number on the drawing to add that spare part to the entry.";
+    ? "&#127919; Toca un número de posició per escriure'n el nom a la descripció."
+    : "&#127919; Toca un número de posició al dibuix per afegir aquell recanvi a l'entrada.";
   // pick-from-edit: hide the edit modal so the drawing is on top (editBack sits
   // above drawBack in the DOM); closeDrawings restores it. Only after the guards
   // above pass, so a failed open never leaves the editor hidden.
   if(viewerPickMode&&editingId){pickReturnEdit=true;$$("editBack").style.display="none"}
   $$("drawManual").textContent=ref.base||ref.serial||"";
-  $$("drawStatus").textContent="Loading…";
+  $$("drawStatus").textContent="Carregant…";
   viewerZoom=1;updateZoomLabel();
   $$("drawBack").style.display="flex";
   try{
     var lib=await loadPdfjs();
-    if(viewerPickMode){try{var vc=buildViewerCatalog(await getManualCatalog(ref.jsonId));viewerRows=vc.rows;viewerSubgrups=vc.subgrups}catch(e){viewerRows=[];viewerSubgrups=[];setDrawStatus("Could not load the catalog — tapping won't resolve parts.")}}
+    if(viewerPickMode){try{var vc=buildViewerCatalog(await getManualCatalog(ref.jsonId));viewerRows=vc.rows;viewerSubgrups=vc.subgrups}catch(e){viewerRows=[];viewerSubgrups=[];setDrawStatus("No s'ha pogut carregar el catàleg — en tocar no es trobaran els recanvis.")}}
     else {viewerRows=[];viewerSubgrups=[]}
     if(viewerDoc&&viewerPdfId===ref.pdfId){$$("drawStatus").textContent="";renderViewerPage(targetPage||viewerPage);return}
     var buf=await getManualPdfBytes(ref.pdfId);
@@ -1338,12 +1345,12 @@ async function openDrawings(targetPage,pickMode,purpose){
     viewerDoc=doc;viewerNumPages=doc.numPages;viewerPdfId=ref.pdfId;
     $$("drawStatus").textContent="";
     renderViewerPage(targetPage||1);
-  }catch(e){$$("drawStatus").textContent="";alert("Could not open drawings: "+((e&&e.message)||e));closeDrawings()}
+  }catch(e){$$("drawStatus").textContent="";alert("No s'han pogut obrir els dibuixos: "+((e&&e.message)||e));closeDrawings()}
 }
 function renderViewerPage(n){
   if(!viewerDoc)return;
   n=Math.max(1,Math.min(n||1,viewerNumPages));viewerPage=n;
-  $$("drawPageLbl").textContent="Page "+n+" / "+viewerNumPages;
+  $$("drawPageLbl").textContent="Pàg. "+n+" / "+viewerNumPages;
   var cv=$$("drawCanvas");cv.style.transform=""; // clear any live pinch preview
   var dc=$$("drawChoices");if(dc)dc.style.display="none";
   viewerDoc.getPage(n).then(function(pg){
@@ -1383,7 +1390,7 @@ async function getManualCatalog(jsonId){
     }catch(e){}
   }
   if(idb){try{var c=await idbGet(idb,key);if(c)return c}catch(e){}}
-  throw new Error("could not load the catalog (offline and not cached)");
+  throw new Error("no s'ha pogut carregar el catàleg (sense connexió i sense còpia local)");
 }
 // -- Tag suggestions: the linked manual's grup names (machine sections) feed a
 //    datalist behind both Tag inputs. Cache-first (no network on every render);
@@ -1523,16 +1530,16 @@ function attemptPick(clientX,clientY){
     viewerPickItems.forEach(function(it){if(!/^\d+$/.test(it.str))return;var d=itemDist2(it,bx,by);if(d<bd){bd=d;best=it}});
     item=best;
   }
-  if(!item){setDrawStatus("No number there — tap right on a position number.");return}
+  if(!item){setDrawStatus("Aquí no hi ha cap número — toca just damunt d'un número de posició.");return}
   var posTok=(item.str.match(/\d+/)||[])[0];
-  if(!posTok){setDrawStatus("That's not a position number.");return}
+  if(!posTok){setDrawStatus("Això no és un número de posició.");return}
   resolvePartByPos(posTok);
 }
 function addResolvedPart(r,qty){
   var cant=(qty===undefined||qty===null)?r.cant:String(qty).trim();
   eParts.push({pos:r.pos,ref:r.ref,cant:cant,denominacio:r.denominacio,conjunt:r.conjunt,grup:r.grup,page:r.page});
   rEParts();
-  setDrawStatus("✓ Added Pos "+r.pos+(cant?" ×"+cant:"")+". Tap another, or Close to return.");
+  setDrawStatus("✓ Afegit: Pos "+r.pos+(cant?" ×"+cant:"")+". Toca'n un altre, o tanca per tornar.");
 }
 // Writes "<denomination> - <reference>" into the description at the caret the
 // field had when picking started, keeping single spaces around it. The edit
@@ -1542,7 +1549,7 @@ function insertPartText(r){
   var ta=$$("eText");if(!ta)return;
   var name=(r.denominacio||"").trim(),ref=(r.ref||"").trim();
   var ins=name+(name&&ref?" - ":"")+ref;
-  if(!ins){setDrawStatus("That row has no name or reference to insert.");return}
+  if(!ins){setDrawStatus("Aquesta fila no té ni nom ni referència per inserir.");return}
   var v=ta.value,at=(textPickCaret==null?v.length:Math.min(textPickCaret,v.length));
   var before=v.slice(0,at),after=v.slice(at);
   var pre=(before&&!/\s$/.test(before))?" ":"";
@@ -1550,7 +1557,7 @@ function insertPartText(r){
   ta.value=before+pre+ins+post+after;
   textPickCaret=(before+pre+ins).length; // next pick lands after this one
   autoH(ta);
-  setDrawStatus("✓ Inserted \""+ins+"\". Tap another, or Close to return.");
+  setDrawStatus("✓ Inserit \""+ins+"\". Toca'n un altre, o tanca per tornar.");
 }
 // Confirm panel with the catalog quantity pre-filled but editable — the list
 // says how many the drawing uses, the technician says how many are needed.
@@ -1568,11 +1575,11 @@ function confirmAndAdd(r){
   box.appendChild(head);
   var row=document.createElement("div");
   row.style.cssText="display:flex;align-items:center;gap:8px;flex-wrap:wrap";
-  var lab=document.createElement("span");lab.style.cssText="font-size:12px;color:var(--tx3)";lab.textContent="Qty";
+  var lab=document.createElement("span");lab.style.cssText="font-size:12px;color:var(--tx3)";lab.textContent="Qt.";
   var inp=document.createElement("input");inp.type="text";inp.inputMode="numeric";
   inp.value=r.cant||"";inp.style.cssText="width:70px;font-size:13px;padding:5px 7px;text-align:center";
-  var add=document.createElement("button");add.className="btn-sm btn-gold";add.textContent="✓ Add";
-  var cancel=document.createElement("button");cancel.className="btn-sm";cancel.textContent="Cancel";
+  var add=document.createElement("button");add.className="btn-sm btn-gold";add.textContent="✓ Afegeix";
+  var cancel=document.createElement("button");cancel.className="btn-sm";cancel.textContent="Cancel·la";
   function done(){box.style.display="none"}
   add.addEventListener("click",function(){done();addResolvedPart(r,inp.value)});
   cancel.addEventListener("click",function(){done();setDrawStatus("")});
@@ -1585,7 +1592,7 @@ function confirmAndAdd(r){
 // single drawing's Pos numbering is unique, so this resolves to exactly one
 // part. Never falls back to other drawings' parts.
 function resolvePartByPos(pos){
-  if(!viewerSubgrups.length){setDrawStatus("Catalog not loaded — tapping can't resolve parts.");return}
+  if(!viewerSubgrups.length){setDrawStatus("Catàleg no carregat — en tocar no es trobaran els recanvis.");return}
   var owning=viewerSubgrups.filter(function(s){return s.pages[viewerPage]});
   if(!owning.length){
     // Marked catalogs often list only the LIST pages, not the drawing sheet the
@@ -1602,10 +1609,10 @@ function resolvePartByPos(pos){
     });
     if(best)owning=[best];
   }
-  if(!owning.length){setDrawStatus("This page has no parts list in the catalog — open the drawing's detail sheet.");return}
+  if(!owning.length){setDrawStatus("Aquesta pàgina no té llista de recanvis al catàleg — obre el full de detall del dibuix.");return}
   var scope=[];owning.forEach(function(s){scope=scope.concat(s.rows)});
   var cand=scope.filter(function(r){return String(r.pos)===String(pos)});
-  if(!cand.length){setDrawStatus("Pos "+pos+" isn't in this drawing's parts list.");return}
+  if(!cand.length){setDrawStatus("La pos. "+pos+" no és a la llista de recanvis d'aquest dibuix.");return}
   if(cand.length===1){confirmAndAdd(cand[0]);return}
   var exact=cand.filter(function(r){return String(r.page)===String(viewerPage)}); // rare tie-break
   if(exact.length===1){confirmAndAdd(exact[0]);return}
@@ -1617,17 +1624,17 @@ function showPickChoices(pos,rows,offPage){
   box.style.cssText="display:block;background:var(--bg1);border:1px solid var(--br2);border-radius:8px;padding:8px;margin-bottom:8px;max-height:38vh;overflow:auto";
   var title=document.createElement("div");
   title.style.cssText="font-size:12px;color:var(--tx2);margin-bottom:6px";
-  title.textContent=offPage?("Pos "+pos+" isn't in this page's list — pick the right one:"):("Pos "+pos+" — pick one:");
+  title.textContent=offPage?("La pos. "+pos+" no és a la llista d'aquesta pàgina — tria la correcta:"):("Pos "+pos+" — tria'n una:");
   box.appendChild(title);
   rows.forEach(function(r){
     var b=document.createElement("button");b.className="btn-sm";
     b.style.cssText="display:block;width:100%;text-align:left;margin-bottom:4px";
     var ctx=(r.subgrup||r.grup||"")+(r.num?" · Nº "+r.num:"");
-    b.innerHTML="<strong>Pos "+esc(r.pos)+(r.ref?" · "+esc(r.ref):"")+"</strong> "+esc(r.denominacio||"")+" <span style=\"color:var(--tx3)\">(p."+esc(r.page)+(ctx?" · "+esc(ctx):"")+")</span>";
+    b.innerHTML="<strong>Pos "+esc(r.pos)+(r.ref?" · "+esc(r.ref):"")+"</strong> "+esc(r.denominacio||"")+" <span style=\"color:var(--tx3)\">(pàg. "+esc(r.page)+(ctx?" · "+esc(ctx):"")+")</span>";
     b.addEventListener("click",function(){confirmAndAdd(r)}); // then confirm the quantity
     box.appendChild(b);
   });
-  var cancel=document.createElement("button");cancel.className="btn-sm";cancel.textContent="Cancel";
+  var cancel=document.createElement("button");cancel.className="btn-sm";cancel.textContent="Cancel·la";
   cancel.addEventListener("click",function(){box.style.display="none"});
   box.appendChild(cancel);
 }
@@ -1718,12 +1725,12 @@ async function findDataFile(token){
   return null;
 }
 async function loadFromDrive(){
-  var token=await ensureToken();if(!token){setSyncSt("error","Not authenticated");return}
-  setSyncSt("loading","Loading from Google Drive...");
+  var token=await ensureToken();if(!token){setSyncSt("error","No autenticat");return}
+  setSyncSt("loading","Carregant de Google Drive…");
   try{
     if(!driveFileId)driveFileId=await findDataFile(token);
     saveTok();
-    if(!driveFileId){setSyncSt("ok","Drive connected");return}
+    if(!driveFileId){setSyncSt("ok","Drive connectat");return}
     var r=await fetch("https://www.googleapis.com/drive/v3/files/"+driveFileId+"?alt=media",{headers:{Authorization:"Bearer "+token}});
     if(r.ok){
       var data=await r.json();
@@ -1739,10 +1746,10 @@ async function loadFromDrive(){
         sessions=merged.concat(sessions.filter(function(s){return !remIds.has(s.id)}));
         saveLocal();
       }
-      setSyncSt("ok","Synced ✓");
-    } else if(r.status===404){driveFileId=null;saveTok();setSyncSt("ok","Drive connected")}
-    else setSyncSt("error","Drive read error");
-  }catch(e){setSyncSt("error","Offline (local data)")}
+      setSyncSt("ok","Sincronitzat ✓");
+    } else if(r.status===404){driveFileId=null;saveTok();setSyncSt("ok","Drive connectat")}
+    else setSyncSt("error","Error de lectura de Drive");
+  }catch(e){setSyncSt("error","Sense connexió (dades locals)")}
 }
 async function saveToDrive(){
   // Serialize: two concurrent saves both seeing driveFileId===null would each
@@ -1752,7 +1759,7 @@ async function saveToDrive(){
   savingDrive=true;
   try{
     var token=await ensureToken();if(!token){saveLocal();return}
-    setSyncSt("loading","Saving...");
+    setSyncSt("loading","Desant…");
     try{
       var body=JSON.stringify(sessions),r;
       if(driveFileId){
@@ -1767,9 +1774,9 @@ async function saveToDrive(){
         r=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"multipart/related; boundary="+bnd},body:mp});
         if(r&&r.ok){driveFileId=(await r.json()).id;saveTok()}
       }
-      if(r&&r.ok){isDirty=false;saveLocal();setSyncSt("ok","Saved ✓ "+fts(now()).slice(12))}
-      else{saveLocal();setSyncSt("error","Save error")}
-    }catch(e){saveLocal();setSyncSt("error","Offline (saved locally)")}
+      if(r&&r.ok){isDirty=false;saveLocal();setSyncSt("ok","Desat ✓ "+fts(now()).slice(12))}
+      else{saveLocal();setSyncSt("error","Error en desar")}
+    }catch(e){saveLocal();setSyncSt("error","Sense connexió (desat localment)")}
   }finally{
     savingDrive=false;
     if(savePending){savePending=false;saveToDrive()}
@@ -1803,12 +1810,12 @@ function updateAuthUI(){
   var lo=$$("btnLogout");if(lo)lo.style.display=isLoggedIn?"":"none";
 }
 function signOut(){
-  if(!confirm("Sign out of Google Drive? Local session data on this device is kept."))return;
+  if(!confirm("Vols tancar la sessió de Google Drive? Les dades d'aquest dispositiu es conserven."))return;
   clearTok();
   isLoggedIn=false;
   hideAuthExpired();
   updateAuthUI();
-  setSyncSt("error","Signed out");
+  setSyncSt("error","Sessió tancada");
   renderAll();
 }
 $$("btnLogout").addEventListener("click",signOut);
@@ -1821,26 +1828,26 @@ async function finishLogin(){
   scheduleSync();
 }
 $$("btnReconnect").addEventListener("click",async function(){
-  var btn=$$("btnReconnect");btn.disabled=true;btn.textContent="Connecting...";
+  var btn=$$("btnReconnect");btn.disabled=true;btn.textContent="Connectant…";
   var t=await googleLogin();
-  btn.disabled=false;btn.textContent="Reconnect";
+  btn.disabled=false;btn.textContent="Reconnecta";
   if(!t)return;
   await finishLogin();
 });
 $$("btnStoreBackup").addEventListener("click",exportAllBackup);
 $$("btnStoreX").addEventListener("click",function(){storeDismissed=true;hideStoreWarning()});
 $$("btnLoginTop").addEventListener("click",async function(){
-  var btn=$$("btnLoginTop");btn.disabled=true;btn.textContent="Connecting...";
+  var btn=$$("btnLoginTop");btn.disabled=true;btn.textContent="Connectant…";
   var t=await googleLogin();
-  btn.disabled=false;btn.textContent="Sign in";
+  btn.disabled=false;btn.textContent="Entra";
   if(!t)return;
   await finishLogin();
 });
 
 // ── THEME ────────────────────────────────────────────────────────────────────
 function applyTheme(t){
-  if(t==="light"){document.documentElement.classList.add("light");$$("btnTheme").textContent="☽";$$("btnTheme").title="Switch to dark"}
-  else{document.documentElement.classList.remove("light");$$("btnTheme").textContent="☀";$$("btnTheme").title="Switch to light"}
+  if(t==="light"){document.documentElement.classList.add("light");$$("btnTheme").textContent="☽";$$("btnTheme").title="Canvia a fosc"}
+  else{document.documentElement.classList.remove("light");$$("btnTheme").textContent="☀";$$("btnTheme").title="Canvia a clar"}
   try{localStorage.setItem(LS_THEME,t)}catch(e){}
 }
 try{applyTheme(localStorage.getItem(LS_THEME)||"dark")}catch(e){applyTheme("dark")}
@@ -1890,8 +1897,8 @@ function buildSitem(s,applyFilter){
     +(issues?"<span style=\"float:right;font-size:10px;font-family:monospace;background:var(--redbg);color:var(--red);padding:1px 5px;border-radius:20px\">"+issues+" !</span>":"")
     +"<div class=\"sitem-name\">"+highlightText(s.client||"—",sessFilterTxt)+"</div>"
     +"<div class=\"sitem-sub\">"+highlightText(s.machine||"",sessFilterTxt)+"</div>"
-    +"<div class=\"sitem-sub\" style=\"margin-top:2px\">"+(s.status==="open"?"🟢 Open":"🔴 Closed")+" · "+(s.entries||[]).length+" entries</div>"
-    +"<button class=\"sitem-del\" title=\"Delete\">✕</button>";
+    +"<div class=\"sitem-sub\" style=\"margin-top:2px\">"+(s.status==="open"?"🟢 Oberta":"🔴 Tancada")+" · "+pl((s.entries||[]).length,"entrada","entrades")+"</div>"
+    +"<button class=\"sitem-del\" title=\"Elimina\">✕</button>";
   div.addEventListener("click",function(){if(aid!==s.id)stopCurAudio();aid=s.id;filterTxt=applyFilter||"";if(mob())closeSide();renderAll()});
   div.querySelector(".sitem-del").addEventListener("click",function(e){e.stopPropagation();openDelModal(s)});
   return div;
@@ -1899,7 +1906,7 @@ function buildSitem(s,applyFilter){
 function renderSidebar(){
   $$("btnSideX").style.display=mob()?"block":"none";
   var list=$$("sList");list.innerHTML="";
-  if(!sessions.length){$$("sideCount").textContent="Sessions (0)";list.innerHTML="<div style=\"font-size:12px;color:var(--tx3);padding:20px 10px;text-align:center\">No sessions yet.<br>Create a new one.</div>";return}
+  if(!sessions.length){$$("sideCount").textContent="Sessions (0)";list.innerHTML="<div style=\"font-size:12px;color:var(--tx3);padding:20px 10px;text-align:center\">Encara no hi ha cap sessió.<br>Crea'n una de nova.</div>";return}
 
   var q=sessFilterTxt.trim().toLowerCase();
   if(!q){
@@ -1918,7 +1925,7 @@ function renderSidebar(){
   }).filter(function(r){return r.sessMatch||r.hits.length});
 
   $$("sideCount").textContent="Sessions ("+results.length+"/"+sessions.length+")";
-  if(!results.length){list.innerHTML="<div style=\"font-size:12px;color:var(--tx3);padding:20px 10px;text-align:center\">No matches for \""+esc(sessFilterTxt)+"\".</div>";return}
+  if(!results.length){list.innerHTML="<div style=\"font-size:12px;color:var(--tx3);padding:20px 10px;text-align:center\">Cap coincidència per a \""+esc(sessFilterTxt)+"\".</div>";return}
 
   results.forEach(function(r){
     list.appendChild(buildSitem(r.s,r.hits.length?sessFilterTxt:""));
@@ -1933,7 +1940,7 @@ function renderSidebar(){
     if(r.hits.length>5){
       var more=document.createElement("div");
       more.className="sitem-hit-more";
-      more.textContent="+"+(r.hits.length-5)+" more match(es)";
+      more.textContent="+"+(r.hits.length-5)+" coincidència(es) més";
       list.appendChild(more);
     }
   });
@@ -1949,10 +1956,10 @@ function renderLogArea(){
   var entries=active.entries||[];
   var filtered=filterTxt?entries.filter(function(e){return entryMatches(e,filterTxt)}):entries;
   var isOpen=active.status==="open";
-  var ec=$$("entCount");if(ec)ec.textContent=(filterTxt?filtered.length+"/":"")+entries.length+" entries";
+  var ec=$$("entCount");if(ec)ec.textContent=(filterTxt?filtered.length+"/":"")+pl(entries.length,"entrada","entrades");
   var logArea=$$("logArea");if(!logArea)return;
   logArea.innerHTML="";
-  if(!filtered.length){logArea.innerHTML="<div class=\"no-ent\">"+(filterTxt?"No results.":"— No entries yet. Log the first action or incident. —")+"</div>"}
+  if(!filtered.length){logArea.innerHTML="<div class=\"no-ent\">"+(filterTxt?"Cap resultat.":"— Encara no hi ha entrades. Registra la primera acció o incidència. —")+"</div>"}
   else{
     filtered.forEach(function(e){
       var sm=SM[e.severity]||SM.info;
@@ -1965,7 +1972,7 @@ function renderLogArea(){
           if(img.type==="audio")return;
           var isVid=img.type==="video",src=isVid?(img.poster||""):img.data;
           imgs+="<div class=\"thumb\" data-idx=\""+i+"\" tabindex=\"0\">"
-            +(src?"<img src=\""+src+"\" alt=\"Attachment "+(i+1)+"\" loading=\"lazy\">":"<div class=\"thumb-ph\">"+(isVid?"🎬":"🖼")+"</div>")
+            +(src?"<img src=\""+src+"\" alt=\"Adjunt "+(i+1)+"\" loading=\"lazy\">":"<div class=\"thumb-ph\">"+(isVid?"🎬":"🖼")+"</div>")
             +(isVid?"<div class=\"thumb-play\">▶</div>":"")
             +upBadge(img)
             +"</div>";
@@ -1978,12 +1985,12 @@ function renderLogArea(){
         +"<span class=\"log-ts\">"+(e.tsFromPhoto?"📷 ":"")+highlightText(fts(e.ts),filterTxt)+"</span>"
         +"<span class=\"log-sev\" style=\"background:"+sm.bg+";color:"+sm.tx+"\">"+highlightText(sm.label,filterTxt)+"</span>"
         +(e.tag?"<span class=\"log-tag\">"+highlightText(e.tag,filterTxt)+"</span>":"")
-        +(e.editedAt?"<span class=\"log-edited\">edited</span>":"")
+        +(e.editedAt?"<span class=\"log-edited\">editat</span>":"")
         +"</div>"
         +"<div class=\"log-text\">"+highlightText(e.text||"",filterTxt)+"</div>"
         +partsBlockHTML(e.parts)
         +imgs+"</div>"
-        +(isOpen?"<div class=\"log-actions\"><button class=\"log-act\" data-act=\"edit\" title=\"Edit\">✎</button><button class=\"log-act\" data-act=\"del\" title=\"Delete\">✕</button></div>":"");
+        +(isOpen?"<div class=\"log-actions\"><button class=\"log-act\" data-act=\"edit\" title=\"Edita\">✎</button><button class=\"log-act\" data-act=\"del\" title=\"Elimina\">✕</button></div>":"");
       // thumb clicks
       div.querySelectorAll(".thumb").forEach(function(t){
         var up=t.querySelector(".thumb-up.err");
@@ -1991,7 +1998,7 @@ function renderLogArea(){
           ev.stopPropagation();
           var img=(e.images||[])[parseInt(t.dataset.idx)];if(!img)return;
           var file=fileCache.get(img);
-          if(!file){alert("Can't retry — the original file is no longer available in this session. Remove and re-add it via Edit.");return}
+          if(!file){alert("No es pot tornar a provar: el fitxer original ja no està disponible en aquesta sessió. Treu-lo i torna'l a afegir des d'Edita.");return}
           img.uploadStatus="loading";renderLogArea();
           uploadMedia(active,file,img.type==="video"?"videos":"photos").then(function(r){
             if(r){img.driveId=r.driveId;img.name=r.name;img.uploadStatus="ok"}else img.uploadStatus="err";
@@ -2002,7 +2009,7 @@ function renderLogArea(){
           var img=(e.images||[])[parseInt(t.dataset.idx)];if(!img)return;
           if(img.type==="video"){
             var url=img.driveId?driveStreamUrl(img.driveId):null;
-            if(!url){alert(img.uploadStatus==="err"?"Video upload failed. Tap the ! badge to retry.":"Video stored on Drive. Sign in to play it.");return}
+            if(!url){alert(img.uploadStatus==="err"?"No s'ha pogut pujar el vídeo. Toca la marca ! per tornar-ho a provar.":"El vídeo és a Drive. Inicia la sessió per reproduir-lo.");return}
             openMedia(url,"video",img.name);
           } else openMedia(img.data,"image",img.name);
         });
@@ -2039,11 +2046,11 @@ function renderContent(){
     mc.innerHTML="<div class=\"empty\">"
       +"<div class=\"empty-icon\">⚙</div>"
       +"<div style=\"font-size:16px;font-weight:700\">Field Service Log</div>"
-      +"<div style=\"font-size:13px;color:var(--tx3);max-width:280px\">Sign in to sync your sessions across all devices with Google Drive</div>"
-      +"<button class=\"btn-google\" id=\"btnLogin\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 48 48\"><path fill=\"#EA4335\" d=\"M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z\"/><path fill=\"#4285F4\" d=\"M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z\"/><path fill=\"#FBBC05\" d=\"M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z\"/><path fill=\"#34A853\" d=\"M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z\"/></svg>Sign in with Google</button>"
-      +"<div style=\"font-size:12px;color:var(--tx3)\">or</div>"
-      +"<button class=\"btn-sm btn-g\" id=\"btnLocal\">Continue without Drive (local only)</button>"
-      +"<button class=\"btn-sm\" id=\"btnImportE\">↑ Import JSON or ZIP</button>"
+      +"<div style=\"font-size:13px;color:var(--tx3);max-width:280px\">Inicia la sessió per sincronitzar les sessions entre tots els dispositius amb Google Drive</div>"
+      +"<button class=\"btn-google\" id=\"btnLogin\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 48 48\"><path fill=\"#EA4335\" d=\"M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z\"/><path fill=\"#4285F4\" d=\"M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z\"/><path fill=\"#FBBC05\" d=\"M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z\"/><path fill=\"#34A853\" d=\"M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z\"/></svg>Inicia la sessió amb Google</button>"
+      +"<div style=\"font-size:12px;color:var(--tx3)\">o</div>"
+      +"<button class=\"btn-sm btn-g\" id=\"btnLocal\">Continua sense Drive (només en aquest dispositiu)</button>"
+      +"<button class=\"btn-sm\" id=\"btnImportE\">↑ Importa JSON o ZIP</button>"
       +"</div>";
     $$("btnLogin").addEventListener("click",async function(){var t=await googleLogin();if(t)await finishLogin()});
     $$("btnLocal").addEventListener("click",function(){isLoggedIn=false;updateAuthUI();renderAll()});
@@ -2054,11 +2061,11 @@ function renderContent(){
   if(!active){
     mc.innerHTML="<div class=\"empty\">"
       +"<div class=\"empty-icon\">⚙</div>"
-      +"<div style=\"font-size:16px;font-weight:700\">No active service visit</div>"
-      +"<div style=\"font-size:13px;color:var(--tx3)\">Select a session or create a new one</div>"
+      +"<div style=\"font-size:16px;font-weight:700\">Cap visita de servei activa</div>"
+      +"<div style=\"font-size:13px;color:var(--tx3)\">Selecciona una sessió o crea'n una de nova</div>"
       +"<div style=\"display:flex;gap:10px;flex-wrap:wrap;justify-content:center\">"
-      +"<button class=\"btn-gold\" id=\"btnNewE\">+ New service visit</button>"
-      +"<button class=\"btn-sm\" id=\"btnImportE2\">↑ Import JSON or ZIP</button>"
+      +"<button class=\"btn-gold\" id=\"btnNewE\">+ Nova visita de servei</button>"
+      +"<button class=\"btn-sm\" id=\"btnImportE2\">↑ Importa JSON o ZIP</button>"
       +"</div></div>";
     $$("btnNewE").addEventListener("click",function(){openNewModal()});
     $$("btnImportE2").addEventListener("click",function(){$$("importFile").click()});
@@ -2077,14 +2084,18 @@ function renderContent(){
     +"<div class=\"s-hdr-top\">"
     +"<span style=\"background:"+tm.bg+";color:"+tm.tx+";border:1px solid "+tm.bd+";border-radius:20px;font-size:11px;font-weight:700;padding:2px 10px;font-family:monospace\">"+tm.label+"</span>"
     +"<span style=\"font-weight:700;font-size:14px\">"+esc(active.client)+"</span>"
-    +"<button class=\"btn-g btn-sm\" id=\"btnEditSess\" title=\"Edit session details\" style=\"font-size:12px;padding:3px 6px\">&#9998;</button>"
+    +"<button class=\"btn-g btn-sm\" id=\"btnEditSess\" title=\"Edita les dades de la sessió\" style=\"font-size:12px;padding:3px 6px\">&#9998;</button>"
     +(isOpen
-      ?"<button class=\"btn-danger btn-sm\" id=\"btnClose\" style=\"margin-left:auto\">■ Close</button>"
-      :"<span style=\"margin-left:auto;font-size:11px;color:var(--tx3)\">🔴 Closed</span><button class=\"btn-sm\" id=\"btnReopen\" style=\"font-size:11px\">↺ Reopen</button>")
-    +"<div class=\"exp-wrap\"><button class=\"btn-sm\" id=\"btnExp\">↓ Report ▾</button>"
-    +"<div class=\"exp-menu\" id=\"expMenu\"><button data-fmt=\"pdf\">📄 PDF</button><button data-fmt=\"docx\">📄 DOCX</button><button data-fmt=\"html\">📄 HTML</button><button data-fmt=\"xlsx\">📊 Spare parts (Excel)</button><button data-fmt=\"timesheet\">🧾 Timesheet…</button><button data-fmt=\"zip\" title=\"Everything: all reports, the media and session.json — the copy you can import back\">🗄 Project ZIP (archive)</button><button data-fmt=\"zipdocx\" title=\"The Word report plus every photo, video and voice note — to hand over. Not importable.\">📦 DOCX + media ZIP</button></div></div>"
-    +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSync\" title=\"Sync now\">⟳</button>":"")
-    +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSessSync\" title=\"Recreate Drive folders and upload any photo missing from Drive for this session\">&#9729; Save</button>":"")
+      ?"<button class=\"btn-danger btn-sm\" id=\"btnClose\" style=\"margin-left:auto\">■ Tanca</button>"
+      :"<span style=\"margin-left:auto;font-size:11px;color:var(--tx3)\">🔴 Tancada</span><button class=\"btn-sm\" id=\"btnReopen\" style=\"font-size:11px\">↺ Reobre</button>")
+    +"<div class=\"exp-wrap\"><button class=\"btn-sm\" id=\"btnExp\">&#8595; Informe &#9662;</button>"
+    +"<div class=\"exp-menu\" id=\"expMenu\">"
+    +"<div class=\"exp-lang\"><span>Idioma de l'informe</span>"
+    +REPORT_LANGS.map(function(l){return "<button data-lang=\""+l[0]+"\" class=\""+(reportLang(active)===l[0]?"on":"")+"\" title=\""+l[2]+"\">"+l[1]+"</button>"}).join("")
+    +"</div>"
+    +"<button data-fmt=\"pdf\">📄 PDF</button><button data-fmt=\"docx\">📄 Word (DOCX)</button><button data-fmt=\"html\">📄 HTML</button><button data-fmt=\"xlsx\">📊 Recanvis (Excel)</button><button data-fmt=\"timesheet\">🧾 Full d'hores…</button><button data-fmt=\"zip\" title=\"Tot: tots els informes, els fitxers multimèdia i session.json — la còpia que es pot tornar a importar\">🗄 ZIP del projecte (arxiu)</button><button data-fmt=\"zipdocx\" title=\"L'informe Word amb totes les fotos, vídeos i notes de veu — per lliurar. No es pot tornar a importar.\">📦 ZIP Word + multimèdia</button></div></div>"
+    +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSync\" title=\"Sincronitza ara\">⟳</button>":"")
+    +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSessSync\" title=\"Recrea les carpetes de Drive i puja-hi les fotos que hi faltin, d'aquesta sessió\">&#9729; Desa</button>":"")
     +"</div>"
     +"<div class=\"s-hdr-meta\">"
     +(active.project?"<span>&#128209; "+esc(active.project)+"</span>":"")
@@ -2099,8 +2110,8 @@ function renderContent(){
     // filter
     +"<div class=\"filter-row\">"
     +"<span style=\"color:var(--tx3)\">🔍</span>"
-    +"<input type=\"text\" id=\"filtIn\" placeholder=\"Filter log...\" style=\"max-width:180px;font-size:12px;padding:5px 8px\" value=\""+esc(filterTxt)+"\">"
-    +"<span id=\"entCount\" style=\"font-size:11px;color:var(--tx3);font-family:monospace\">"+(filterTxt?filtered.length+"/":"")+entries.length+" entries</span>"
+    +"<input type=\"text\" id=\"filtIn\" placeholder=\"Filtra el registre…\" style=\"max-width:180px;font-size:12px;padding:5px 8px\" value=\""+esc(filterTxt)+"\">"
+    +"<span id=\"entCount\" style=\"font-size:11px;color:var(--tx3);font-family:monospace\">"+(filterTxt?filtered.length+"/":"")+pl(entries.length,"entrada","entrades")+"</span>"
     +"</div>"
     // log
     +"<div class=\"log-area\" id=\"logArea\"></div>"
@@ -2110,25 +2121,25 @@ function renderContent(){
         +"<div id=\"pThumbs\" class=\"thumbs\"></div>"
         +"<div class=\"input-row\">"
         +"<div class=\"input-ctrl\">"
-        +"<select id=\"sevSel\" class=\"sel-sev\"><option value=\"info\">○ Info</option><option value=\"ok\">● OK</option><option value=\"warning\">▲ Warning</option><option value=\"issue\">■ Issue</option></select>"
-        +"<input type=\"text\" id=\"tagIn\" placeholder=\"Tag...\" class=\"inp-tag\" list=\"tagOptions\">"
+        +"<select id=\"sevSel\" class=\"sel-sev\"><option value=\"info\">○ Info</option><option value=\"ok\">● OK</option><option value=\"warning\">▲ Avís</option><option value=\"issue\">■ Problema</option></select>"
+        +"<input type=\"text\" id=\"tagIn\" placeholder=\"Etiqueta…\" class=\"inp-tag\" list=\"tagOptions\">"
         +"</div>"
-        +"<textarea id=\"entIn\" rows=\"3\" placeholder=\"Description (optional if photo attached)... Ctrl+Enter to add\"></textarea>"
+        +"<textarea id=\"entIn\" rows=\"3\" placeholder=\"Descripció (opcional si hi ha foto)… Ctrl+Retorn per afegir\"></textarea>"
         +"<div class=\"input-ctrl\">"
-        +"<button class=\"btn-gold btn-sm\" id=\"btnAdd\">↵ Add</button>"
+        +"<button class=\"btn-gold btn-sm\" id=\"btnAdd\">↵ Afegeix</button>"
         +"<button class=\"btn-sm\" id=\"btnPhoto\">📷</button>"
-        +"<button class=\"btn-sm\" id=\"btnRec\" title=\"Record voice note\">🎙</button>"
+        +"<button class=\"btn-sm\" id=\"btnRec\" title=\"Grava una nota de veu\">🎙</button>"
         +"<input type=\"file\" id=\"fileIn\" accept=\"image/*,video/*\" multiple style=\"display:none\">"
         +"</div></div>"
-        +"<textarea id=\"notesIn\" class=\"inp-notes\" placeholder=\"General notes for this session...\"></textarea>"
+        +"<textarea id=\"notesIn\" class=\"inp-notes\" placeholder=\"Notes generals d'aquesta sessió…\"></textarea>"
         +"</div>"
-      :"<div class=\"closed-bar\"><span>🔴 Session closed on "+(active.closedAt?fts(active.closedAt):"—")+"</span></div>")
+      :"<div class=\"closed-bar\"><span>🔴 Sessió tancada el "+(active.closedAt?fts(active.closedAt):"—")+"</span></div>")
     // status bar
     +"<div class=\"stat-bar\">"
-    +"<span style=\"color:var(--red)\">■ "+errs+" issues</span>"
-    +"<span style=\"color:var(--orange)\">▲ "+warns+" warnings</span>"
+    +"<span style=\"color:var(--red)\">■ "+pl(errs,"problema","problemes")+"</span>"
+    +"<span style=\"color:var(--orange)\">▲ "+pl(warns,"avís","avisos")+"</span>"
     +"<span style=\"color:var(--green)\">● "+oks+" ok</span>"
-    +"<span style=\"margin-left:auto\">"+entries.length+" total</span>"
+    +"<span style=\"margin-left:auto\">"+entries.length+" en total</span>"
     +"</div>"
     +"</div>";
 
@@ -2140,11 +2151,25 @@ function renderContent(){
   var mChip=$$("manualChip");if(mChip)mChip.addEventListener("click",openLinkModal);
   var dChip=$$("drawingsChip");if(dChip)dChip.addEventListener("click",function(){openDrawings()});
   var tChip=$$("tsChip");if(tChip)tChip.addEventListener("click",openTimesheet);
-  var btnC=$$("btnClose");if(btnC)btnC.addEventListener("click",function(){if(confirm("Close this session? You can reopen it later.")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"closed",closedAt:now()}):s});scheduleSave();renderAll()}});
-  var btnR=$$("btnReopen");if(btnR)btnR.addEventListener("click",function(){if(confirm("Reopen this session?")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"open",closedAt:null}):s});scheduleSave();renderAll()}});
+  var btnC=$$("btnClose");if(btnC)btnC.addEventListener("click",function(){if(confirm("Vols tancar aquesta sessió? La pots reobrir més endavant.")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"closed",closedAt:now()}):s});scheduleSave();renderAll()}});
+  var btnR=$$("btnReopen");if(btnR)btnR.addEventListener("click",function(){if(confirm("Vols reobrir aquesta sessió?")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"open",closedAt:null}):s});scheduleSave();renderAll()}});
   var btnEx=$$("btnExp");if(btnEx){
     btnEx.addEventListener("click",function(e){e.stopPropagation();var m=$$("expMenu");if(m.style.display==="block")m.style.display="none";else openExpMenu(btnEx,m)});
-    $$("expMenu").addEventListener("click",function(e){var f=e.target.dataset.fmt;if(f){$$("expMenu").style.display="none";exportRep(active,f)}});
+    $$("expMenu").addEventListener("click",function(e){
+      // The language row keeps the menu open (the document-level click would
+      // close it): pick the language, then the format.
+      var row=e.target.closest?e.target.closest(".exp-lang"):null;
+      if(row){
+        e.stopPropagation();
+        var lb=e.target.closest("[data-lang]");
+        if(lb){
+          setReportLang(active.id,lb.dataset.lang);
+          Array.prototype.forEach.call(row.querySelectorAll("[data-lang]"),function(b){b.classList.toggle("on",b===lb)});
+        }
+        return;
+      }
+      var f=e.target.dataset.fmt;if(f){$$("expMenu").style.display="none";exportRep(active,f)}
+    });
   }
   var btnSy=$$("btnSync");if(btnSy)btnSy.addEventListener("click",function(){loadFromDrive().then(renderAll)});
   var btnSS=$$("btnSessSync");if(btnSS)btnSS.addEventListener("click",syncActiveSessionToDrive);
@@ -2164,14 +2189,14 @@ function renderContent(){
 // ── THUMBNAILS ────────────────────────────────────────────────────────────────
 function upBadge(img){
   if(img.uploadStatus==="loading")return"<div class=\"thumb-up loading\">⟳</div>";
-  if(img.uploadStatus==="err")return"<div class=\"thumb-up err\" title=\"Upload failed — tap to retry\" style=\"cursor:pointer\">!</div>";
+  if(img.uploadStatus==="err")return"<div class=\"thumb-up err\" title=\"No s'ha pogut pujar — toca per tornar-ho a provar\" style=\"cursor:pointer\">!</div>";
   if(img.uploadStatus==="ok")return"<div class=\"thumb-up ok\">✓</div>";
   return"";
 }
 function retryUpload(img,isEdit){
   var active=sessions.find(function(s){return s.id===aid});
   var file=fileCache.get(img);
-  if(!active||!file){alert("Can't retry — remove this attachment and add it again.");return}
+  if(!active||!file){alert("No es pot tornar a provar: treu aquest adjunt i torna'l a afegir.");return}
   img.uploadStatus="loading";
   if(isEdit)rEThumbs();else rThumbs();
   uploadMedia(active,file,img.type==="video"?"videos":"photos").then(function(r){
@@ -2212,12 +2237,12 @@ function rEParts(){
   box.className="eparts";
   eParts.forEach(function(p,idx){
     var qi=document.createElement("input");
-    qi.type="text";qi.className="pq-in";qi.inputMode="numeric";qi.value=p.cant||"";qi.title="Quantity";
+    qi.type="text";qi.className="pq-in";qi.inputMode="numeric";qi.value=p.cant||"";qi.title="Quantitat";
     // live edit, no re-render (that would steal focus mid-typing)
     qi.addEventListener("input",function(){p.cant=this.value.trim()});
     var ref=document.createElement("span");ref.className="pr";ref.textContent=p.ref||"";
     var nm=document.createElement("span");nm.className="pn";nm.textContent=p.denominacio||"";nm.title=p.denominacio||"";
-    var del=document.createElement("button");del.className="part-del";del.title="Remove";del.innerHTML="&#10005;";
+    var del=document.createElement("button");del.className="part-del";del.title="Treu";del.innerHTML="&#10005;";
     del.addEventListener("click",function(){eParts.splice(idx,1);rEParts()});
     box.appendChild(qi);box.appendChild(ref);box.appendChild(nm);box.appendChild(del);
   });
@@ -2245,29 +2270,29 @@ function audioSrc(img){return img.data||(img.driveId?driveStreamUrl(img.driveId)
 function stopCurAudio(){if(curAudio){try{curAudio.pause()}catch(e){}}curAudio=null;curAudioImg=null}
 function upBadgeAc(img){
   if(img.uploadStatus==="loading")return"<span class=\"ac-badge\" style=\"color:var(--blue)\">⟳</span>";
-  if(img.uploadStatus==="err")return"<span class=\"ac-badge err\" title=\"Upload failed — tap to retry\" style=\"color:var(--red);cursor:pointer\">!</span>";
+  if(img.uploadStatus==="err")return"<span class=\"ac-badge err\" title=\"No s'ha pogut pujar — toca per tornar-ho a provar\" style=\"color:var(--red);cursor:pointer\">!</span>";
   if(img.uploadStatus==="ok")return"<span class=\"ac-badge\" style=\"color:var(--green)\">✓</span>";
   return"";
 }
 function playAudioToggle(img,btn){
   var src=audioSrc(img);
-  if(!src){alert("This voice note is stored on Drive. Sign in to play it.");return}
+  if(!src){alert("Aquesta nota de veu és a Drive. Inicia la sessió per reproduir-la.");return}
   if(curAudioImg===img&&curAudio&&!curAudio.paused){curAudio.pause();btn.textContent="▶";return}
   stopCurAudio();
   var a=new Audio(src);curAudio=a;curAudioImg=img;
   a.addEventListener("ended",function(){btn.textContent="▶";if(curAudioImg===img){curAudio=null;curAudioImg=null}});
   a.addEventListener("pause",function(){btn.textContent="▶"});
   a.addEventListener("play",function(){btn.textContent="⏸"});
-  a.play().catch(function(){alert("Could not play this voice note.")});
+  a.play().catch(function(){alert("No s'ha pogut reproduir aquesta nota de veu.")});
 }
 // cfg: { editable, isEdit, onDelete }
 function audioChipEl(img,cfg){
   cfg=cfg||{};
   var el=document.createElement("div");el.className="audio-chip";
-  el.innerHTML="<button class=\"ac-play\" title=\"Play / pause\">▶</button>"
+  el.innerHTML="<button class=\"ac-play\" title=\"Reprodueix / pausa\">▶</button>"
     +"<span class=\"ac-dur\">🎧 "+fmtDur(img.duration)+"</span>"
     +(cfg.editable?upBadgeAc(img):"")
-    +(cfg.editable?"<button class=\"ac-del\" title=\"Remove\">✕</button>":"");
+    +(cfg.editable?"<button class=\"ac-del\" title=\"Treu\">✕</button>":"");
   el.querySelector(".ac-play").addEventListener("click",function(){playAudioToggle(img,el.querySelector(".ac-play"))});
   var db=el.querySelector(".ac-del");if(db)db.addEventListener("click",function(){if(cfg.onDelete)cfg.onDelete()});
   var eb=el.querySelector(".ac-badge.err");if(eb)eb.addEventListener("click",function(){retryUpload(img,cfg.isEdit)});
@@ -2282,27 +2307,27 @@ function pickAudioMime(){
 function renderRecUI(isEdit,active){
   var btn=$$(isEdit?"eRec":"btnRec");
   if(btn){
-    btn.textContent=isEdit?(active?"⏹ Stop recording":"🎙 Record voice note"):(active?"⏹":"🎙");
-    btn.title=active?"Stop recording":"Record voice note";
+    btn.textContent=isEdit?(active?"⏹ Atura la gravació":"🎙 Grava una nota de veu"):(active?"⏹":"🎙");
+    btn.title=active?"Atura la gravació":"Grava una nota de veu";
     if(active)btn.classList.add("btn-danger");else btn.classList.remove("btn-danger");
   }
   var cont=$$(isEdit?"eThumbs":"pThumbs"),existing=$$(isEdit?"eRecLive":"pRecLive");
   if(active&&cont&&!existing){
     var d=document.createElement("div");d.className="rec-live";d.id=isEdit?"eRecLive":"pRecLive";
-    d.innerHTML="<span class=\"rec-dot\"></span><span>Recording…</span><span class=\"rec-time\" style=\"font-family:monospace;margin-left:auto\">0:00</span>";
+    d.innerHTML="<span class=\"rec-dot\"></span><span>Gravant…</span><span class=\"rec-time\" style=\"font-family:monospace;margin-left:auto\">0:00</span>";
     cont.insertBefore(d,cont.firstChild);
   } else if(!active&&existing){existing.remove()}
 }
 function recTick(){recSeconds++;var el=$$(recIsEdit?"eRecLive":"pRecLive");if(el){var t=el.querySelector(".rec-time");if(t)t.textContent=fmtDur(recSeconds)}}
 async function startRec(isEdit){
   if(mediaRec)return;
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){alert("Voice recording is not supported on this browser.");return}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){alert("Aquest navegador no permet gravar notes de veu.");return}
   try{recStream=await navigator.mediaDevices.getUserMedia({audio:true})}
-  catch(e){alert("Microphone access denied or unavailable.");return}
+  catch(e){alert("L'accés al micròfon s'ha denegat o no està disponible.");return}
   recIsEdit=isEdit;recChunks=[];recSeconds=0;
   var mime=pickAudioMime();
   try{mediaRec=mime?new MediaRecorder(recStream,{mimeType:mime}):new MediaRecorder(recStream)}
-  catch(e){try{mediaRec=new MediaRecorder(recStream)}catch(e2){alert("Recording not supported.");recStream.getTracks().forEach(function(t){t.stop()});recStream=null;return}}
+  catch(e){try{mediaRec=new MediaRecorder(recStream)}catch(e2){alert("La gravació no és compatible.");recStream.getTracks().forEach(function(t){t.stop()});recStream=null;return}}
   mediaRec.ondataavailable=function(ev){if(ev.data&&ev.data.size)recChunks.push(ev.data)};
   mediaRec.onstop=onRecStop;
   mediaRec.start();
@@ -2346,7 +2371,7 @@ function handleFiles(e,isEdit){
   // nowhere for the file to go, so block it up front instead of silently
   // losing the video after showing a fake "uploaded" thumbnail.
   if(files.some(isVidFile)&&(!active||!isLoggedIn)){
-    alert("Sign in with Google to attach videos — they upload directly to Drive and are not stored on this device.");
+    alert("Inicia la sessió amb Google per adjuntar vídeos: es pugen directament a Drive i no es guarden en aquest dispositiu.");
     files=files.filter(function(f){return !isVidFile(f)});
   }
   files.forEach(function(file){
@@ -2386,15 +2411,15 @@ function handleFiles(e,isEdit){
 // ── ADD / EDIT / DELETE ENTRY ─────────────────────────────────────────────────
 function earliestTs(imgs){var d=(imgs||[]).map(function(i){return i.capturedAt}).filter(Boolean).sort();return d.length?d[0]:null}
 function addEntry(){
-  if(mediaRec&&!recIsEdit){alert("Stop the voice recording before adding the entry.");return}
+  if(mediaRec&&!recIsEdit){alert("Atura la gravació de veu abans d'afegir l'entrada.");return}
   var entIn=$$("entIn");if(!entIn)return;
   var text=entIn.value.trim();
   if(!text&&!pImgs.length)return;
   var active=sessions.find(function(s){return s.id===aid});if(!active||active.status!=="open")return;
-  var captText=text||(pImgs.length?"[Media — add description]":""),captSev=$$("sevSel").value,captTag=$$("tagIn").value.trim(),waited=0;
+  var captText=text||(pImgs.length?"[Multimèdia — afegeix-hi una descripció]":""),captSev=$$("sevSel").value,captTag=$$("tagIn").value.trim(),waited=0;
   function tryAdd(){
-    if(pExif>0&&waited<3000){var b=$$("btnAdd");if(b){b.disabled=true;b.textContent="Processing..."}waited+=150;setTimeout(tryAdd,150);return}
-    var b2=$$("btnAdd");if(b2){b2.disabled=false;b2.innerHTML="↵ Add"}
+    if(pExif>0&&waited<3000){var b=$$("btnAdd");if(b){b.disabled=true;b.textContent="Processant…"}waited+=150;setTimeout(tryAdd,150);return}
+    var b2=$$("btnAdd");if(b2){b2.disabled=false;b2.innerHTML="↵ Afegeix"}
     var imgs=pImgs.slice(),pts=earliestTs(imgs);
     var entry={id:uid(),ts:pts||now(),text:captText,severity:captSev,tag:captTag,images:imgs};
     if(pts)entry.tsFromPhoto=true;
@@ -2423,22 +2448,22 @@ function openEdit(entryId){
   setTimeout(function(){$$("eText").focus()},80);
 }
 function saveEdit(){
-  if(mediaRec&&recIsEdit){alert("Stop the voice recording before saving.");return}
+  if(mediaRec&&recIsEdit){alert("Atura la gravació de veu abans de desar.");return}
   var text=$$("eText").value.trim();
-  if(!text&&!eImgs.length){alert("Description cannot be empty.");return}
+  if(!text&&!eImgs.length){alert("La descripció no pot quedar buida.");return}
   if(!editingId)return;
   var entId=editingId,newSev=$$("eSev").value,newTag=$$("eTag").value.trim(),waited=0;
-  var captText=text||(eImgs.length?"[Media — add description]":"");
+  var captText=text||(eImgs.length?"[Multimèdia — afegeix-hi una descripció]":"");
   function tryS(){
-    if(pExifEdit>0&&waited<3000){var b=$$("eSave");if(b){b.disabled=true;b.textContent="Processing..."}waited+=150;setTimeout(tryS,150);return}
-    var b2=$$("eSave");if(b2){b2.disabled=false;b2.innerHTML="✓ Save changes"}
+    if(pExifEdit>0&&waited<3000){var b=$$("eSave");if(b){b.disabled=true;b.textContent="Processant…"}waited+=150;setTimeout(tryS,150);return}
+    var b2=$$("eSave");if(b2){b2.disabled=false;b2.innerHTML="✓ Desa els canvis"}
     sessions=sessions.map(function(s){if(s.id!==aid)return s;return Object.assign({},s,{entries:(s.entries||[]).map(function(en){if(en.id!==entId)return en;return Object.assign({},en,{text:captText,severity:newSev,tag:newTag,images:eImgs.slice(),parts:eParts.slice(),editedAt:now()})})})});
     closeEdit();scheduleSave();renderAll();
   }tryS();
 }
 function closeEdit(){if(mediaRec&&recIsEdit){stopRec();recChunks=[]}stopCurAudio();$$("editBack").style.display="none";editingId=null;eImgs=[];eParts=[];clearPartForm()}
 function delEntry(entryId){
-  if(!confirm("Delete this log entry? This cannot be undone."))return;
+  if(!confirm("Vols eliminar aquesta entrada? No es pot desfer."))return;
   sessions=sessions.map(function(s){if(s.id!==aid)return s;return Object.assign({},s,{entries:(s.entries||[]).filter(function(en){return en.id!==entryId})})});
   scheduleSave();renderAll();
 }
@@ -2456,7 +2481,7 @@ $$("ePartAdd").addEventListener("click",function(){var f=$$("ePartForm");f.style
 $$("pfCancel").addEventListener("click",clearPartForm);
 $$("pfSave").addEventListener("click",function(){
   var pos=$$("pfPos").value.trim(),ref=$$("pfRef").value.trim(),cant=$$("pfCant").value.trim(),den=$$("pfDen").value.trim();
-  if(!pos&&!ref&&!den){alert("Enter at least a position, reference or denomination.");return}
+  if(!pos&&!ref&&!den){alert("Escriu com a mínim una posició, una referència o una denominació.");return}
   eParts.push({pos:pos,ref:ref,cant:cant,denominacio:den});
   clearPartForm();rEParts();
 });
@@ -2479,18 +2504,18 @@ function zipIsCurrent(s){
 function renderDelModal(){
   var s=pendingDel;if(!s)return;
   var n=(s.entries||[]).length;
-  $$("delDesc").innerHTML="You are about to delete <strong>"+esc(s.client||"this session")+"</strong>"+(s.machine?" — "+esc(s.machine):"")
-    +(n?" with its "+n+" entr"+(n===1?"y":"ies"):"")+".";
+  $$("delDesc").innerHTML="Estàs a punt d'eliminar <strong>"+esc(s.client||"aquesta sessió")+"</strong>"+(s.machine?" — "+esc(s.machine):"")
+    +(n?" amb "+(n===1?"la seva entrada":"les seves "+n+" entrades"):"")+".";
   var ok=zipIsCurrent(s);
   $$("delZipSt").innerHTML=ok
-    ? "<span style=\"color:var(--green)\">&#10003; <strong>Drive ZIP exported "+esc(fts(s.zipAt))+"</strong>, after the last change — a full copy exists.</span>"
-    : "<span style=\"color:var(--gold)\">&#9888; <strong>No Drive ZIP since the last change"+(s.zipAt?" (last one: "+esc(fts(s.zipAt))+")":"")
-      +".</strong> Only that file carries the photos and videos, and it can be imported back complete.</span>";
+    ? "<span style=\"color:var(--green)\">&#10003; <strong>ZIP del projecte exportat el "+esc(fts(s.zipAt))+"</strong>, després de l'últim canvi: n'hi ha una còpia completa.</span>"
+    : "<span style=\"color:var(--gold)\">&#9888; <strong>No s'ha exportat cap ZIP del projecte des de l'últim canvi"+(s.zipAt?" (l'últim: "+esc(fts(s.zipAt))+")":"")
+      +".</strong> Només aquest fitxer conté les fotos i els vídeos, i es pot tornar a importar sencer.</span>";
   $$("delZipNow").style.display=ok?"none":"";
-  $$("delConfirm").innerHTML=ok?"&#128465; Delete":"&#128465; Delete anyway";
+  $$("delConfirm").innerHTML=ok?"&#128465; Elimina":"&#128465; Elimina igualment";
   $$("delFile").textContent=isLoggedIn
-    ? "Its Drive folder (photos, videos, reports) goes to the Drive trash, where you can restore it."
-    : "You are signed out, so any Drive folder for this session is left untouched.";
+    ? "La seva carpeta de Drive (fotos, vídeos, informes) va a la paperera de Drive, d'on la pots recuperar."
+    : "No has iniciat la sessió, així que no es toca la carpeta de Drive d'aquesta sessió (si en té).";
 }
 function openDelModal(s){
   pendingDel=s;
@@ -2501,7 +2526,7 @@ function openDelModal(s){
 // technician cancel, export and start over.
 $$("delZipNow").addEventListener("click",async function(){
   var s=pendingDel;if(!s)return;
-  var btn=this,lbl=btn.innerHTML;btn.disabled=true;btn.textContent="Exporting…";
+  var btn=this,lbl=btn.innerHTML;btn.disabled=true;btn.textContent="Exportant…";
   try{await exportSessionZip(s,"project")}catch(e){}
   btn.disabled=false;btn.innerHTML=lbl;
   pendingDel=sessions.find(function(x){return x.id===s.id})||s; // pick up the new zipAt
@@ -2523,7 +2548,7 @@ $$("delConfirm").addEventListener("click",async function(){
   if(isLoggedIn){
     var token=await ensureToken();
     if(token){
-      setSyncSt("loading","Moving Drive folder to trash...");
+      setSyncSt("loading","Enviant la carpeta de Drive a la paperera…");
       try{
         // look the folder up WITHOUT creating it — getSessionFolder() is
         // find-or-create and would conjure an empty folder just to bin it
@@ -2534,10 +2559,10 @@ $$("delConfirm").addEventListener("click",async function(){
         if(folderId){
           var r=await fetch("https://www.googleapis.com/drive/v3/files/"+folderId,
             {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({trashed:true})});
-          if(!r.ok)throw new Error("Drive replied "+r.status);
+          if(!r.ok)throw new Error("Drive ha respost "+r.status);
         }
         setSyncSt("ok","");
-      }catch(e){setSyncSt("error","Could not move the Drive folder to trash")}
+      }catch(e){setSyncSt("error","No s'ha pogut enviar la carpeta de Drive a la paperera")}
     }
   }
 });
@@ -2546,8 +2571,8 @@ $$("delConfirm").addEventListener("click",async function(){
 var editingSessId=null;
 function openNewModal(editSess){
   editingSessId=editSess?editSess.id:null;
-  $$("newModalTitle").innerHTML=editSess?"&#9998; Edit Service Visit":"&#9658; New Service Visit";
-  $$("nSave").innerHTML=editSess?"&#10003; Save changes":"&#10003; Create session";
+  $$("newModalTitle").innerHTML=editSess?"&#9998; Edita la visita de servei":"&#9658; Nova visita de servei";
+  $$("nSave").innerHTML=editSess?"&#10003; Desa els canvis":"&#10003; Crea la sessió";
   $$("nClient").value=editSess?(editSess.client||""):"";
   $$("nProject").value=editSess?(editSess.project||""):"";
   $$("nMachine").value=editSess?(editSess.machine||""):"";
@@ -2573,7 +2598,7 @@ $$("nCancel").addEventListener("click",closeNewModal);
 $$("newBack").addEventListener("click",function(e){if(e.target===$$("newBack"))closeNewModal()});
 $$("nSave").addEventListener("click",function(){
   var c=$$("nClient").value.trim(),m=$$("nMachine").value.trim();
-  if(!c||!m){alert("Client and machine are required.");return}
+  if(!c||!m){alert("El client i la màquina són obligatoris.");return}
   var proj=$$("nProject").value.trim(),loc=$$("nLoc").value.trim(),tech=$$("nTech").value.trim(),type=$$("nType").value;
   if(editingSessId){
     var editId=editingSessId,old=sessions.find(function(s){return s.id===editId});
@@ -2631,16 +2656,16 @@ function mimeForName(n){
 // That also restores photos at their original resolution.
 async function importSessionZip(file){
   var JSZipLib=await loadJSZip();
-  if(!JSZipLib)throw new Error("could not load the ZIP library");
+  if(!JSZipLib)throw new Error("no s'ha pogut carregar la llibreria ZIP");
   var zip=await JSZipLib.loadAsync(file);
   var sj=zip.file("session.json");
-  if(!sj)throw new Error("this ZIP has no session.json — is it a session export?");
+  if(!sj)throw new Error("aquest ZIP no té session.json: és una exportació de sessió?");
   var list=JSON.parse(await sj.async("string"));
-  if(!Array.isArray(list))throw new Error("session.json should hold an array of sessions");
+  if(!Array.isArray(list))throw new Error("session.json hauria de contenir una llista de sessions");
 
   var res=mergeImportedSessions(list);
   saveLocal();renderAll();
-  if(!res.added.length){alert("Nothing imported — that session already exists here.");return}
+  if(!res.added.length){alert("No s'ha importat res: aquesta sessió ja existeix aquí.");return}
 
   // index the media by file name, whichever folder it sits in
   var media={};
@@ -2661,21 +2686,21 @@ async function importSessionZip(file){
   });
 
   if(!pending.length){
-    alert("Imported "+res.added.length+" session(s)."+(res.skipped?" "+res.skipped+" skipped (already exist).":""));
+    alert("S'han importat "+res.added.length+" sessió(ns)."+(res.skipped?" "+res.skipped+" omeses (ja existien).":""));
     return;
   }
   if(!isLoggedIn){
     res.added.forEach(function(sess){(sess.entries||[]).forEach(function(en){(en.images||[]).forEach(function(img){img.driveId=null})})});
     saveLocal();renderAll();
-    alert("Imported "+res.added.length+" session(s).\n\nPhotos and voice notes are back, but the "+pending.length
-      +" file(s) in the ZIP could not be restored to Drive because you are signed out.\nSign in and import the ZIP again to recover the videos.");
+    alert("S'han importat "+res.added.length+" sessió(ns).\n\nLes fotos i les notes de veu ja hi són, però els "+pending.length
+      +" fitxer(s) del ZIP no s'han pogut restaurar a Drive perquè no has iniciat la sessió.\nInicia-la i torna a importar el ZIP per recuperar els vídeos.");
     return;
   }
 
   var okCount=0,failCount=0;
   for(var i=0;i<pending.length;i++){
     var p=pending[i];
-    setSyncSt("loading","Restoring media "+(i+1)+"/"+pending.length+"…");
+    setSyncSt("loading","Restaurant la multimèdia "+(i+1)+"/"+pending.length+"…");
     try{
       var blob=await p.hit.entry.async("blob");
       var f=new File([blob],p.img.name,{type:mimeForName(p.img.name)});
@@ -2688,60 +2713,192 @@ async function importSessionZip(file){
   saveLocal();
   isDirty=true;await saveToDrive();
   renderAll();
-  alert("Imported "+res.added.length+" session(s)."+(res.skipped?" "+res.skipped+" skipped (already exist).":"")
-    +"\n\n"+okCount+" media file(s) restored to Drive"+(failCount?", "+failCount+" failed":"")+".");
+  alert("S'han importat "+res.added.length+" sessió(ns)."+(res.skipped?" "+res.skipped+" omeses (ja existien).":"")
+    +"\n\n"+okCount+" fitxer(s) multimèdia restaurat(s) a Drive"+(failCount?", "+failCount+" han fallat":"")+".");
 }
 $$("importFile").addEventListener("change",function(e){
   var file=e.target.files&&e.target.files[0];if(!file)return;
   e.target.value="";
   if(/\.zip$/i.test(file.name)){
-    importSessionZip(file).catch(function(err){setSyncSt("ok","");alert("Import failed: "+((err&&err.message)||err))});
+    importSessionZip(file).catch(function(err){setSyncSt("ok","");alert("La importació ha fallat: "+((err&&err.message)||err))});
     return;
   }
   var r=new FileReader();
   r.onload=function(ev){
     try{
       var data=JSON.parse(ev.target.result);
-      if(!Array.isArray(data))throw new Error("Expected a JSON array");
+      if(!Array.isArray(data))throw new Error("S'esperava una llista JSON");
       var res=mergeImportedSessions(data);
       saveLocal();renderAll();
-      alert("Imported "+res.added.length+" session(s)."+(res.skipped?" "+res.skipped+" skipped (already exist).":""));
-    }catch(err){alert("Import failed: "+err.message)}
+      alert("S'han importat "+res.added.length+" sessió(ns)."+(res.skipped?" "+res.skipped+" omeses (ja existien).":""));
+    }catch(err){alert("La importació ha fallat: "+err.message)}
   };
-  r.onerror=function(){alert("Could not read file.")};
+  r.onerror=function(){alert("No s'ha pogut llegir el fitxer.")};
   r.readAsText(file);
 });
 
 // ── EXPORT ────────────────────────────────────────────────────────────────────
 function dlBlob(blob,filename){var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
 
-function buildReportHTML(s,forPrint){
-  var tm=TM[s.type]||TM.commissioning;
+// ── REPORT LANGUAGE ──────────────────────────────────────────────────────────
+// The app itself is in Catalan; a report goes out in whichever language its
+// reader needs, chosen in the Report menu and remembered per session. The
+// fixed labels come from RPT; the technician's own words (entry descriptions,
+// general notes) are machine-translated with Google Cloud Translation. The
+// manual's data — part names, references — always stays as the manual has it.
+var RPT={
+  ca:{title:"Informe de servei tècnic",gen:"Generat el",
+      types:{commissioning:"Posada en marxa",maintenance:"Manteniment",retrofit:"Millora / Retrofit"},
+      sev:{info:"INFO",ok:"OK",warning:"AVÍS",issue:"PROBLEMA"},
+      client:"Client",project:"Número de projecte",machine:"Màquina",location:"Ubicació",tech:"Tècnic",
+      start:"Inici",status:"Estat",manual:"Manual",open:"Oberta",closed:"Tancada",
+      issues:"Problemes",warnings:"Avisos",ok:"OK",total:"Total",
+      ts:"Data i hora",severity:"Gravetat",tag:"Etiqueta",desc:"Descripció",att:"Adjunts",
+      edited:"editat",noEntries:"Sense entrades",photos:"Fotos",notes:"Notes generals",
+      sigTech:"Signatura del tècnic",sigCli:"Signatura del client / receptor",
+      qty:"QT.",ref:"REF.",part:"RECANVI",photoTag:"[foto]",openDrive:"Obre a Drive",
+      voice:"nota de veu",video:"vídeo",photo:"foto",file:"fitxer",
+      pre:{report:"informe",parts:"recanvis"},
+      x:{sSession:"Sessió",sDetail:"Detall",sSummary:"Resum",qty:"Quantitat",ref:"Ref.",den:"Denominació",
+         date:"Data",sev:"Gravetat",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunt",grup:"Grup / Dibuix",
+         page:"Pàgina",project:"Projecte",type:"Tipus",gen:"Generat",lines:"Recanvis (línies)",refs:"Referències diferents"}},
+  es:{title:"Informe de servicio técnico",gen:"Generado el",
+      types:{commissioning:"Puesta en marcha",maintenance:"Mantenimiento",retrofit:"Mejora / Retrofit"},
+      sev:{info:"INFO",ok:"OK",warning:"AVISO",issue:"PROBLEMA"},
+      client:"Cliente",project:"Número de proyecto",machine:"Máquina",location:"Ubicación",tech:"Técnico",
+      start:"Inicio",status:"Estado",manual:"Manual",open:"Abierta",closed:"Cerrada",
+      issues:"Problemas",warnings:"Avisos",ok:"OK",total:"Total",
+      ts:"Fecha y hora",severity:"Gravedad",tag:"Etiqueta",desc:"Descripción",att:"Adjuntos",
+      edited:"editado",noEntries:"Sin entradas",photos:"Fotos",notes:"Notas generales",
+      sigTech:"Firma del técnico",sigCli:"Firma del cliente / receptor",
+      qty:"CANT.",ref:"REF.",part:"RECAMBIO",photoTag:"[foto]",openDrive:"Abrir en Drive",
+      voice:"nota de voz",video:"vídeo",photo:"foto",file:"archivo",
+      pre:{report:"informe",parts:"recambios"},
+      x:{sSession:"Sesión",sDetail:"Detalle",sSummary:"Resumen",qty:"Cantidad",ref:"Ref.",den:"Denominación",
+         date:"Fecha",sev:"Gravedad",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunto",grup:"Grupo / Plano",
+         page:"Página",project:"Proyecto",type:"Tipo",gen:"Generado",lines:"Recambios (líneas)",refs:"Referencias distintas"}},
+  en:{title:"Field Service Report",gen:"Generated on",
+      types:{commissioning:"Commissioning",maintenance:"Maintenance",retrofit:"Upgrade / Retrofit"},
+      sev:{info:"INFO",ok:"OK",warning:"WARNING",issue:"ISSUE"},
+      client:"Client",project:"Project Number",machine:"Machine",location:"Location",tech:"Technician",
+      start:"Start",status:"Status",manual:"Manual",open:"Open",closed:"Closed",
+      issues:"Issues",warnings:"Warnings",ok:"OK",total:"Total",
+      ts:"Timestamp",severity:"Severity",tag:"Tag",desc:"Description",att:"Attachments",
+      edited:"edited",noEntries:"No entries",photos:"Photos",notes:"General notes",
+      sigTech:"Technician signature",sigCli:"Client / Recipient signature",
+      qty:"QTY",ref:"REF.",part:"SPARE PART",photoTag:"[photo]",openDrive:"Open in Drive",
+      voice:"voice note",video:"video",photo:"photo",file:"file",
+      pre:{report:"report",parts:"spare_parts"},
+      x:{sSession:"Session",sDetail:"Detail",sSummary:"Summary",qty:"Quantity",ref:"Ref.",den:"Designation",
+         date:"Date",sev:"Severity",tag:"Tag",entry:"Entry",pos:"Pos.",conj:"Assembly",grup:"Group / Drawing",
+         page:"Page",project:"Project",type:"Type",gen:"Generated",lines:"Spare parts (lines)",refs:"Distinct references"}}
+};
+// [code, menu label, name, "into <language>" phrase for messages]
+var REPORT_LANGS=[["ca","CA","Català","al català"],["es","ES","Castellano","al castellà"],["en","EN","English","a l'anglès"]];
+function reportLang(s){return (s&&RPT[s.reportLang])?s.reportLang:"ca"}
+function langInto(l){var x=REPORT_LANGS.filter(function(r){return r[0]===l})[0];return x?x[3]:l}
+function reportBase(s,lang){return (s.client||"sessio").replace(/\s+/g,"_")+"_"+s.createdAt.slice(0,10)+"_"+lang}
+// A preference, not a change to the visit, so updatedAt stays put: bumping it
+// would make the delete dialog think the last project ZIP is out of date.
+function setReportLang(id,lang){
+  sessions=sessions.map(function(x){return x.id===id?Object.assign({},x,{reportLang:lang}):x});
+  saveLocal();isDirty=true;if(isLoggedIn)saveToDrive();
+}
+// Same Google Cloud project and key as the Drive Picker. The Cloud Translation
+// API has to be enabled there and allowed on this key — see CONTEXT.md.
+var TR_KEY=PICKER_KEY, TR_URL="https://translation.googleapis.com/language/translate/v2";
+function txHash(str){var h=5381;for(var i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))|0;return (h>>>0).toString(36)+"."+str.length}
+async function gTranslate(texts,target){
+  var out=[],i=0;
+  while(i<texts.length){
+    // batches well under the API's limits (128 strings per call, ~30k chars)
+    var batch=[],chars=0;
+    while(i<texts.length&&batch.length<100&&(!batch.length||chars+texts[i].length<20000)){batch.push(texts[i]);chars+=texts[i].length;i++}
+    var r=await fetch(TR_URL+"?key="+encodeURIComponent(TR_KEY),{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({q:batch,target:target,format:"text"})});
+    if(!r.ok){var m="HTTP "+r.status;try{var j=await r.json();if(j&&j.error&&j.error.message)m=j.error.message}catch(e){}throw new Error(m)}
+    var d=await r.json();
+    ((d.data&&d.data.translations)||[]).forEach(function(t){out.push(t.translatedText)});
+  }
+  if(out.length!==texts.length)throw new Error("resposta incompleta del traductor");
+  return out;
+}
+// The copy of the session a report is built from: same data, with the entry
+// descriptions and the general notes in the report's language. Translations are
+// cached on the session (entry.tr / session.notesTr, keyed by a hash of the
+// source text), so re-exporting costs nothing and works offline, and editing a
+// text simply makes its old translation stale.
+async function localizeSession(s,lang){
+  var jobs=[];
+  (s.entries||[]).forEach(function(e){
+    var src=(e.text||"").trim();if(!src)return;
+    var c=e.tr&&e.tr[lang];
+    if(!(c&&c.h===txHash(src)))jobs.push({id:e.id,src:src});
+  });
+  var nsrc=(s.notes||"").trim();
+  if(nsrc){var nc=s.notesTr&&s.notesTr[lang];if(!(nc&&nc.h===txHash(nsrc)))jobs.push({id:null,src:nsrc})}
+  if(jobs.length){
+    var got=await gTranslate(jobs.map(function(j){return j.src}),lang);
+    var byId={},notesT=null;
+    jobs.forEach(function(j,k){var v={h:txHash(j.src),t:got[k]};if(j.id)byId[j.id]=v;else notesT=v});
+    // written without touching updatedAt, like the language choice
+    sessions=sessions.map(function(x){
+      if(x.id!==s.id)return x;
+      var o=Object.assign({},x);
+      o.entries=(x.entries||[]).map(function(e){var v=byId[e.id];if(!v)return e;var tr=Object.assign({},e.tr||{});tr[lang]=v;return Object.assign({},e,{tr:tr})});
+      if(notesT){var nt=Object.assign({},x.notesTr||{});nt[lang]=notesT;o.notesTr=nt}
+      return o;
+    });
+    s=sessions.find(function(x){return x.id===s.id})||s;
+    saveLocal();isDirty=true;if(isLoggedIn)saveToDrive();
+  }
+  function pick(src,c){src=(src||"").trim();return (src&&c&&c.h===txHash(src))?c.t:null}
+  return Object.assign({},s,{
+    entries:(s.entries||[]).map(function(e){var t=pick(e.text,e.tr&&e.tr[lang]);return t==null?e:Object.assign({},e,{text:t})}),
+    notes:(function(){var t=pick(s.notes,s.notesTr&&s.notesTr[lang]);return t==null?s.notes:t})()
+  });
+}
+// Every report goes through here. If translating fails (offline, API not
+// enabled…) the technician decides whether to go ahead with the originals.
+async function reportSession(s){
+  var lang=reportLang(s);
+  try{return {s:await localizeSession(s,lang),lang:lang}}
+  catch(e){
+    if(!confirm("No s'han pogut traduir els textos "+langInto(lang)+":\n"+((e&&e.message)||e)
+      +"\n\nVols generar l'informe igualment, amb els textos tal com els vas escriure?"))return null;
+    return {s:s,lang:lang};
+  }
+}
+function expBusy(t){var b=$$("btnExp");if(b){b.disabled=!!t;b.innerHTML=t?esc(t):"&#8595; Informe &#9662;"}}
+
+function buildReportHTML(s,forPrint,lang){
+  lang=RPT[lang]?lang:"ca";
+  var R=RPT[lang],tm=TM[s.type]||TM.commissioning,tl=R.types[s.type]||R.types.commissioning;
   var entries=s.entries||[];
   var cnt=severityCounts(entries),errs=cnt.issue,warns=cnt.warning,oks=cnt.ok;
   var rows=entries.map(function(e){
-    var sm=SM[e.severity]||SM.info;
+    var sm=SM[e.severity]||SM.info,sl=R.sev[e.severity]||R.sev.info;
     var imgCell=(e.images||[]).map(function(img){
       if(img.type==="video"){
         var ph=img.poster?"<img src=\""+img.poster+"\" style=\"max-width:140px;max-height:100px;object-fit:cover;border-radius:4px;display:block\">":"<div style=\"width:130px;height:90px;background:#eee;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:24px\">🎬</div>";
-        var lnk=(!forPrint&&img.driveId)?"<a href=\"https://drive.google.com/file/d/"+img.driveId+"/view\" target=\"_blank\" style=\"font-size:9px;color:#1d4ed8;display:block\">↗ Open in Drive</a>":"";
-        return "<div style=\"margin:2px;display:inline-block;vertical-align:top\">"+ph+"<div style=\"font-size:9px;color:#6b7280;font-family:monospace;word-break:break-all\">▶ "+esc(img.name||"video")+"</div>"+lnk+"</div>";
+        var lnk=(!forPrint&&img.driveId)?"<a href=\"https://drive.google.com/file/d/"+img.driveId+"/view\" target=\"_blank\" style=\"font-size:9px;color:#1d4ed8;display:block\">↗ "+esc(R.openDrive)+"</a>":"";
+        return "<div style=\"margin:2px;display:inline-block;vertical-align:top\">"+ph+"<div style=\"font-size:9px;color:#6b7280;font-family:monospace;word-break:break-all\">▶ "+esc(img.name||R.video)+"</div>"+lnk+"</div>";
       }
       if(img.type==="audio"){
         var alnk=(!forPrint&&img.driveId)?"<a href=\"https://drive.google.com/file/d/"+img.driveId+"/view\" target=\"_blank\" style=\"font-size:9px;color:#1d4ed8\">↗ Drive</a>":"";
-        return "<div style=\"margin:2px 0;padding:6px 8px;background:#f9fafb;border-left:3px solid #f59e0b;border-radius:4px\"><div style=\"font-size:9px;color:#6b7280;font-family:monospace\">🎧 "+esc(img.name||"voice note")+" · "+fmtDur(img.duration)+" "+alnk+"</div></div>";
+        return "<div style=\"margin:2px 0;padding:6px 8px;background:#f9fafb;border-left:3px solid #f59e0b;border-radius:4px\"><div style=\"font-size:9px;color:#6b7280;font-family:monospace\">🎧 "+esc(img.name||R.voice)+" · "+fmtDur(img.duration)+" "+alnk+"</div></div>";
       }
-      return "<div style=\"margin:2px;display:inline-block;vertical-align:top\"><img src=\""+img.data+"\" style=\"max-width:140px;max-height:100px;object-fit:cover;border-radius:4px;display:block\"><div style=\"font-size:9px;color:#6b7280;font-family:monospace;word-break:break-all\">"+esc(img.name||"photo")+"</div></div>";
+      return "<div style=\"margin:2px;display:inline-block;vertical-align:top\"><img src=\""+img.data+"\" style=\"max-width:140px;max-height:100px;object-fit:cover;border-radius:4px;display:block\"><div style=\"font-size:9px;color:#6b7280;font-family:monospace;word-break:break-all\">"+esc(img.name||R.photo)+"</div></div>";
     }).join("");
     return "<tr>"
       +"<td style=\"font-family:monospace;font-size:11px;white-space:nowrap;padding:5px 8px;border:1px solid #e5e7eb;color:#6b7280\">"+(e.tsFromPhoto?"📷 ":"")+fts(e.ts)+"</td>"
-      +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:11px;font-weight:700;color:"+sm.tx+"\">"+sm.label+"</td>"
+      +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:11px;font-weight:700;color:"+sm.tx+"\">"+esc(sl)+"</td>"
       +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:11px;font-family:monospace;color:#1d4ed8\">"+esc(e.tag||"")+"</td>"
-      +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:13px\">"+esc(e.text||"")+(e.editedAt?"<em style=\"color:#9ca3af;font-size:11px\"> (edited)</em>":"")+partsReportHTML(e.parts)+"</td>"
+      +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:13px\">"+esc(e.text||"")+(e.editedAt?"<em style=\"color:#9ca3af;font-size:11px\"> ("+esc(R.edited)+")</em>":"")+partsReportHTML(e.parts,R)+"</td>"
       +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb\">"+imgCell+"</td>"
       +"</tr>";
   }).join("");
-  return "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><title>Report - "+esc(s.client||"")+"</title>"
+  return "<!DOCTYPE html><html lang=\""+lang+"\"><head><meta charset=\"UTF-8\"><title>"+esc(R.title)+" - "+esc(s.client||"")+"</title>"
     +"<style>body{font-family:Arial,sans-serif;max-width:1000px;margin:40px auto;padding:0 24px;color:#111827}"
     +"h1{font-size:22px;font-weight:800;margin:8px 0 4px}"
     +".meta{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;margin:16px 0}"
@@ -2753,50 +2910,59 @@ function buildReportHTML(s,forPrint){
     +".ft{margin-top:28px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;display:flex;justify-content:space-between}"
     +"@media print{body{margin:0;padding:16px}}</style></head><body>"
     +"<div style=\"border-bottom:3px solid #f59e0b;padding-bottom:14px;margin-bottom:16px\">"
-    +"<span style=\"background:"+tm.bg+";color:"+tm.tx+";border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700;letter-spacing:1px\">"+tm.label.toUpperCase()+"</span>"
-    +"<h1>Field Service Report</h1>"
-    +"<div style=\"color:#6b7280;font-size:13px\">Generated on "+fts(new Date().toISOString())+"</div></div>"
+    +"<span style=\"background:"+tm.bg+";color:"+tm.tx+";border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700;letter-spacing:1px\">"+esc(tl.toUpperCase())+"</span>"
+    +"<h1>"+esc(R.title)+"</h1>"
+    +"<div style=\"color:#6b7280;font-size:13px\">"+esc(R.gen)+" "+fts(new Date().toISOString())+"</div></div>"
     +"<div class=\"meta\">"
-    +"<div><div class=\"ml\">Client</div><div class=\"mv\">"+esc(s.client||"—")+"</div></div>"
-    +"<div><div class=\"ml\">Project Number</div><div class=\"mv\">"+esc(s.project||"—")+"</div></div>"
-    +"<div><div class=\"ml\">Machine</div><div class=\"mv\">"+esc(s.machine||"—")+"</div></div>"
-    +"<div><div class=\"ml\">Location</div><div class=\"mv\">"+esc(s.location||"—")+"</div></div>"
-    +"<div><div class=\"ml\">Technician</div><div class=\"mv\">"+esc(s.tech||"—")+"</div></div>"
-    +"<div><div class=\"ml\">Start</div><div class=\"mv\">"+fts(s.createdAt)+"</div></div>"
-    +"<div><div class=\"ml\">Status</div><div class=\"mv\">"+(s.status==="open"?"Open":"Closed")+"</div></div>"
+    +"<div><div class=\"ml\">"+esc(R.client)+"</div><div class=\"mv\">"+esc(s.client||"—")+"</div></div>"
+    +"<div><div class=\"ml\">"+esc(R.project)+"</div><div class=\"mv\">"+esc(s.project||"—")+"</div></div>"
+    +"<div><div class=\"ml\">"+esc(R.machine)+"</div><div class=\"mv\">"+esc(s.machine||"—")+"</div></div>"
+    +"<div><div class=\"ml\">"+esc(R.location)+"</div><div class=\"mv\">"+esc(s.location||"—")+"</div></div>"
+    +"<div><div class=\"ml\">"+esc(R.tech)+"</div><div class=\"mv\">"+esc(s.tech||"—")+"</div></div>"
+    +"<div><div class=\"ml\">"+esc(R.start)+"</div><div class=\"mv\">"+fts(s.createdAt)+"</div></div>"
+    +"<div><div class=\"ml\">"+esc(R.status)+"</div><div class=\"mv\">"+esc(s.status==="open"?R.open:R.closed)+"</div></div>"
     +"</div>"
     +"<div class=\"stats\">"
-    +"<div class=\"stat\" style=\"background:#fef2f2;color:#dc2626\"><strong style=\"font-size:26px;display:block\">"+errs+"</strong><span style=\"font-size:11px\">Issues</span></div>"
-    +"<div class=\"stat\" style=\"background:#fff7ed;color:#ea580c\"><strong style=\"font-size:26px;display:block\">"+warns+"</strong><span style=\"font-size:11px\">Warnings</span></div>"
-    +"<div class=\"stat\" style=\"background:#f0fdf4;color:#16a34a\"><strong style=\"font-size:26px;display:block\">"+oks+"</strong><span style=\"font-size:11px\">OK</span></div>"
-    +"<div class=\"stat\" style=\"background:#f1f5f9;color:#475569\"><strong style=\"font-size:26px;display:block\">"+entries.length+"</strong><span style=\"font-size:11px\">Total</span></div>"
+    +"<div class=\"stat\" style=\"background:#fef2f2;color:#dc2626\"><strong style=\"font-size:26px;display:block\">"+errs+"</strong><span style=\"font-size:11px\">"+esc(R.issues)+"</span></div>"
+    +"<div class=\"stat\" style=\"background:#fff7ed;color:#ea580c\"><strong style=\"font-size:26px;display:block\">"+warns+"</strong><span style=\"font-size:11px\">"+esc(R.warnings)+"</span></div>"
+    +"<div class=\"stat\" style=\"background:#f0fdf4;color:#16a34a\"><strong style=\"font-size:26px;display:block\">"+oks+"</strong><span style=\"font-size:11px\">"+esc(R.ok)+"</span></div>"
+    +"<div class=\"stat\" style=\"background:#f1f5f9;color:#475569\"><strong style=\"font-size:26px;display:block\">"+entries.length+"</strong><span style=\"font-size:11px\">"+esc(R.total)+"</span></div>"
     +"</div>"
-    +"<table><thead><tr><th>Timestamp</th><th>Severity</th><th>Tag</th><th>Description</th><th>Attachments</th></tr></thead><tbody>"+rows+"</tbody></table>"
-    +(s.notes?"<div style=\"margin-top:18px;padding:12px;background:#f9fafb;border-radius:6px;border-left:3px solid #f59e0b\"><strong>General notes:</strong><br>"+esc(s.notes)+"</div>":"")
-    +"<div class=\"sig\"><div><div class=\"sl\">Technician signature<br><strong>"+esc(s.tech||"_________________")+"</strong></div></div><div><div class=\"sl\">Client / Recipient signature</div></div></div>"
+    +"<table><thead><tr><th>"+esc(R.ts)+"</th><th>"+esc(R.severity)+"</th><th>"+esc(R.tag)+"</th><th>"+esc(R.desc)+"</th><th>"+esc(R.att)+"</th></tr></thead><tbody>"+rows+"</tbody></table>"
+    +(s.notes?"<div style=\"margin-top:18px;padding:12px;background:#f9fafb;border-radius:6px;border-left:3px solid #f59e0b\"><strong>"+esc(R.notes)+":</strong><br>"+esc(s.notes)+"</div>":"")
+    +"<div class=\"sig\"><div><div class=\"sl\">"+esc(R.sigTech)+"<br><strong>"+esc(s.tech||"_________________")+"</strong></div></div><div><div class=\"sl\">"+esc(R.sigCli)+"</div></div></div>"
     +"<div class=\"ft\"><span>ID: "+s.id+"</span><span>Field Service Log</span></div>"
     +"</body></html>";
 }
 
-function exportRep(s,fmt){
+async function exportRep(s,fmt){
   if(!s)return;
-  var base=(s.client||"session").replace(/\s+/g,"_")+"_"+s.createdAt.slice(0,10);
-  if(fmt==="html"){
-    var htmlBlob=new Blob([buildReportHTML(s,false)],{type:"text/html;charset=utf-8"});
-    dlBlob(htmlBlob,"report_"+base+".html");
-    uploadReportCopy(s,htmlBlob,"report_"+base+".html","text/html");
-  }
-  else if(fmt==="pdf"){exportPDF(s,base)}
-  else if(fmt==="docx"){exportDOCX(s,base)}
-  else if(fmt==="xlsx"){exportXLSX(s,base)}
+  // the menu was built from the session as it was at render time; re-read it so
+  // a language just picked in that same menu is the one used
+  s=sessions.find(function(x){return x.id===s.id})||s;
   // The timesheet is composed, not just rendered: which days, which columns,
   // who signs. So the menu OPENS it — everything prefilled from last time,
   // "Save & PDF" one tap away. It used to export straight off, which handed
   // over the frozen sheet without showing what was in it and left no way to
   // redo one from the menu at all.
-  else if(fmt==="timesheet"){openTimesheet()}
-  else if(fmt==="zip"){exportSessionZip(s,"project")}
-  else if(fmt==="zipdocx"){exportSessionZip(s,"docx")}
+  if(fmt==="timesheet"){openTimesheet();return}
+  if(fmt==="zip"){exportSessionZip(s,"project");return}
+  if(fmt==="zipdocx"){exportSessionZip(s,"docx");return}
+  if(fmt==="xlsx"&&!collectSessionParts(s).length){alert("Aquesta sessió encara no té recanvis.\n\nTria'ls d'un dibuix o afegeix-los a mà en una entrada.");return}
+  var R;
+  expBusy("Traduint…");
+  try{R=await reportSession(s)}finally{expBusy("")}
+  if(!R)return;
+  var base=reportBase(s,R.lang),P=RPT[R.lang].pre;
+  if(fmt==="html"){
+    var htmlBlob=new Blob([buildReportHTML(R.s,false,R.lang)],{type:"text/html;charset=utf-8"});
+    var hn=P.report+"_"+base+".html";
+    dlBlob(htmlBlob,hn);
+    uploadReportCopy(s,htmlBlob,hn,"text/html");
+  }
+  else if(fmt==="pdf"){exportPDF(s,R,base)}
+  else if(fmt==="docx"){exportDOCX(s,R,base)}
+  else if(fmt==="xlsx"){exportXLSX(s,R,base)}
 }
 
 // ── TIMESHEET ─────────────────────────────────────────────────────────────────
@@ -2886,19 +3052,19 @@ function tsRange(s){
 }
 
 var TSL={
-  en:{title:"Timesheet",gen:"Generated on",period:"Period",daysN:"Days",
+  en:{title:"Timesheet",file:"timesheet",gen:"Generated on",period:"Period",daysN:"Days",
       meta:["Client","Project Number","Machine","Location","Technician","Period"],
       date:"Date",day:"Day",dep:"Depart",arr:"On site",lv:"Off site",ret:"Back",brk:"Break",
       trav:"Travel h",work:"Work h",total:"Total h",dest:"Destination",tot:"TOTAL",
       rem:"Remarks",sigT:"Technician",sigC:"Client / Recipient",sigNote:"Signature",dt:"Date",
       wd:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],none:"No days selected"},
-  es:{title:"Hoja de horas",gen:"Generada el",period:"Periodo",daysN:"D\u00edas",
+  es:{title:"Hoja de horas",file:"hoja_de_horas",gen:"Generada el",period:"Periodo",daysN:"D\u00edas",
       meta:["Cliente","N\u00famero de proyecto","M\u00e1quina","Ubicaci\u00f3n","T\u00e9cnico","Periodo"],
       date:"Fecha",day:"D\u00eda",dep:"Salida",arr:"Llegada",lv:"Fin",ret:"Regreso",brk:"Pausa",
       trav:"H. viaje",work:"H. trabajo",total:"Total h",dest:"Destino",tot:"TOTAL",
       rem:"Observaciones",sigT:"T\u00e9cnico",sigC:"Cliente / Receptor",sigNote:"Firma",dt:"Fecha",
       wd:["dom","lun","mar","mi\u00e9","jue","vie","s\u00e1b"],none:"Ning\u00fan d\u00eda seleccionado"},
-  ca:{title:"Full d'hores",gen:"Generat el",period:"Per\u00edode",daysN:"Dies",
+  ca:{title:"Full d'hores",file:"full_d_hores",gen:"Generat el",period:"Per\u00edode",daysN:"Dies",
       meta:["Client","N\u00famero de projecte","M\u00e0quina","Ubicaci\u00f3","T\u00e8cnic","Per\u00edode"],
       date:"Data",day:"Dia",dep:"Sortida",arr:"Arribada",lv:"Fi",ret:"Tornada",brk:"Pausa",
       trav:"H. viatge",work:"H. treball",total:"Total h",dest:"Destinaci\u00f3",tot:"TOTAL",
@@ -2951,9 +3117,9 @@ function tsSum(rows,k){return tsR2(rows.reduce(function(a,r){return a+(+r[k]||0)
 function tsChipHTML(sess){
   var T=sess.timesheet;
   if(T&&T.rows&&T.rows.length)
-    return "<span id=\"tsChip\" style=\"cursor:pointer\" title=\"Timesheet — click to review, re-sign or change the days\">&#129534; "
+    return "<span id=\"tsChip\" style=\"cursor:pointer\" title=\"Full d'hores: clica per revisar-lo, tornar-lo a signar o canviar els dies\">&#129534; "
       +T.rows.length+"d · "+tsSum(T.rows,"total").toFixed(2)+"h"+((T.cliSig||T.techSig)?" &#9997;":"")+"</span>";
-  return "<span id=\"tsChip\" style=\"cursor:pointer;color:var(--tx3)\" title=\"Build a timesheet from the hours clocked in Calendari laboral\">&#129534; Timesheet</span>";
+  return "<span id=\"tsChip\" style=\"cursor:pointer;color:var(--tx3)\" title=\"Fes un full d'hores amb les hores fitxades al Calendari laboral\">&#129534; Full d'hores</span>";
 }
 
 // ── TIMESHEET · modal ─────────────────────────────────────────────────────────
@@ -3016,7 +3182,7 @@ function tsCacheLabel(){var c=loadCalCache();return c?esc(c.src)+" · "+esc(fts(
 // plant floor with no coverage.
 async function tsLoad(force){
   var from=$$("tsFrom").value,to=$$("tsTo").value;
-  tsSetSrc("<span class=\"spinner\"></span> Reading the calendar…");
+  tsSetSrc("<span class=\"spinner\"></span> Llegint el calendari…");
   var db=null,src="";
   if(isLoggedIn&&(force||!loadCalCache())){
     try{db=await fetchCalendarDB()}catch(e){db=null}
@@ -3027,10 +3193,10 @@ async function tsLoad(force){
     if(c&&c.db){db=c.db;src="Calendari laboral · "+tsCacheLabel()}
   }
   if(!db){
-    tsSetSrc("<span style=\"color:var(--orange)\">&#9888; Could not read the Calendari laboral file."
-      +(isLoggedIn?" It may never have been synced from that app."
-                  :" Sign in with Google, or")
-      +" use &#8593; Import JSON with a copy exported there (&#9881; Exporta còpia).</span>");
+    tsSetSrc("<span style=\"color:var(--orange)\">&#9888; No s'ha pogut llegir el fitxer del Calendari laboral."
+      +(isLoggedIn?" Potser no s'ha sincronitzat mai des d'aquella app."
+                  :" Inicia la sessió amb Google, o")
+      +" fes servir &#8593; Importa JSON amb una còpia exportada d'allà (&#9881; Exporta còpia).</span>");
     tsAll=[];tsRenderRows();return;
   }
   tsSetSrc(src);
@@ -3054,7 +3220,7 @@ function tsRenderColChips(){
   bar.innerHTML=TSCOLS.map(function(c){
     var on=tsCols.indexOf(c.k)>=0,lock=c.k==="date";
     return "<button class=\"ts-col"+(on?" on":"")+(lock?" lock":"")+"\" data-k=\""+c.k+"\""
-      +(lock?" title=\"Every row has to say which day it is\"":"")+">"+esc(t[c.lab])+"</button>";
+      +(lock?" title=\"Cada fila ha de dir quin dia és\"":"")+">"+esc(t[c.lab])+"</button>";
   }).join("");
   Array.prototype.forEach.call(bar.querySelectorAll("button"),function(b){
     b.addEventListener("click",function(){
@@ -3074,7 +3240,7 @@ function tsRenderRows(){
   var box=$$("tsRows"),t=TSL[$$("tsLang").value]||TSL.en;
   tsRenderColChips();
   if(!tsAll.length){
-    box.innerHTML="<div class=\"ts-note\" style=\"padding:16px;text-align:center\">No clocked days in this range.</div>";
+    box.innerHTML="<div class=\"ts-note\" style=\"padding:16px;text-align:center\">No hi ha dies fitxats en aquest interval.</div>";
     $$("tsTot").textContent="";return;
   }
   var h="<table class=\"ts-tbl\"><thead><tr><th></th>"
@@ -3121,7 +3287,7 @@ function openTimesheet(){
   var T=active.timesheet||{},R=tsRange(active);
   $$("tsFrom").value=T.from||R.from;
   $$("tsTo").value=T.to||R.to;
-  $$("tsLang").value=T.lang||"en";
+  $$("tsLang").value=T.lang||reportLang(active);
   // A saved sheet keeps the columns it was signed with; a new one starts from
   // whatever was chosen last.
   tsCols=(T.cols&&T.cols.length)?TSCOL_ALL.filter(function(k){return T.cols.indexOf(k)>=0}):tsColDef();
@@ -3169,8 +3335,8 @@ function tsImportFile(e){
   rd.onload=function(){
     var db=null;
     try{db=JSON.parse(rd.result)}catch(err){}
-    if(!db||!db.years){alert("That is not a Calendari laboral export — no \"years\" in it.");return}
-    saveCalCache(db,"imported file");
+    if(!db||!db.years){alert("Això no és una exportació del Calendari laboral: no hi ha \"years\".");return}
+    saveCalCache(db,"fitxer importat");
     tsPick=null;tsLoad(false);
   };
   rd.readAsText(f);
@@ -3181,7 +3347,7 @@ function tsImportFile(e){
 // Drive ZIP like the other reports.
 function tsCommit(){
   var rows=tsChosen();
-  if(!rows.length){alert("Pick at least one day for the timesheet.");return false}
+  if(!rows.length){alert("Tria com a mínim un dia per al full d'hores.");return false}
   var T={
     from:$$("tsFrom").value,to:$$("tsTo").value,lang:$$("tsLang").value,
     cols:tsCols.slice(),
@@ -3337,14 +3503,20 @@ async function buildTimesheetBlob(s){
 }
 // Writes the file. Reached from the modal's "Save & PDF", never straight from
 // the menu — see exportRep.
-async function exportTimesheet(s,base){
+// The sheet keeps its own language (chosen in its modal, frozen with the
+// signatures), so its file is named after that one, not the report language.
+function tsFileName(s){
+  var lang=(s.timesheet&&TSL[s.timesheet.lang])?s.timesheet.lang:"ca";
+  return TSL[lang].file+"_"+reportBase(s,lang)+".pdf";
+}
+async function exportTimesheet(s){
   if(!s)return;
   if(!s.timesheet||!s.timesheet.rows||!s.timesheet.rows.length){openTimesheet();return}
-  base=base||(s.client||"session").replace(/\s+/g,"_")+"_"+s.createdAt.slice(0,10);
   var blob=await buildTimesheetBlob(s);
-  if(!blob){alert("Cannot load the PDF library. Check internet connection.");return}
-  dlBlob(blob,"timesheet_"+base+".pdf");
-  uploadReportCopy(s,blob,"timesheet_"+base+".pdf","application/pdf");
+  if(!blob){alert("No s'ha pogut carregar la llibreria PDF. Comprova la connexió.");return}
+  var fn=tsFileName(s);
+  dlBlob(blob,fn);
+  uploadReportCopy(s,blob,fn,"application/pdf");
 }
 
 // ── REPORT → PDF ──────────────────────────────────────────────────────────────
@@ -3370,34 +3542,37 @@ function loadPdfLibs(){
   });
 }
 function hexRgb(h){var m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h||"");return m?[parseInt(m[1],16),parseInt(m[2],16),parseInt(m[3],16)]:[17,24,39]}
-async function exportPDF(s,base){
-  var blob=await buildPdfBlob(s);
-  if(!blob){alert("Cannot load the PDF library. Check internet connection.");return}
-  dlBlob(blob,"report_"+base+".pdf");
-  uploadReportCopy(s,blob,"report_"+base+".pdf","application/pdf");
+// s = the real session (Drive folder, file names); R = {s: its localized copy, lang}
+async function exportPDF(s,R,base){
+  var blob=await buildPdfBlob(R.s,R.lang);
+  if(!blob){alert("No s'ha pogut carregar la llibreria PDF. Comprova la connexió.");return}
+  var fn=RPT[R.lang].pre.report+"_"+base+".pdf";
+  dlBlob(blob,fn);
+  uploadReportCopy(s,blob,fn,"application/pdf");
 }
 // Returns the report as PDF bytes so both the download and the ZIP can use it.
-async function buildPdfBlob(s){
+async function buildPdfBlob(s,lang){
   var L=await loadPdfLibs();
   if(!L)return null;
+  var R=RPT[lang]||RPT.ca;
   var doc=new L.jsPDF({unit:"mm",format:"a4"});
   var M=14,W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),CW=W-M*2;
-  var tm=TM[s.type]||TM.commissioning,entries=s.entries||[];
+  var tl=R.types[s.type]||R.types.commissioning,entries=s.entries||[];
   var cnt=severityCounts(entries);
   var y=M;
 
   // header
   doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(17,24,39);
-  doc.text("Field Service Report",M,y+6);
+  doc.text(R.title,M,y+6);
   doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(107,114,128);
-  doc.text(tm.label+"  ·  Generated on "+fts(new Date().toISOString()),M,y+12);
+  doc.text(tl+"  ·  "+R.gen+" "+fts(new Date().toISOString()),M,y+12);
   doc.setDrawColor(245,158,11);doc.setLineWidth(0.8);doc.line(M,y+15,W-M,y+15);
   y+=21;
 
   // metadata, two columns
-  var meta=[["Client",s.client||"—"],["Project Number",s.project||"—"],["Machine",s.machine||"—"],
-            ["Location",s.location||"—"],["Technician",s.tech||"—"],["Start",fts(s.createdAt)],
-            ["Status",s.status==="open"?"Open":"Closed"],["Manual",(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||"—"]];
+  var meta=[[R.client,s.client||"—"],[R.project,s.project||"—"],[R.machine,s.machine||"—"],
+            [R.location,s.location||"—"],[R.tech,s.tech||"—"],[R.start,fts(s.createdAt)],
+            [R.status,s.status==="open"?R.open:R.closed],[R.manual,(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||"—"]];
   doc.setFont("helvetica","normal");doc.setFontSize(8.5);
   // Values used to sit at a fixed x, which the widest label ran straight into.
   // Measure the labels and start the values past the longest one.
@@ -3415,7 +3590,7 @@ async function buildPdfBlob(s){
 
   // counters
   doc.setFontSize(9);
-  var stats=[["Issues: "+cnt.issue,[220,38,38]],["Warnings: "+cnt.warning,[234,88,12]],["OK: "+cnt.ok,[22,163,74]],["Total: "+entries.length,[71,85,105]]];
+  var stats=[[R.issues+": "+cnt.issue,[220,38,38]],[R.warnings+": "+cnt.warning,[234,88,12]],[R.ok+": "+cnt.ok,[22,163,74]],[R.total+": "+entries.length,[71,85,105]]];
   var sx=M;
   stats.forEach(function(st){doc.setTextColor(st[1][0],st[1][1],st[1][2]);doc.text(st[0],sx,y);sx+=doc.getTextWidth(st[0])+9});
   y+=6;
@@ -3429,19 +3604,26 @@ async function buildPdfBlob(s){
     (e.parts||[]).forEach(function(p){
       desc+="\n"+(p.cant?p.cant+"× ":"")+(p.ref||"")+(p.denominacio?"  "+p.denominacio:"");
     });
-    var att=(e.images||[]).map(function(im){return (im.type==="video"?"▶ ":im.type==="audio"?"🎧 ":"")+(im.name||"file")}).join("\n");
-    return [{content:(e.tsFromPhoto?"[photo] ":"")+fts(e.ts)},
-            {content:sm.label,styles:{textColor:hexRgb(sm.tx),fontStyle:"bold"}},
+    var att=(e.images||[]).map(function(im){return (im.type==="video"?"▶ ":im.type==="audio"?"🎧 ":"")+(im.name||R.file)}).join("\n");
+    return [{content:(e.tsFromPhoto?R.photoTag+" ":"")+fts(e.ts)},
+            {content:R.sev[e.severity]||R.sev.info,styles:{textColor:hexRgb(sm.tx),fontStyle:"bold"}},
             e.tag||"",desc,att];
   });
+  // The severity column is sized to its longest label in this language: a
+  // fixed 17mm split "PROBLEMA" into "PROBLE"/"MA" (and "WARNING" never quite
+  // fitted either). Bold 8pt text plus the 2mm padding each side, plus slack.
+  doc.setFont("helvetica","bold");doc.setFontSize(8);
+  var sevW=17;
+  ["info","ok","warning","issue"].forEach(function(k){sevW=Math.max(sevW,doc.getTextWidth(R.sev[k])+5)});
+  doc.setFont("helvetica","normal");
   doc.autoTable({
     startY:y,margin:{left:M,right:M},
-    head:[["Timestamp","Severity","Tag","Description","Attachments"]],
-    body:body.length?body:[[{content:"No entries",colSpan:5,styles:{halign:"center",textColor:[156,163,175]}}]],
+    head:[[R.ts,R.severity,R.tag,R.desc,R.att]],
+    body:body.length?body:[[{content:R.noEntries,colSpan:5,styles:{halign:"center",textColor:[156,163,175]}}]],
     styles:{fontSize:8,cellPadding:2,overflow:"linebreak",valign:"top"},
     headStyles:{fillColor:[17,24,39],textColor:255,fontSize:7.5},
     alternateRowStyles:{fillColor:[249,250,251]},
-    columnStyles:{0:{cellWidth:26},1:{cellWidth:17},2:{cellWidth:16},4:{cellWidth:34}}
+    columnStyles:{0:{cellWidth:26},1:{cellWidth:sevW},2:{cellWidth:16},4:{cellWidth:34}}
   });
   y=doc.lastAutoTable.finalY+8;
 
@@ -3456,7 +3638,7 @@ async function buildPdfBlob(s){
   if(shots.length){
     if(y>H-40){doc.addPage();y=M}
     doc.setFont("helvetica","bold");doc.setFontSize(11);doc.setTextColor(17,24,39);
-    doc.text("Photos",M,y);y+=5;
+    doc.text(R.photos,M,y);y+=5;
     doc.setFont("helvetica","normal");doc.setFontSize(6.5);
     var cols=3,gap=4,iw=(CW-gap*(cols-1))/cols,ih=iw*0.72;
     shots.forEach(function(sh,i){
@@ -3474,7 +3656,7 @@ async function buildPdfBlob(s){
   // notes + signatures
   if(s.notes){
     if(y>H-30){doc.addPage();y=M}
-    doc.setFont("helvetica","bold");doc.setFontSize(9);doc.setTextColor(17,24,39);doc.text("General notes",M,y);y+=4;
+    doc.setFont("helvetica","bold");doc.setFontSize(9);doc.setTextColor(17,24,39);doc.text(R.notes,M,y);y+=4;
     doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(55,65,81);
     var nl=doc.splitTextToSize(s.notes,CW);doc.text(nl,M,y);y+=nl.length*4+4;
   }
@@ -3483,8 +3665,8 @@ async function buildPdfBlob(s){
   doc.setDrawColor(107,114,128);doc.setLineWidth(0.2);
   doc.line(M,y,M+CW/2-10,y);doc.line(M+CW/2+10,y,W-M,y);
   doc.setFontSize(8);doc.setTextColor(107,114,128);
-  doc.text("Technician signature"+(s.tech?" — "+s.tech:""),M,y+4);
-  doc.text("Client / Recipient signature",M+CW/2+10,y+4);
+  doc.text(R.sigTech+(s.tech?" — "+s.tech:""),M,y+4);
+  doc.text(R.sigCli,M+CW/2+10,y+4);
 
   // page numbers
   var n=doc.internal.getNumberOfPages();
@@ -3555,27 +3737,28 @@ function autoCols(rows,min,max){
   });
   return w.map(function(len){return {wch:Math.min(max||55,Math.max(min||6,(len||0)+2))}});
 }
-async function exportXLSX(s,base){
-  if(!collectSessionParts(s).length){alert("No spare parts in this session yet.\n\nPick them from a drawing or add them by hand in an entry.");return}
-  var blob=await buildXlsxBlob(s);
-  if(!blob){alert("Cannot load the Excel library. Check internet connection.");return}
-  dlBlob(blob,"recanvis_"+base+".xlsx");
-  uploadReportCopy(s,blob,"recanvis_"+base+".xlsx",XLSX_MIME);
+async function exportXLSX(s,R,base){
+  var blob=await buildXlsxBlob(R.s,R.lang);
+  if(!blob){alert("No s'ha pogut carregar la llibreria d'Excel. Comprova la connexió.");return}
+  var fn=RPT[R.lang].pre.parts+"_"+base+".xlsx";
+  dlBlob(blob,fn);
+  uploadReportCopy(s,blob,fn,XLSX_MIME);
 }
 // Returns the spare-parts workbook, or null when the library fails or there are
 // no parts (the ZIP just leaves it out then, without nagging).
-async function buildXlsxBlob(s){
+async function buildXlsxBlob(s,lang){
   var items=collectSessionParts(s);
   if(!items.length)return null;
   var X=await loadXlsxLib();
   if(!X)return null;
-  var sm=function(e){return (SM[e.severity]||SM.info).label};
+  var R=RPT[lang]||RPT.ca,C=R.x;
+  var sm=function(e){return R.sev[e.severity]||R.sev.info};
 
   // Sheet 1 — consolidated, for ordering
   var sum=summarizeParts(items);
   // Just what you need to order material: how many, of which reference, of what.
   // Everything else (position, conjunt, which entries) lives in the Detall sheet.
-  var resum=[["Quantitat","Ref.","Denominació"]];
+  var resum=[[C.qty,C.ref,C.den]];
   sum.forEach(function(m){
     var qty=m.raw.length?((m.total?m.total+" + ":"")+m.raw.join(" + ")):(m.total||"");
     resum.push([qty,m.ref,m.denominacio]);
@@ -3585,7 +3768,7 @@ async function buildXlsxBlob(s){
   wsR["!autofilter"]={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:resum.length-1,c:2}})};
 
   // Sheet 2 — every occurrence, with the entry that needed it
-  var detall=[["Data","Severitat","Tag","Entrada","Ref.","Pos.","Quantitat","Denominació","Conjunt","Grup / Dibuix","Pàgina"]];
+  var detall=[[C.date,C.sev,C.tag,C.entry,C.ref,C.pos,C.qty,C.den,C.conj,C.grup,C.page]];
   items.forEach(function(it){
     var e=it.entry,p=it.part;
     detall.push([fts(e.ts),sm(e),e.tag||"",e.text||"",p.ref||"",p.pos||"",qtyNum(p.cant)!==null?qtyNum(p.cant):(p.cant||""),p.denominacio||"",p.conjunt||"",p.grup||"",p.page||""]);
@@ -3595,17 +3778,17 @@ async function buildXlsxBlob(s){
   wsD["!autofilter"]={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:detall.length-1,c:10}})};
 
   // Sheet 3 — who/what/when this list belongs to
-  var info=[["Client",s.client||""],["Projecte",s.project||""],["Màquina",s.machine||""],["Ubicació",s.location||""],
-            ["Tècnic",s.tech||""],["Tipus",(TM[s.type]||TM.commissioning).label],["Inici",fts(s.createdAt)],
-            ["Estat",s.status==="open"?"Oberta":"Tancada"],["Manual",(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||""],
-            ["Generat",fts(new Date().toISOString())],["Recanvis (línies)",items.length],["Referències diferents",sum.length]];
+  var info=[[R.client,s.client||""],[C.project,s.project||""],[R.machine,s.machine||""],[R.location,s.location||""],
+            [R.tech,s.tech||""],[C.type,R.types[s.type]||R.types.commissioning],[R.start,fts(s.createdAt)],
+            [R.status,s.status==="open"?R.open:R.closed],[R.manual,(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||""],
+            [C.gen,fts(new Date().toISOString())],[C.lines,items.length],[C.refs,sum.length]];
   var wsI=X.utils.aoa_to_sheet(info);
   wsI["!cols"]=autoCols(info);
 
   var wb=X.utils.book_new();
-  X.utils.book_append_sheet(wb,wsI,"Sessió");
-  X.utils.book_append_sheet(wb,wsD,"Detall");
-  X.utils.book_append_sheet(wb,wsR,"Resum");
+  X.utils.book_append_sheet(wb,wsI,C.sSession);
+  X.utils.book_append_sheet(wb,wsD,C.sDetail);
+  X.utils.book_append_sheet(wb,wsR,C.sSummary);
   var out=X.write(wb,{bookType:"xlsx",type:"array"});
   return new Blob([out],{type:XLSX_MIME});
 }
@@ -3624,21 +3807,23 @@ function loadDocxLib(){
   });
 }
 var DOCX_MIME="application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-async function buildDocxBlob(s){
+async function buildDocxBlob(s,lang){
   var D=await loadDocxLib();
   if(!D)return null;
-  return await D.Packer.toBlob(buildDocxDocument(D,s));
+  return await D.Packer.toBlob(buildDocxDocument(D,s,lang));
 }
-async function exportDOCX(s,base){
+async function exportDOCX(s,R,base){
   try{
-    var blob=await buildDocxBlob(s);
-    if(!blob){alert("Cannot load DOCX library. Check internet connection.");return}
-    dlBlob(blob,"report_"+base+".docx");
-    uploadReportCopy(s,blob,"report_"+base+".docx",DOCX_MIME);
-  }catch(err){alert("DOCX error: "+err.message)}
+    var blob=await buildDocxBlob(R.s,R.lang);
+    if(!blob){alert("No s'ha pogut carregar la llibreria de Word. Comprova la connexió.");return}
+    var fn=RPT[R.lang].pre.report+"_"+base+".docx";
+    dlBlob(blob,fn);
+    uploadReportCopy(s,blob,fn,DOCX_MIME);
+  }catch(err){alert("Error en generar el Word: "+err.message)}
 }
-function buildDocxDocument(D,s){
-  var tm=TM[s.type]||TM.commissioning,entries=s.entries||[];
+function buildDocxDocument(D,s,lang){
+  var R=RPT[lang]||RPT.ca;
+  var tl=R.types[s.type]||R.types.commissioning,entries=s.entries||[];
   var cnt=severityCounts(entries),errs=cnt.issue,warns=cnt.warning,oks=cnt.ok;
   var br={style:D.BorderStyle.SINGLE,size:1,color:"E5E7EB"},borders={top:br,bottom:br,left:br,right:br},mg={top:80,bottom:80,left:120,right:120};
   function hdrCell(t){return new D.TableCell({borders:borders,margins:mg,shading:{fill:"111827",type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:t,bold:true,color:"FFFFFF",size:18,font:"Arial"})]})]})}
@@ -3648,12 +3833,12 @@ function buildDocxDocument(D,s){
     var att=[];
     (e.images||[]).forEach(function(img){
       if(img.type==="audio"){
-        att.push(new D.Paragraph({spacing:{after:30},children:[new D.TextRun({text:"🎧 "+esc(img.name||"voice note")+" ("+fmtDur(img.duration)+")",size:14,font:"Courier New",color:"6B7280",italics:true})]}));
+        att.push(new D.Paragraph({spacing:{after:30},children:[new D.TextRun({text:"🎧 "+(img.name||R.voice)+" ("+fmtDur(img.duration)+")",size:14,font:"Courier New",color:"6B7280",italics:true})]}));
         return;
       }
       var isVid=img.type==="video",src=isVid?img.poster:img.data;
       if(src){var id=toImg(src);if(id){try{att.push(new D.Paragraph({spacing:{after:4},children:[new D.ImageRun({data:id.bytes,type:id.type,transformation:{width:65,height:45}})]}));}catch(err){}}}
-      att.push(new D.Paragraph({spacing:{after:30},children:[new D.TextRun({text:(isVid?"▶ ":"")+esc(img.name||"file"),size:14,font:"Courier New",color:"6B7280",italics:true})]}));
+      att.push(new D.Paragraph({spacing:{after:30},children:[new D.TextRun({text:(isVid?"▶ ":"")+(img.name||R.file),size:14,font:"Courier New",color:"6B7280",italics:true})]}));
     });
     if(!att.length)att.push(new D.Paragraph({children:[new D.TextRun({text:"",size:18})]}));
     var descCh=[new D.Paragraph({children:[new D.TextRun({text:e.text||"",size:20,font:"Arial"})]})];
@@ -3666,29 +3851,29 @@ function buildDocxDocument(D,s){
       descCh.push(new D.Paragraph({spacing:{before:20},children:runs}));
     });
     return new D.TableRow({children:[
-      new D.TableCell({borders:borders,margins:mg,width:{size:1700,type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:(e.tsFromPhoto?"[photo] ":"")+fts(e.ts),size:16,font:"Courier New",color:"6B7280"})]})]}) ,
-      new D.TableCell({borders:borders,margins:mg,width:{size:900,type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:sm.label,bold:true,size:18,color:sc,font:"Arial"})]})]}) ,
+      new D.TableCell({borders:borders,margins:mg,width:{size:1700,type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:(e.tsFromPhoto?R.photoTag+" ":"")+fts(e.ts),size:16,font:"Courier New",color:"6B7280"})]})]}) ,
+      new D.TableCell({borders:borders,margins:mg,width:{size:1400,type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:R.sev[e.severity]||R.sev.info,bold:true,size:18,color:sc,font:"Arial"})]})]}) ,
       new D.TableCell({borders:borders,margins:mg,width:{size:900,type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:e.tag||"",size:18,font:"Courier New",color:"1D4ED8"})]})]}) ,
-      new D.TableCell({borders:borders,margins:mg,width:{size:4626,type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:descCh}) ,
+      new D.TableCell({borders:borders,margins:mg,width:{size:4126,type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:descCh}) ,
       new D.TableCell({borders:borders,margins:mg,width:{size:1100,type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:att})
     ]});
   });
   function mp(l,v){return new D.Paragraph({spacing:{after:80},children:[new D.TextRun({text:l+": ",bold:true,size:18,font:"Arial"}),new D.TextRun({text:v||"—",size:18,font:"Arial"})]})}
   var children=[
-    new D.Paragraph({spacing:{after:80},border:{bottom:{style:D.BorderStyle.SINGLE,size:6,color:"F59E0B",space:1}},children:[new D.TextRun({text:"Field Service Report",bold:true,size:40,font:"Arial",color:"111827"})]}),
-    new D.Paragraph({spacing:{after:40},children:[new D.TextRun({text:tm.label,size:20,font:"Arial",color:"6B7280"})]}),
-    new D.Paragraph({spacing:{after:200},children:[new D.TextRun({text:"Generated on "+fts(new Date().toISOString()),size:18,font:"Arial",color:"9CA3AF"})]}),
-    mp("Client",s.client),mp("Project Number",s.project),mp("Machine / Equipment",s.machine),mp("Location",s.location),mp("Technician",s.tech),mp("Start",fts(s.createdAt)),mp("Status",s.status==="open"?"Open":"Closed"),
+    new D.Paragraph({spacing:{after:80},border:{bottom:{style:D.BorderStyle.SINGLE,size:6,color:"F59E0B",space:1}},children:[new D.TextRun({text:R.title,bold:true,size:40,font:"Arial",color:"111827"})]}),
+    new D.Paragraph({spacing:{after:40},children:[new D.TextRun({text:tl,size:20,font:"Arial",color:"6B7280"})]}),
+    new D.Paragraph({spacing:{after:200},children:[new D.TextRun({text:R.gen+" "+fts(new Date().toISOString()),size:18,font:"Arial",color:"9CA3AF"})]}),
+    mp(R.client,s.client),mp(R.project,s.project),mp(R.machine,s.machine),mp(R.location,s.location),mp(R.tech,s.tech),mp(R.start,fts(s.createdAt)),mp(R.status,s.status==="open"?R.open:R.closed),
     new D.Paragraph({spacing:{after:200},children:[new D.TextRun({text:""})]}),
-    new D.Paragraph({spacing:{after:40},children:[new D.TextRun({text:"Issues: ",bold:true,size:20,font:"Arial",color:"DC2626"}),new D.TextRun({text:errs+"   ",size:20,color:"DC2626"}),new D.TextRun({text:"Warnings: ",bold:true,size:20,font:"Arial",color:"EA580C"}),new D.TextRun({text:warns+"   ",size:20,color:"EA580C"}),new D.TextRun({text:"OK: ",bold:true,size:20,font:"Arial",color:"16A34A"}),new D.TextRun({text:oks+"   ",size:20,color:"16A34A"}),new D.TextRun({text:"Total: ",bold:true,size:20,font:"Arial"}),new D.TextRun({text:""+entries.length,size:20})]}),
+    new D.Paragraph({spacing:{after:40},children:[new D.TextRun({text:R.issues+": ",bold:true,size:20,font:"Arial",color:"DC2626"}),new D.TextRun({text:errs+"   ",size:20,color:"DC2626"}),new D.TextRun({text:R.warnings+": ",bold:true,size:20,font:"Arial",color:"EA580C"}),new D.TextRun({text:warns+"   ",size:20,color:"EA580C"}),new D.TextRun({text:R.ok+": ",bold:true,size:20,font:"Arial",color:"16A34A"}),new D.TextRun({text:oks+"   ",size:20,color:"16A34A"}),new D.TextRun({text:R.total+": ",bold:true,size:20,font:"Arial"}),new D.TextRun({text:""+entries.length,size:20})]}),
     new D.Paragraph({spacing:{after:160},children:[new D.TextRun({text:""})]}),
-    new D.Table({width:{size:9226,type:D.WidthType.DXA},columnWidths:[1700,900,900,4626,1100],rows:[new D.TableRow({tableHeader:true,children:[hdrCell("Timestamp"),hdrCell("Severity"),hdrCell("Tag"),hdrCell("Description"),hdrCell("Attachments")]})].concat(rows)}),
+    new D.Table({width:{size:9226,type:D.WidthType.DXA},columnWidths:[1700,1400,900,4126,1100],rows:[new D.TableRow({tableHeader:true,children:[hdrCell(R.ts),hdrCell(R.severity),hdrCell(R.tag),hdrCell(R.desc),hdrCell(R.att)]})].concat(rows)}),
     new D.Paragraph({spacing:{after:200},children:[new D.TextRun({text:""})]})
   ];
-  if(s.notes){children.push(new D.Paragraph({spacing:{after:80},children:[new D.TextRun({text:"General notes:",bold:true,size:20,font:"Arial"})]}));children.push(new D.Paragraph({spacing:{after:400},children:[new D.TextRun({text:s.notes,size:20,font:"Arial"})]}));}
+  if(s.notes){children.push(new D.Paragraph({spacing:{after:80},children:[new D.TextRun({text:R.notes+":",bold:true,size:20,font:"Arial"})]}));children.push(new D.Paragraph({spacing:{after:400},children:[new D.TextRun({text:s.notes,size:20,font:"Arial"})]}));}
   children=children.concat([
-    new D.Paragraph({spacing:{before:800,after:40},border:{top:{style:D.BorderStyle.SINGLE,size:2,color:"E5E7EB",space:1}},children:[new D.TextRun({text:"Technician signature: "+(s.tech||"_________________"),size:20,font:"Arial"})]}),
-    new D.Paragraph({spacing:{before:600,after:40},border:{top:{style:D.BorderStyle.SINGLE,size:2,color:"E5E7EB",space:1}},children:[new D.TextRun({text:"Client / Recipient signature: _________________",size:20,font:"Arial"})]}),
+    new D.Paragraph({spacing:{before:800,after:40},border:{top:{style:D.BorderStyle.SINGLE,size:2,color:"E5E7EB",space:1}},children:[new D.TextRun({text:R.sigTech+": "+(s.tech||"_________________"),size:20,font:"Arial"})]}),
+    new D.Paragraph({spacing:{before:600,after:40},border:{top:{style:D.BorderStyle.SINGLE,size:2,color:"E5E7EB",space:1}},children:[new D.TextRun({text:R.sigCli+": _________________",size:20,font:"Arial"})]}),
     new D.Paragraph({spacing:{before:200},children:[new D.TextRun({text:"ID: "+s.id,size:16,font:"Arial",color:"9CA3AF"})]})
   ]);
   return new D.Document({styles:{default:{document:{run:{font:"Arial",size:20}}}},sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:1440,right:1440,bottom:1440,left:1440}}},children:children}]});
@@ -3741,42 +3926,52 @@ async function collectDriveFiles(token,folderId,pathPrefix,out){
 //               back and must never be mistaken for an archive.
 async function exportSessionZip(s,kind){
   if(!s)return;
+  s=sessions.find(function(x){return x.id===s.id})||s; // pick up a language just chosen in the menu
   var archive=(kind||"project")==="project";
-  if(!isLoggedIn){alert("Sign in with Google first — this exports the files stored in the session's Drive folder.");return}
-  var token=await ensureToken();if(!token){alert("Could not authenticate with Drive.");return}
-  var btn=$$("btnExp");if(btn){btn.disabled=true;btn.textContent="Zipping..."}
+  if(!isLoggedIn){alert("Primer inicia la sessió amb Google: s'exporten els fitxers guardats a la carpeta de Drive de la sessió.");return}
+  var token=await ensureToken();if(!token){alert("No s'ha pogut autenticar amb Drive.");return}
+  expBusy("Traduint…");
+  var R;
+  try{R=await reportSession(s)}catch(e){R=null}
+  if(!R){expBusy("");return}
+  // the real session again: the translations just cached are part of what the
+  // archive's session.json should carry
+  s=sessions.find(function(x){return x.id===s.id})||s;
+  expBusy("Comprimint…");
   try{
     var folderId=await getSessionFolder(token,s);
-    if(!folderId){alert("No Drive folder found for this session yet.");return}
+    if(!folderId){alert("Aquesta sessió encara no té carpeta a Drive.");return}
     var JSZipLib=await loadJSZip();
-    if(!JSZipLib){alert("Cannot load ZIP library. Check internet connection.");return}
+    if(!JSZipLib){alert("No s'ha pogut carregar la llibreria ZIP. Comprova la connexió.");return}
     var files=[];
     await collectDriveFiles(token,folderId,"",files);
     var zip=new JSZipLib();
-    var base=(s.client||"session").replace(/\s+/g,"_")+"_"+s.createdAt.slice(0,10);
+    var base=reportBase(s,R.lang),P=RPT[R.lang].pre;
 
     // The reports are BUILT here rather than copied from Drive: the folder only
     // holds whichever formats happened to be exported (and, from before the
     // fixed-name fix, a pile of timestamped leftovers). Building them means the
-    // ZIP always carries one current copy of each — pdf, xlsx, html and docx.
-    if(btn)btn.textContent="Reports...";
-    var docxBlob=await buildDocxBlob(s);
-    if(docxBlob)zip.file("report_"+base+".docx",docxBlob);
-    else if(!archive)throw new Error("could not build the DOCX report");
+    // ZIP always carries one current copy of each — pdf, xlsx, html and docx —
+    // in the language chosen for this session's reports.
+    expBusy("Informes…");
+    var docxBlob=await buildDocxBlob(R.s,R.lang);
+    if(docxBlob)zip.file(P.report+"_"+base+".docx",docxBlob);
+    else if(!archive)throw new Error("no s'ha pogut generar l'informe Word");
     if(archive){
-      zip.file("report_"+base+".html",new Blob([buildReportHTML(s,false)],{type:"text/html;charset=utf-8"}));
-      var pdfBlob=await buildPdfBlob(s); if(pdfBlob)zip.file("report_"+base+".pdf",pdfBlob);
-      var xlsxBlob=await buildXlsxBlob(s); if(xlsxBlob)zip.file("recanvis_"+base+".xlsx",xlsxBlob);
-      var tsBlob=await buildTimesheetBlob(s); if(tsBlob)zip.file("timesheet_"+base+".pdf",tsBlob);
+      zip.file(P.report+"_"+base+".html",new Blob([buildReportHTML(R.s,false,R.lang)],{type:"text/html;charset=utf-8"}));
+      var pdfBlob=await buildPdfBlob(R.s,R.lang); if(pdfBlob)zip.file(P.report+"_"+base+".pdf",pdfBlob);
+      var xlsxBlob=await buildXlsxBlob(R.s,R.lang); if(xlsxBlob)zip.file(P.parts+"_"+base+".xlsx",xlsxBlob);
+      var tsBlob=await buildTimesheetBlob(s); if(tsBlob)zip.file(tsFileName(s),tsBlob);
       // Built too, not copied: Drive only gets a session.json when the technician
-      // presses Save, so a session that was never synced had none at all.
+      // presses Save, so a session that was never synced had none at all. Always
+      // the ORIGINAL texts — this is what gets imported back.
       zip.file("session.json",new Blob([sessionToJson(s)],{type:"application/json;charset=utf-8"}));
     }
 
     // From Drive take only the media subfolders (photos/, videos/, audio/):
     // anything loose at the root is an old report copy or a stale session.json,
     // and the current ones were just built above.
-    if(btn)btn.textContent="Media...";
+    expBusy("Multimèdia…");
     var media=files.filter(function(f){return f.path.indexOf("/")>=0});
     for(var i=0;i<media.length;i++){
       var f=media[i];
@@ -3784,9 +3979,9 @@ async function exportSessionZip(s,kind){
       if(!r.ok)continue;
       zip.file(f.path,await r.blob());
     }
-    if(btn)btn.textContent="Zipping...";
+    expBusy("Comprimint…");
     var zipBlob=await zip.generateAsync({type:"blob"});
-    dlBlob(zipBlob,sanitize(s.client)+"_"+sanitize(s.machine)+(archive?"_project.zip":"_docx_media.zip"));
+    dlBlob(zipBlob,sanitize(s.client)+"_"+sanitize(s.machine)+(archive?"_projecte_":"_docx_multimedia_")+R.lang+".zip");
     // Only the archive stamps zipAt: the delete dialog reads it as "a complete
     // copy of this session exists", and the DOCX pack carries no session.json,
     // so nothing could be restored from it.
@@ -3795,8 +3990,8 @@ async function exportSessionZip(s,kind){
       sessions=sessions.map(function(x){return x.id===s.id?Object.assign({},x,{zipAt:t,updatedAt:t}):x});
       saveLocal();isDirty=true;
     }
-  }catch(e){alert("ZIP export failed: "+((e&&e.message)||e))}
-  finally{var b2=$$("btnExp");if(b2){b2.disabled=false;b2.innerHTML="↓ Report ▾"}}
+  }catch(e){alert("No s'ha pogut exportar el ZIP: "+((e&&e.message)||e))}
+  finally{expBusy("")}
 }
 
 // ── CLOSE DROPDOWNS ───────────────────────────────────────────────────────────
@@ -3812,7 +4007,7 @@ function renderAll(){renderSidebar();renderContent()}
 // e.g. a tap on the hamburger right after paint would queue behind it and
 // feel stuck. Show a lightweight placeholder immediately (cheap, no parsing)
 // and defer the real load to right after the browser gets to paint it.
-$$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><div style=\"font-size:13px;color:var(--tx3)\">Loading sessions...</div></div>";
+$$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><div style=\"font-size:13px;color:var(--tx3)\">Carregant les sessions…</div></div>";
 (async function(){
   sessions=await loadSessions();
   if(loadTok()&&accessToken&&Date.now()<tokenExp){

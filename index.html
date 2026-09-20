@@ -523,6 +523,7 @@ textarea{resize:none;line-height:1.4}
         </div>
         <div class="field"><label>Qu&egrave; s'hi ha fet</label><textarea id="fText" rows="3" style="resize:vertical"></textarea></div>
         <div id="fThumbs" class="thumbs"></div>
+        <div id="fFileNames" class="fnames"></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn-sm" id="fAddPhoto">&#128247; Foto / v&iacute;deo</button>
           <button class="btn-sm" id="fRec" title="Grava una nota de veu">&#127897; Grava una nota de veu</button>
@@ -597,9 +598,18 @@ var SM = {
 };
 // Tally of entry severities — shared by the sidebar badge, the status bar and
 // both report formats (previously four copies of the same filter().length trio).
+// A problem counts as RESOLVED once its entry carries a resolution that ends
+// well (OK or Info). A resolution that still says AVÍS or PROBLEMA is not a
+// close, so it isn't counted as one. The problem itself still counts — it
+// happened — which is why `resolved` is a second number and not a subtraction.
+function isResolved(e){return !!(e&&e.fix&&(e.fix.severity==="ok"||e.fix.severity==="info"))}
 function severityCounts(entries){
-  var c={issue:0,warning:0,ok:0};
-  (entries||[]).forEach(function(e){if(e&&c.hasOwnProperty(e.severity))c[e.severity]++});
+  var c={issue:0,warning:0,ok:0,resolved:0};
+  (entries||[]).forEach(function(e){
+    if(!e)return;
+    if(c.hasOwnProperty(e.severity))c[e.severity]++;
+    if((e.severity==="issue"||e.severity==="warning")&&isResolved(e))c.resolved++;
+  });
   return c;
 }
 
@@ -2292,6 +2302,7 @@ function renderContent(){
     +"<div class=\"stat-bar\">"
     +"<span style=\"color:var(--red)\">■ "+pl(errs,"problema","problemes")+"</span>"
     +"<span style=\"color:var(--orange)\">▲ "+pl(warns,"avís","avisos")+"</span>"
+    +(cnt.resolved?"<span style=\"color:var(--green)\">✔ "+pl(cnt.resolved,"resolt","resolts")+"</span>":"")
     +"<span style=\"color:var(--green)\">● "+oks+" ok</span>"
     +"<span style=\"margin-left:auto\">"+entries.length+" en total</span>"
     +"</div>"
@@ -2356,10 +2367,10 @@ var MB={
   pend:{thumbs:"pThumbs",rec:"btnRec",live:"pRecLive",
         get:function(){return pImgs},set:function(v){pImgs=v},
         busy:function(n){if(n===undefined)return pExif;pExif+=n}},
-  edit:{thumbs:"eThumbs",rec:"eRec",live:"eRecLive",
+  edit:{thumbs:"eThumbs",rec:"eRec",live:"eRecLive",names:"eFileNames",
         get:function(){return eImgs},set:function(v){eImgs=v},
         busy:function(n){if(n===undefined)return pExifEdit;pExifEdit+=n}},
-  fix: {thumbs:"fThumbs",rec:"fRec",live:"fRecLive",
+  fix: {thumbs:"fThumbs",rec:"fRec",live:"fRecLive",names:"fFileNames",
         get:function(){return fImgs},set:function(v){fImgs=v},
         busy:function(n){if(n===undefined)return pExifFix;pExifFix+=n}}
 };
@@ -2394,7 +2405,7 @@ function renderThumbs(bk){
     d.querySelector(".thumb-del").addEventListener("click",removeAt);
     c.appendChild(d);
   });
-  if(bk==="edit")rENames();
+  if(MB[bk].names)rNames(bk);
 }
 function rThumbs(){renderThumbs("pend")}
 function rEThumbs(){renderThumbs("edit")}
@@ -2417,9 +2428,12 @@ function rEParts(){
   });
 }
 function clearPartForm(){["pfPos","pfRef","pfCant","pfDen"].forEach(function(id){var el=$$(id);if(el)el.value=""});var f=$$("ePartForm");if(f)f.style.display="none"}
-function rENames(){
-  var list=$$("eFileNames");if(!list)return;list.innerHTML="";
-  eImgs.forEach(function(img,i){
+// Renaming works the same for the entry's attachments and the resolution's:
+// the name is what you read in the Drive folder later, so both get the field.
+function rENames(){rNames("edit")}
+function rNames(bk){
+  var B=MB[bk],list=$$(B.names);if(!list)return;list.innerHTML="";
+  B.get().forEach(function(img,i){
     var row=document.createElement("div");row.className="fname-row";
     row.innerHTML="<span class=\"fi\">"+(img.type==="video"?"🎬":img.type==="audio"?"🎧":"📷")+"</span><input type=\"text\" value=\""+esc(img.name||"")+"\"><span class=\"fname-st\"></span>";
     var inp=row.querySelector("input"),st=row.querySelector(".fname-st");
@@ -3010,7 +3024,7 @@ var RPT={
       sev:{info:"INFO",ok:"OK",warning:"AVÍS",issue:"PROBLEMA"},
       client:"Client",project:"Número de projecte",machine:"Màquina",location:"Ubicació",tech:"Tècnic",
       start:"Inici",status:"Estat",manual:"Manual",open:"Oberta",closed:"Tancada",
-      issues:"Problemes",warnings:"Avisos",ok:"OK",total:"Total",
+      issues:"Problemes",warnings:"Avisos",ok:"OK",total:"Total",res1:"resolt",resN:"resolts",resolved:"Resolts",
       ts:"Data i hora",severity:"Gravetat",tag:"Etiqueta",desc:"Descripció",att:"Adjunts",
       fix:"Com ha quedat",edited:"editat",noEntries:"Sense entrades",photos:"Fotos",notes:"Notes generals",
       sigTech:"Signatura del tècnic",sigCli:"Signatura del client / receptor",
@@ -3025,7 +3039,7 @@ var RPT={
       sev:{info:"INFO",ok:"OK",warning:"AVISO",issue:"PROBLEMA"},
       client:"Cliente",project:"Número de proyecto",machine:"Máquina",location:"Ubicación",tech:"Técnico",
       start:"Inicio",status:"Estado",manual:"Manual",open:"Abierta",closed:"Cerrada",
-      issues:"Problemas",warnings:"Avisos",ok:"OK",total:"Total",
+      issues:"Problemas",warnings:"Avisos",ok:"OK",total:"Total",res1:"resuelto",resN:"resueltos",resolved:"Resueltos",
       ts:"Fecha y hora",severity:"Gravedad",tag:"Etiqueta",desc:"Descripción",att:"Adjuntos",
       fix:"Cómo ha quedado",edited:"editado",noEntries:"Sin entradas",photos:"Fotos",notes:"Notas generales",
       sigTech:"Firma del técnico",sigCli:"Firma del cliente / receptor",
@@ -3040,7 +3054,7 @@ var RPT={
       sev:{info:"INFO",ok:"OK",warning:"WARNING",issue:"ISSUE"},
       client:"Client",project:"Project Number",machine:"Machine",location:"Location",tech:"Technician",
       start:"Start",status:"Status",manual:"Manual",open:"Open",closed:"Closed",
-      issues:"Issues",warnings:"Warnings",ok:"OK",total:"Total",
+      issues:"Issues",warnings:"Warnings",ok:"OK",total:"Total",res1:"resolved",resN:"resolved",resolved:"Resolved",
       ts:"Timestamp",severity:"Severity",tag:"Tag",desc:"Description",att:"Attachments",
       fix:"Outcome",edited:"edited",noEntries:"No entries",photos:"Photos",notes:"General notes",
       sigTech:"Technician signature",sigCli:"Client / Recipient signature",
@@ -3252,6 +3266,7 @@ function buildReportHTML(s,forPrint,lang){
     +"<div class=\"stats\">"
     +"<div class=\"stat\" style=\"background:#fef2f2;color:#dc2626\"><strong style=\"font-size:26px;display:block\">"+errs+"</strong><span style=\"font-size:11px\">"+esc(R.issues)+"</span></div>"
     +"<div class=\"stat\" style=\"background:#fff7ed;color:#ea580c\"><strong style=\"font-size:26px;display:block\">"+warns+"</strong><span style=\"font-size:11px\">"+esc(R.warnings)+"</span></div>"
+    +(cnt.resolved?"<div class=\"stat\" style=\"background:#f0fdf4;color:#16a34a\"><strong style=\"font-size:26px;display:block\">✔ "+cnt.resolved+"</strong><span style=\"font-size:11px\">"+esc(R.resolved)+"</span></div>":"")
     +"<div class=\"stat\" style=\"background:#f0fdf4;color:#16a34a\"><strong style=\"font-size:26px;display:block\">"+oks+"</strong><span style=\"font-size:11px\">"+esc(R.ok)+"</span></div>"
     +"<div class=\"stat\" style=\"background:#f1f5f9;color:#475569\"><strong style=\"font-size:26px;display:block\">"+entries.length+"</strong><span style=\"font-size:11px\">"+esc(R.total)+"</span></div>"
     +"</div>"
@@ -4236,30 +4251,29 @@ async function buildPdfBlob(s,lang){
 
   // counters
   doc.setFontSize(9);
-  var stats=[[R.issues+": "+cnt.issue,[220,38,38]],[R.warnings+": "+cnt.warning,[234,88,12]],[R.ok+": "+cnt.ok,[22,163,74]],[R.total+": "+entries.length,[71,85,105]]];
+  var stats=[[R.issues+": "+cnt.issue,[220,38,38]],[R.warnings+": "+cnt.warning,[234,88,12]]];
+  if(cnt.resolved)stats.push([R.resolved+": "+cnt.resolved,[22,163,74]]);
+  stats.push([R.ok+": "+cnt.ok,[22,163,74]],[R.total+": "+entries.length,[71,85,105]]);
   var sx=M;
   stats.forEach(function(st){doc.setTextColor(st[1][0],st[1][1],st[1][2]);doc.text(st[0],sx,y);sx+=doc.getTextWidth(st[0])+9});
   y+=6;
 
-  // entries table (spare parts appended inside the description cell)
+  // entries table. The spare parts and the outcome are DRAWN inside the
+  // description cell (autoTable can't nest a table in one), so the PDF reads
+  // like the HTML report instead of dumping them as bare lines: a QT./REF./
+  // SPARE PART table with its own header, and a coloured outcome block.
+  // The room is booked by padding the cell text with blank lines, which leaves
+  // autoTable in charge of row height and page breaks; didDrawCell then paints
+  // over that band. LH is autoTable's own line height (font size ÷ scale × 1.15).
+  var CELL_FS=8,LH=CELL_FS/doc.internal.scaleFactor*1.15;
+  var PT_FS=6.8,PT_LH=PT_FS/doc.internal.scaleFactor*1.2;
+  var FX_FS=7.2,FX_LH=FX_FS/doc.internal.scaleFactor*1.2;
   var body=entries.map(function(e){
     var sm=SM[e.severity]||SM.info;
     var desc=e.text||"";
-    // autoTable can't nest a table in a cell, so the parts keep the report's
-    // column ORDER (quantity, reference, name) as lines instead
-    (e.parts||[]).forEach(function(p){
-      desc+="\n"+(p.cant?p.cant+"× ":"")+(p.ref||"")+(p.denominacio?"  "+p.denominacio:"");
-    });
     // WinAnsi markers, not emoji: jsPDF's standard fonts have no ▶ or 🎧, and a
     // single character outside the encoding flips the whole string to UTF-16 —
     // the name came out as "%¶\0V\0I\0D…" and measured wrong on top of that.
-    // The outcome rides in the same row: the problem and how it ended read
-    // together, and the table keeps one line per entry.
-    if(e.fix){
-      // No tick here: ✔ is outside WinAnsi and flips the whole line to UTF-16,
-      // exactly as the ▶/🎧 emoji did — the label carries itself.
-      desc+="\n"+R.fix.toUpperCase()+" ("+(R.sev[e.fix.severity]||R.sev.ok)+")"+(e.fix.ts?" · "+fts(e.fix.ts):"")+(e.fix.text?": "+e.fix.text:"");
-    }
     var att=(e.images||[]).concat((e.fix&&e.fix.images)||[]).map(function(im){return (im.type==="video"?"» ":im.type==="audio"?"• ":"")+(im.name||R.file)}).join("\n");
     // Date and time on their own lines: the column then only has to be as wide
     // as the longer of the two, not both plus a space.
@@ -4293,7 +4307,41 @@ async function buildPdfBlob(s,lang){
   [[attC,0],[tagC,0],[attC,1],[tagC,1]].forEach(function(p){
     if(descW()<50)p[0].set(p[0].cellWidth-(50-descW()),!!p[1]);
   });
+
+  // Measure the blocks that go under the description, now that its width is
+  // known, and book their room as blank lines at the end of the cell's text.
+  var DW=descW()-4; // the cell's padding, 2mm each side
+  var extras=entries.map(function(e,i){
+    var hasP=!!(e.parts&&e.parts.length),hasF=!!e.fix;
+    if(!hasP&&!hasF)return null;
+    var X={qtyW:9,refW:Math.min(24,DW*0.3)};
+    X.nameW=DW-X.qtyW-X.refW-4;
+    X.rows=[];X.partsH=0;
+    if(hasP){
+      doc.setFontSize(PT_FS);
+      e.parts.forEach(function(p){
+        pdfFont(doc,ar,p.denominacio,"normal");
+        var ln=doc.splitTextToSize(p.denominacio||"",X.nameW);
+        X.rows.push({p:p,lines:ln,h:Math.max(PT_LH,ln.length*PT_LH)+0.8});
+      });
+      X.partsH=1.2+PT_LH+1.2+X.rows.reduce(function(a,r){return a+r.h},0)+0.8;
+    }
+    X.fixH=0;
+    if(hasF){
+      doc.setFontSize(FX_FS);pdfFont(doc,ar,e.fix.text,"normal");
+      X.fixLines=e.fix.text?doc.splitTextToSize(e.fix.text,DW-5):[];
+      X.fixLabel=R.fix.toUpperCase()+" ("+(R.sev[e.fix.severity]||R.sev.ok)+")"+(e.fix.ts?" · "+fts(e.fix.ts):"");
+      X.fixH=2+FX_LH+X.fixLines.length*FX_LH+2;
+    }
+    X.blanks=Math.ceil((X.partsH+X.fixH)/LH);
+    body[i][3]=(body[i][3]||"")+new Array(X.blanks+1).join("\n");
+    return X;
+  });
+  doc.setFont("helvetica","normal");doc.setFontSize(8);
+  // A row must not be cut in two: the blocks are painted at absolute positions
+  // inside the cell, and half a cell on the next page would strand them.
   doc.autoTable({
+    rowPageBreak:"avoid",
     startY:y,margin:{left:M,right:M},
     head:[[R.ts,R.severity,R.tag,R.desc,R.att]],
     body:body.length?body:[[{content:R.noEntries,colSpan:5,styles:{halign:"center",textColor:[156,163,175]}}]],
@@ -4312,6 +4360,51 @@ async function buildPdfBlob(s,lang){
       // Left-anchored on purpose: autoTable would hand the alignment to
       // jsPDF, whose {align:"right"} anchors an Arabic run at the wrong end.
       d.cell.styles.font=ar;d.cell.styles.fontStyle="normal";
+    },
+    // The parts table and the outcome block, painted into the blank lines the
+    // cell's text reserved for them.
+    didDrawCell:function(d){
+      if(d.section!=="body"||d.column.index!==3)return;
+      var X=extras[d.row.index];if(!X)return;
+      var lines=[].concat(d.cell.text||[]);
+      var x=d.cell.x+2,w=d.cell.width-4;
+      var yy=d.cell.y+2+(lines.length-X.blanks)*LH;
+      if(X.rows.length){
+        var tblTop=yy+1.2,rowY=tblTop+PT_LH+1.2;
+        // header strip, then a rule under it, like the HTML table's <thead>
+        doc.setFillColor(243,244,246);doc.rect(x,tblTop,w,PT_LH+1.2,"F");
+        doc.setFont("helvetica","bold");doc.setFontSize(PT_FS-0.4);doc.setTextColor(107,114,128);
+        doc.text(R.qty,x+X.qtyW,tblTop+PT_LH,{align:"right"});
+        doc.text(R.ref,x+X.qtyW+2,tblTop+PT_LH);
+        doc.text(R.part,x+X.qtyW+X.refW+4,tblTop+PT_LH);
+        doc.setFont("helvetica","normal");doc.setFontSize(PT_FS);
+        X.rows.forEach(function(r){
+          var base=rowY+PT_LH;
+          doc.setTextColor(180,83,9);
+          if(r.p.cant)doc.text(String(r.p.cant)+"×",x+X.qtyW,base,{align:"right"});
+          doc.setTextColor(29,78,216);
+          if(r.p.ref)doc.text(String(r.p.ref),x+X.qtyW+2,base);
+          doc.setTextColor(17,24,39);
+          pdfFont(doc,ar,r.p.denominacio,"normal");
+          r.lines.forEach(function(l,k){doc.text(l,x+X.qtyW+X.refW+4,base+k*PT_LH)});
+          doc.setFont("helvetica","normal");
+          rowY+=r.h;
+        });
+        doc.setDrawColor(229,231,235);doc.setLineWidth(0.15);
+        doc.rect(x,tblTop,w,rowY-tblTop+0.8);
+        doc.line(x,tblTop+PT_LH+1.2,x+w,tblTop+PT_LH+1.2);
+      }
+      if(X.fixH){
+        var fy=yy+X.partsH+1.2,fh=X.fixH-2,fsm=SM[entries[d.row.index].fix.severity]||SM.ok,fc=hexRgb(fsm.tx);
+        doc.setFillColor(249,250,251);doc.rect(x,fy,w,fh,"F");
+        doc.setFillColor(fc[0],fc[1],fc[2]);doc.rect(x,fy,0.8,fh,"F");
+        doc.setFont("helvetica","bold");doc.setFontSize(FX_FS-0.4);doc.setTextColor(fc[0],fc[1],fc[2]);
+        doc.text(X.fixLabel,x+2.5,fy+FX_LH);
+        doc.setFont("helvetica","normal");doc.setFontSize(FX_FS);doc.setTextColor(55,65,81);
+        pdfFont(doc,ar,entries[d.row.index].fix.text,"normal");
+        X.fixLines.forEach(function(l,k){doc.text(l,x+2.5,fy+FX_LH+(k+1)*FX_LH)});
+      }
+      doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(0,0,0);
     }
   });
   y=doc.lastAutoTable.finalY+8;
@@ -4606,7 +4699,8 @@ function buildDocxDocument(D,s,lang){
     new D.Paragraph({spacing:{after:200},children:[new D.TextRun({text:R.gen+" "+fts(new Date().toISOString()),size:18,font:"Arial",color:"9CA3AF"})]}),
     mp(R.client,s.client),mp(R.project,s.project),mp(R.machine,s.machine),mp(R.location,s.location),mp(R.tech,s.tech),mp(R.start,fts(s.createdAt)),mp(R.status,s.status==="open"?R.open:R.closed),
     new D.Paragraph({spacing:{after:200},children:[new D.TextRun({text:""})]}),
-    new D.Paragraph({spacing:{after:40},children:[new D.TextRun({text:R.issues+": ",bold:true,size:20,font:"Arial",color:"DC2626"}),new D.TextRun({text:errs+"   ",size:20,color:"DC2626"}),new D.TextRun({text:R.warnings+": ",bold:true,size:20,font:"Arial",color:"EA580C"}),new D.TextRun({text:warns+"   ",size:20,color:"EA580C"}),new D.TextRun({text:R.ok+": ",bold:true,size:20,font:"Arial",color:"16A34A"}),new D.TextRun({text:oks+"   ",size:20,color:"16A34A"}),new D.TextRun({text:R.total+": ",bold:true,size:20,font:"Arial"}),new D.TextRun({text:""+entries.length,size:20})]}),
+    new D.Paragraph({spacing:{after:40},children:[new D.TextRun({text:R.issues+": ",bold:true,size:20,font:"Arial",color:"DC2626"}),new D.TextRun({text:errs+"   ",size:20,color:"DC2626"}),new D.TextRun({text:R.warnings+": ",bold:true,size:20,font:"Arial",color:"EA580C"}),new D.TextRun({text:warns+"   ",size:20,color:"EA580C"}),].concat(cnt.resolved?[new D.TextRun({text:R.resolved+": ",bold:true,size:20,font:"Arial",color:"16A34A"}),new D.TextRun({text:cnt.resolved+"   ",size:20,color:"16A34A"})]:[]).concat([
+      new D.TextRun({text:R.ok+": ",bold:true,size:20,font:"Arial",color:"16A34A"}),new D.TextRun({text:oks+"   ",size:20,color:"16A34A"}),new D.TextRun({text:R.total+": ",bold:true,size:20,font:"Arial"}),new D.TextRun({text:""+entries.length,size:20})])}),
     new D.Paragraph({spacing:{after:160},children:[new D.TextRun({text:""})]}),
     new D.Table({width:{size:TBLW,type:D.WidthType.DXA},columnWidths:COLW,layout:D.TableLayoutType.FIXED,rows:[new D.TableRow({tableHeader:true,children:[hdrCell(R.ts,COLW[0]),hdrCell(R.severity,COLW[1]),hdrCell(R.tag,COLW[2]),hdrCell(R.desc,COLW[3]),hdrCell(R.att,COLW[4])]})].concat(rows)}),
     new D.Paragraph({spacing:{after:200},children:[new D.TextRun({text:""})]})

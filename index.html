@@ -2957,18 +2957,18 @@ function buildReportHTML(s,forPrint,lang){
       if(img.type==="video"){
         var ph=img.poster?"<img src=\""+img.poster+"\" style=\"max-width:140px;max-height:100px;object-fit:cover;border-radius:4px;display:block\">":"<div style=\"width:130px;height:90px;background:#eee;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:24px\">🎬</div>";
         var lnk=(!forPrint&&img.driveId)?"<a href=\"https://drive.google.com/file/d/"+img.driveId+"/view\" target=\"_blank\" style=\"font-size:9px;color:#1d4ed8;display:block\">↗ "+esc(R.openDrive)+"</a>":"";
-        return "<div style=\"margin:2px;display:inline-block;vertical-align:top\">"+ph+"<div style=\"font-size:9px;color:#6b7280;font-family:monospace;word-break:break-all\">▶ "+esc(img.name||R.video)+"</div>"+lnk+"</div>";
+        return "<div style=\"margin:2px;display:inline-block;vertical-align:top\">"+ph+"<div style=\"font-size:9px;color:#6b7280;font-family:monospace;white-space:nowrap\">▶ "+esc(img.name||R.video)+"</div>"+lnk+"</div>";
       }
       if(img.type==="audio"){
         var alnk=(!forPrint&&img.driveId)?"<a href=\"https://drive.google.com/file/d/"+img.driveId+"/view\" target=\"_blank\" style=\"font-size:9px;color:#1d4ed8\">↗ Drive</a>":"";
-        return "<div style=\"margin:2px 0;padding:6px 8px;background:#f9fafb;border-left:3px solid #f59e0b;border-radius:4px\"><div style=\"font-size:9px;color:#6b7280;font-family:monospace\">🎧 "+esc(img.name||R.voice)+" · "+fmtDur(img.duration)+" "+alnk+"</div></div>";
+        return "<div style=\"margin:2px 0;padding:6px 8px;background:#f9fafb;border-left:3px solid #f59e0b;border-radius:4px\"><div style=\"font-size:9px;color:#6b7280;font-family:monospace;white-space:nowrap\">🎧 "+esc(img.name||R.voice)+" · "+fmtDur(img.duration)+" "+alnk+"</div></div>";
       }
-      return "<div style=\"margin:2px;display:inline-block;vertical-align:top\"><img src=\""+img.data+"\" style=\"max-width:140px;max-height:100px;object-fit:cover;border-radius:4px;display:block\"><div style=\"font-size:9px;color:#6b7280;font-family:monospace;word-break:break-all\">"+esc(img.name||R.photo)+"</div></div>";
+      return "<div style=\"margin:2px;display:inline-block;vertical-align:top\"><img src=\""+img.data+"\" style=\"max-width:140px;max-height:100px;object-fit:cover;border-radius:4px;display:block\"><div style=\"font-size:9px;color:#6b7280;font-family:monospace;white-space:nowrap\">"+esc(img.name||R.photo)+"</div></div>";
     }).join("");
     return "<tr>"
-      +"<td style=\"font-family:monospace;font-size:11px;white-space:nowrap;padding:5px 8px;border:1px solid #e5e7eb;color:#6b7280\">"+(e.tsFromPhoto?"📷 ":"")+fts(e.ts)+"</td>"
-      +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:11px;font-weight:700;color:"+sm.tx+"\">"+esc(sl)+"</td>"
-      +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:11px;font-family:monospace;color:#1d4ed8\">"+esc(e.tag||"")+"</td>"
+      +"<td style=\"font-family:monospace;font-size:11px;white-space:nowrap;padding:5px 8px;border:1px solid #e5e7eb;color:#6b7280;width:1%\">"+fts(e.ts).split(" ")[0]+"<br>"+fts(e.ts).split(" ")[1]+(e.tsFromPhoto?"<br>📷":"")+"</td>"
+      +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:11px;font-weight:700;white-space:nowrap;width:1%;color:"+sm.tx+"\">"+esc(sl)+"</td>"
+      +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:11px;font-family:monospace;white-space:nowrap;width:1%;color:#1d4ed8\">"+esc(e.tag||"")+"</td>"
       +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:13px\">"+esc(e.text||"")+(e.editedAt?"<em style=\"color:#9ca3af;font-size:11px\"> ("+esc(R.edited)+")</em>":"")+partsReportHTML(e.parts,R)+"</td>"
       +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb\">"+imgCell+"</td>"
       +"</tr>";
@@ -3463,18 +3463,7 @@ async function buildTimesheetBlob(s){
   var period=tsDMY(T.rows[0].date)+" – "+tsDMY(T.rows[T.rows.length-1].date);
   var meta=[[t.meta[0],s.client||"—"],[t.meta[1],s.project||"—"],[t.meta[2],s.machine||"—"],
             [t.meta[3],s.location||"—"],[t.meta[4],T.techName||s.tech||"—"],[t.meta[5],period]];
-  doc.setFontSize(8.5);
-  var valX=0;
-  meta.forEach(function(p){valX=Math.max(valX,doc.getTextWidth(p[0].toUpperCase()))});
-  valX+=4;
-  meta.forEach(function(p,i){
-    var col=i%2,row=Math.floor(i/2),x=M+col*(CW/2),ry=y+row*6;
-    doc.setTextColor(156,163,175);doc.setFont("helvetica","normal");doc.text(p[0].toUpperCase(),x,ry);
-    doc.setTextColor(17,24,39);doc.setFont("helvetica","bold");
-    doc.text(doc.splitTextToSize(String(p[1]),CW/2-valX-4)[0],x+valX,ry);
-  });
-  doc.setFont("helvetica","normal");
-  y+=Math.ceil(meta.length/2)*6+4;
+  y=pdfMetaBlock(doc,meta,M,CW,y);
 
   // Only the columns this sheet was built with — the chips in the modal are
   // the same list, so the printout matches what was reviewed on screen.
@@ -3616,6 +3605,51 @@ function loadPdfLibs(){
     });
   });
 }
+// Two-column LABEL / value block, shared by the service report and the
+// timesheet. The value WRAPS: it used to be cut to its first line, which
+// silently dropped the rest of a long one — a full address under UBICACIÓ came
+// out halfway. Returns the y to carry on from.
+function pdfMetaBlock(doc,meta,M,CW,y){
+  doc.setFont("helvetica","normal");doc.setFontSize(8.5);
+  var valX=0;
+  meta.forEach(function(p){valX=Math.max(valX,doc.getTextWidth(p[0].toUpperCase()))});
+  valX+=4;
+  var vw=CW/2-valX-6,LH=4.2;
+  for(var i=0;i<meta.length;i+=2){
+    var h=0;
+    [meta[i],meta[i+1]].forEach(function(p,col){
+      if(!p)return;
+      var x=M+col*(CW/2);
+      doc.setTextColor(156,163,175);doc.setFont("helvetica","normal");doc.text(p[0].toUpperCase(),x,y);
+      doc.setTextColor(17,24,39);doc.setFont("helvetica","bold");
+      var ln=doc.splitTextToSize(String(p[1]),vw);
+      ln.forEach(function(l,k){doc.text(l,x+valX,y+k*LH)});
+      h=Math.max(h,ln.length*LH);
+    });
+    y+=Math.max(6,h+1.8);
+  }
+  doc.setFont("helvetica","normal");doc.setTextColor(17,24,39);
+  return y+4;
+}
+// A report column that must never break a line: it gets the width its widest
+// line needs, and past the cap the text is SHRUNK to fit rather than wrapped.
+// Below 5.8pt it stops shrinking and the column WIDENS instead (up to a quarter
+// over the cap) — a floor alone just brought the wrapping back. `tiny` lifts
+// that floor when the page is out of room. Measure with the column's own font
+// already set on doc.
+function pdfFitCol(doc,texts,minW,maxW,pad){
+  var w=0;
+  texts.forEach(function(t){String(t==null?"":t).split("\n").forEach(function(l){w=Math.max(w,doc.getTextWidth(l))})});
+  var c={w:w,cellWidth:0,fontSize:8};
+  c.set=function(cw,tiny){
+    cw=Math.max(minW,Math.min(maxW*1.25,cw));
+    var fs=c.w?Math.min(8,8*(cw-pad)/c.w):8,floor=tiny?4.5:5.8;
+    if(fs<floor){fs=floor;cw=Math.max(minW,Math.min(maxW*1.25,c.w*fs/8+pad))}
+    c.cellWidth=cw;c.fontSize=fs;
+  };
+  c.set(Math.min(w+pad,maxW));
+  return c;
+}
 function hexRgb(h){var m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h||"");return m?[parseInt(m[1],16),parseInt(m[2],16),parseInt(m[3],16)]:[17,24,39]}
 // s = the real session (Drive folder, file names); R = {s: its localized copy, lang}
 async function exportPDF(s,R,base){
@@ -3648,20 +3682,10 @@ async function buildPdfBlob(s,lang){
   var meta=[[R.client,s.client||"—"],[R.project,s.project||"—"],[R.machine,s.machine||"—"],
             [R.location,s.location||"—"],[R.tech,s.tech||"—"],[R.start,fts(s.createdAt)],
             [R.status,s.status==="open"?R.open:R.closed],[R.manual,(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||"—"]];
-  doc.setFont("helvetica","normal");doc.setFontSize(8.5);
   // Values used to sit at a fixed x, which the widest label ran straight into.
-  // Measure the labels and start the values past the longest one.
-  var valX=0;
-  meta.forEach(function(p){valX=Math.max(valX,doc.getTextWidth(p[0].toUpperCase()))});
-  valX+=4;
-  meta.forEach(function(p,i){
-    var col=i%2,row=Math.floor(i/2),x=M+col*(CW/2),ry=y+row*6;
-    doc.setTextColor(156,163,175);doc.setFont("helvetica","normal");doc.text(p[0].toUpperCase(),x,ry);
-    doc.setTextColor(17,24,39);doc.setFont("helvetica","bold");
-    doc.text(doc.splitTextToSize(String(p[1]),CW/2-valX-4)[0],x+valX,ry);
-  });
-  doc.setFont("helvetica","normal");
-  y+=Math.ceil(meta.length/2)*6+4;
+  // pdfMetaBlock measures the labels, starts the values past the longest one,
+  // and wraps them.
+  y=pdfMetaBlock(doc,meta,M,CW,y);
 
   // counters
   doc.setFontSize(9);
@@ -3679,18 +3703,42 @@ async function buildPdfBlob(s,lang){
     (e.parts||[]).forEach(function(p){
       desc+="\n"+(p.cant?p.cant+"× ":"")+(p.ref||"")+(p.denominacio?"  "+p.denominacio:"");
     });
-    var att=(e.images||[]).map(function(im){return (im.type==="video"?"▶ ":im.type==="audio"?"🎧 ":"")+(im.name||R.file)}).join("\n");
-    return [{content:(e.tsFromPhoto?R.photoTag+" ":"")+fts(e.ts)},
+    // WinAnsi markers, not emoji: jsPDF's standard fonts have no ▶ or 🎧, and a
+    // single character outside the encoding flips the whole string to UTF-16 —
+    // the name came out as "%¶\0V\0I\0D…" and measured wrong on top of that.
+    var att=(e.images||[]).map(function(im){return (im.type==="video"?"» ":im.type==="audio"?"• ":"")+(im.name||R.file)}).join("\n");
+    // Date and time on their own lines: the column then only has to be as wide
+    // as the longer of the two, not both plus a space.
+    return [{content:fts(e.ts).replace(" ","\n")+(e.tsFromPhoto?"\n"+R.photoTag:"")},
             {content:R.sev[e.severity]||R.sev.info,styles:{textColor:hexRgb(sm.tx),fontStyle:"bold"}},
             e.tag||"",desc,att];
   });
+  // Column widths are MEASURED, not guessed. Head labels wrap between words, so
+  // every column must still fit its longest single head word (bold 7.5 — head
+  // styles win over column styles, so the head can't be shrunk).
+  var PAD=5; // 2mm cell padding each side, plus slack
+  doc.setFont("helvetica","bold");doc.setFontSize(7.5);
+  function headW(t){var w=0;String(t).split(/\s+/).forEach(function(k){w=Math.max(w,doc.getTextWidth(k))});return w+PAD}
+  var hTs=headW(R.ts),hSev=headW(R.severity),hTag=headW(R.tag),hAtt=headW(R.att);
   // The severity column is sized to its longest label in this language: a
   // fixed 17mm split "PROBLEMA" into "PROBLE"/"MA" (and "WARNING" never quite
-  // fitted either). Bold 8pt text plus the 2mm padding each side, plus slack.
-  doc.setFont("helvetica","bold");doc.setFontSize(8);
-  var sevW=17;
-  ["info","ok","warning","issue"].forEach(function(k){sevW=Math.max(sevW,doc.getTextWidth(R.sev[k])+5)});
+  // fitted either). Bold 8pt text plus the padding.
+  doc.setFontSize(8);
+  var sevW=hSev;
+  ["info","ok","warning","issue"].forEach(function(k){sevW=Math.max(sevW,doc.getTextWidth(R.sev[k])+PAD)});
   doc.setFont("helvetica","normal");
+  var tsW=Math.max(hTs,doc.getTextWidth("00/00/0000")+PAD,doc.getTextWidth(R.photoTag)+PAD);
+  // Tag and attachments never break: they take the width they need, and only if
+  // that hits the cap is the text shrunk (never wrapped) to fit.
+  var tagC=pdfFitCol(doc,entries.map(function(e){return e.tag||""}).concat([""]),hTag,32,PAD);
+  var attC=pdfFitCol(doc,body.map(function(r){return r[4]}).concat([""]),Math.max(hAtt,16),50,PAD);
+  // Description keeps the lion's share; if the two measured columns leave it too
+  // little they give the difference back, attachments first, and only as a last
+  // resort do they go under the 5.8pt floor (still one line, just smaller).
+  function descW(){return CW-tsW-sevW-tagC.cellWidth-attC.cellWidth}
+  [[attC,0],[tagC,0],[attC,1],[tagC,1]].forEach(function(p){
+    if(descW()<50)p[0].set(p[0].cellWidth-(50-descW()),!!p[1]);
+  });
   doc.autoTable({
     startY:y,margin:{left:M,right:M},
     head:[[R.ts,R.severity,R.tag,R.desc,R.att]],
@@ -3698,7 +3746,9 @@ async function buildPdfBlob(s,lang){
     styles:{fontSize:8,cellPadding:2,overflow:"linebreak",valign:"top"},
     headStyles:{fillColor:[17,24,39],textColor:255,fontSize:7.5},
     alternateRowStyles:{fillColor:[249,250,251]},
-    columnStyles:{0:{cellWidth:26},1:{cellWidth:sevW},2:{cellWidth:16},4:{cellWidth:34}}
+    columnStyles:{0:{cellWidth:tsW},1:{cellWidth:sevW},
+                  2:{cellWidth:tagC.cellWidth,fontSize:tagC.fontSize},
+                  4:{cellWidth:attC.cellWidth,fontSize:attC.fontSize}}
   });
   y=doc.lastAutoTable.finalY+8;
 
@@ -3707,7 +3757,7 @@ async function buildPdfBlob(s,lang){
   entries.forEach(function(e){
     (e.images||[]).forEach(function(im){
       var src=im.type==="video"?im.poster:(im.type==="audio"?null:im.data);
-      if(src)shots.push({src:src,label:fts(e.ts)+" · "+(im.name||"")});
+      if(src)shots.push({src:src,ts:fts(e.ts),name:im.name||""});
     });
   });
   if(shots.length){
@@ -3716,16 +3766,23 @@ async function buildPdfBlob(s,lang){
     doc.text(R.photos,M,y);y+=5;
     doc.setFont("helvetica","normal");doc.setFontSize(6.5);
     var cols=3,gap=4,iw=(CW-gap*(cols-1))/cols,ih=iw*0.72;
+    // The caption used to be one line, cut at the column width — which ate the
+    // file name. Time on top, then the name whole, shrunk if it doesn't fit.
+    var nameFs=6.5,longest=0;
+    shots.forEach(function(sh){longest=Math.max(longest,doc.getTextWidth(sh.name))});
+    if(longest>iw)nameFs=Math.max(4.2,6.5*iw/longest);
     shots.forEach(function(sh,i){
       var c=i%cols;
-      if(c===0&&y+ih+8>H-M){doc.addPage();y=M}
+      if(c===0&&y+ih+11>H-M){doc.addPage();y=M}
       var x=M+c*(iw+gap);
       try{doc.addImage(sh.src,x,y,iw,ih,undefined,"FAST")}catch(err){}
       doc.setTextColor(107,114,128);
-      doc.text(doc.splitTextToSize(sh.label,iw)[0],x,y+ih+3);
-      if(c===cols-1)y+=ih+8;
+      doc.setFontSize(6.5);doc.text(sh.ts,x,y+ih+3);
+      doc.setFontSize(nameFs);doc.text(sh.name,x,y+ih+6);
+      if(c===cols-1)y+=ih+11;
     });
-    if(shots.length%cols)y+=ih+8;
+    doc.setFontSize(6.5);
+    if(shots.length%cols)y+=ih+11;
   }
 
   // notes + signatures
@@ -3901,19 +3958,48 @@ function buildDocxDocument(D,s,lang){
   var tl=R.types[s.type]||R.types.commissioning,entries=s.entries||[];
   var cnt=severityCounts(entries),errs=cnt.issue,warns=cnt.warning,oks=cnt.ok;
   var br={style:D.BorderStyle.SINGLE,size:1,color:"E5E7EB"},borders={top:br,bottom:br,left:br,right:br},mg={top:80,bottom:80,left:120,right:120};
-  function hdrCell(t){return new D.TableCell({borders:borders,margins:mg,shading:{fill:"111827",type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:t,bold:true,color:"FFFFFF",size:18,font:"Arial"})]})]})}
+  function hdrCell(t,w){return new D.TableCell({borders:borders,margins:mg,width:w?{size:w,type:D.WidthType.DXA}:undefined,shading:{fill:"111827",type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:t,bold:true,color:"FFFFFF",size:18,font:"Arial"})]})]})}
   function toImg(url){try{var b64=url.split(",")[1],bin=atob(b64),arr=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);var m=/^data:image\/([a-zA-Z+]+);/.exec(url);return{bytes:arr,type:(m&&m[1].includes("png"))?"png":"jpg"}}catch(e){return null}}
+  // Column widths in DXA (twips), measured instead of fixed so that severity,
+  // tag and every attachment NAME stay whole on one line. Courier New advances
+  // 0.6 em, so a character is 6 × its half-point size in twips; Arial caps in
+  // bold run wider, ~7 ×. CELLMG is the 120+120 cell margin.
+  var CELLMG=240,TBLW=9226;
+  function dxa(txt,sz,per){return Math.ceil(String(txt||"").length*per*sz*1.06)+CELLMG}
+  function widest(list,sz,per){var w=0;list.forEach(function(t){w=Math.max(w,dxa(t,sz,per))});return w}
+  var attNames=[];
+  entries.forEach(function(e){(e.images||[]).forEach(function(im){
+    attNames.push((im.type==="video"?"▶ ":im.type==="audio"?"🎧 ":"")+(im.name||R.file)+(im.type==="audio"?" ("+fmtDur(im.duration)+")":""));
+  })});
+  var W_TS=Math.max(dxa("00/00/00",16,6),dxa(R.photoTag,16,6),dxa(R.ts,18,7)/2);
+  var W_SEV=Math.max(widest([R.sev.info,R.sev.ok,R.sev.warning,R.sev.issue],18,7),dxa(R.severity,18,7));
+  // Tag and attachment name must stay whole, so their columns are as wide as
+  // their text needs — and when that starves the description, the TEXT gets
+  // smaller (never broken). The thumbnail above a name is 65 pt wide, so 1400
+  // DXA is the attachment column's floor.
+  var tagSz=18,attSz=14,W_TAG,W_ATT;
+  var steps=[[18,14],[16,13],[14,12],[12,11],[10,10]];
+  for(var si=0;si<steps.length;si++){
+    tagSz=steps[si][0];attSz=steps[si][1];
+    W_TAG=Math.max(widest(entries.map(function(e){return e.tag||""}),tagSz,6),dxa(R.tag,18,7),900);
+    W_ATT=Math.max(widest(attNames,attSz,6),1400);
+    if(TBLW-W_TS-W_SEV-W_TAG-W_ATT>=3000)break;
+  }
+  var W_DESC=Math.max(1800,TBLW-W_TS-W_SEV-W_TAG-W_ATT);
+  var COLW=[W_TS,W_SEV,W_TAG,W_DESC,W_ATT];
+  var slack=TBLW-COLW.reduce(function(a,b){return a+b},0);
+  if(slack<0){COLW[4]+=slack;W_ATT=COLW[4]} // absurd data: the page wins
   var rows=entries.map(function(e){
     var sm=SM[e.severity]||SM.info,sc=sm.tx.replace("#",""),fill=e.severity==="issue"?"FEF2F2":e.severity==="warning"?"FFF7ED":e.severity==="ok"?"F0FDF4":"FFFFFF";
     var att=[];
     (e.images||[]).forEach(function(img){
       if(img.type==="audio"){
-        att.push(new D.Paragraph({spacing:{after:30},children:[new D.TextRun({text:"🎧 "+(img.name||R.voice)+" ("+fmtDur(img.duration)+")",size:14,font:"Courier New",color:"6B7280",italics:true})]}));
+        att.push(new D.Paragraph({spacing:{after:30},children:[new D.TextRun({text:"🎧 "+(img.name||R.voice)+" ("+fmtDur(img.duration)+")",size:attSz,font:"Courier New",color:"6B7280",italics:true})]}));
         return;
       }
       var isVid=img.type==="video",src=isVid?img.poster:img.data;
       if(src){var id=toImg(src);if(id){try{att.push(new D.Paragraph({spacing:{after:4},children:[new D.ImageRun({data:id.bytes,type:id.type,transformation:{width:65,height:45}})]}));}catch(err){}}}
-      att.push(new D.Paragraph({spacing:{after:30},children:[new D.TextRun({text:(isVid?"▶ ":"")+(img.name||R.file),size:14,font:"Courier New",color:"6B7280",italics:true})]}));
+      att.push(new D.Paragraph({spacing:{after:30},children:[new D.TextRun({text:(isVid?"▶ ":"")+(img.name||R.file),size:attSz,font:"Courier New",color:"6B7280",italics:true})]}));
     });
     if(!att.length)att.push(new D.Paragraph({children:[new D.TextRun({text:"",size:18})]}));
     var descCh=[new D.Paragraph({children:[new D.TextRun({text:e.text||"",size:20,font:"Arial"})]})];
@@ -3926,11 +4012,14 @@ function buildDocxDocument(D,s,lang){
       descCh.push(new D.Paragraph({spacing:{before:20},children:runs}));
     });
     return new D.TableRow({children:[
-      new D.TableCell({borders:borders,margins:mg,width:{size:1700,type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:(e.tsFromPhoto?R.photoTag+" ":"")+fts(e.ts),size:16,font:"Courier New",color:"6B7280"})]})]}) ,
-      new D.TableCell({borders:borders,margins:mg,width:{size:1400,type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:R.sev[e.severity]||R.sev.info,bold:true,size:18,color:sc,font:"Arial"})]})]}) ,
-      new D.TableCell({borders:borders,margins:mg,width:{size:900,type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:e.tag||"",size:18,font:"Courier New",color:"1D4ED8"})]})]}) ,
-      new D.TableCell({borders:borders,margins:mg,width:{size:4126,type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:descCh}) ,
-      new D.TableCell({borders:borders,margins:mg,width:{size:1100,type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:att})
+      new D.TableCell({borders:borders,margins:mg,width:{size:COLW[0],type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[
+        new D.TextRun({text:fts(e.ts).split(" ")[0],size:16,font:"Courier New",color:"6B7280"}),
+        new D.TextRun({text:fts(e.ts).split(" ")[1],size:16,font:"Courier New",color:"6B7280",break:1})
+      ].concat(e.tsFromPhoto?[new D.TextRun({text:R.photoTag,size:16,font:"Courier New",color:"9CA3AF",break:1})]:[])})]}) ,
+      new D.TableCell({borders:borders,margins:mg,width:{size:COLW[1],type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:R.sev[e.severity]||R.sev.info,bold:true,size:18,color:sc,font:"Arial"})]})]}) ,
+      new D.TableCell({borders:borders,margins:mg,width:{size:COLW[2],type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:e.tag||"",size:tagSz,font:"Courier New",color:"1D4ED8"})]})]}) ,
+      new D.TableCell({borders:borders,margins:mg,width:{size:COLW[3],type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:descCh}) ,
+      new D.TableCell({borders:borders,margins:mg,width:{size:COLW[4],type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:att})
     ]});
   });
   function mp(l,v){return new D.Paragraph({spacing:{after:80},children:[new D.TextRun({text:l+": ",bold:true,size:18,font:"Arial"}),new D.TextRun({text:v||"—",size:18,font:"Arial"})]})}
@@ -3942,7 +4031,7 @@ function buildDocxDocument(D,s,lang){
     new D.Paragraph({spacing:{after:200},children:[new D.TextRun({text:""})]}),
     new D.Paragraph({spacing:{after:40},children:[new D.TextRun({text:R.issues+": ",bold:true,size:20,font:"Arial",color:"DC2626"}),new D.TextRun({text:errs+"   ",size:20,color:"DC2626"}),new D.TextRun({text:R.warnings+": ",bold:true,size:20,font:"Arial",color:"EA580C"}),new D.TextRun({text:warns+"   ",size:20,color:"EA580C"}),new D.TextRun({text:R.ok+": ",bold:true,size:20,font:"Arial",color:"16A34A"}),new D.TextRun({text:oks+"   ",size:20,color:"16A34A"}),new D.TextRun({text:R.total+": ",bold:true,size:20,font:"Arial"}),new D.TextRun({text:""+entries.length,size:20})]}),
     new D.Paragraph({spacing:{after:160},children:[new D.TextRun({text:""})]}),
-    new D.Table({width:{size:9226,type:D.WidthType.DXA},columnWidths:[1700,1400,900,4126,1100],rows:[new D.TableRow({tableHeader:true,children:[hdrCell(R.ts),hdrCell(R.severity),hdrCell(R.tag),hdrCell(R.desc),hdrCell(R.att)]})].concat(rows)}),
+    new D.Table({width:{size:TBLW,type:D.WidthType.DXA},columnWidths:COLW,layout:D.TableLayoutType.FIXED,rows:[new D.TableRow({tableHeader:true,children:[hdrCell(R.ts,COLW[0]),hdrCell(R.severity,COLW[1]),hdrCell(R.tag,COLW[2]),hdrCell(R.desc,COLW[3]),hdrCell(R.att,COLW[4])]})].concat(rows)}),
     new D.Paragraph({spacing:{after:200},children:[new D.TextRun({text:""})]})
   ];
   if(s.notes){children.push(new D.Paragraph({spacing:{after:80},children:[new D.TextRun({text:R.notes+":",bold:true,size:20,font:"Arial"})]}));children.push(new D.Paragraph({spacing:{after:400},children:[new D.TextRun({text:s.notes,size:20,font:"Arial"})]}));}

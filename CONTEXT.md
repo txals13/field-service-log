@@ -171,8 +171,21 @@ Field Service Log/
   from the value loaded, so editing just the text keeps the original timestamp
   to the second; a manual change zeroes the seconds (the field has no seconds)
   and clears `tsFromPhoto`, since the time is no longer the photo's — the 📷
-  marker disappears from the log. Entries are **not** re-sorted afterwards: they
-  keep the order they were logged in.
+  marker disappears from the log. A hand-set time is flagged `tsManual` and
+  **re-sorts the entry** (see below).
+- **Entries are kept in time order, oldest first** (`sortEntries`, by `entry.ts`)
+  — in the log and in every report, since they all read `session.entries`.
+  - **The photo's time rules.** An entry with a photo takes that photo's EXIF
+    time, so one shot at 08:03 and written up at 11:00 sits at 08:03. That
+    already happened when the entry was created; now it also happens when a
+    photo is added to an existing entry, so the entry moves to where the photo
+    puts it. Only a hand-set time beats it, and `tsManual` makes that stick —
+    without it the photo would take the time back on the next save.
+  - Entries with the same time keep the order they were logged in (Array sort is
+    stable). One with no usable date sorts last, not to 1970.
+  - Sorting happens where entries change (add, edit) and where sessions come in
+    (`orderSessions` on boot, on the Drive merge and on import), so sessions
+    written before this still read in order.
 - Delete entries
 - Close session / **Reopen session** (↺ button)
 - Delete session: **no backup is written**. It used to drop a JSON in Downloads

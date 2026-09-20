@@ -1758,7 +1758,7 @@ async function loadFromDrive(){
         var localById={};sessions.forEach(function(s){localById[s.id]=s});
         var merged=data.map(function(rs){var ls=localById[rs.id];return(ls&&(ls.updatedAt||"")>(rs.updatedAt||""))?ls:rs});
         var remIds=new Set(data.map(function(s){return s.id}));
-        sessions=merged.concat(sessions.filter(function(s){return !remIds.has(s.id)}));
+        sessions=orderSessions(merged.concat(sessions.filter(function(s){return !remIds.has(s.id)})));
         saveLocal();
       }
       setSyncSt("ok","Sincronitzat ✓");
@@ -2425,6 +2425,23 @@ function handleFiles(e,isEdit){
 
 // ── ADD / EDIT / DELETE ENTRY ─────────────────────────────────────────────────
 function earliestTs(imgs){var d=(imgs||[]).map(function(i){return i.capturedAt}).filter(Boolean).sort();return d.length?d[0]:null}
+// ── ENTRY ORDER ───────────────────────────────────────────────────────────────
+// The log reads oldest first, by the time the entry carries. The PHOTO's own
+// time rules: an entry with a photo takes that photo's EXIF time (📷 in the
+// log), so a photo shot at 08:03 and written up at 11:00 sits at 08:03. Only a
+// time typed by hand in the edit modal beats it, and it moves the entry too.
+// An entry with no photo and no hand-set time keeps the moment it was logged.
+// Entries with the same time stay in the order they were logged (sort is
+// stable); one without a usable date goes last rather than to 1970.
+function tsMs(e){var t=e&&e.ts?Date.parse(e.ts):NaN;return isNaN(t)?Infinity:t}
+function sortEntries(list){return (list||[]).slice().sort(function(a,b){return tsMs(a)-tsMs(b)})}
+// Sessions that were written before entries were sorted (and any that arrive
+// from Drive, an import or a ZIP) get put in order on the way in.
+function orderSessions(list){
+  return (list||[]).map(function(s){
+    return (s&&s.entries&&s.entries.length>1)?Object.assign({},s,{entries:sortEntries(s.entries)}):s;
+  });
+}
 function addEntry(){
   if(mediaRec&&!recIsEdit){alert("Atura la gravació de veu abans d'afegir l'entrada.");return}
   var entIn=$$("entIn");if(!entIn)return;
@@ -2438,7 +2455,7 @@ function addEntry(){
     var imgs=pImgs.slice(),pts=earliestTs(imgs);
     var entry={id:uid(),ts:pts||now(),text:captText,severity:captSev,tag:captTag,images:imgs};
     if(pts)entry.tsFromPhoto=true;
-    sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{entries:(s.entries||[]).concat([entry])}):s});
+    sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{entries:sortEntries((s.entries||[]).concat([entry]))}):s});
     entIn.value="";var ti=$$("tagIn");if(ti)ti.value="";pImgs=[];
     scheduleSave();renderAll();
   }
@@ -2499,9 +2516,13 @@ function saveEdit(){
   function tryS(){
     if(pExifEdit>0&&waited<3000){var b=$$("eSave");if(b){b.disabled=true;b.textContent="Processant…"}waited+=150;setTimeout(tryS,150);return}
     var b2=$$("eSave");if(b2){b2.disabled=false;b2.innerHTML="✓ Desa els canvis"}
-    sessions=sessions.map(function(s){if(s.id!==aid)return s;return Object.assign({},s,{entries:(s.entries||[]).map(function(en){if(en.id!==entId)return en;var up=Object.assign({},en,{text:captText,severity:newSev,tag:newTag,images:eImgs.slice(),parts:eParts.slice(),editedAt:now()});
-      if(newTs){up.ts=newTs;delete up.tsFromPhoto}
-      return up;})})});
+    var pts=earliestTs(eImgs);
+    sessions=sessions.map(function(s){if(s.id!==aid)return s;return Object.assign({},s,{entries:sortEntries((s.entries||[]).map(function(en){if(en.id!==entId)return en;var up=Object.assign({},en,{text:captText,severity:newSev,tag:newTag,images:eImgs.slice(),parts:eParts.slice(),editedAt:now()});
+      // A hand-set time wins for good (tsManual): otherwise the photo would
+      // take it back the next time this entry is saved.
+      if(newTs){up.ts=newTs;up.tsManual=true;delete up.tsFromPhoto}
+      else if(pts&&!up.tsManual&&up.ts!==pts){up.ts=pts;up.tsFromPhoto=true}
+      return up;}))})});
     closeEdit();scheduleSave();renderAll();
   }tryS();
 }
@@ -2684,7 +2705,7 @@ $$("mediaClose").addEventListener("click",function(e){e.stopPropagation();closeM
 $$("btnImport").addEventListener("click",function(){$$("importFile").click()});
 function mergeImportedSessions(list){
   var existIds={};sessions.forEach(function(s){existIds[s.id]=1});
-  var added=list.filter(function(s){return s.id&&!existIds[s.id]});
+  var added=orderSessions(list.filter(function(s){return s.id&&!existIds[s.id]}));
   sessions=added.concat(sessions);
   if(added.length&&!aid)aid=added[0].id;
   return {added:added,skipped:list.length-added.length};
@@ -4173,7 +4194,7 @@ function renderAll(){renderSidebar();renderContent()}
 // and defer the real load to right after the browser gets to paint it.
 $$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><div style=\"font-size:13px;color:var(--tx3)\">Carregant les sessions…</div></div>";
 (async function(){
-  sessions=await loadSessions();
+  sessions=orderSessions(await loadSessions());
   if(loadTok()&&accessToken&&Date.now()<tokenExp){
     isLoggedIn=true;
     loadFromDrive().then(function(){renderAll();scheduleSync()});

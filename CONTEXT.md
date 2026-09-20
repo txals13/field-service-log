@@ -387,8 +387,21 @@ Field Service Log/
   ended up in the Drive ZIP.
 - **DOCX:** via `docx@8.5.0` library loaded from unpkg.com (fallback: jsdelivr.net)
   - Images embedded as Uint8Array (not base64 string)
-  - Video thumbnails embedded + filename shown in italic monospace
   - Service Worker explicitly passes unpkg.com and jsdelivr.net through (not cached)
+  - **It is built to land on the same layout as the PDF**, because the usual
+    route is "export Word → Save as PDF" and the two had drifted apart. Same A4
+    geometry (14 mm margins = 794 twips), same measured column widths
+    (`entryColWidths` runs against a throwaway jsPDF doc and the millimetres are
+    converted to twips, 1 mm = 56.6929), same blocks: the two-column LABEL/value
+    meta grid, the counters line, the QT./REF./SPARE PART table, the outcome
+    block with its coloured bar, names-only attachments, the 3-across photo
+    appendix, side-by-side signature lines and a footer with the id and the page
+    number. Rows alternate white / #F9FAFB like the PDF and the HTML — they used
+    to be tinted per severity, which was the most visible difference.
+  - **What cannot match: where Word breaks pages.** It repaginates with its own
+    engine, so a row may land on a different page than in the direct PDF.
+  - If jsPDF can't be loaded (offline), the Word report still builds with a
+    fallback set of widths.
 - **Nothing in the entries table is cut or broken up.** Severity, tag and each
   attachment's file name always read whole on ONE line; the description is the
   only column meant to wrap, and it gets whatever is left.

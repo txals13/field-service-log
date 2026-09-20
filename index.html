@@ -4179,6 +4179,39 @@ function pdfMetaBlock(doc,meta,M,CW,y,ar){
   doc.setFont("helvetica","normal");doc.setTextColor(17,24,39);
   return y+4;
 }
+// The entry table's column widths, in mm, MEASURED rather than guessed — and
+// measured ONCE, because the Word report uses the same numbers (converted to
+// twips) so that saving it as a PDF lands on the same layout as exporting one.
+// Head labels wrap between words, so every column must still fit its longest
+// single head WORD (bold 7.5 — in the PDF head styles beat column styles, so
+// the head can never be shrunk).
+function entryColWidths(doc,R,entries,attTexts,ar,CW){
+  var PAD=5; // 2mm cell padding each side, plus slack
+  doc.setFont("helvetica","bold");doc.setFontSize(7.5);
+  function headW(t){var w=0;String(t).split(/\s+/).forEach(function(k){w=Math.max(w,doc.getTextWidth(k))});return w+PAD}
+  var hTs=headW(R.ts),hSev=headW(R.severity),hTag=headW(R.tag),hAtt=headW(R.att);
+  // The severity column is sized to its longest label in this language: a
+  // fixed 17mm split "PROBLEMA" into "PROBLE"/"MA" (and "WARNING" never quite
+  // fitted either). Bold 8pt text plus the padding.
+  doc.setFontSize(8);
+  var sev=hSev;
+  ["info","ok","warning","issue"].forEach(function(k){sev=Math.max(sev,doc.getTextWidth(R.sev[k])+PAD)});
+  doc.setFont("helvetica","normal");
+  var ts=Math.max(hTs,doc.getTextWidth("00/00/0000")+PAD,doc.getTextWidth(R.photoTag)+PAD);
+  // Tag and attachments never break: they take the width they need, and only if
+  // that hits the cap is the text shrunk (never wrapped) to fit.
+  var tagC=pdfFitCol(doc,entries.map(function(e){return e.tag||""}).concat([""]),hTag,32,PAD,ar);
+  var attC=pdfFitCol(doc,(attTexts||[]).concat([""]),Math.max(hAtt,16),50,PAD,ar);
+  // Description keeps the lion's share; if the two measured columns leave it too
+  // little they give the difference back, attachments first, and only as a last
+  // resort do they go under the 5.8pt floor (still one line, just smaller).
+  function desc(){return CW-ts-sev-tagC.cellWidth-attC.cellWidth}
+  [[attC,0],[tagC,0],[attC,1],[tagC,1]].forEach(function(p){
+    if(desc()<50)p[0].set(p[0].cellWidth-(50-desc()),!!p[1]);
+  });
+  doc.setFont("helvetica","normal");doc.setFontSize(8);
+  return {ts:ts,sev:sev,tagC:tagC,attC:attC,desc:desc};
+}
 // A report column that must never break a line: it gets the width its widest
 // line needs, and past the cap the text is SHRUNK to fit rather than wrapped.
 // Below 5.8pt it stops shrinking and the column WIDENS instead (up to a quarter
@@ -4281,32 +4314,9 @@ async function buildPdfBlob(s,lang){
             {content:R.sev[e.severity]||R.sev.info,styles:{textColor:hexRgb(sm.tx),fontStyle:"bold"}},
             e.tag||"",desc,att];
   });
-  // Column widths are MEASURED, not guessed. Head labels wrap between words, so
-  // every column must still fit its longest single head word (bold 7.5 — head
-  // styles win over column styles, so the head can't be shrunk).
-  var PAD=5; // 2mm cell padding each side, plus slack
-  doc.setFont("helvetica","bold");doc.setFontSize(7.5);
-  function headW(t){var w=0;String(t).split(/\s+/).forEach(function(k){w=Math.max(w,doc.getTextWidth(k))});return w+PAD}
-  var hTs=headW(R.ts),hSev=headW(R.severity),hTag=headW(R.tag),hAtt=headW(R.att);
-  // The severity column is sized to its longest label in this language: a
-  // fixed 17mm split "PROBLEMA" into "PROBLE"/"MA" (and "WARNING" never quite
-  // fitted either). Bold 8pt text plus the padding.
-  doc.setFontSize(8);
-  var sevW=hSev;
-  ["info","ok","warning","issue"].forEach(function(k){sevW=Math.max(sevW,doc.getTextWidth(R.sev[k])+PAD)});
-  doc.setFont("helvetica","normal");
-  var tsW=Math.max(hTs,doc.getTextWidth("00/00/0000")+PAD,doc.getTextWidth(R.photoTag)+PAD);
-  // Tag and attachments never break: they take the width they need, and only if
-  // that hits the cap is the text shrunk (never wrapped) to fit.
-  var tagC=pdfFitCol(doc,entries.map(function(e){return e.tag||""}).concat([""]),hTag,32,PAD,ar);
-  var attC=pdfFitCol(doc,body.map(function(r){return r[4]}).concat([""]),Math.max(hAtt,16),50,PAD,ar);
-  // Description keeps the lion's share; if the two measured columns leave it too
-  // little they give the difference back, attachments first, and only as a last
-  // resort do they go under the 5.8pt floor (still one line, just smaller).
-  function descW(){return CW-tsW-sevW-tagC.cellWidth-attC.cellWidth}
-  [[attC,0],[tagC,0],[attC,1],[tagC,1]].forEach(function(p){
-    if(descW()<50)p[0].set(p[0].cellWidth-(50-descW()),!!p[1]);
-  });
+  var COL=entryColWidths(doc,R,entries,body.map(function(r){return r[4]}),ar,CW);
+  var tsW=COL.ts,sevW=COL.sev,tagC=COL.tagC,attC=COL.attC;
+  function descW(){return COL.desc()}
 
   // Measure the blocks that go under the description, now that its width is
   // known, and book their room as blank lines at the end of the cell's text.
@@ -4604,7 +4614,7 @@ var DOCX_MIME="application/vnd.openxmlformats-officedocument.wordprocessingml.do
 async function buildDocxBlob(s,lang){
   var D=await loadDocxLib();
   if(!D)return null;
-  return await D.Packer.toBlob(buildDocxDocument(D,s,lang));
+  return await D.Packer.toBlob(await buildDocxDocument(D,s,lang));
 }
 async function exportDOCX(s,R,base){
   try{
@@ -4615,103 +4625,231 @@ async function exportDOCX(s,R,base){
     uploadReportCopy(s,blob,fn,DOCX_MIME);
   }catch(err){alert("Error en generar el Word: "+err.message)}
 }
-function buildDocxDocument(D,s,lang){
+// The Word report is built to land on the SAME layout as the PDF, because the
+// technician's usual route is "export Word → Save as PDF" and the two had
+// drifted apart: different page margins, different column widths, parts as bare
+// lines, photos inline instead of in an appendix. So the geometry is the PDF's
+// (A4, 14mm margins, the measured column widths from entryColWidths, converted
+// to twips), and every block is the PDF's block in Word's vocabulary. Page
+// breaks will still fall where Word decides — that's the one thing this can't
+// control.
+async function buildDocxDocument(D,s,lang){
   var R=RPT[lang]||RPT.ca;
   var tl=R.types[s.type]||R.types.commissioning,entries=s.entries||[];
   var cnt=severityCounts(entries),errs=cnt.issue,warns=cnt.warning,oks=cnt.ok;
-  var br={style:D.BorderStyle.SINGLE,size:1,color:"E5E7EB"},borders={top:br,bottom:br,left:br,right:br},mg={top:80,bottom:80,left:120,right:120};
-  function hdrCell(t,w){return new D.TableCell({borders:borders,margins:mg,width:w?{size:w,type:D.WidthType.DXA}:undefined,shading:{fill:"111827",type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:t,bold:true,color:"FFFFFF",size:18,font:"Arial"})]})]})}
+  var MM=56.6929,M=14,PGW=210,CW=PGW-M*2;      // mm → twips, and the PDF's page
+  function tw(mm){return Math.round(mm*MM)}
+  function hp(pt){return Math.round(pt*2)}      // pt → half-points
+  var br={style:D.BorderStyle.SINGLE,size:1,color:"E5E7EB"},borders={top:br,bottom:br,left:br,right:br};
+  var mg={top:57,bottom:57,left:113,right:113}; // the PDF's 2mm cell padding
+  var NONE={style:D.BorderStyle.NONE,size:0,color:"FFFFFF"},noBorders={top:NONE,bottom:NONE,left:NONE,right:NONE};
   function toImg(url){try{var b64=url.split(",")[1],bin=atob(b64),arr=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);var m=/^data:image\/([a-zA-Z+]+);/.exec(url);return{bytes:arr,type:(m&&m[1].includes("png"))?"png":"jpg"}}catch(e){return null}}
-  // Column widths in DXA (twips), measured instead of fixed so that severity,
-  // tag and every attachment NAME stay whole on one line. Courier New advances
-  // 0.6 em, so a character is 6 × its half-point size in twips; Arial caps in
-  // bold run wider, ~7 ×. CELLMG is the 120+120 cell margin.
-  var CELLMG=240,TBLW=9226;
-  function dxa(txt,sz,per){return Math.ceil(String(txt||"").length*per*sz*1.06)+CELLMG}
-  function widest(list,sz,per){var w=0;list.forEach(function(t){w=Math.max(w,dxa(t,sz,per))});return w}
-  var attNames=[];
-  entries.forEach(function(e){(e.images||[]).concat((e.fix&&e.fix.images)||[]).forEach(function(im){
-    attNames.push((im.type==="video"?"▶ ":im.type==="audio"?"🎧 ":"")+(im.name||R.file)+(im.type==="audio"?" ("+fmtDur(im.duration)+")":""));
-  })});
-  var W_TS=Math.max(dxa("00/00/00",16,6),dxa(R.photoTag,16,6),dxa(R.ts,18,7)/2);
-  var W_SEV=Math.max(widest([R.sev.info,R.sev.ok,R.sev.warning,R.sev.issue],18,7),dxa(R.severity,18,7));
-  // Tag and attachment name must stay whole, so their columns are as wide as
-  // their text needs — and when that starves the description, the TEXT gets
-  // smaller (never broken). The thumbnail above a name is 65 pt wide, so 1400
-  // DXA is the attachment column's floor.
-  var tagSz=18,attSz=14,W_TAG,W_ATT;
-  var steps=[[18,14],[16,13],[14,12],[12,11],[10,10]];
-  for(var si=0;si<steps.length;si++){
-    tagSz=steps[si][0];attSz=steps[si][1];
-    W_TAG=Math.max(widest(entries.map(function(e){return e.tag||""}),tagSz,6),dxa(R.tag,18,7),900);
-    W_ATT=Math.max(widest(attNames,attSz,6),1400);
-    if(TBLW-W_TS-W_SEV-W_TAG-W_ATT>=3000)break;
+  function P(o){return new D.Paragraph(o)}
+  function T(o){return new D.TextRun(o)}
+
+  // Same attachment lines as the PDF, same WinAnsi markers, so both reports
+  // name the files identically.
+  var attTexts=entries.map(function(e){
+    return (e.images||[]).concat((e.fix&&e.fix.images)||[]).map(function(im){
+      return (im.type==="video"?"» ":im.type==="audio"?"• ":"")+(im.name||R.file);
+    }).join("\n");
+  });
+  // Measured by jsPDF, exactly as the PDF measures them.
+  var L=await loadPdfLibs(),mdoc=L?new L.jsPDF({unit:"mm",format:"a4"}):null;
+  var colMm,tagPt=8,attPt=8,valX=30;
+  if(mdoc){
+    var COL=entryColWidths(mdoc,R,entries,attTexts,null,CW);
+    colMm=[COL.ts,COL.sev,COL.tagC.cellWidth,COL.desc(),COL.attC.cellWidth];
+    tagPt=COL.tagC.fontSize;attPt=COL.attC.fontSize;
+    mdoc.setFont("helvetica","normal");mdoc.setFontSize(8.5);
+    valX=0;[R.client,R.project,R.machine,R.location,R.tech,R.start,R.status,R.manual].forEach(function(l){
+      valX=Math.max(valX,mdoc.getTextWidth(String(l).toUpperCase()));
+    });
+    valX+=4;
+  } else {
+    colMm=[19,21,18,74,50]; // no jsPDF: sane fallback, same shape
   }
-  var W_DESC=Math.max(1800,TBLW-W_TS-W_SEV-W_TAG-W_ATT);
-  var COLW=[W_TS,W_SEV,W_TAG,W_DESC,W_ATT];
-  var slack=TBLW-COLW.reduce(function(a,b){return a+b},0);
-  if(slack<0){COLW[4]+=slack;W_ATT=COLW[4]} // absurd data: the page wins
-  var rows=entries.map(function(e){
-    var sm=SM[e.severity]||SM.info,sc=sm.tx.replace("#",""),fill=e.severity==="issue"?"FEF2F2":e.severity==="warning"?"FFF7ED":e.severity==="ok"?"F0FDF4":"FFFFFF";
-    var att=[];
-    (e.images||[]).concat((e.fix&&e.fix.images)||[]).forEach(function(img){
-      if(img.type==="audio"){
-        att.push(new D.Paragraph({spacing:{after:30},children:[new D.TextRun({text:"🎧 "+(img.name||R.voice)+" ("+fmtDur(img.duration)+")",size:attSz,font:"Courier New",color:"6B7280",italics:true})]}));
-        return;
-      }
-      var isVid=img.type==="video",src=isVid?img.poster:img.data;
-      if(src){var id=toImg(src);if(id){try{att.push(new D.Paragraph({spacing:{after:4},children:[new D.ImageRun({data:id.bytes,type:id.type,transformation:{width:65,height:45}})]}));}catch(err){}}}
-      att.push(new D.Paragraph({spacing:{after:30},children:[new D.TextRun({text:(isVid?"▶ ":"")+(img.name||R.file),size:attSz,font:"Courier New",color:"6B7280",italics:true})]}));
+  var COLW=colMm.map(tw),TBLW=COLW.reduce(function(a,b){return a+b},0);
+
+  function hdrCell(t,w){return new D.TableCell({borders:borders,margins:mg,width:{size:w,type:D.WidthType.DXA},
+    shading:{fill:"111827",type:D.ShadingType.CLEAR},
+    children:[P({children:[T({text:t,bold:true,color:"FFFFFF",size:hp(7.5),font:"Arial"})]})]})}
+
+  // The spare parts, as the same QT./REF./SPARE PART table the PDF draws.
+  function partsTable(parts,descMm){
+    var innerMm=descMm-4,qty=9,ref=Math.min(24,innerMm*0.3),name=innerMm-qty-ref;
+    var pmg={top:14,bottom:14,left:40,right:40};
+    function cell(w,ch,fill){return new D.TableCell({width:{size:tw(w),type:D.WidthType.DXA},margins:pmg,
+      borders:noBorders,shading:fill?{fill:fill,type:D.ShadingType.CLEAR}:undefined,children:ch})}
+    var head=new D.TableRow({children:[
+      cell(qty,[P({alignment:D.AlignmentType.RIGHT,children:[T({text:R.qty,bold:true,size:hp(6.4),font:"Arial",color:"6B7280"})]})],"F3F4F6"),
+      cell(ref,[P({children:[T({text:R.ref,bold:true,size:hp(6.4),font:"Arial",color:"6B7280"})]})],"F3F4F6"),
+      cell(name,[P({children:[T({text:R.part,bold:true,size:hp(6.4),font:"Arial",color:"6B7280"})]})],"F3F4F6")
+    ]});
+    var rows=parts.map(function(p){
+      return new D.TableRow({children:[
+        cell(qty,[P({alignment:D.AlignmentType.RIGHT,children:[T({text:p.cant?String(p.cant)+"×":"",size:hp(6.8),font:"Arial",color:"B45309"})]})]),
+        cell(ref,[P({children:[T({text:p.ref||"",size:hp(6.8),font:"Arial",color:"1D4ED8"})]})]),
+        cell(name,[P({children:[T({text:p.denominacio||"",size:hp(6.8),font:"Arial",color:"111827"})]})])
+      ]});
     });
-    if(!att.length)att.push(new D.Paragraph({children:[new D.TextRun({text:"",size:18})]}));
-    var descCh=[new D.Paragraph({children:[new D.TextRun({text:e.text||"",size:20,font:"Arial"})]})];
-    // quantity, reference, name — the report's column order, as lines
-    (e.parts||[]).forEach(function(p){
-      var runs=[];
-      if(p.cant)runs.push(new D.TextRun({text:p.cant+"× ",bold:true,size:16,font:"Courier New",color:"B45309"}));
-      if(p.ref)runs.push(new D.TextRun({text:p.ref+"  ",size:16,font:"Courier New",color:"1D4ED8"}));
-      if(p.denominacio)runs.push(new D.TextRun({text:p.denominacio,size:16,font:"Arial"}));
-      descCh.push(new D.Paragraph({spacing:{before:20},children:runs}));
+    return new D.Table({width:{size:tw(innerMm),type:D.WidthType.DXA},
+      columnWidths:[tw(qty),tw(ref),tw(name)],layout:D.TableLayoutType.FIXED,
+      borders:{top:br,bottom:br,left:br,right:br,insideHorizontal:{style:D.BorderStyle.NONE,size:0,color:"FFFFFF"},insideVertical:{style:D.BorderStyle.NONE,size:0,color:"FFFFFF"}},
+      rows:[head].concat(rows)});
+  }
+  // How it ended: shaded block with a bar in its severity's colour, as in the PDF.
+  function fixBlock(fx,descMm){
+    var fsm=SM[fx.severity]||SM.ok,fc=fsm.tx.replace("#","");
+    var label=R.fix.toUpperCase()+" ("+(R.sev[fx.severity]||R.sev.ok)+")"+(fx.ts?" · "+fts(fx.ts):"");
+    var cellCh=[P({spacing:{after:20},children:[T({text:label,bold:true,size:hp(6.8),font:"Arial",color:fc})]})];
+    if(fx.text)cellCh.push(P({children:[T({text:fx.text,size:hp(7.2),font:"Arial",color:"374151"})]}));
+    return new D.Table({width:{size:tw(descMm-4),type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED,
+      columnWidths:[tw(descMm-4)],
+      rows:[new D.TableRow({children:[new D.TableCell({
+        width:{size:tw(descMm-4),type:D.WidthType.DXA},
+        margins:{top:40,bottom:40,left:80,right:80},
+        shading:{fill:"F9FAFB",type:D.ShadingType.CLEAR},
+        borders:{top:NONE,bottom:NONE,right:NONE,left:{style:D.BorderStyle.SINGLE,size:18,color:fc}},
+        children:cellCh})]})]});
+  }
+
+  var rows=entries.map(function(e,i){
+    var sm=SM[e.severity]||SM.info,sc=sm.tx.replace("#","");
+    // Alternating rows, not a tint per severity: that's what the PDF and the
+    // HTML report do, and the three have to look like one another.
+    var fill=(i%2)?"F9FAFB":"FFFFFF";
+    // Names only, like the PDF: the photos themselves are in the appendix.
+    var att=(attTexts[i]?attTexts[i].split("\n"):[""]).map(function(line){
+      return P({spacing:{after:20},children:[T({text:line,size:hp(attPt),font:"Arial",color:"6B7280"})]});
     });
-    // How it ended, in the same cell as the problem, in its severity's colour.
-    if(e.fix){
-      var fsm=SM[e.fix.severity]||SM.ok,fc=fsm.tx.replace("#","");
-      descCh.push(new D.Paragraph({spacing:{before:80},children:[
-        new D.TextRun({text:"✔ "+R.fix.toUpperCase()+" ("+(R.sev[e.fix.severity]||R.sev.ok)+")"+(e.fix.ts?" · "+fts(e.fix.ts):""),bold:true,size:16,font:"Arial",color:fc})
-      ]}));
-      if(e.fix.text)descCh.push(new D.Paragraph({children:[new D.TextRun({text:e.fix.text,size:20,font:"Arial"})]}));
+    var descCh=[P({children:[T({text:e.text||"",size:hp(8),font:"Arial"})]})];
+    if(e.parts&&e.parts.length){
+      descCh.push(P({spacing:{before:60},children:[T({text:""})]}));
+      descCh.push(partsTable(e.parts,colMm[3]));
+      descCh.push(P({spacing:{after:0},children:[T({text:""})]})); // Word needs a paragraph after a table
     }
+    if(e.fix){
+      descCh.push(P({spacing:{before:60},children:[T({text:""})]}));
+      descCh.push(fixBlock(e.fix,colMm[3]));
+      descCh.push(P({spacing:{after:0},children:[T({text:""})]}));
+    }
+    function cell(idx,ch){return new D.TableCell({borders:borders,margins:mg,width:{size:COLW[idx],type:D.WidthType.DXA},
+      shading:{fill:fill,type:D.ShadingType.CLEAR},children:ch})}
     return new D.TableRow({children:[
-      new D.TableCell({borders:borders,margins:mg,width:{size:COLW[0],type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[
-        new D.TextRun({text:fts(e.ts).split(" ")[0],size:16,font:"Courier New",color:"6B7280"}),
-        new D.TextRun({text:fts(e.ts).split(" ")[1],size:16,font:"Courier New",color:"6B7280",break:1})
-      ].concat(e.tsFromPhoto?[new D.TextRun({text:R.photoTag,size:16,font:"Courier New",color:"9CA3AF",break:1})]:[])})]}) ,
-      new D.TableCell({borders:borders,margins:mg,width:{size:COLW[1],type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:R.sev[e.severity]||R.sev.info,bold:true,size:18,color:sc,font:"Arial"})]})]}) ,
-      new D.TableCell({borders:borders,margins:mg,width:{size:COLW[2],type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[new D.TextRun({text:e.tag||"",size:tagSz,font:"Courier New",color:"1D4ED8"})]})]}) ,
-      new D.TableCell({borders:borders,margins:mg,width:{size:COLW[3],type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:descCh}) ,
-      new D.TableCell({borders:borders,margins:mg,width:{size:COLW[4],type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:att})
+      cell(0,[P({children:[
+        T({text:fts(e.ts).split(" ")[0],size:hp(8),font:"Arial",color:"6B7280"}),
+        T({text:fts(e.ts).split(" ")[1],size:hp(8),font:"Arial",color:"6B7280",break:1})
+      ].concat(e.tsFromPhoto?[T({text:R.photoTag,size:hp(8),font:"Arial",color:"9CA3AF",break:1})]:[])})]),
+      cell(1,[P({children:[T({text:R.sev[e.severity]||R.sev.info,bold:true,size:hp(8),color:sc,font:"Arial"})]})]),
+      cell(2,[P({children:[T({text:e.tag||"",size:hp(tagPt),font:"Arial",color:"111827"})]})]),
+      cell(3,descCh),
+      cell(4,att)
     ]});
   });
-  function mp(l,v){return new D.Paragraph({spacing:{after:80},children:[new D.TextRun({text:l+": ",bold:true,size:18,font:"Arial"}),new D.TextRun({text:v||"—",size:18,font:"Arial"})]})}
+
+  // Metadata: the PDF's two-column LABEL / value grid, as a borderless table.
+  var meta=[[R.client,s.client||"—"],[R.project,s.project||"—"],[R.machine,s.machine||"—"],
+            [R.location,s.location||"—"],[R.tech,s.tech||"—"],[R.start,fts(s.createdAt)],
+            [R.status,s.status==="open"?R.open:R.closed],[R.manual,(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||"—"]];
+  var halfW=CW/2,metaCols=[valX,halfW-valX,valX,halfW-valX].map(tw);
+  var metaRows=[];
+  for(var mi=0;mi<meta.length;mi+=2){
+    var cells=[];
+    [meta[mi],meta[mi+1]].forEach(function(p,col){
+      if(!p){cells.push(new D.TableCell({borders:noBorders,width:{size:metaCols[col*2],type:D.WidthType.DXA},children:[P({})]}),
+                        new D.TableCell({borders:noBorders,width:{size:metaCols[col*2+1],type:D.WidthType.DXA},children:[P({})]}));return}
+      cells.push(new D.TableCell({borders:noBorders,margins:{top:20,bottom:20,left:0,right:57},width:{size:metaCols[col*2],type:D.WidthType.DXA},
+        children:[P({children:[T({text:String(p[0]).toUpperCase(),size:hp(8.5),font:"Arial",color:"9CA3AF"})]})]}));
+      cells.push(new D.TableCell({borders:noBorders,margins:{top:20,bottom:20,left:0,right:57},width:{size:metaCols[col*2+1],type:D.WidthType.DXA},
+        children:[P({children:[T({text:String(p[1]),bold:true,size:hp(8.5),font:"Arial",color:"111827"})]})]}));
+    });
+    metaRows.push(new D.TableRow({children:cells}));
+  }
+  var metaTable=new D.Table({width:{size:tw(CW),type:D.WidthType.DXA},columnWidths:metaCols,
+    layout:D.TableLayoutType.FIXED,borders:{top:NONE,bottom:NONE,left:NONE,right:NONE,insideHorizontal:NONE,insideVertical:NONE},rows:metaRows});
+
+  var counters=[T({text:R.issues+": ",bold:true,size:hp(9),font:"Arial",color:"DC2626"}),T({text:errs+"      ",size:hp(9),font:"Arial",color:"DC2626"}),
+                T({text:R.warnings+": ",bold:true,size:hp(9),font:"Arial",color:"EA580C"}),T({text:warns+"      ",size:hp(9),font:"Arial",color:"EA580C"})]
+    .concat(cnt.resolved?[T({text:R.resolved+": ",bold:true,size:hp(9),font:"Arial",color:"16A34A"}),T({text:cnt.resolved+"      ",size:hp(9),font:"Arial",color:"16A34A"})]:[])
+    .concat([T({text:R.ok+": ",bold:true,size:hp(9),font:"Arial",color:"16A34A"}),T({text:oks+"      ",size:hp(9),font:"Arial",color:"16A34A"}),
+             T({text:R.total+": ",bold:true,size:hp(9),font:"Arial",color:"475569"}),T({text:""+entries.length,size:hp(9),font:"Arial",color:"475569"})]);
+
   var children=[
-    new D.Paragraph({spacing:{after:80},border:{bottom:{style:D.BorderStyle.SINGLE,size:6,color:"F59E0B",space:1}},children:[new D.TextRun({text:R.title,bold:true,size:40,font:"Arial",color:"111827"})]}),
-    new D.Paragraph({spacing:{after:40},children:[new D.TextRun({text:tl,size:20,font:"Arial",color:"6B7280"})]}),
-    new D.Paragraph({spacing:{after:200},children:[new D.TextRun({text:R.gen+" "+fts(new Date().toISOString()),size:18,font:"Arial",color:"9CA3AF"})]}),
-    mp(R.client,s.client),mp(R.project,s.project),mp(R.machine,s.machine),mp(R.location,s.location),mp(R.tech,s.tech),mp(R.start,fts(s.createdAt)),mp(R.status,s.status==="open"?R.open:R.closed),
-    new D.Paragraph({spacing:{after:200},children:[new D.TextRun({text:""})]}),
-    new D.Paragraph({spacing:{after:40},children:[new D.TextRun({text:R.issues+": ",bold:true,size:20,font:"Arial",color:"DC2626"}),new D.TextRun({text:errs+"   ",size:20,color:"DC2626"}),new D.TextRun({text:R.warnings+": ",bold:true,size:20,font:"Arial",color:"EA580C"}),new D.TextRun({text:warns+"   ",size:20,color:"EA580C"}),].concat(cnt.resolved?[new D.TextRun({text:R.resolved+": ",bold:true,size:20,font:"Arial",color:"16A34A"}),new D.TextRun({text:cnt.resolved+"   ",size:20,color:"16A34A"})]:[]).concat([
-      new D.TextRun({text:R.ok+": ",bold:true,size:20,font:"Arial",color:"16A34A"}),new D.TextRun({text:oks+"   ",size:20,color:"16A34A"}),new D.TextRun({text:R.total+": ",bold:true,size:20,font:"Arial"}),new D.TextRun({text:""+entries.length,size:20})])}),
-    new D.Paragraph({spacing:{after:160},children:[new D.TextRun({text:""})]}),
-    new D.Table({width:{size:TBLW,type:D.WidthType.DXA},columnWidths:COLW,layout:D.TableLayoutType.FIXED,rows:[new D.TableRow({tableHeader:true,children:[hdrCell(R.ts,COLW[0]),hdrCell(R.severity,COLW[1]),hdrCell(R.tag,COLW[2]),hdrCell(R.desc,COLW[3]),hdrCell(R.att,COLW[4])]})].concat(rows)}),
-    new D.Paragraph({spacing:{after:200},children:[new D.TextRun({text:""})]})
+    P({spacing:{after:60},children:[T({text:R.title,bold:true,size:hp(18),font:"Arial",color:"111827"})]}),
+    P({spacing:{after:120},border:{bottom:{style:D.BorderStyle.SINGLE,size:6,color:"F59E0B",space:4}},
+       children:[T({text:tl+"  ·  "+R.gen+" "+fts(new Date().toISOString()),size:hp(9),font:"Arial",color:"6B7280"})]}),
+    metaTable,
+    P({spacing:{before:120,after:120},children:counters}),
+    new D.Table({width:{size:TBLW,type:D.WidthType.DXA},columnWidths:COLW,layout:D.TableLayoutType.FIXED,
+      rows:[new D.TableRow({tableHeader:true,children:[hdrCell(R.ts,COLW[0]),hdrCell(R.severity,COLW[1]),hdrCell(R.tag,COLW[2]),hdrCell(R.desc,COLW[3]),hdrCell(R.att,COLW[4])]})].concat(rows)}),
+    P({spacing:{after:120},children:[T({text:""})]})
   ];
-  if(s.notes){children.push(new D.Paragraph({spacing:{after:80},children:[new D.TextRun({text:R.notes+":",bold:true,size:20,font:"Arial"})]}));children.push(new D.Paragraph({spacing:{after:400},children:[new D.TextRun({text:s.notes,size:20,font:"Arial"})]}));}
-  children=children.concat([
-    new D.Paragraph({spacing:{before:800,after:40},border:{top:{style:D.BorderStyle.SINGLE,size:2,color:"E5E7EB",space:1}},children:[new D.TextRun({text:R.sigTech+": "+(s.tech||"_________________"),size:20,font:"Arial"})]}),
-    new D.Paragraph({spacing:{before:600,after:40},border:{top:{style:D.BorderStyle.SINGLE,size:2,color:"E5E7EB",space:1}},children:[new D.TextRun({text:R.sigCli+": _________________",size:20,font:"Arial"})]}),
-    new D.Paragraph({spacing:{before:200},children:[new D.TextRun({text:"ID: "+s.id,size:16,font:"Arial",color:"9CA3AF"})]})
-  ]);
-  return new D.Document({styles:{default:{document:{run:{font:"Arial",size:20}}}},sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:1440,right:1440,bottom:1440,left:1440}}},children:children}]});
+
+  // Photo appendix, 3 across, like the PDF's — and for the same reason: images
+  // inside the rows would blow the table up.
+  var shots=[];
+  entries.forEach(function(e){
+    (e.images||[]).concat((e.fix&&e.fix.images)||[]).forEach(function(im){
+      var src=im.type==="video"?im.poster:(im.type==="audio"?null:im.data);
+      if(src)shots.push({src:src,ts:fts(e.ts),name:im.name||""});
+    });
+  });
+  if(shots.length){
+    var cols=3,gapMm=4,iwMm=(CW-gapMm*(cols-1))/cols,ihMm=iwMm*0.72;
+    children.push(P({spacing:{after:80},children:[T({text:R.photos,bold:true,size:hp(11),font:"Arial",color:"111827"})]}));
+    var shotRows=[];
+    for(var i=0;i<shots.length;i+=cols){
+      var cellsS=[];
+      for(var c=0;c<cols;c++){
+        var sh=shots[i+c],ch=[];
+        if(sh){
+          var id=toImg(sh.src);
+          if(id){try{ch.push(P({spacing:{after:20},children:[new D.ImageRun({data:id.bytes,type:id.type,
+            transformation:{width:Math.round(iwMm*72/25.4),height:Math.round(ihMm*72/25.4)}})]}))}catch(err){}}
+          ch.push(P({children:[T({text:sh.ts,size:hp(6.5),font:"Arial",color:"6B7280"})]}));
+          ch.push(P({spacing:{after:80},children:[T({text:sh.name,size:hp(6.5),font:"Arial",color:"6B7280"})]}));
+        } else ch.push(P({}));
+        cellsS.push(new D.TableCell({borders:noBorders,margins:{top:0,bottom:0,left:0,right:tw(gapMm)},
+          width:{size:tw(iwMm+gapMm),type:D.WidthType.DXA},children:ch}));
+      }
+      shotRows.push(new D.TableRow({children:cellsS}));
+    }
+    children.push(new D.Table({width:{size:tw(CW),type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED,
+      columnWidths:[tw(iwMm+gapMm),tw(iwMm+gapMm),tw(iwMm+gapMm)],
+      borders:{top:NONE,bottom:NONE,left:NONE,right:NONE,insideHorizontal:NONE,insideVertical:NONE},rows:shotRows}));
+    children.push(P({spacing:{after:120},children:[T({text:""})]}));
+  }
+
+  if(s.notes){
+    children.push(P({spacing:{before:120,after:40},children:[T({text:R.notes,bold:true,size:hp(9),font:"Arial",color:"111827"})]}));
+    children.push(P({spacing:{after:200},children:[T({text:s.notes,size:hp(8.5),font:"Arial",color:"374151"})]}));
+  }
+  // Signature lines side by side, as the PDF draws them.
+  var sigW=tw(CW/2-10);
+  children.push(new D.Table({width:{size:tw(CW),type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED,
+    columnWidths:[sigW,tw(20),sigW],
+    borders:{top:NONE,bottom:NONE,left:NONE,right:NONE,insideHorizontal:NONE,insideVertical:NONE},
+    rows:[new D.TableRow({children:[
+      new D.TableCell({borders:{top:{style:D.BorderStyle.SINGLE,size:4,color:"6B7280"},bottom:NONE,left:NONE,right:NONE},
+        margins:{top:80,bottom:0,left:0,right:0},width:{size:sigW,type:D.WidthType.DXA},
+        children:[P({children:[T({text:R.sigTech+(s.tech?" — "+s.tech:""),size:hp(8),font:"Arial",color:"6B7280"})]})]}),
+      new D.TableCell({borders:noBorders,width:{size:tw(20),type:D.WidthType.DXA},children:[P({})]}),
+      new D.TableCell({borders:{top:{style:D.BorderStyle.SINGLE,size:4,color:"6B7280"},bottom:NONE,left:NONE,right:NONE},
+        margins:{top:80,bottom:0,left:0,right:0},width:{size:sigW,type:D.WidthType.DXA},
+        children:[P({children:[T({text:R.sigCli,size:hp(8),font:"Arial",color:"6B7280"})]})]})
+    ]})]}));
+
+  // The PDF's footer: session id on the left, page x / y on the right.
+  var footer=new D.Footer({children:[P({
+    tabStops:[{type:D.TabStopType.RIGHT,position:tw(CW)}],
+    children:[T({text:"ID: "+s.id,size:hp(7.5),font:"Arial",color:"9CA3AF"}),T({text:"\t",size:hp(7.5)}),
+              T({children:[D.PageNumber.CURRENT," / ",D.PageNumber.TOTAL_PAGES],size:hp(7.5),font:"Arial",color:"9CA3AF"})]})]});
+
+  return new D.Document({
+    styles:{default:{document:{run:{font:"Arial",size:hp(8)},paragraph:{spacing:{after:0,line:240,lineRule:"auto"}}}}},
+    sections:[{properties:{page:{size:{width:tw(PGW),height:tw(297)},margin:{top:tw(M),right:tw(M),bottom:tw(M),left:tw(M)}}},
+               footers:{default:footer},children:children}]});
 }
 
 // ── DRIVE ZIP EXPORT ──────────────────────────────────────────────────────────

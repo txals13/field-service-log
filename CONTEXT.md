@@ -162,6 +162,17 @@ Field Service Log/
     is kept; transcription is intentionally gone. Don't re-add it without a
     better model/approach.
 - Edit entries (description, severity, tag, add/remove/rename attachments)
+- **The entry's date and time can be edited** (`datetime-local` field at the top
+  of the edit modal, `step=60`), mainly to round hours before the client signs.
+  Rounding is **manual only** — the `:05` / `:15` / `:00` buttons round the field
+  to the nearest 5 min / quarter / hour when tapped; nothing ever rounds by
+  itself. `entry.ts` stays a UTC ISO string, the field speaks local wall-clock
+  (`tsToInput` / `inputToTs`). The new time is applied only if the field differs
+  from the value loaded, so editing just the text keeps the original timestamp
+  to the second; a manual change zeroes the seconds (the field has no seconds)
+  and clears `tsFromPhoto`, since the time is no longer the photo's — the 📷
+  marker disappears from the log. Entries are **not** re-sorted afterwards: they
+  keep the order they were logged in.
 - Delete entries
 - Close session / **Reopen session** (↺ button)
 - Delete session: **no backup is written**. It used to drop a JSON in Downloads

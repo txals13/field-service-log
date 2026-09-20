@@ -206,6 +206,28 @@ Field Service Log/
   behind for good), keeping the media recoverable there. Looked up with
   `driveFind`, not `getSessionFolder`, which is find-or-create and would make an
   empty folder just to bin it.
+- **Removing an attachment removes it from Drive too** (`queueTrash` /
+  `flushTrash`). It used to stay in the session's folder for good, so a photo the
+  technician had thrown out came back in the next ZIP. It goes to the **Drive
+  trash** (30 days to change your mind, same as deleting a whole session), from
+  the edit modal, from deleting an entry, and from the folder screen. The ids
+  wait in `session.trashQ` until there is a token, so deleting works offline or
+  signed out; the queue is part of the session, so it survives a reload, and it
+  drains on boot, on sign-in and on every sync. Only ids this app attached are
+  ever touched — never a file put in the folder from Drive.
+- **🗂 Carpeta — the session's Drive folder, from inside the app** (`openFolder`).
+  Lists everything `isSessionMedia` matches, with what the report shows first and
+  the rest under "Sense vincular". Any file can be renamed (the extension is kept
+  if you don't type one; renaming an attachment updates the report's copy of the
+  name) or sent to the trash.
+  - **Tying a loose photo to one in the report renames it after that photo** —
+    `IMG_0847.jpg` → `IMG_0847_02.jpg`, `_03`… The Drive folder only shows names,
+    so the name IS how you know later which extra belongs to which. The number is
+    the first free one, checked against the folder as it stands. The link itself
+    lives in `session.driveLinks` = `{<file id>: {to: <attachment's drive id>}}`,
+    so the grouping survives further renames — and renaming the parent drags its
+    tied files along, or they would be left pointing at a name that is gone.
+  - Untying leaves the file name as it is (the button's tooltip says so).
 - Import JSON **or a session ZIP** (↑ Import button in topbar and on empty screen).
   A ZIP restores the media too: photos and voice notes ride along inside
   session.json as base64, but a video is only ever a thumbnail + a Drive id, and
@@ -296,13 +318,12 @@ Field Service Log/
   - Both take the media from Drive but **build** the reports fresh, and both skip
     loose files at the root of the Drive folder (old report copies, a stale
     `session.json`).
-  - **Only the media the report still shows goes in.** Deleting a photo, or a
-    whole entry, never deletes the file from Drive, so the folder keeps orphans
-    and the pack used to carry them — photos the technician had thrown out came
-    back in the ZIP handed to the client. The entries' `images[]` decide: matched
-    by `driveId`, falling back to the file name for anything attached before the
-    id was recorded. Fewer downloads too. The orphans stay in Drive, untouched —
-    this only decides what goes in the pack.
+  - **Everything in the folder goes in, not just what the report prints**
+    (`isSessionMedia`: the media subfolders, plus an image/video/audio dropped at
+    the folder's root — the reports are pdf/docx/xlsx/html/json and never match).
+    Photos put there from Drive are there on purpose, to round out what an entry
+    says, and they travel with the pack without appearing in the report. What was
+    deleted in the app isn't in the folder any more — see below.
 - Export: HTML (video playable), PDF (jsPDF + autoTable), DOCX (via docx lib CDN),
   XLSX (spare parts, via SheetJS)
 - Reports in Catalan, Spanish or English (see Languages), filenames shown under each photo/video

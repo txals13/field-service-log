@@ -208,6 +208,14 @@ textarea{resize:none;line-height:1.4}
 .ts-tbl input[type=checkbox]{width:17px;height:17px;accent-color:var(--gold);margin:0}
 .ts-sig{border:1px dashed var(--br2);border-radius:8px;background:#fff;touch-action:none;width:100%;height:110px;display:block;cursor:crosshair}
 .ts-note{font-size:11px;color:var(--tx3)}
+.fol-row{display:flex;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid var(--br);font-size:12px}
+.fol-row.fol-rep{background:var(--bg2)}
+.fol-name{flex:1;min-width:0;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fol-badge{font-size:10px;color:var(--gold);border:1px solid var(--gold);border-radius:10px;padding:1px 6px;flex-shrink:0}
+.fol-acts{display:flex;gap:4px;align-items:center;flex-shrink:0}
+.fol-sub{padding-left:18px;border-left:2px solid var(--gold)}
+.fol-head{font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:10px 8px 4px}
+.fol-sel{font-size:11px;padding:2px 4px;max-width:150px}
 .ts-col{font-size:11px;padding:3px 9px;border-radius:20px}
 .ts-col.on{background:var(--goldbg);border-color:var(--golddim);color:var(--goldtx);font-weight:700}
 .ts-col.lock{opacity:.5;cursor:default}
@@ -398,6 +406,23 @@ textarea{resize:none;line-height:1.4}
         <button class="btn-sm" id="tsSave">&#10003; Desa</button>
         <button class="btn-gold" id="tsPdf">&#128196; Desa i PDF</button>
       </div>
+    </div>
+  </div>
+
+  <!-- The session's Drive folder: what the report shows AND what was dropped in
+       from Drive to round it out. Rename anything, and tie a loose photo to the
+       one that does appear in the report so the folder itself tells you which
+       is which. -->
+  <div class="modal-back" id="folBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,720px)">
+      <div class="modal-title">&#128451; Fitxers de la carpeta</div>
+      <div id="folNote" class="ts-note" style="margin-bottom:10px">&mdash;</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="btn-sm" id="folReload" title="Torna a llegir la carpeta de Drive">&#8635; Actualitza</button>
+        <button class="btn-sm" id="folOpenDrive" title="Obre la carpeta d'aquesta sessió a Drive">&#8599; Obre-la a Drive</button>
+      </div>
+      <div id="folList" style="max-height:56vh;overflow:auto"></div>
+      <div class="modal-actions"><button id="folClose">Tanca</button></div>
     </div>
   </div>
 
@@ -1018,6 +1043,7 @@ async function syncAllToDrive(){
   var btn=$$("btnFullSync");if(btn){btn.disabled=true;btn.textContent="Sincronitzant…"}
   var total={uploaded:0,missingVideos:0};
   try{
+    await flushTrash(); // deletions made offline go through here too
     for(var i=0;i<sessions.length;i++){
       var res=await syncSessionToDrive(token,sessions[i]);
       total.uploaded+=res.uploaded;total.missingVideos+=res.missingVideos;
@@ -1096,6 +1122,54 @@ function driveStreamUrl(driveId){if(!accessToken||!driveId)return null;return"ht
 async function driveRename(driveId,name){
   var token=await ensureToken();if(!token||!driveId)return false;
   try{var r=await fetch("https://www.googleapis.com/drive/v3/files/"+driveId,{method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({name:name})});return r.ok}catch(e){return false}
+}
+// ── REMOVED ATTACHMENTS LEAVE DRIVE TOO ──────────────────────────────────────
+// A photo dropped from an entry used to stay in the session's Drive folder for
+// good, so it came back in the next ZIP. It goes to the DRIVE TRASH (30 days to
+// change your mind, same as deleting a whole session). The ids wait in
+// `session.trashQ` until there's a token, so it also works offline and on a
+// phone that signs in later; the queue is part of the session, so it survives a
+// reload. Files the technician put in the folder from Drive itself are never
+// touched — only ids this app had attached to an entry.
+function queueTrash(sessId,ids){
+  ids=(ids||[]).filter(Boolean);
+  if(!ids.length)return;
+  sessions=sessions.map(function(s){
+    if(s.id!==sessId)return s;
+    var q=(s.trashQ||[]).slice();
+    ids.forEach(function(id){if(q.indexOf(id)<0)q.push(id)});
+    return Object.assign({},s,{trashQ:q});
+  });
+  flushTrash();
+}
+var trashBusy=false;
+async function flushTrash(){
+  if(trashBusy||!isLoggedIn)return;
+  if(!sessions.some(function(s){return s.trashQ&&s.trashQ.length}))return;
+  trashBusy=true;
+  try{
+    var token=await getToken(); // never force a login prompt for housekeeping
+    if(!token)return;
+    for(var i=0;i<sessions.length;i++){
+      var q=(sessions[i].trashQ||[]).slice();
+      if(!q.length)continue;
+      var sid=sessions[i].id,done=[];
+      for(var k=0;k<q.length;k++){
+        try{
+          var r=await fetch("https://www.googleapis.com/drive/v3/files/"+q[k],
+            {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({trashed:true})});
+          // 404: already gone — either way it is no longer our problem
+          if(r.ok||r.status===404)done.push(q[k]);
+        }catch(e){}
+      }
+      if(done.length){
+        sessions=sessions.map(function(s){
+          return s.id===sid?Object.assign({},s,{trashQ:(s.trashQ||[]).filter(function(id){return done.indexOf(id)<0})}):s;
+        });
+        saveLocal();
+      }
+    }
+  }finally{trashBusy=false}
 }
 
 // ── SPARE-PARTS MANUALS ──────────────────────────────────────────────────────
@@ -1798,7 +1872,7 @@ async function saveToDrive(){
   }
 }
 function scheduleSave(){if(aid)sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{updatedAt:now()}):s});isDirty=true;saveLocal();if(saveTimer)clearTimeout(saveTimer);saveTimer=setTimeout(function(){if(isDirty&&isLoggedIn)saveToDrive()},2000)}
-function scheduleSync(){if(syncStarted)return;syncStarted=true;setInterval(function(){if(isLoggedIn&&!isDirty&&!hasUnsaved())loadFromDrive().then(renderAll)},30000)}
+function scheduleSync(){if(syncStarted)return;syncStarted=true;setInterval(function(){if(isLoggedIn&&!isDirty&&!hasUnsaved()){loadFromDrive().then(renderAll);flushTrash()}},30000)}
 function hasUnsaved(){if(mediaRec)return true;var a=document.activeElement;if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return true;var e=$$("entIn");if(e&&e.value.trim())return true;if(pImgs.length)return true;if(editingId)return true;return false}
 function setSyncSt(state,msg){
   var bar=$$("syncBar"),st=$$("syncSt");
@@ -1838,6 +1912,7 @@ async function finishLogin(){
   isLoggedIn=true;hideAuthExpired();updateAuthUI();
   await loadFromDrive();
   await saveToDrive(); // push any sessions created locally before signing in
+  flushTrash();        // and bin the attachments deleted while signed out
   loadManualsIndex(); // fire-and-forget: populate the manuals list in the background
   renderAll();
   scheduleSync();
@@ -2120,6 +2195,7 @@ function renderContent(){
     +"<span>🕐 "+fts(active.createdAt)+"</span>"
     +manualChipHTML(active)
     +drawingsChipHTML(active)
+    +folderChipHTML(active)
     +tsChipHTML(active)
     +"</div></div>"
     // filter
@@ -2166,6 +2242,7 @@ function renderContent(){
   var mChip=$$("manualChip");if(mChip)mChip.addEventListener("click",openLinkModal);
   var dChip=$$("drawingsChip");if(dChip)dChip.addEventListener("click",function(){openDrawings()});
   var tChip=$$("tsChip");if(tChip)tChip.addEventListener("click",openTimesheet);
+  var fChip=$$("folChip");if(fChip)fChip.addEventListener("click",openFolder);
   var btnC=$$("btnClose");if(btnC)btnC.addEventListener("click",function(){if(confirm("Vols tancar aquesta sessió? La pots reobrir més endavant.")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"closed",closedAt:now()}):s});scheduleSave();renderAll()}});
   var btnR=$$("btnReopen");if(btnR)btnR.addEventListener("click",function(){if(confirm("Vols reobrir aquesta sessió?")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"open",closedAt:null}):s});scheduleSave();renderAll()}});
   var btnEx=$$("btnExp");if(btnEx){
@@ -2186,7 +2263,7 @@ function renderContent(){
       var f=e.target.dataset.fmt;if(f){$$("expMenu").style.display="none";exportRep(active,f)}
     });
   }
-  var btnSy=$$("btnSync");if(btnSy)btnSy.addEventListener("click",function(){loadFromDrive().then(renderAll)});
+  var btnSy=$$("btnSync");if(btnSy)btnSy.addEventListener("click",function(){loadFromDrive().then(renderAll);flushTrash()});
   var btnSS=$$("btnSessSync");if(btnSS)btnSS.addEventListener("click",syncActiveSessionToDrive);
   var fi=$$("filtIn");if(fi)fi.addEventListener("input",function(e){filterTxt=e.target.value;debLogRender()});
   if(isOpen){
@@ -2517,6 +2594,9 @@ function saveEdit(){
     if(pExifEdit>0&&waited<3000){var b=$$("eSave");if(b){b.disabled=true;b.textContent="Processant…"}waited+=150;setTimeout(tryS,150);return}
     var b2=$$("eSave");if(b2){b2.disabled=false;b2.innerHTML="✓ Desa els canvis"}
     var pts=earliestTs(eImgs);
+    // Attachments dropped in this edit: out of the entry, and out of Drive.
+    var kept={};eImgs.forEach(function(im){if(im.driveId)kept[im.driveId]=1});
+    queueTrash(aid,((entry0&&entry0.images)||[]).map(function(im){return im.driveId}).filter(function(id){return id&&!kept[id]}));
     sessions=sessions.map(function(s){if(s.id!==aid)return s;return Object.assign({},s,{entries:sortEntries((s.entries||[]).map(function(en){if(en.id!==entId)return en;var up=Object.assign({},en,{text:captText,severity:newSev,tag:newTag,images:eImgs.slice(),parts:eParts.slice(),editedAt:now()});
       // A hand-set time wins for good (tsManual): otherwise the photo would
       // take it back the next time this entry is saved.
@@ -2529,6 +2609,9 @@ function saveEdit(){
 function closeEdit(){if(mediaRec&&recIsEdit){stopRec();recChunks=[]}stopCurAudio();$$("editBack").style.display="none";editingId=null;eImgs=[];eParts=[];clearPartForm()}
 function delEntry(entryId){
   if(!confirm("Vols eliminar aquesta entrada? No es pot desfer."))return;
+  var act=sessions.find(function(s){return s.id===aid});
+  var gone=act&&(act.entries||[]).find(function(en){return en.id===entryId});
+  queueTrash(aid,((gone&&gone.images)||[]).map(function(im){return im.driveId}));
   sessions=sessions.map(function(s){if(s.id!==aid)return s;return Object.assign({},s,{entries:(s.entries||[]).filter(function(en){return en.id!==entryId})})});
   scheduleSave();renderAll();
 }
@@ -3219,6 +3302,226 @@ function tsWd(t,iso){return t.wd[new Date(iso+"T00:00:00").getDay()]}
 function tsN(n){return n?n.toFixed(2):"—"}
 function tsDMY(iso){var p=iso.split("-");return p[2]+"/"+p[1]+"/"+p[0].slice(2)}
 function tsSum(rows,k){return tsR2(rows.reduce(function(a,r){return a+(+r[k]||0)},0))}
+// ── SESSION DRIVE FOLDER ─────────────────────────────────────────────────────
+// The folder holds more than the report: photos put there from Drive to round
+// out what an entry says. They are NOT in the report and they stay out of it —
+// but they do travel in the ZIP, they can be renamed here, and each can be tied
+// to the report photo it belongs with. Tying one RENAMES it after that photo
+// (IMG_0847.jpg → IMG_0847_02.jpg), because the Drive folder only shows names:
+// that is what makes the pile readable later. The link is kept in
+// `session.driveLinks` = {<file id>: {to: <report photo's drive id>}} so this
+// screen can group them even after either one is renamed again.
+var folFiles=[],folBusy=false,folWired=false,folLinking=null;
+function folderChipHTML(sess){
+  var n=(sess.driveLinks&&Object.keys(sess.driveLinks).length)||0;
+  return "<span id=\"folChip\" style=\"cursor:pointer\" title=\"Els fitxers de la carpeta de Drive d'aquesta sessió: canvia'ls el nom o vincula'ls a una foto de l'informe\">&#128451; Carpeta"
+    +(n?" · "+n+" vinculada"+(n===1?"":"s"):"")+"</span>";
+}
+function folNote(t){var e=$$("folNote");if(e)e.innerHTML=t}
+// Every attachment the report shows, flattened, so a loose file can be tied to one.
+function reportAttachments(s){
+  var out=[];
+  (s.entries||[]).forEach(function(e){
+    (e.images||[]).forEach(function(im){
+      if(im.driveId)out.push({driveId:im.driveId,name:im.name||"",entryId:e.id,ts:e.ts,type:im.type||"photo"});
+    });
+  });
+  return out;
+}
+function openFolder(){
+  var s=sessions.find(function(x){return x.id===aid});if(!s)return;
+  $$("folBack").style.display="flex";
+  if(!folWired){
+    folWired=true;
+    $$("folClose").addEventListener("click",function(){$$("folBack").style.display="none"});
+    $$("folBack").addEventListener("click",function(e){if(e.target===$$("folBack"))$$("folBack").style.display="none"});
+    $$("folReload").addEventListener("click",function(){loadFolder(true)});
+    $$("folList").addEventListener("click",folAct);
+    $$("folOpenDrive").addEventListener("click",async function(){
+      var t=await ensureToken();if(!t)return;
+      var sx=sessions.find(function(x){return x.id===aid});if(!sx)return;
+      var id=await getSessionFolder(t,sx);
+      if(id)window.open("https://drive.google.com/drive/folders/"+id,"_blank");
+    });
+  }
+  loadFolder(false);
+}
+async function loadFolder(force){
+  var s=sessions.find(function(x){return x.id===aid});if(!s)return;
+  if(!isLoggedIn){folNote("Inicia la sessió amb Google per veure la carpeta d'aquesta sessió.");$$("folList").innerHTML="";return}
+  if(folBusy)return;
+  folBusy=true;folNote("<span class=\"spinner\"></span> Llegint la carpeta…");
+  try{
+    var token=await ensureToken();if(!token)throw new Error("sense accés a Drive");
+    var folderId=await getSessionFolder(token,s);
+    if(!folderId)throw new Error("aquesta sessió encara no té carpeta a Drive");
+    var all=[];await collectDriveFiles(token,folderId,"",all);
+    folFiles=all.filter(isSessionMedia);
+    renderFolder();
+  }catch(e){folNote("No s'ha pogut llegir la carpeta: "+((e&&e.message)||e));$$("folList").innerHTML=""}
+  finally{folBusy=false}
+}
+function folRow(f,kind,extra){
+  return "<div class=\"fol-row"+(kind==="rep"?" fol-rep":"")+"\" data-id=\""+esc(f.id)+"\">"
+    +"<span class=\"fol-name\" title=\""+esc(f.path)+"\">"+esc(f.name||f.path)+"</span>"
+    +(kind==="rep"?"<span class=\"fol-badge\">a l'informe</span>":"")
+    +"<span class=\"fol-acts\">"+extra
+    +"<button class=\"btn-xs\" data-fol=\"ren\">&#9998; Nom</button>"
+    +"<button class=\"btn-xs\" data-fol=\"open\">&#8599;</button>"
+    +"<button class=\"btn-xs\" data-fol=\"del\" title=\"Envia'l a la paperera de Drive\">&#128465;</button>"
+    +"</span></div>";
+}
+function renderFolder(){
+  var s=sessions.find(function(x){return x.id===aid});if(!s)return;
+  var box=$$("folList");if(!box)return;
+  var links=s.driveLinks||{};
+  var att=reportAttachments(s),attById={};att.forEach(function(a){attById[a.driveId]=a});
+  var inReport=folFiles.filter(function(f){return attById[f.id]});
+  var loose=folFiles.filter(function(f){return !attById[f.id]});
+  var byTarget={};
+  loose.forEach(function(f){var L=links[f.id];if(L&&L.to&&attById[L.to])(byTarget[L.to]=byTarget[L.to]||[]).push(f)});
+  var free=loose.filter(function(f){var L=links[f.id];return !(L&&L.to&&attById[L.to])});
+  var h="";
+  inReport.forEach(function(f){
+    h+=folRow(f,"rep","");
+    (byTarget[f.id]||[]).forEach(function(g){
+      h+="<div class=\"fol-sub\">"+folRow(g,"linked","<button class=\"btn-xs\" data-fol=\"unlink\" title=\"Desfés el vincle (el nom del fitxer no es toca)\">&#128279;&#10005;</button>")+"</div>";
+    });
+  });
+  if(free.length){
+    h+="<div class=\"fol-head\">Sense vincular</div>";
+    free.forEach(function(f){h+=folRow(f,"free","<button class=\"btn-xs\" data-fol=\"link\">&#128279; Vincula</button>")});
+  }
+  box.innerHTML=h||"<div class=\"ts-note\" style=\"padding:10px\">La carpeta no té cap fitxer multimèdia.</div>";
+  var nLoose=loose.length;
+  folNote(pl(folFiles.length,"fitxer","fitxers")+" · "+inReport.length+" a l'informe · "
+    +(nLoose?pl(nLoose,"de complement","de complement"):"cap de complement")
+    +". Tot plegat va al ZIP; només el que és a l'informe hi surt imprès.");
+}
+// One delegated handler for the whole list.
+function folAct(ev){
+  var b=ev.target.closest("[data-fol]");if(!b)return;
+  var row=b.closest(".fol-row");if(!row)return;
+  var id=row.dataset.id,f=folFiles.filter(function(x){return x.id===id})[0];if(!f)return;
+  var act=b.dataset.fol;
+  if(act==="open"){window.open("https://drive.google.com/file/d/"+id+"/view","_blank");return}
+  if(act==="ren")return folDoRename(f);
+  if(act==="del")return folDoDelete(f);
+  if(act==="unlink")return folSetLink(id,null);
+  if(act==="link")return folPickTarget(f,row);
+  if(act==="linkGo"){
+    var sel=row.querySelector("select");
+    if(sel&&sel.value)folDoLink(f,sel.value);
+    return;
+  }
+  if(act==="linkNo"){folLinking=null;renderFolder();return}
+}
+function folPickTarget(f,row){
+  var s=sessions.find(function(x){return x.id===aid});if(!s)return;
+  var att=reportAttachments(s);
+  if(!att.length){alert("Aquesta sessió encara no té cap adjunt a l'informe per vincular-hi.");return}
+  folLinking=f.id;
+  var opts=att.map(function(a){return "<option value=\""+esc(a.driveId)+"\">"+esc(fts(a.ts)+" · "+(a.name||"—"))+"</option>"}).join("");
+  row.querySelector(".fol-acts").innerHTML=
+    "<select class=\"fol-sel\">"+opts+"</select>"
+    +"<button class=\"btn-xs btn-gold\" data-fol=\"linkGo\">Vincula</button>"
+    +"<button class=\"btn-xs\" data-fol=\"linkNo\">&#10005;</button>";
+}
+function extOf(n){var m=/\.([A-Za-z0-9]+)$/.exec(n||"");return m?m[1]:""}
+function baseOf(n){return String(n||"").replace(/\.[A-Za-z0-9]+$/,"")}
+// IMG_0847.jpg + the first free _NN → IMG_0847_02.jpg. The number is picked
+// against the folder as it stands, so it never lands on a name already there.
+function linkedName(baseName,ext){
+  var base=baseOf(baseName),taken={};
+  folFiles.forEach(function(f){
+    var m=new RegExp("^"+base.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"_(\\d+)\\.","i").exec(f.name||"");
+    if(m)taken[parseInt(m[1],10)]=1;
+  });
+  var n=2;while(taken[n])n++;
+  return base+"_"+("0"+n).slice(-2)+(ext?"."+ext:"");
+}
+async function folDoLink(f,targetId){
+  var s=sessions.find(function(x){return x.id===aid});if(!s)return;
+  var t=reportAttachments(s).filter(function(a){return a.driveId===targetId})[0];if(!t)return;
+  var nn=linkedName(t.name||"foto",extOf(f.name));
+  folNote("<span class=\"spinner\"></span> Reanomenant a Drive…");
+  var ok=await driveRename(f.id,nn);
+  if(!ok){alert("No s'ha pogut reanomenar el fitxer a Drive.");renderFolder();return}
+  f.name=nn;f.path=f.path.replace(/[^/]+$/,nn);
+  folSetLink(f.id,targetId);
+}
+function folSetLink(id,targetId){
+  sessions=sessions.map(function(s){
+    if(s.id!==aid)return s;
+    var L=Object.assign({},s.driveLinks||{});
+    if(targetId)L[id]={to:targetId};else delete L[id];
+    return Object.assign({},s,{driveLinks:L});
+  });
+  folLinking=null;
+  scheduleSave();renderFolder();renderContent();
+}
+// Renaming a photo that has files tied to it drags them along: the whole point
+// of the _NN names is that the folder points back at the photo in the report,
+// and a parent renamed on its own would leave them pointing at nothing.
+async function folRenameLinked(parent){
+  var s=sessions.find(function(x){return x.id===aid});if(!s)return;
+  var links=s.driveLinks||{};
+  var kids=folFiles.filter(function(g){var L=links[g.id];return L&&L.to===parent.id});
+  if(!kids.length)return;
+  var others=folFiles.filter(function(g){return kids.indexOf(g)<0});
+  var base=baseOf(parent.name),n=2;
+  for(var i=0;i<kids.length;i++){
+    var ext=extOf(kids[i].name),nm;
+    do{nm=base+"_"+("0"+n).slice(-2)+(ext?"."+ext:"");n++}
+    while(others.some(function(o){return String(o.name||"").toLowerCase()===nm.toLowerCase()}));
+    if(nm!==kids[i].name&&await driveRename(kids[i].id,nm)){
+      kids[i].name=nm;kids[i].path=kids[i].path.replace(/[^/]+$/,nm);
+    }
+  }
+}
+async function folDoRename(f){
+  var nn=prompt("Nom del fitxer:",f.name||"");
+  if(nn===null)return;
+  nn=nn.trim();if(!nn||nn===f.name)return;
+  if(!extOf(nn)&&extOf(f.name))nn+="."+extOf(f.name); // keep the extension
+  folNote("<span class=\"spinner\"></span> Reanomenant a Drive…");
+  var ok=await driveRename(f.id,nn);
+  if(!ok){alert("No s'ha pogut reanomenar el fitxer a Drive.");renderFolder();return}
+  var old=f.name;
+  f.name=nn;f.path=f.path.replace(/[^/]+$/,nn);
+  await folRenameLinked(f);
+  // If it is an attachment, the report has to say the new name too.
+  sessions=sessions.map(function(s){
+    if(s.id!==aid)return s;
+    return Object.assign({},s,{entries:(s.entries||[]).map(function(e){
+      if(!(e.images||[]).some(function(im){return im.driveId===f.id}))return e;
+      return Object.assign({},e,{images:e.images.map(function(im){return im.driveId===f.id?Object.assign({},im,{name:nn}):im})});
+    })});
+  });
+  if(old!==nn)scheduleSave();
+  renderFolder();renderContent();
+}
+async function folDoDelete(f){
+  var s=sessions.find(function(x){return x.id===aid});if(!s)return;
+  var att=reportAttachments(s).filter(function(a){return a.driveId===f.id})[0];
+  if(!confirm("Vols enviar «"+(f.name||f.path)+"» a la paperera de Drive?"
+    +(att?"\n\nAquest fitxer és a l'informe: també es traurà de la seva entrada.":"")
+    +"\n\nEl podràs recuperar durant 30 dies des de drive.google.com."))return;
+  if(att){
+    sessions=sessions.map(function(x){
+      if(x.id!==aid)return x;
+      return Object.assign({},x,{entries:(x.entries||[]).map(function(e){
+        if(e.id!==att.entryId)return e;
+        return Object.assign({},e,{images:(e.images||[]).filter(function(im){return im.driveId!==f.id})});
+      })});
+    });
+  }
+  folSetLink(f.id,null);          // saves too
+  queueTrash(aid,[f.id]);
+  await flushTrash();
+  folFiles=folFiles.filter(function(x){return x.id!==f.id});
+  renderFolder();renderContent();
+}
 function tsChipHTML(sess){
   var T=sess.timesheet;
   if(T&&T.rows&&T.rows.length)
@@ -4101,12 +4404,20 @@ async function driveListChildren(token,folderId){
   return out;
 }
 var FOLDER_MIME="application/vnd.google-apps.folder";
+// What counts as this session's MEDIA inside its Drive folder: anything in the
+// media subfolders (photos/, videos/, audio/), plus an image, video or sound
+// dropped straight into the folder — the reports are pdf/docx/xlsx/html/json
+// and never match, so old copies of them still stay out. The ZIP and the
+// folder screen share this, so what you see is what you get.
+function isSessionMedia(f){
+  return f.path.indexOf("/")>=0||/^(image|video|audio)\//.test(f.mimeType||"");
+}
 async function collectDriveFiles(token,folderId,pathPrefix,out){
   var children=await driveListChildren(token,folderId);
   for(var i=0;i<children.length;i++){
     var c=children[i];
     if(c.mimeType===FOLDER_MIME)await collectDriveFiles(token,c.id,pathPrefix+c.name+"/",out);
-    else out.push({id:c.id,path:pathPrefix+c.name});
+    else out.push({id:c.id,path:pathPrefix+c.name,name:c.name,mimeType:c.mimeType});
   }
 }
 // Two packs, two jobs.
@@ -4166,22 +4477,13 @@ async function exportSessionZip(s,kind){
     // anything loose at the root is an old report copy or a stale session.json,
     // and the current ones were just built above.
     //
-    // And only the media the report still SHOWS. Deleting a photo, or a whole
-    // entry, never deletes the file from Drive, so the folder keeps orphans and
-    // the pack used to carry them: photos the technician had thrown out came
-    // back in the ZIP handed to the client. Matched by Drive id, falling back to
-    // the file name for anything attached before the id was recorded. The
-    // orphans stay in Drive — this only decides what goes in the pack.
+    // EVERYTHING in those subfolders goes in, not just what the report shows:
+    // photos dropped into the folder from Drive are there on purpose, to round
+    // out what the report says. What the technician deleted in the app isn't
+    // there to begin with — removing an attachment bins the Drive file too
+    // (see queueTrash), which is what keeps thrown-out photos out of the pack.
     expBusy("Multimèdia…");
-    var keepIds={},keepNames={};
-    (s.entries||[]).forEach(function(e){(e.images||[]).forEach(function(im){
-      if(im.driveId)keepIds[im.driveId]=1;
-      if(im.name)keepNames[im.name]=1;
-    })});
-    var media=files.filter(function(f){
-      if(f.path.indexOf("/")<0)return false;
-      return keepIds[f.id]||keepNames[f.path.slice(f.path.lastIndexOf("/")+1)];
-    });
+    var media=files.filter(isSessionMedia);
     for(var i=0;i<media.length;i++){
       var f=media[i];
       var r=await fetch("https://www.googleapis.com/drive/v3/files/"+f.id+"?alt=media",{headers:{Authorization:"Bearer "+token}});
@@ -4221,7 +4523,7 @@ $$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><di
   sessions=orderSessions(await loadSessions());
   if(loadTok()&&accessToken&&Date.now()<tokenExp){
     isLoggedIn=true;
-    loadFromDrive().then(function(){renderAll();scheduleSync()});
+    loadFromDrive().then(function(){renderAll();scheduleSync();flushTrash()});
   } else {
     renderAll();
   }

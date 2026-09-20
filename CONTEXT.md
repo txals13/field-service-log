@@ -43,6 +43,13 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
   so text written in Spanish also comes out right). The manual's data — part
   names, references — is never translated; neither are client/machine/location
   names, tags or file names.
+- **Text already in the report's language is kept exactly as written.** Google
+  answers even when the source IS the target, and it quietly rewrites: a Catalan
+  report turned "B migdia 11:15" into "B 23:15" and "Sense data" into "Dades
+  sensorials". The reply carries `detectedSourceLanguage`, so when it matches the
+  target the answer is thrown away and the original kept — no extra API call. The
+  original is what gets cached, so from the second export on nothing is sent at
+  all (verified: 0 requests). A different source still translates normally.
 - **Anything in double quotes is never translated.** "Insereix un recanvi des
   del dibuix" wraps what it writes in `"…"`, so a name and reference out of the
   manual reach the report exactly as the manual has them ("Separador" must not
@@ -289,6 +296,13 @@ Field Service Log/
   - Both take the media from Drive but **build** the reports fresh, and both skip
     loose files at the root of the Drive folder (old report copies, a stale
     `session.json`).
+  - **Only the media the report still shows goes in.** Deleting a photo, or a
+    whole entry, never deletes the file from Drive, so the folder keeps orphans
+    and the pack used to carry them — photos the technician had thrown out came
+    back in the ZIP handed to the client. The entries' `images[]` decide: matched
+    by `driveId`, falling back to the file name for anything attached before the
+    id was recorded. Fewer downloads too. The orphans stay in Drive, untouched —
+    this only decides what goes in the pack.
 - Export: HTML (video playable), PDF (jsPDF + autoTable), DOCX (via docx lib CDN),
   XLSX (spare parts, via SheetJS)
 - Reports in Catalan, Spanish or English (see Languages), filenames shown under each photo/video

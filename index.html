@@ -216,6 +216,12 @@ textarea{resize:none;line-height:1.4}
 .fol-sub{padding-left:18px;border-left:2px solid var(--gold)}
 .fol-head{font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:10px 8px 4px}
 .fol-sel{font-size:11px;padding:2px 4px;max-width:150px}
+.fix-wrap{border:1px solid var(--br2);border-left:3px solid var(--green);border-radius:8px;padding:10px;margin-top:10px;background:var(--bg2)}
+.fix-head{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--green);margin-bottom:8px}
+.fix-head button{margin-left:auto}
+.log-fix{border-left:3px solid var(--green);background:var(--bg2);border-radius:0 6px 6px 0;padding:6px 8px;margin-top:6px}
+.log-fix .log-meta{margin-bottom:2px}
+.log-fix-lbl{font-size:10px;font-weight:700;color:var(--green);letter-spacing:.4px}
 .ts-col{font-size:11px;padding:3px 9px;border-radius:20px}
 .ts-col.on{background:var(--goldbg);border-color:var(--golddim);color:var(--goldtx);font-weight:700}
 .ts-col.lock{opacity:.5;cursor:default}
@@ -499,6 +505,30 @@ textarea{resize:none;line-height:1.4}
           <button class="btn-sm" id="pfCancel">Cancel·la</button>
         </div>
       </div>
+      <!-- How the problem ended. Lives INSIDE the entry: the original severity
+           and description stay exactly as they were written. -->
+      <button class="btn-sm" id="fixAdd" style="margin-top:4px;display:none">&#10004; Afegeix com ha quedat</button>
+      <div id="fixWrap" class="fix-wrap" style="display:none">
+        <div class="fix-head">
+          <span>&#10004; Com ha quedat</span>
+          <button class="btn-xs" id="fixDel" title="Treu la resolució: l'entrada torna a quedar només amb el problema">Treu-la</button>
+        </div>
+        <div class="field"><label>Gravetat final</label>
+          <select id="fSev">
+            <option value="ok">&#9679; OK &mdash; resolt</option>
+            <option value="info">&#9675; Info</option>
+            <option value="warning">&#9650; Av&iacute;s &mdash; resolt a mitges</option>
+            <option value="issue">&#9632; Problema &mdash; segueix obert</option>
+          </select>
+        </div>
+        <div class="field"><label>Qu&egrave; s'hi ha fet</label><textarea id="fText" rows="3" style="resize:vertical"></textarea></div>
+        <div id="fThumbs" class="thumbs"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn-sm" id="fAddPhoto">&#128247; Foto / v&iacute;deo</button>
+          <button class="btn-sm" id="fRec" title="Grava una nota de veu">&#127897; Grava una nota de veu</button>
+          <input type="file" id="fFileIn" accept="image/*,video/*" multiple style="display:none">
+        </div>
+      </div>
       <div class="modal-actions">
         <button id="eCancel">Cancel·la</button>
         <button class="btn-gold" id="eSave">&#10003; Desa els canvis</button>
@@ -575,7 +605,9 @@ function severityCounts(entries){
 
 // ── STATE ───────────────────────────────────────────────────────────────────
 var sessions=[], aid=null, pImgs=[], filterTxt="", sessFilterTxt="";
-var pExif=0, pExifEdit=0;
+var pExif=0, pExifEdit=0, pExifFix=0;
+// The resolution being edited: its media, and whether the entry has one at all.
+var fImgs=[], fixOn=false;
 var accessToken=null, tokenExp=0, driveFileId=null, rootFolderId=null;
 var isLoggedIn=false, saveTimer=null, isDirty=false, savingDrive=false, savePending=false;
 var editingId=null, eImgs=[], eParts=[], pendingDel=null, dInst=null;
@@ -588,7 +620,7 @@ var viewerPickPurpose="part", textPickCaret=null;
 var authExpired=false, syncStarted=false;
 var fileCache=new WeakMap(); // img object -> raw File/Blob, kept in memory only, for upload retry
 // Voice-note recording state
-var mediaRec=null, recChunks=[], recTimer=null, recSeconds=0, recIsEdit=false, recStream=null;
+var mediaRec=null, recChunks=[], recTimer=null, recSeconds=0, recBk="pend", recStream=null;
 var curAudio=null, curAudioImg=null; // single shared <audio> so only one note plays at a time
 var storeDismissed=false; // user dismissed the soft storage warning
 
@@ -642,6 +674,7 @@ function entryMatches(e,rawQuery){
   if(!q)return true;
   var sm=SM[e.severity]||SM.info;
   return(e.text||"").toLowerCase().includes(q)
+    ||((e.fix&&e.fix.text)||"").toLowerCase().includes(q)
     ||(e.tag||"").toLowerCase().includes(q)
     ||(e.severity||"").toLowerCase().includes(q)
     ||sm.label.toLowerCase().includes(q)
@@ -994,8 +1027,12 @@ async function syncSessionToDrive(token,sess){
   var entries=(sess.entries||[]).slice(),changed=false;
   for(var j=0;j<entries.length;j++){
     var e=entries[j];
-    if(!e.images||!e.images.length)continue;
-    var imgs=e.images.slice(),entryChanged=false;
+    // The entry's own attachments and its resolution's, in one pass: the
+    // resolution's photos are session media like any other.
+    var imgs=(e.images||[]).slice(),nOwn=imgs.length;
+    imgs=imgs.concat((e.fix&&e.fix.images)||[]);
+    if(!imgs.length)continue;
+    var entryChanged=false;
     for(var k=0;k<imgs.length;k++){
       var img=imgs[k];
       if(img.type==="video"){if(!img.driveId)res.missingVideos++;continue}
@@ -1009,7 +1046,11 @@ async function syncSessionToDrive(token,sess){
       var r=await driveUploadBlob(token,blob,img.name||defName,defMime,kindId);
       if(r){imgs[k]=Object.assign({},img,{driveId:r.id,name:r.name});entryChanged=true;res.uploaded++}
     }
-    if(entryChanged){entries[j]=Object.assign({},e,{images:imgs});changed=true}
+    if(entryChanged){
+      var up=Object.assign({},e,{images:imgs.slice(0,nOwn)});
+      if(e.fix)up.fix=Object.assign({},e.fix,{images:imgs.slice(nOwn)});
+      entries[j]=up;changed=true;
+    }
   }
   var latest=sess;
   if(changed){
@@ -2041,6 +2082,41 @@ function renderSidebar(){
 // typing in #filtIn never touches (and never steals focus from) itself —
 // a full renderContent() replaces the whole pane's innerHTML, including
 // the input the user is typing into.
+// One thumbnail strip, used for the entry's own attachments and for those of
+// its resolution. data-fix says which list an index belongs to.
+function logThumbsHTML(list,isFix){
+  list=list||[];
+  if(!list.filter(function(im){return im.type!=="audio"}).length)return "";
+  var h="<div class=\"thumbs\">";
+  list.forEach(function(img,i){
+    if(img.type==="audio")return;
+    var isVid=img.type==="video",src=isVid?(img.poster||""):img.data;
+    h+="<div class=\"thumb\" data-idx=\""+i+"\""+(isFix?" data-fix=\"1\"":"")+" tabindex=\"0\">"
+      +(src?"<img src=\""+src+"\" alt=\"Adjunt "+(i+1)+"\" loading=\"lazy\">":"<div class=\"thumb-ph\">"+(isVid?"🎬":"🖼")+"</div>")
+      +(isVid?"<div class=\"thumb-play\">▶</div>":"")
+      +upBadge(img)
+      +"</div>";
+  });
+  return h+"</div>";
+}
+// How the problem ended, shown under the entry it belongs to.
+function logImgAt(e,t){
+  var list=t.dataset.fix?((e.fix&&e.fix.images)||[]):(e.images||[]);
+  return list[parseInt(t.dataset.idx)];
+}
+function logFixHTML(e){
+  var fx=e.fix;if(!fx)return "";
+  var fsm=SM[fx.severity]||SM.ok;
+  return "<div class=\"log-fix\">"
+    +"<div class=\"log-meta\">"
+    +"<span class=\"log-fix-lbl\">✔ COM HA QUEDAT</span>"
+    +"<span class=\"log-sev\" style=\"background:"+fsm.bg+";color:"+fsm.tx+"\">"+highlightText(fsm.label,filterTxt)+"</span>"
+    +(fx.ts?"<span class=\"log-ts\">"+fts(fx.ts)+"</span>":"")
+    +"</div>"
+    +(fx.text?"<div class=\"log-text\">"+highlightText(fx.text,filterTxt)+"</div>":"")
+    +logThumbsHTML(fx.images,true)
+    +"</div>";
+}
 function renderLogArea(){
   var active=sessions.find(function(s){return s.id===aid});if(!active)return;
   var entries=active.entries||[];
@@ -2054,21 +2130,7 @@ function renderLogArea(){
     filtered.forEach(function(e){
       var sm=SM[e.severity]||SM.info;
       var div=document.createElement("div");div.className="log-entry sev-"+e.severity;
-      var imgs="";
-      var nonAudio=(e.images||[]).filter(function(im){return im.type!=="audio"});
-      if(nonAudio.length){
-        imgs="<div class=\"thumbs\">";
-        e.images.forEach(function(img,i){
-          if(img.type==="audio")return;
-          var isVid=img.type==="video",src=isVid?(img.poster||""):img.data;
-          imgs+="<div class=\"thumb\" data-idx=\""+i+"\" tabindex=\"0\">"
-            +(src?"<img src=\""+src+"\" alt=\"Adjunt "+(i+1)+"\" loading=\"lazy\">":"<div class=\"thumb-ph\">"+(isVid?"🎬":"🖼")+"</div>")
-            +(isVid?"<div class=\"thumb-play\">▶</div>":"")
-            +upBadge(img)
-            +"</div>";
-        });
-        imgs+="</div>";
-      }
+      var imgs=logThumbsHTML(e.images,false);
       div.innerHTML="<span class=\"log-dot\" style=\"color:"+sm.dc+"\">"+sm.dot+"</span>"
         +"<div class=\"log-body\" style=\"flex:1;min-width:0\">"
         +"<div class=\"log-meta\">"
@@ -2079,14 +2141,15 @@ function renderLogArea(){
         +"</div>"
         +"<div class=\"log-text\">"+highlightText(e.text||"",filterTxt)+"</div>"
         +partsBlockHTML(e.parts)
-        +imgs+"</div>"
+        +imgs
+        +logFixHTML(e)+"</div>"
         +(isOpen?"<div class=\"log-actions\"><button class=\"log-act\" data-act=\"edit\" title=\"Edita\">✎</button><button class=\"log-act\" data-act=\"del\" title=\"Elimina\">✕</button></div>":"");
       // thumb clicks
       div.querySelectorAll(".thumb").forEach(function(t){
         var up=t.querySelector(".thumb-up.err");
         if(up)up.addEventListener("click",function(ev){
           ev.stopPropagation();
-          var img=(e.images||[])[parseInt(t.dataset.idx)];if(!img)return;
+          var img=logImgAt(e,t);if(!img)return;
           var file=fileCache.get(img);
           if(!file){alert("No es pot tornar a provar: el fitxer original ja no està disponible en aquesta sessió. Treu-lo i torna'l a afegir des d'Edita.");return}
           img.uploadStatus="loading";renderLogArea();
@@ -2096,7 +2159,7 @@ function renderLogArea(){
           });
         });
         t.addEventListener("click",function(){
-          var img=(e.images||[])[parseInt(t.dataset.idx)];if(!img)return;
+          var img=logImgAt(e,t);if(!img)return;
           if(img.type==="video"){
             var url=img.driveId?driveStreamUrl(img.driveId):null;
             if(!url){alert(img.uploadStatus==="err"?"No s'ha pogut pujar el vídeo. Toca la marca ! per tornar-ho a provar.":"El vídeo és a Drive. Inicia la sessió per reproduir-lo.");return}
@@ -2105,7 +2168,7 @@ function renderLogArea(){
         });
       });
       // audio voice-note chips (appended as elements — chips need real handlers)
-      var audioAtt=(e.images||[]).filter(function(im){return im.type==="audio"});
+      var audioAtt=(e.images||[]).concat((e.fix&&e.fix.images)||[]).filter(function(im){return im.type==="audio"});
       if(audioAtt.length){
         var body=div.querySelector(".log-body");
         var ac=document.createElement("div");ac.className="thumbs";
@@ -2273,8 +2336,8 @@ function renderContent(){
     $$("entIn").addEventListener("keydown",function(e){if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){e.preventDefault();addEntry()}});
     ni.addEventListener("input",function(e){autoH(e.target);sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{notes:e.target.value}):s});scheduleSave()});
     $$("btnPhoto").addEventListener("click",function(){$$("fileIn").click()});
-    $$("fileIn").addEventListener("change",function(e){handleFiles(e,false)});
-    $$("btnRec").addEventListener("click",function(){if(mediaRec&&!recIsEdit)stopRec();else if(!mediaRec)startRec(false)});
+    $$("fileIn").addEventListener("change",function(e){handleFiles(e,"pend")});
+    $$("btnRec").addEventListener("click",function(){if(mediaRec&&recBk==="pend")stopRec();else if(!mediaRec)startRec("pend")});
   }
 }
 
@@ -2285,27 +2348,40 @@ function upBadge(img){
   if(img.uploadStatus==="ok")return"<div class=\"thumb-up ok\">✓</div>";
   return"";
 }
-function retryUpload(img,isEdit){
+// Attachments are composed in three places now: the entry composer, the edit
+// modal, and an entry's RESOLUTION. Each has its own array, thumbnail strip,
+// record button and "still processing" counter — everything that used to be
+// the isEdit boolean lives here instead, so a third place costs one entry.
+var MB={
+  pend:{thumbs:"pThumbs",rec:"btnRec",live:"pRecLive",
+        get:function(){return pImgs},set:function(v){pImgs=v},
+        busy:function(n){if(n===undefined)return pExif;pExif+=n}},
+  edit:{thumbs:"eThumbs",rec:"eRec",live:"eRecLive",
+        get:function(){return eImgs},set:function(v){eImgs=v},
+        busy:function(n){if(n===undefined)return pExifEdit;pExifEdit+=n}},
+  fix: {thumbs:"fThumbs",rec:"fRec",live:"fRecLive",
+        get:function(){return fImgs},set:function(v){fImgs=v},
+        busy:function(n){if(n===undefined)return pExifFix;pExifFix+=n}}
+};
+function retryUpload(img,bk){
   var active=sessions.find(function(s){return s.id===aid});
   var file=fileCache.get(img);
   if(!active||!file){alert("No es pot tornar a provar: treu aquest adjunt i torna'l a afegir.");return}
   img.uploadStatus="loading";
-  if(isEdit)rEThumbs();else rThumbs();
+  renderThumbs(bk);
   uploadMedia(active,file,img.type==="video"?"videos":"photos").then(function(r){
     if(r){img.driveId=r.driveId;img.name=r.name;img.uploadStatus="ok"}else img.uploadStatus="err";
-    if(isEdit)rEThumbs();else rThumbs();
+    renderThumbs(bk);
     scheduleSave();
   });
 }
-// Shared renderer for the pending-attachments strip (pImgs) and the edit
-// modal's attachments (eImgs) — previously two near-identical functions.
-// cfg: { container, get:()->arr, set:(arr)->void, isEdit, after? }
-function renderThumbs(cfg){
-  var c=$$(cfg.container);if(!c)return;c.innerHTML="";
-  cfg.get().forEach(function(img,i){
-    function removeAt(){cfg.set(cfg.get().filter(function(_,j){return j!==i}));renderThumbs(cfg)}
+// One renderer for all three strips.
+function renderThumbs(bk){
+  var B=MB[bk],c=$$(B.thumbs);if(!c)return;c.innerHTML="";
+  B.get().forEach(function(img,i){
+    function removeAt(){B.set(B.get().filter(function(_,j){return j!==i}));renderThumbs(bk)}
     if(img.type==="audio"){
-      c.appendChild(audioChipEl(img,{editable:true,isEdit:cfg.isEdit,onDelete:function(){stopCurAudio();removeAt()}}));
+      c.appendChild(audioChipEl(img,{editable:true,bk:bk,onDelete:function(){stopCurAudio();removeAt()}}));
       return;
     }
     var isVid=img.type==="video",src=isVid?(img.poster||""):img.data;
@@ -2314,14 +2390,15 @@ function renderThumbs(cfg){
       +(isVid?"<div class=\"thumb-play\">▶</div>":"")
       +upBadge(img)
       +"<button class=\"thumb-del\">✕</button>";
-    var up=d.querySelector(".thumb-up.err");if(up)up.addEventListener("click",function(ev){ev.stopPropagation();retryUpload(img,cfg.isEdit)});
+    var up=d.querySelector(".thumb-up.err");if(up)up.addEventListener("click",function(ev){ev.stopPropagation();retryUpload(img,bk)});
     d.querySelector(".thumb-del").addEventListener("click",removeAt);
     c.appendChild(d);
   });
-  if(cfg.after)cfg.after();
+  if(bk==="edit")rENames();
 }
-function rThumbs(){renderThumbs({container:"pThumbs",get:function(){return pImgs},set:function(v){pImgs=v},isEdit:false})}
-function rEThumbs(){renderThumbs({container:"eThumbs",get:function(){return eImgs},set:function(v){eImgs=v},isEdit:true,after:rENames})}
+function rThumbs(){renderThumbs("pend")}
+function rEThumbs(){renderThumbs("edit")}
+function rFThumbs(){renderThumbs("fix")}
 // spare parts list inside the edit modal (quantity editable, each row removable)
 function rEParts(){
   var box=$$("eParts");if(!box)return;
@@ -2377,7 +2454,7 @@ function playAudioToggle(img,btn){
   a.addEventListener("play",function(){btn.textContent="⏸"});
   a.play().catch(function(){alert("No s'ha pogut reproduir aquesta nota de veu.")});
 }
-// cfg: { editable, isEdit, onDelete }
+// cfg: { editable, bk, onDelete }
 function audioChipEl(img,cfg){
   cfg=cfg||{};
   var el=document.createElement("div");el.className="audio-chip";
@@ -2387,7 +2464,7 @@ function audioChipEl(img,cfg){
     +(cfg.editable?"<button class=\"ac-del\" title=\"Treu\">✕</button>":"");
   el.querySelector(".ac-play").addEventListener("click",function(){playAudioToggle(img,el.querySelector(".ac-play"))});
   var db=el.querySelector(".ac-del");if(db)db.addEventListener("click",function(){if(cfg.onDelete)cfg.onDelete()});
-  var eb=el.querySelector(".ac-badge.err");if(eb)eb.addEventListener("click",function(){retryUpload(img,cfg.isEdit)});
+  var eb=el.querySelector(".ac-badge.err");if(eb)eb.addEventListener("click",function(){retryUpload(img,cfg.bk)});
   return el;
 }
 // ── recording ──
@@ -2396,27 +2473,27 @@ function pickAudioMime(){
   for(var i=0;i<c.length;i++){if(window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(c[i]))return c[i]}
   return"";
 }
-function renderRecUI(isEdit,active){
-  var btn=$$(isEdit?"eRec":"btnRec");
+function renderRecUI(bk,active){
+  var B=MB[bk],btn=$$(B.rec);
   if(btn){
-    btn.textContent=isEdit?(active?"⏹ Atura la gravació":"🎙 Grava una nota de veu"):(active?"⏹":"🎙");
+    btn.textContent=bk==="pend"?(active?"⏹":"🎙"):(active?"⏹ Atura la gravació":"🎙 Grava una nota de veu");
     btn.title=active?"Atura la gravació":"Grava una nota de veu";
     if(active)btn.classList.add("btn-danger");else btn.classList.remove("btn-danger");
   }
-  var cont=$$(isEdit?"eThumbs":"pThumbs"),existing=$$(isEdit?"eRecLive":"pRecLive");
+  var cont=$$(B.thumbs),existing=$$(B.live);
   if(active&&cont&&!existing){
-    var d=document.createElement("div");d.className="rec-live";d.id=isEdit?"eRecLive":"pRecLive";
+    var d=document.createElement("div");d.className="rec-live";d.id=B.live;
     d.innerHTML="<span class=\"rec-dot\"></span><span>Gravant…</span><span class=\"rec-time\" style=\"font-family:monospace;margin-left:auto\">0:00</span>";
     cont.insertBefore(d,cont.firstChild);
   } else if(!active&&existing){existing.remove()}
 }
-function recTick(){recSeconds++;var el=$$(recIsEdit?"eRecLive":"pRecLive");if(el){var t=el.querySelector(".rec-time");if(t)t.textContent=fmtDur(recSeconds)}}
-async function startRec(isEdit){
+function recTick(){recSeconds++;var el=$$(MB[recBk].live);if(el){var t=el.querySelector(".rec-time");if(t)t.textContent=fmtDur(recSeconds)}}
+async function startRec(bk){
   if(mediaRec)return;
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){alert("Aquest navegador no permet gravar notes de veu.");return}
   try{recStream=await navigator.mediaDevices.getUserMedia({audio:true})}
   catch(e){alert("L'accés al micròfon s'ha denegat o no està disponible.");return}
-  recIsEdit=isEdit;recChunks=[];recSeconds=0;
+  recBk=bk;recChunks=[];recSeconds=0;
   var mime=pickAudioMime();
   try{mediaRec=mime?new MediaRecorder(recStream,{mimeType:mime}):new MediaRecorder(recStream)}
   catch(e){try{mediaRec=new MediaRecorder(recStream)}catch(e2){alert("La gravació no és compatible.");recStream.getTracks().forEach(function(t){t.stop()});recStream=null;return}}
@@ -2424,19 +2501,19 @@ async function startRec(isEdit){
   mediaRec.onstop=onRecStop;
   mediaRec.start();
   recTimer=setInterval(recTick,1000);
-  renderRecUI(isEdit,true);
+  renderRecUI(bk,true);
 }
 function stopRec(){if(!mediaRec)return;try{mediaRec.stop()}catch(e){}if(recTimer){clearInterval(recTimer);recTimer=null}}
 function onRecStop(){
   var type=((mediaRec&&mediaRec.mimeType)||"audio/webm").split(";")[0];
-  var blob=new Blob(recChunks,{type:type}),dur=recSeconds,isEdit=recIsEdit;
+  var blob=new Blob(recChunks,{type:type}),dur=recSeconds,bk=recBk;
   if(recStream){recStream.getTracks().forEach(function(t){t.stop()});recStream=null}
   mediaRec=null;recChunks=[];
-  renderRecUI(isEdit,false);
-  if(blob.size)buildAudioAttachment(blob,dur,isEdit);
+  renderRecUI(bk,false);
+  if(blob.size)buildAudioAttachment(blob,dur,bk);
 }
 function uploadAudio(sess,blob,name){return uploadMedia(sess,new File([blob],name,{type:blob.type||"audio/webm"}),"audio")}
-function buildAudioAttachment(blob,dur,isEdit){
+function buildAudioAttachment(blob,dur,bk){
   var active=sessions.find(function(s){return s.id===aid});
   var ext=/mp4/.test(blob.type)?"m4a":/ogg/.test(blob.type)?"ogg":"webm";
   var name="voice_"+fnameStamp()+"."+ext;
@@ -2445,17 +2522,18 @@ function buildAudioAttachment(blob,dur,isEdit){
   var fr=new FileReader();
   fr.onload=function(ev){
     img.data=ev.target.result;
-    if(isEdit){eImgs.push(img);rEThumbs()}else{pImgs.push(img);rThumbs()}
+    MB[bk].set(MB[bk].get().concat([img]));renderThumbs(bk);
     if(active&&isLoggedIn)uploadAudio(active,blob,name).then(function(r){
       if(r){img.driveId=r.driveId;img.name=r.name;img.uploadStatus="ok"}else img.uploadStatus="err";
-      if(isEdit)rEThumbs();else rThumbs();scheduleSave();
+      renderThumbs(bk);scheduleSave();
     });
   };
   fr.readAsDataURL(blob);
 }
 // ── FILE HANDLING ─────────────────────────────────────────────────────────────
 function isVidFile(f){return f.type.startsWith("video")||/\.(mp4|mov|m4v)$/i.test(f.name||"")}
-function handleFiles(e,isEdit){
+function handleFiles(e,bk){
+  var B=MB[bk];
   var active=sessions.find(function(s){return s.id===aid});
   var files=Array.from(e.target.files||[]);
   // Videos are never stored locally (only uploaded to Drive as a blob, see
@@ -2471,14 +2549,14 @@ function handleFiles(e,isEdit){
     if(isVid){
       var img={data:null,type:"video",name:file.name,uploadStatus:"loading",poster:null};
       fileCache.set(img,file);
-      if(isEdit){eImgs.push(img);rEThumbs()}else{pImgs.push(img);rThumbs()}
-      function inc(){if(isEdit)pExifEdit++;else pExif++}
-      function dec(){if(isEdit)pExifEdit--;else pExif--}
-      inc();getFileTs(file).then(function(ts){img.capturedAt=ts;dec();if(isEdit)rEThumbs();else rThumbs()});
-      inc();genThumb(file).then(function(t){if(t)img.poster=t;dec();if(isEdit)rEThumbs();else rThumbs()});
+      B.set(B.get().concat([img]));renderThumbs(bk);
+      function inc(){B.busy(1)}
+      function dec(){B.busy(-1)}
+      inc();getFileTs(file).then(function(ts){img.capturedAt=ts;dec();renderThumbs(bk)});
+      inc();genThumb(file).then(function(t){if(t)img.poster=t;dec();renderThumbs(bk)});
       inc();uploadMedia(active,file,"videos").then(function(r){
         if(r){img.driveId=r.driveId;img.name=r.name;img.uploadStatus="ok"}else img.uploadStatus="err";
-        dec();if(isEdit)rEThumbs();else rThumbs();scheduleSave();
+        dec();renderThumbs(bk);scheduleSave();
       });
     } else {
       // Store a downscaled copy locally (fast to render, small to store); the
@@ -2486,14 +2564,14 @@ function handleFiles(e,isEdit){
       // File for the Drive upload + retry.
       var img2={data:null,type:"image",name:file.name,uploadStatus:(active&&isLoggedIn)?"loading":""};
       fileCache.set(img2,file);
-      if(isEdit){eImgs.push(img2);rEThumbs()}else{pImgs.push(img2);rThumbs()}
-      if(isEdit)pExifEdit++;else pExif++;
-      makeLocalImageData(file).then(function(d){img2.data=d;if(isEdit)pExifEdit--;else pExif--;if(isEdit)rEThumbs();else rThumbs()});
-      if(isEdit)pExifEdit++;else pExif++;
-      getFileTs(file).then(function(ts){img2.capturedAt=ts;if(isEdit)pExifEdit--;else pExif--;if(isEdit)rEThumbs();else rThumbs()});
+      B.set(B.get().concat([img2]));renderThumbs(bk);
+      B.busy(1);
+      makeLocalImageData(file).then(function(d){img2.data=d;B.busy(-1);renderThumbs(bk)});
+      B.busy(1);
+      getFileTs(file).then(function(ts){img2.capturedAt=ts;B.busy(-1);renderThumbs(bk)});
       if(active&&isLoggedIn)uploadMedia(active,file,"photos").then(function(r3){
         if(r3){img2.driveId=r3.driveId;img2.name=r3.name;img2.uploadStatus="ok"}else img2.uploadStatus="err";
-        if(isEdit)rEThumbs();else rThumbs();scheduleSave();
+        renderThumbs(bk);scheduleSave();
       });
     }
   });
@@ -2520,7 +2598,7 @@ function orderSessions(list){
   });
 }
 function addEntry(){
-  if(mediaRec&&!recIsEdit){alert("Atura la gravació de veu abans d'afegir l'entrada.");return}
+  if(mediaRec&&recBk==="pend"){alert("Atura la gravació de veu abans d'afegir l'entrada.");return}
   var entIn=$$("entIn");if(!entIn)return;
   var text=entIn.value.trim();
   if(!text&&!pImgs.length)return;
@@ -2565,7 +2643,11 @@ function openEdit(entryId){
   $$("eSev").value=entry.severity||"info";
   $$("eTag").value=entry.tag||"";
   $$("eText").value=entry.text||"";
-  rEThumbs();rEParts();clearPartForm();
+  var fx=entry.fix||null;
+  fixOn=!!fx;fImgs=fx&&fx.images?fx.images.slice():[];
+  $$("fSev").value=(fx&&fx.severity)||"ok";
+  $$("fText").value=(fx&&fx.text)||"";
+  rEThumbs();rFThumbs();rEParts();clearPartForm();renderFixUI();
   var sessR=sessions.find(function(s){return s.id===aid});
   var hasManual=!!(sessR&&sessR.manualRef);
   $$("ePickDraw").style.display=hasManual?"inline-block":"none";
@@ -2575,8 +2657,17 @@ function openEdit(entryId){
   autoH($$("eText")); // only once visible — a hidden textarea measures 0 and would collapse
   setTimeout(function(){$$("eText").focus()},80);
 }
+// The resolution is offered where it makes sense — on a problem or a warning —
+// and stays visible once written, whatever the severity ends up being, so it
+// can never be stranded out of reach.
+function fixOffered(sev){return sev==="issue"||sev==="warning"}
+function renderFixUI(){
+  var sev=$$("eSev").value;
+  $$("fixWrap").style.display=fixOn?"block":"none";
+  $$("fixAdd").style.display=(!fixOn&&fixOffered(sev))?"inline-block":"none";
+}
 function saveEdit(){
-  if(mediaRec&&recIsEdit){alert("Atura la gravació de veu abans de desar.");return}
+  if(mediaRec&&recBk!=="pend"){alert("Atura la gravació de veu abans de desar.");return}
   var text=$$("eText").value.trim();
   if(!text&&!eImgs.length){alert("La descripció no pot quedar buida.");return}
   if(!editingId)return;
@@ -2590,28 +2681,35 @@ function saveEdit(){
   var tsVal=$$("eTs").value,newTs=null;
   if(entry0&&tsVal&&tsVal!==tsToInput(entry0.ts))newTs=inputToTs(tsVal);
   if(tsVal&&!newTs&&tsVal!==tsToInput(entry0&&entry0.ts)){alert("La data i hora no són vàlides.");return}
+  var fixText=$$("fText").value.trim(),fixSev=$$("fSev").value;
+  if(fixOn&&!fixText&&!fImgs.length){alert("Escriu què s'hi ha fet, o treu la resolució.");return}
   function tryS(){
-    if(pExifEdit>0&&waited<3000){var b=$$("eSave");if(b){b.disabled=true;b.textContent="Processant…"}waited+=150;setTimeout(tryS,150);return}
+    if((pExifEdit>0||pExifFix>0)&&waited<3000){var b=$$("eSave");if(b){b.disabled=true;b.textContent="Processant…"}waited+=150;setTimeout(tryS,150);return}
     var b2=$$("eSave");if(b2){b2.disabled=false;b2.innerHTML="✓ Desa els canvis"}
     var pts=earliestTs(eImgs);
     // Attachments dropped in this edit: out of the entry, and out of Drive.
-    var kept={};eImgs.forEach(function(im){if(im.driveId)kept[im.driveId]=1});
-    queueTrash(aid,((entry0&&entry0.images)||[]).map(function(im){return im.driveId}).filter(function(id){return id&&!kept[id]}));
+    var kept={};eImgs.concat(fixOn?fImgs:[]).forEach(function(im){if(im.driveId)kept[im.driveId]=1});
+    var had=((entry0&&entry0.images)||[]).concat((entry0&&entry0.fix&&entry0.fix.images)||[]);
+    queueTrash(aid,had.map(function(im){return im.driveId}).filter(function(id){return id&&!kept[id]}));
     sessions=sessions.map(function(s){if(s.id!==aid)return s;return Object.assign({},s,{entries:sortEntries((s.entries||[]).map(function(en){if(en.id!==entId)return en;var up=Object.assign({},en,{text:captText,severity:newSev,tag:newTag,images:eImgs.slice(),parts:eParts.slice(),editedAt:now()});
       // A hand-set time wins for good (tsManual): otherwise the photo would
       // take it back the next time this entry is saved.
       if(newTs){up.ts=newTs;up.tsManual=true;delete up.tsFromPhoto}
       else if(pts&&!up.tsManual&&up.ts!==pts){up.ts=pts;up.tsFromPhoto=true}
+      // The resolution keeps the moment it was first written down.
+      if(fixOn)up.fix={severity:fixSev,text:fixText,images:fImgs.slice(),
+                       ts:(en.fix&&en.fix.ts)||now(),editedAt:en.fix?now():null};
+      else delete up.fix;
       return up;}))})});
     closeEdit();scheduleSave();renderAll();
   }tryS();
 }
-function closeEdit(){if(mediaRec&&recIsEdit){stopRec();recChunks=[]}stopCurAudio();$$("editBack").style.display="none";editingId=null;eImgs=[];eParts=[];clearPartForm()}
+function closeEdit(){if(mediaRec&&recBk!=="pend"){stopRec();recChunks=[]}stopCurAudio();$$("editBack").style.display="none";editingId=null;eImgs=[];eParts=[];fImgs=[];fixOn=false;clearPartForm()}
 function delEntry(entryId){
   if(!confirm("Vols eliminar aquesta entrada? No es pot desfer."))return;
   var act=sessions.find(function(s){return s.id===aid});
   var gone=act&&(act.entries||[]).find(function(en){return en.id===entryId});
-  queueTrash(aid,((gone&&gone.images)||[]).map(function(im){return im.driveId}));
+  queueTrash(aid,((gone&&gone.images)||[]).concat((gone&&gone.fix&&gone.fix.images)||[]).map(function(im){return im.driveId}));
   sessions=sessions.map(function(s){if(s.id!==aid)return s;return Object.assign({},s,{entries:(s.entries||[]).filter(function(en){return en.id!==entryId})})});
   scheduleSave();renderAll();
 }
@@ -2625,8 +2723,17 @@ $$("eTsRound").addEventListener("click",function(){tsRoundField(5)});
 $$("eTsRound15").addEventListener("click",function(){tsRoundField(15)});
 $$("eTsHour").addEventListener("click",function(){tsRoundField(60)});
 $$("eAddPhoto").addEventListener("click",function(){$$("eFileIn").click()});
-$$("eFileIn").addEventListener("change",function(e){handleFiles(e,true)});
-$$("eRec").addEventListener("click",function(){if(mediaRec&&recIsEdit)stopRec();else if(!mediaRec)startRec(true)});
+$$("eFileIn").addEventListener("change",function(e){handleFiles(e,"edit")});
+$$("eRec").addEventListener("click",function(){if(mediaRec&&recBk==="edit")stopRec();else if(!mediaRec)startRec("edit")});
+$$("eSev").addEventListener("change",renderFixUI);
+$$("fixAdd").addEventListener("click",function(){fixOn=true;renderFixUI();rFThumbs();setTimeout(function(){$$("fText").focus()},50)});
+$$("fixDel").addEventListener("click",function(){
+  if(($$("fText").value.trim()||fImgs.length)&&!confirm("Vols treure la resolució d'aquesta entrada? El problema i la seva descripció es queden com estan."))return;
+  fixOn=false;fImgs=[];$$("fText").value="";renderFixUI();
+});
+$$("fAddPhoto").addEventListener("click",function(){$$("fFileIn").click()});
+$$("fFileIn").addEventListener("change",function(e){handleFiles(e,"fix")});
+$$("fRec").addEventListener("click",function(){if(mediaRec&&recBk==="fix")stopRec();else if(!mediaRec)startRec("fix")});
 $$("eTagSel").addEventListener("change",function(){if(this.value)$$("eTag").value=this.value;this.selectedIndex=0});
 $$("ePartAdd").addEventListener("click",function(){var f=$$("ePartForm");f.style.display="flex";$$("pfPos").focus()});
 $$("pfCancel").addEventListener("click",clearPartForm);
@@ -2905,7 +3012,7 @@ var RPT={
       start:"Inici",status:"Estat",manual:"Manual",open:"Oberta",closed:"Tancada",
       issues:"Problemes",warnings:"Avisos",ok:"OK",total:"Total",
       ts:"Data i hora",severity:"Gravetat",tag:"Etiqueta",desc:"Descripció",att:"Adjunts",
-      edited:"editat",noEntries:"Sense entrades",photos:"Fotos",notes:"Notes generals",
+      fix:"Com ha quedat",edited:"editat",noEntries:"Sense entrades",photos:"Fotos",notes:"Notes generals",
       sigTech:"Signatura del tècnic",sigCli:"Signatura del client / receptor",
       qty:"QT.",ref:"REF.",part:"RECANVI",photoTag:"[foto]",openDrive:"Obre a Drive",
       voice:"nota de veu",video:"vídeo",photo:"foto",file:"fitxer",
@@ -2920,7 +3027,7 @@ var RPT={
       start:"Inicio",status:"Estado",manual:"Manual",open:"Abierta",closed:"Cerrada",
       issues:"Problemas",warnings:"Avisos",ok:"OK",total:"Total",
       ts:"Fecha y hora",severity:"Gravedad",tag:"Etiqueta",desc:"Descripción",att:"Adjuntos",
-      edited:"editado",noEntries:"Sin entradas",photos:"Fotos",notes:"Notas generales",
+      fix:"Cómo ha quedado",edited:"editado",noEntries:"Sin entradas",photos:"Fotos",notes:"Notas generales",
       sigTech:"Firma del técnico",sigCli:"Firma del cliente / receptor",
       qty:"CANT.",ref:"REF.",part:"RECAMBIO",photoTag:"[foto]",openDrive:"Abrir en Drive",
       voice:"nota de voz",video:"vídeo",photo:"foto",file:"archivo",
@@ -2935,7 +3042,7 @@ var RPT={
       start:"Start",status:"Status",manual:"Manual",open:"Open",closed:"Closed",
       issues:"Issues",warnings:"Warnings",ok:"OK",total:"Total",
       ts:"Timestamp",severity:"Severity",tag:"Tag",desc:"Description",att:"Attachments",
-      edited:"edited",noEntries:"No entries",photos:"Photos",notes:"General notes",
+      fix:"Outcome",edited:"edited",noEntries:"No entries",photos:"Photos",notes:"General notes",
       sigTech:"Technician signature",sigCli:"Client / Recipient signature",
       qty:"QTY",ref:"REF.",part:"SPARE PART",photoTag:"[photo]",openDrive:"Open in Drive",
       voice:"voice note",video:"video",photo:"photo",file:"file",
@@ -3019,21 +3126,36 @@ async function gTranslate(texts,target){
 async function localizeSession(s,lang){
   var jobs=[];
   (s.entries||[]).forEach(function(e){
-    var src=(e.text||"").trim();if(!src||!needsTranslation(src))return;
-    var c=e.tr&&e.tr[lang];
-    if(!(c&&c.h===txHash(src)))jobs.push({id:e.id,src:src});
+    var src=(e.text||"").trim();
+    if(src&&needsTranslation(src)){
+      var c=e.tr&&e.tr[lang];
+      if(!(c&&c.h===txHash(src)))jobs.push({id:e.id,src:src});
+    }
+    var fsrc=((e.fix&&e.fix.text)||"").trim();
+    if(fsrc&&needsTranslation(fsrc)){
+      var fc=e.trF&&e.trF[lang];
+      if(!(fc&&fc.h===txHash(fsrc)))jobs.push({id:e.id,fix:true,src:fsrc});
+    }
   });
   var nsrc=(s.notes||"").trim();
   if(nsrc&&needsTranslation(nsrc)){var nc=s.notesTr&&s.notesTr[lang];if(!(nc&&nc.h===txHash(nsrc)))jobs.push({id:null,src:nsrc})}
   if(jobs.length){
     var got=await gTranslate(jobs.map(function(j){return j.src}),lang);
-    var byId={},notesT=null;
-    jobs.forEach(function(j,k){var v={h:txHash(j.src),t:got[k]};if(j.id)byId[j.id]=v;else notesT=v});
+    var byId={},byFix={},notesT=null;
+    jobs.forEach(function(j,k){var v={h:txHash(j.src),t:got[k]};
+      if(!j.id)notesT=v;else if(j.fix)byFix[j.id]=v;else byId[j.id]=v;});
     // written without touching updatedAt, like the language choice
     sessions=sessions.map(function(x){
       if(x.id!==s.id)return x;
       var o=Object.assign({},x);
-      o.entries=(x.entries||[]).map(function(e){var v=byId[e.id];if(!v)return e;var tr=Object.assign({},e.tr||{});tr[lang]=v;return Object.assign({},e,{tr:tr})});
+      o.entries=(x.entries||[]).map(function(e){
+        var v=byId[e.id],fv=byFix[e.id];
+        if(!v&&!fv)return e;
+        var ne=Object.assign({},e);
+        if(v){var tr=Object.assign({},e.tr||{});tr[lang]=v;ne.tr=tr}
+        if(fv){var tf=Object.assign({},e.trF||{});tf[lang]=fv;ne.trF=tf}
+        return ne;
+      });
       if(notesT){var nt=Object.assign({},x.notesTr||{});nt[lang]=notesT;o.notesTr=nt}
       return o;
     });
@@ -3042,7 +3164,15 @@ async function localizeSession(s,lang){
   }
   function pick(src,c){src=(src||"").trim();return (src&&needsTranslation(src)&&c&&c.h===txHash(src))?c.t:null}
   return Object.assign({},s,{
-    entries:(s.entries||[]).map(function(e){var t=pick(e.text,e.tr&&e.tr[lang]);return t==null?e:Object.assign({},e,{text:t})}),
+    entries:(s.entries||[]).map(function(e){
+      var t=pick(e.text,e.tr&&e.tr[lang]);
+      var ft=e.fix?pick(e.fix.text,e.trF&&e.trF[lang]):null;
+      if(t==null&&ft==null)return e;
+      var ne=Object.assign({},e);
+      if(t!=null)ne.text=t;
+      if(ft!=null)ne.fix=Object.assign({},e.fix,{text:ft});
+      return ne;
+    }),
     notes:(function(){var t=pick(s.notes,s.notesTr&&s.notesTr[lang]);return t==null?s.notes:t})()
   });
 }
@@ -3059,6 +3189,15 @@ async function reportSession(s){
 }
 function expBusy(t){var b=$$("btnExp");if(b){b.disabled=!!t;b.innerHTML=t?esc(t):"&#8595; Informe &#9662;"}}
 
+// The outcome, inside the same row as the problem it closes.
+function fixReportHTML(e,R){
+  var fx=e.fix;if(!fx)return "";
+  var fsm=SM[fx.severity]||SM.ok;
+  return "<div style=\"margin-top:6px;padding:6px 8px;border-left:3px solid "+fsm.tx+";background:#f9fafb;border-radius:0 4px 4px 0\">"
+    +"<div style=\"font-size:10px;font-weight:700;letter-spacing:.5px;color:"+fsm.tx+"\">✔ "+esc(R.fix.toUpperCase())+" &middot; "+esc(R.sev[fx.severity]||R.sev.ok)+(fx.ts?" &middot; "+fts(fx.ts):"")+"</div>"
+    +(fx.text?"<div style=\"font-size:12px;margin-top:2px\">"+esc(fx.text)+"</div>":"")
+    +"</div>";
+}
 function buildReportHTML(s,forPrint,lang){
   lang=RPT[lang]?lang:"ca";
   var R=RPT[lang],tm=TM[s.type]||TM.commissioning,tl=R.types[s.type]||R.types.commissioning;
@@ -3066,7 +3205,7 @@ function buildReportHTML(s,forPrint,lang){
   var cnt=severityCounts(entries),errs=cnt.issue,warns=cnt.warning,oks=cnt.ok;
   var rows=entries.map(function(e){
     var sm=SM[e.severity]||SM.info,sl=R.sev[e.severity]||R.sev.info;
-    var imgCell=(e.images||[]).map(function(img){
+    var imgCell=(e.images||[]).concat((e.fix&&e.fix.images)||[]).map(function(img){
       if(img.type==="video"){
         var ph=img.poster?"<img src=\""+img.poster+"\" style=\"max-width:140px;max-height:100px;object-fit:cover;border-radius:4px;display:block\">":"<div style=\"width:130px;height:90px;background:#eee;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:24px\">🎬</div>";
         var lnk=(!forPrint&&img.driveId)?"<a href=\"https://drive.google.com/file/d/"+img.driveId+"/view\" target=\"_blank\" style=\"font-size:9px;color:#1d4ed8;display:block\">↗ "+esc(R.openDrive)+"</a>":"";
@@ -3082,7 +3221,7 @@ function buildReportHTML(s,forPrint,lang){
       +"<td style=\"font-family:monospace;font-size:11px;white-space:nowrap;padding:5px 8px;border:1px solid #e5e7eb;color:#6b7280;width:1%\">"+fts(e.ts).split(" ")[0]+"<br>"+fts(e.ts).split(" ")[1]+(e.tsFromPhoto?"<br>📷":"")+"</td>"
       +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:11px;font-weight:700;white-space:nowrap;width:1%;color:"+sm.tx+"\">"+esc(sl)+"</td>"
       +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:11px;font-family:monospace;white-space:nowrap;width:1%;color:#1d4ed8\">"+esc(e.tag||"")+"</td>"
-      +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:13px\">"+esc(e.text||"")+(e.editedAt?"<em style=\"color:#9ca3af;font-size:11px\"> ("+esc(R.edited)+")</em>":"")+partsReportHTML(e.parts,R)+"</td>"
+      +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:13px\">"+esc(e.text||"")+(e.editedAt?"<em style=\"color:#9ca3af;font-size:11px\"> ("+esc(R.edited)+")</em>":"")+partsReportHTML(e.parts,R)+fixReportHTML(e,R)+"</td>"
       +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb\">"+imgCell+"</td>"
       +"</tr>";
   }).join("");
@@ -4071,6 +4210,7 @@ async function buildPdfBlob(s,lang){
   var typed=[s.client,s.project,s.machine,s.location,s.tech,s.notes];
   entries.forEach(function(e){
     typed.push(e.text,e.tag);
+    if(e.fix){typed.push(e.fix.text);(e.fix.images||[]).forEach(function(im){typed.push(im.name)})}
     (e.parts||[]).forEach(function(p){typed.push(p.ref,p.denominacio)});
     (e.images||[]).forEach(function(im){typed.push(im.name)});
   });
@@ -4113,7 +4253,14 @@ async function buildPdfBlob(s,lang){
     // WinAnsi markers, not emoji: jsPDF's standard fonts have no ▶ or 🎧, and a
     // single character outside the encoding flips the whole string to UTF-16 —
     // the name came out as "%¶\0V\0I\0D…" and measured wrong on top of that.
-    var att=(e.images||[]).map(function(im){return (im.type==="video"?"» ":im.type==="audio"?"• ":"")+(im.name||R.file)}).join("\n");
+    // The outcome rides in the same row: the problem and how it ended read
+    // together, and the table keeps one line per entry.
+    if(e.fix){
+      // No tick here: ✔ is outside WinAnsi and flips the whole line to UTF-16,
+      // exactly as the ▶/🎧 emoji did — the label carries itself.
+      desc+="\n"+R.fix.toUpperCase()+" ("+(R.sev[e.fix.severity]||R.sev.ok)+")"+(e.fix.ts?" · "+fts(e.fix.ts):"")+(e.fix.text?": "+e.fix.text:"");
+    }
+    var att=(e.images||[]).concat((e.fix&&e.fix.images)||[]).map(function(im){return (im.type==="video"?"» ":im.type==="audio"?"• ":"")+(im.name||R.file)}).join("\n");
     // Date and time on their own lines: the column then only has to be as wide
     // as the longer of the two, not both plus a space.
     return [{content:fts(e.ts).replace(" ","\n")+(e.tsFromPhoto?"\n"+R.photoTag:"")},
@@ -4172,7 +4319,7 @@ async function buildPdfBlob(s,lang){
   // photo appendix — images stay out of the table so rows keep a sane height
   var shots=[];
   entries.forEach(function(e){
-    (e.images||[]).forEach(function(im){
+    (e.images||[]).concat((e.fix&&e.fix.images)||[]).forEach(function(im){
       var src=im.type==="video"?im.poster:(im.type==="audio"?null:im.data);
       if(src)shots.push({src:src,ts:fts(e.ts),name:im.name||""});
     });
@@ -4390,7 +4537,7 @@ function buildDocxDocument(D,s,lang){
   function dxa(txt,sz,per){return Math.ceil(String(txt||"").length*per*sz*1.06)+CELLMG}
   function widest(list,sz,per){var w=0;list.forEach(function(t){w=Math.max(w,dxa(t,sz,per))});return w}
   var attNames=[];
-  entries.forEach(function(e){(e.images||[]).forEach(function(im){
+  entries.forEach(function(e){(e.images||[]).concat((e.fix&&e.fix.images)||[]).forEach(function(im){
     attNames.push((im.type==="video"?"▶ ":im.type==="audio"?"🎧 ":"")+(im.name||R.file)+(im.type==="audio"?" ("+fmtDur(im.duration)+")":""));
   })});
   var W_TS=Math.max(dxa("00/00/00",16,6),dxa(R.photoTag,16,6),dxa(R.ts,18,7)/2);
@@ -4414,7 +4561,7 @@ function buildDocxDocument(D,s,lang){
   var rows=entries.map(function(e){
     var sm=SM[e.severity]||SM.info,sc=sm.tx.replace("#",""),fill=e.severity==="issue"?"FEF2F2":e.severity==="warning"?"FFF7ED":e.severity==="ok"?"F0FDF4":"FFFFFF";
     var att=[];
-    (e.images||[]).forEach(function(img){
+    (e.images||[]).concat((e.fix&&e.fix.images)||[]).forEach(function(img){
       if(img.type==="audio"){
         att.push(new D.Paragraph({spacing:{after:30},children:[new D.TextRun({text:"🎧 "+(img.name||R.voice)+" ("+fmtDur(img.duration)+")",size:attSz,font:"Courier New",color:"6B7280",italics:true})]}));
         return;
@@ -4433,6 +4580,14 @@ function buildDocxDocument(D,s,lang){
       if(p.denominacio)runs.push(new D.TextRun({text:p.denominacio,size:16,font:"Arial"}));
       descCh.push(new D.Paragraph({spacing:{before:20},children:runs}));
     });
+    // How it ended, in the same cell as the problem, in its severity's colour.
+    if(e.fix){
+      var fsm=SM[e.fix.severity]||SM.ok,fc=fsm.tx.replace("#","");
+      descCh.push(new D.Paragraph({spacing:{before:80},children:[
+        new D.TextRun({text:"✔ "+R.fix.toUpperCase()+" ("+(R.sev[e.fix.severity]||R.sev.ok)+")"+(e.fix.ts?" · "+fts(e.fix.ts):""),bold:true,size:16,font:"Arial",color:fc})
+      ]}));
+      if(e.fix.text)descCh.push(new D.Paragraph({children:[new D.TextRun({text:e.fix.text,size:20,font:"Arial"})]}));
+    }
     return new D.TableRow({children:[
       new D.TableCell({borders:borders,margins:mg,width:{size:COLW[0],type:D.WidthType.DXA},shading:{fill:fill,type:D.ShadingType.CLEAR},children:[new D.Paragraph({children:[
         new D.TextRun({text:fts(e.ts).split(" ")[0],size:16,font:"Courier New",color:"6B7280"}),

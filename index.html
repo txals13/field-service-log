@@ -3783,6 +3783,8 @@ async function buildTimesheetBlob(s){
   var doc=new L.jsPDF({unit:"mm",format:"a4"});
   var M=14,W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),CW=W-M*2;
   var y=M;
+  var ar=await pdfArabicFont(doc,[s.client,s.project,s.machine,s.location,s.tech,T.techName,T.cliName,T.remarks]
+    .concat(T.rows.map(function(r){return r.dest||r.note||""})));
 
   // header
   doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(17,24,39);
@@ -3796,7 +3798,7 @@ async function buildTimesheetBlob(s){
   var period=tsDMY(T.rows[0].date)+" – "+tsDMY(T.rows[T.rows.length-1].date);
   var meta=[[t.meta[0],s.client||"—"],[t.meta[1],s.project||"—"],[t.meta[2],s.machine||"—"],
             [t.meta[3],s.location||"—"],[t.meta[4],T.techName||s.tech||"—"],[t.meta[5],period]];
-  y=pdfMetaBlock(doc,meta,M,CW,y);
+  y=pdfMetaBlock(doc,meta,M,CW,y,ar);
 
   // Only the columns this sheet was built with — the chips in the modal are
   // the same list, so the printout matches what was reviewed on screen.
@@ -3850,15 +3852,23 @@ async function buildTimesheetBlob(s){
                 cellPadding:{top:2,bottom:2,left:0.8,right:0.8}},
     footStyles:{fillColor:[243,244,246],textColor:[17,24,39],fontStyle:"bold",fontSize:7.5},
     alternateRowStyles:{fillColor:[249,250,251]},
-    columnStyles:colStyles
+    columnStyles:colStyles,
+    didParseCell:function(d){
+      if(!ar||d.section!=="body")return;
+      var x=[].concat(d.cell.text||[]).join("\n");
+      if(!hasArabic(x))return;
+      d.cell.styles.font=ar;d.cell.styles.fontStyle="normal";
+    }
   });
   y=doc.lastAutoTable.finalY+8;
 
   if(T.remarks){
     if(y>H-40){doc.addPage();y=M}
     doc.setFont("helvetica","bold");doc.setFontSize(9);doc.setTextColor(17,24,39);doc.text(t.rem,M,y);y+=4;
-    doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(55,65,81);
-    var rl=doc.splitTextToSize(T.remarks,CW);doc.text(rl,M,y);y+=rl.length*4+4;
+    pdfFont(doc,ar,T.remarks,"normal");doc.setFontSize(8.5);doc.setTextColor(55,65,81);
+    var rl=doc.splitTextToSize(T.remarks,CW),rr=startsRtl(T.remarks);
+    rl.forEach(function(l,k){doc.text(l,M+(rr?CW-doc.getTextWidth(l):0),y+k*4)});
+    y+=rl.length*4+4;
   }
 
   // signature boxes — the on-device signature if there is one, otherwise the
@@ -3886,7 +3896,9 @@ async function buildTimesheetBlob(s){
     doc.setDrawColor(107,114,128);doc.setLineWidth(0.2);
     doc.line(x,y+boxH,x+bw,y+boxH);
     doc.setFontSize(8);doc.setTextColor(107,114,128);
-    doc.text(b[0]+(b[1]?" — "+b[1]:""),x,y+boxH+4);
+    var lbl=b[0]+(b[1]?" — "+b[1]:"");
+    pdfFont(doc,ar,lbl,"normal");doc.text(lbl,x,y+boxH+4);
+    doc.setFont("helvetica","normal");
     doc.text(t.dt+": "+(b[2]?tsDMY((T.generatedAt||now()).slice(0,10)):""),x,y+boxH+8);
   });
 
@@ -3938,11 +3950,53 @@ function loadPdfLibs(){
     });
   });
 }
+// ── ARABIC (AND ANYTHING ELSE HELVETICA CAN'T DRAW) IN THE PDF ───────────────
+// jsPDF's built-in fonts are WinAnsi: an Arabic address came out as
+// "þ•þ®þÐþäþßþ•", the same way the ▶/🎧 emoji did. The only real fix is to
+// embed a font that has the glyphs, so when a report carries Arabic we fetch
+// Amiri (Arabic AND Latin, so a mixed line like "Rue 12, الدار البيضاء" draws
+// whole) and use it for those texts only — everything else stays helvetica.
+// jsPDF joins the letters into their contextual forms and lays the run out
+// right-to-left by itself; setR2L() must NOT be used, it reverses them again.
+// Verified by rendering the finished PDF with pdf.js and reading it.
+var AR_FONT_URL="https://cdn.jsdelivr.net/npm/@expo-google-fonts/amiri/Amiri_400Regular.ttf";
+var AR_RE=/[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/;
+var arFontB64=null,arFontP=null;
+function hasArabic(t){return AR_RE.test(t==null?"":String(t))}
+// Which way the line runs: the first letter that has a direction decides.
+function startsRtl(t){var m=/[A-Za-zÀ-ɏ؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]/.exec(t==null?"":String(t));return !!m&&hasArabic(m[0])}
+function loadArabicFont(){
+  if(arFontB64)return Promise.resolve(arFontB64);
+  if(!arFontP)arFontP=fetch(AR_FONT_URL).then(function(r){
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    return r.arrayBuffer();
+  }).then(function(ab){
+    var b=new Uint8Array(ab),s="";
+    for(var i=0;i<b.length;i+=8192)s+=String.fromCharCode.apply(null,b.subarray(i,i+8192));
+    arFontB64=btoa(s);return arFontB64;
+  }).catch(function(){arFontP=null;return null});
+  return arFontP;
+}
+// Registers the font on this document if any of `texts` needs it. Returns the
+// font name to pass around, or null (nothing needed it, or it wouldn't load).
+async function pdfArabicFont(doc,texts){
+  if(!(texts||[]).some(hasArabic))return null;
+  var b64=await loadArabicFont();
+  if(!b64)return null;
+  try{doc.addFileToVFS("Amiri.ttf",b64);doc.addFont("Amiri.ttf","Amiri","normal");return "Amiri"}
+  catch(e){return null}
+}
+// Picks the font for one piece of text. Amiri is registered in one weight, so
+// Arabic never goes bold — the labels that are bold are all fixed Latin.
+function pdfFont(doc,ar,txt,style){
+  if(ar&&hasArabic(txt)){doc.setFont(ar,"normal");return true}
+  doc.setFont("helvetica",style||"normal");return false;
+}
 // Two-column LABEL / value block, shared by the service report and the
 // timesheet. The value WRAPS: it used to be cut to its first line, which
 // silently dropped the rest of a long one — a full address under UBICACIÓ came
 // out halfway. Returns the y to carry on from.
-function pdfMetaBlock(doc,meta,M,CW,y){
+function pdfMetaBlock(doc,meta,M,CW,y,ar){
   doc.setFont("helvetica","normal");doc.setFontSize(8.5);
   var valX=0;
   meta.forEach(function(p){valX=Math.max(valX,doc.getTextWidth(p[0].toUpperCase()))});
@@ -3954,9 +4008,16 @@ function pdfMetaBlock(doc,meta,M,CW,y){
       if(!p)return;
       var x=M+col*(CW/2);
       doc.setTextColor(156,163,175);doc.setFont("helvetica","normal");doc.text(p[0].toUpperCase(),x,y);
-      doc.setTextColor(17,24,39);doc.setFont("helvetica","bold");
+      doc.setTextColor(17,24,39);
+      // The font has to be set BEFORE measuring, or the wrap is computed
+      // against glyph widths the line won't be drawn with.
+      var rtl=startsRtl(p[1]);
+      pdfFont(doc,ar,p[1],"bold");
       var ln=doc.splitTextToSize(String(p[1]),vw);
-      ln.forEach(function(l,k){doc.text(l,x+valX,y+k*LH)});
+      // Right-aligned by measuring, not by jsPDF's {align:"right"}: with an
+      // Arabic run that anchors the wrong end and the address walked off the
+      // right edge of the page.
+      ln.forEach(function(l,k){doc.text(l,x+valX+(rtl?vw-doc.getTextWidth(l):0),y+k*LH)});
       h=Math.max(h,ln.length*LH);
     });
     y+=Math.max(6,h+1.8);
@@ -3970,9 +4031,13 @@ function pdfMetaBlock(doc,meta,M,CW,y){
 // over the cap) — a floor alone just brought the wrapping back. `tiny` lifts
 // that floor when the page is out of room. Measure with the column's own font
 // already set on doc.
-function pdfFitCol(doc,texts,minW,maxW,pad){
+function pdfFitCol(doc,texts,minW,maxW,pad,ar){
   var w=0;
-  texts.forEach(function(t){String(t==null?"":t).split("\n").forEach(function(l){w=Math.max(w,doc.getTextWidth(l))})});
+  texts.forEach(function(t){
+    pdfFont(doc,ar,t,"normal"); // measure with the font the cell will be drawn in
+    String(t==null?"":t).split("\n").forEach(function(l){w=Math.max(w,doc.getTextWidth(l))});
+  });
+  doc.setFont("helvetica","normal");
   var c={w:w,cellWidth:0,fontSize:8};
   c.set=function(cw,tiny){
     cw=Math.max(minW,Math.min(maxW*1.25,cw));
@@ -4002,6 +4067,15 @@ async function buildPdfBlob(s,lang){
   var tl=R.types[s.type]||R.types.commissioning,entries=s.entries||[];
   var cnt=severityCounts(entries);
   var y=M;
+  // Everything the technician can have typed in a script helvetica can't draw.
+  var typed=[s.client,s.project,s.machine,s.location,s.tech,s.notes];
+  entries.forEach(function(e){
+    typed.push(e.text,e.tag);
+    (e.parts||[]).forEach(function(p){typed.push(p.ref,p.denominacio)});
+    (e.images||[]).forEach(function(im){typed.push(im.name)});
+  });
+  var ar=await pdfArabicFont(doc,typed);
+  if(!ar&&typed.some(hasArabic))alert("No s'ha pogut carregar la tipografia àrab (cal connexió el primer cop): el text en àrab d'aquest PDF no sortirà bé.");
 
   // header
   doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(17,24,39);
@@ -4018,7 +4092,7 @@ async function buildPdfBlob(s,lang){
   // Values used to sit at a fixed x, which the widest label ran straight into.
   // pdfMetaBlock measures the labels, starts the values past the longest one,
   // and wraps them.
-  y=pdfMetaBlock(doc,meta,M,CW,y);
+  y=pdfMetaBlock(doc,meta,M,CW,y,ar);
 
   // counters
   doc.setFontSize(9);
@@ -4063,8 +4137,8 @@ async function buildPdfBlob(s,lang){
   var tsW=Math.max(hTs,doc.getTextWidth("00/00/0000")+PAD,doc.getTextWidth(R.photoTag)+PAD);
   // Tag and attachments never break: they take the width they need, and only if
   // that hits the cap is the text shrunk (never wrapped) to fit.
-  var tagC=pdfFitCol(doc,entries.map(function(e){return e.tag||""}).concat([""]),hTag,32,PAD);
-  var attC=pdfFitCol(doc,body.map(function(r){return r[4]}).concat([""]),Math.max(hAtt,16),50,PAD);
+  var tagC=pdfFitCol(doc,entries.map(function(e){return e.tag||""}).concat([""]),hTag,32,PAD,ar);
+  var attC=pdfFitCol(doc,body.map(function(r){return r[4]}).concat([""]),Math.max(hAtt,16),50,PAD,ar);
   // Description keeps the lion's share; if the two measured columns leave it too
   // little they give the difference back, attachments first, and only as a last
   // resort do they go under the 5.8pt floor (still one line, just smaller).
@@ -4081,7 +4155,17 @@ async function buildPdfBlob(s,lang){
     alternateRowStyles:{fillColor:[249,250,251]},
     columnStyles:{0:{cellWidth:tsW},1:{cellWidth:sevW},
                   2:{cellWidth:tagC.cellWidth,fontSize:tagC.fontSize},
-                  4:{cellWidth:attC.cellWidth,fontSize:attC.fontSize}}
+                  4:{cellWidth:attC.cellWidth,fontSize:attC.fontSize}},
+    // Per cell, so a table with one Arabic entry keeps helvetica everywhere
+    // else. autoTable measures with the cell's own styles, so the wrap follows.
+    didParseCell:function(d){
+      if(!ar||d.section!=="body")return;
+      var t=[].concat(d.cell.text||[]).join("\n");
+      if(!hasArabic(t))return;
+      // Left-anchored on purpose: autoTable would hand the alignment to
+      // jsPDF, whose {align:"right"} anchors an Arabic run at the wrong end.
+      d.cell.styles.font=ar;d.cell.styles.fontStyle="normal";
+    }
   });
   y=doc.lastAutoTable.finalY+8;
 
@@ -4102,7 +4186,8 @@ async function buildPdfBlob(s,lang){
     // The caption used to be one line, cut at the column width — which ate the
     // file name. Time on top, then the name whole, shrunk if it doesn't fit.
     var nameFs=6.5,longest=0;
-    shots.forEach(function(sh){longest=Math.max(longest,doc.getTextWidth(sh.name))});
+    shots.forEach(function(sh){pdfFont(doc,ar,sh.name,"normal");longest=Math.max(longest,doc.getTextWidth(sh.name))});
+    doc.setFont("helvetica","normal");
     if(longest>iw)nameFs=Math.max(4.2,6.5*iw/longest);
     shots.forEach(function(sh,i){
       var c=i%cols;
@@ -4111,7 +4196,8 @@ async function buildPdfBlob(s,lang){
       try{doc.addImage(sh.src,x,y,iw,ih,undefined,"FAST")}catch(err){}
       doc.setTextColor(107,114,128);
       doc.setFontSize(6.5);doc.text(sh.ts,x,y+ih+3);
-      doc.setFontSize(nameFs);doc.text(sh.name,x,y+ih+6);
+      doc.setFontSize(nameFs);pdfFont(doc,ar,sh.name,"normal");doc.text(sh.name,x,y+ih+6);
+      doc.setFont("helvetica","normal");
       if(c===cols-1)y+=ih+11;
     });
     doc.setFontSize(6.5);
@@ -4122,16 +4208,19 @@ async function buildPdfBlob(s,lang){
   if(s.notes){
     if(y>H-30){doc.addPage();y=M}
     doc.setFont("helvetica","bold");doc.setFontSize(9);doc.setTextColor(17,24,39);doc.text(R.notes,M,y);y+=4;
-    doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(55,65,81);
-    var nl=doc.splitTextToSize(s.notes,CW);doc.text(nl,M,y);y+=nl.length*4+4;
+    pdfFont(doc,ar,s.notes,"normal");doc.setFontSize(8.5);doc.setTextColor(55,65,81);
+    var nl=doc.splitTextToSize(s.notes,CW),nr=startsRtl(s.notes);
+    nl.forEach(function(l,k){doc.text(l,M+(nr?CW-doc.getTextWidth(l):0),y+k*4)});
+    y+=nl.length*4+4;
   }
   if(y>H-32){doc.addPage();y=M}
   y=Math.max(y+14,H-32);
   doc.setDrawColor(107,114,128);doc.setLineWidth(0.2);
   doc.line(M,y,M+CW/2-10,y);doc.line(M+CW/2+10,y,W-M,y);
   doc.setFontSize(8);doc.setTextColor(107,114,128);
-  doc.text(R.sigTech+(s.tech?" — "+s.tech:""),M,y+4);
-  doc.text(R.sigCli,M+CW/2+10,y+4);
+  var sig=R.sigTech+(s.tech?" — "+s.tech:"");
+  pdfFont(doc,ar,sig,"normal");doc.text(sig,M,y+4);
+  doc.setFont("helvetica","normal");doc.text(R.sigCli,M+CW/2+10,y+4);
 
   // page numbers
   var n=doc.internal.getNumberOfPages();

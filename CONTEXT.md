@@ -371,6 +371,27 @@ Field Service Log/
     flipped the whole string to UTF-16 — names came out as `%¶\0V\0I\0D…` and
     measured wrong on top of it. The PDF marks a video with `»` and a voice note
     with `•`; DOCX and HTML keep the emoji.
+  - **Arabic needs an embedded font** (same WinAnsi wall: a Moroccan address came
+    out as `þ•þ®þÐþäþßþ•`). When a report carries Arabic, `pdfArabicFont` fetches
+    **Amiri** from jsdelivr and registers it on that document; `pdfFont` then
+    picks it per text, so everything else stays helvetica. Amiri on purpose: it
+    has Latin as well, so a mixed line ("Rue 12, الدار البيضاء") draws whole —
+    Noto Naskh Arabic has no Latin and dropped it silently. jsPDF joins the
+    letters into their contextual forms and runs them right-to-left by itself:
+    **never call `setR2L()`**, it reverses them again.
+    - **Never `{align:"right"}` on Arabic either** — jsPDF anchors the run at the
+      wrong end and the address walked off the page. Right-aligning is done by
+      measuring (`x + width - getTextWidth(line)`); table cells are left-anchored
+      and autoTable is told nothing about alignment.
+    - The font has to be set BEFORE `splitTextToSize` or the wrap is measured
+      against the wrong glyphs; same for `pdfFitCol`'s column measuring.
+    - Only Arabic reports pay for it: ~83 KB instead of ~9 KB, one 430 KB font
+      download the first time (nothing is fetched when there's no Arabic). If it
+      can't be fetched the report still builds, with a warning that the Arabic
+      won't read. Other scripts (Cyrillic, Chinese) are still broken — they'd
+      need their own font.
+    - Verified by rendering the finished PDF with **pdf.js** and reading it on
+      screen; that's the only way to see what a PDF really says.
 - **Metadata values wrap** (`pdfMetaBlock`, shared by the report and the
   timesheet). They used to be cut to their first line — `splitTextToSize(...)[0]`
   — which silently dropped the rest of a long one: a full address under UBICACIÓ

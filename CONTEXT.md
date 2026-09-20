@@ -302,6 +302,32 @@ Field Service Log/
   - Images embedded as Uint8Array (not base64 string)
   - Video thumbnails embedded + filename shown in italic monospace
   - Service Worker explicitly passes unpkg.com and jsdelivr.net through (not cached)
+- **Nothing in the entries table is cut or broken up.** Severity, tag and each
+  attachment's file name always read whole on ONE line; the description is the
+  only column meant to wrap, and it gets whatever is left.
+  - The timestamp column carries the date and the time on separate lines, so it
+    only has to be as wide as the longer of the two (it used to be a fixed 26 mm
+    for both plus a space). A photo's `[foto]` marker goes on a third line.
+  - PDF widths are MEASURED with `doc.getTextWidth`, never guessed: `pdfFitCol`
+    gives a column the width its widest line needs, shrinks the text past the cap
+    instead of wrapping it, and below 5.8 pt WIDENS the column instead (a font
+    floor on its own just brought the wrapping back). Head labels wrap between
+    words but head styles beat column styles in autoTable, so a column can never
+    be narrower than its longest head WORD.
+  - DOCX can't measure, so widths come from character counts (Courier New
+    advances 0.6 em → a character is 6 × its half-point size in twips, ~7 for
+    bold Arial caps, +6% slack) and the table is `TableLayoutType.FIXED` so Word
+    honours them. Tag and attachment font sizes step down together (9/7 pt →
+    5/5 pt) until the description gets its 3000 DXA.
+  - **No emoji in the PDF**: jsPDF's standard fonts are WinAnsi, and one ▶ or 🎧
+    flipped the whole string to UTF-16 — names came out as `%¶\0V\0I\0D…` and
+    measured wrong on top of it. The PDF marks a video with `»` and a voice note
+    with `•`; DOCX and HTML keep the emoji.
+- **Metadata values wrap** (`pdfMetaBlock`, shared by the report and the
+  timesheet). They used to be cut to their first line — `splitTextToSize(...)[0]`
+  — which silently dropped the rest of a long one: a full address under UBICACIÓ
+  came out halfway. The photo appendix's caption had the same bug and now puts
+  the time on one line and the whole file name, shrunk to fit, on the next.
 
 ---
 

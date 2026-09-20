@@ -169,6 +169,30 @@ Field Service Log/
     is kept; transcription is intentionally gone. Don't re-add it without a
     better model/approach.
 - Edit entries (description, severity, tag, add/remove/rename attachments)
+- **A problem is closed inside its own entry** (`entry.fix`). A PROBLEMA or an
+  AVÍS gets a "✔ Afegeix com ha quedat" button in the edit modal, which opens a
+  resolution with its **own severity, its own description and its own media**.
+  Nothing is overwritten: the entry keeps the severity and the words the problem
+  was first written with, and the pair reads as one story — what happened, and
+  how it ended.
+  - Shape: `{severity, text, images[], ts, editedAt}`. `ts` is stamped when the
+    resolution is first written and kept afterwards.
+  - The resolution's attachments are session media like any other: they upload
+    to the same Drive folders, ride in the ZIP, and go to the Drive trash when
+    the resolution (or the entry) is removed.
+  - It shows under its entry in the log, and in every report **inside the same
+    row** as the problem, so the table stays one line per entry. HTML and DOCX
+    mark it with ✔; the PDF must not — ✔ is outside WinAnsi and would flip the
+    line to UTF-16, exactly like the ▶/🎧 emoji.
+  - Search and machine translation cover its text too (cached separately in
+    `entry.trF[lang]`, same hash rule as `entry.tr`).
+  - **Counters are unchanged**: a resolved PROBLEMA still counts as a problem in
+    the totals, because it still happened. If that should read "1 problema (1
+    resolt)" instead, it's a deliberate open question, not an oversight.
+  - Attachments can now be composed in three places, so the `isEdit` boolean
+    that ran through the media code became a bucket key (`MB.pend` / `MB.edit` /
+    `MB.fix`), each with its own array, strip, record button and pending
+    counter. A fourth place would cost one more entry in that table.
 - **The entry's date and time can be edited** (`datetime-local` field at the top
   of the edit modal, `step=60`), mainly to round hours before the client signs.
   Rounding is **manual only** — the `:05` / `:15` / `:00` buttons round the field

@@ -43,6 +43,17 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
   so text written in Spanish also comes out right). The manual's data — part
   names, references — is never translated; neither are client/machine/location
   names, tags or file names.
+- **Anything in double quotes is never translated.** "Insereix un recanvi des
+  del dibuix" wraps what it writes in `"…"`, so a name and reference out of the
+  manual reach the report exactly as the manual has them ("Separador" must not
+  come back as "Separator"); typing quotes by hand protects anything else the
+  same way. Mechanics: the text travels to Google as **HTML** with the quoted
+  runs in `<span translate="no">` and newlines as `<br>`, and comes back through
+  `txFromHtml` (a div's textContent drops the tags and decodes the entities).
+  Verified against the live API: protected runs return character for character,
+  accents and Ø included, with the surrounding spaces intact.
+- What decides whether a text is sent is what is left OUTSIDE the quotes
+  (`needsTranslation`), so an entry that is only an inserted part is never sent.
 - Only text with at least one real word (3+ letters) is sent to the translator
   (`worthTranslating`). A lone letter or a code gives it no context and it
   guesses: a test entry "M" came back as "METRO" in Spanish. Such texts stay

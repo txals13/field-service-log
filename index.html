@@ -1550,6 +1550,10 @@ function insertPartText(r){
   var name=(r.denominacio||"").trim(),ref=(r.ref||"").trim();
   var ins=name+(name&&ref?" - ":"")+ref;
   if(!ins){setDrawStatus("Aquesta fila no té ni nom ni referència per inserir.");return}
+  // Quoted, and quoted text is never machine-translated: this is a name and a
+  // reference out of the manual, and they have to reach the report as the
+  // manual writes them.
+  ins='"'+ins+'"';
   var v=ta.value,at=(textPickCaret==null?v.length:Math.min(textPickCaret,v.length));
   var before=v.slice(0,at),after=v.slice(at);
   var pre=(before&&!/\s$/.test(before))?" ":"";
@@ -1557,7 +1561,7 @@ function insertPartText(r){
   ta.value=before+pre+ins+post+after;
   textPickCaret=(before+pre+ins).length; // next pick lands after this one
   autoH(ta);
-  setDrawStatus("✓ Inserit \""+ins+"\". Toca'n un altre, o tanca per tornar.");
+  setDrawStatus("✓ Inserit "+ins+". Toca'n un altre, o tanca per tornar.");
 }
 // Confirm panel with the catalog quantity pre-filled but editable — the list
 // says how many the drawing uses, the technician says how many are needed.
@@ -2813,6 +2817,29 @@ function txHash(str){var h=5381;for(var i=0;i<str.length;i++)h=((h<<5)+h+str.cha
 // text with at least one real word (3+ letters) is sent; the rest stays as
 // written, and any translation already cached for it is ignored.
 function worthTranslating(t){return /[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(t||"")}
+// ANYTHING IN DOUBLE QUOTES IS LEFT ALONE. That is how a part inserted from a
+// drawing survives the trip — it is a name and a reference the manual owns, and
+// "Separador" must not come back as "Separator" — and it doubles as a manual
+// escape hatch: quote it and it reaches the report as typed.
+var TX_Q=/"[^"\n]*"/g;
+function txBare(t){return String(t||"").replace(TX_Q," ")}          // what's left for the translator
+function needsTranslation(t){return worthTranslating(txBare(t))}
+// Google only honours "don't touch this" markers in HTML mode, so the text
+// travels as HTML: quoted runs inside <span translate="no">, newlines as <br>.
+function txEsc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>")}
+function txToHtml(t){
+  return String(t||"").split(/("[^"\n]*")/).map(function(p){
+    if(!p)return "";
+    return /^"[^"\n]*"$/.test(p) ? '<span translate="no">'+txEsc(p)+'</span>' : txEsc(p);
+  }).join("");
+}
+// back to plain text: the browser both drops the tags and decodes the entities
+function txFromHtml(h){
+  var d=document.createElement("div");
+  d.innerHTML=String(h==null?"":h).replace(/<br\s*\/?>/gi,"\n");
+  // Google hands back "…correcta.<br> Todo…" — tidy the space it adds
+  return d.textContent.replace(/[ \t]+\n/g,"\n").replace(/\n[ \t]+/g,"\n");
+}
 async function gTranslate(texts,target){
   var out=[],i=0;
   while(i<texts.length){
@@ -2820,10 +2847,10 @@ async function gTranslate(texts,target){
     var batch=[],chars=0;
     while(i<texts.length&&batch.length<100&&(!batch.length||chars+texts[i].length<20000)){batch.push(texts[i]);chars+=texts[i].length;i++}
     var r=await fetch(TR_URL+"?key="+encodeURIComponent(TR_KEY),{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({q:batch,target:target,format:"text"})});
+      body:JSON.stringify({q:batch.map(txToHtml),target:target,format:"html"})});
     if(!r.ok){var m="HTTP "+r.status;try{var j=await r.json();if(j&&j.error&&j.error.message)m=j.error.message}catch(e){}throw new Error(m)}
     var d=await r.json();
-    ((d.data&&d.data.translations)||[]).forEach(function(t){out.push(t.translatedText)});
+    ((d.data&&d.data.translations)||[]).forEach(function(t){out.push(txFromHtml(t.translatedText))});
   }
   if(out.length!==texts.length)throw new Error("resposta incompleta del traductor");
   return out;
@@ -2836,12 +2863,12 @@ async function gTranslate(texts,target){
 async function localizeSession(s,lang){
   var jobs=[];
   (s.entries||[]).forEach(function(e){
-    var src=(e.text||"").trim();if(!src||!worthTranslating(src))return;
+    var src=(e.text||"").trim();if(!src||!needsTranslation(src))return;
     var c=e.tr&&e.tr[lang];
     if(!(c&&c.h===txHash(src)))jobs.push({id:e.id,src:src});
   });
   var nsrc=(s.notes||"").trim();
-  if(nsrc&&worthTranslating(nsrc)){var nc=s.notesTr&&s.notesTr[lang];if(!(nc&&nc.h===txHash(nsrc)))jobs.push({id:null,src:nsrc})}
+  if(nsrc&&needsTranslation(nsrc)){var nc=s.notesTr&&s.notesTr[lang];if(!(nc&&nc.h===txHash(nsrc)))jobs.push({id:null,src:nsrc})}
   if(jobs.length){
     var got=await gTranslate(jobs.map(function(j){return j.src}),lang);
     var byId={},notesT=null;
@@ -2857,7 +2884,7 @@ async function localizeSession(s,lang){
     s=sessions.find(function(x){return x.id===s.id})||s;
     saveLocal();isDirty=true;if(isLoggedIn)saveToDrive();
   }
-  function pick(src,c){src=(src||"").trim();return (src&&worthTranslating(src)&&c&&c.h===txHash(src))?c.t:null}
+  function pick(src,c){src=(src||"").trim();return (src&&needsTranslation(src)&&c&&c.h===txHash(src))?c.t:null}
   return Object.assign({},s,{
     entries:(s.entries||[]).map(function(e){var t=pick(e.text,e.tr&&e.tr[lang]);return t==null?e:Object.assign({},e,{text:t})}),
     notes:(function(){var t=pick(s.notes,s.notesTr&&s.notesTr[lang]);return t==null?s.notes:t})()

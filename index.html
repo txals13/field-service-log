@@ -2914,7 +2914,16 @@ async function gTranslate(texts,target){
       body:JSON.stringify({q:batch.map(txToHtml),target:target,format:"html"})});
     if(!r.ok){var m="HTTP "+r.status;try{var j=await r.json();if(j&&j.error&&j.error.message)m=j.error.message}catch(e){}throw new Error(m)}
     var d=await r.json();
-    ((d.data&&d.data.translations)||[]).forEach(function(t){out.push(txFromHtml(t.translatedText))});
+    // Text already written in the report's language is KEPT AS WRITTEN. Google
+    // still "translates" it and quietly rewrites it — "B migdia 11:15" came
+    // back as "B 23:15", "Sense data" as "Dades sensorials" — so when the
+    // detected source is the target, the answer is thrown away. The reply
+    // carries the detection, so this costs no extra call, and the original is
+    // what gets cached: a second export of the same text sends nothing at all.
+    ((d.data&&d.data.translations)||[]).forEach(function(t,k){
+      var det=(t.detectedSourceLanguage||"").slice(0,2).toLowerCase();
+      out.push(det===String(target).slice(0,2).toLowerCase()?batch[k]:txFromHtml(t.translatedText));
+    });
   }
   if(out.length!==texts.length)throw new Error("resposta incompleta del traductor");
   return out;
@@ -4156,8 +4165,23 @@ async function exportSessionZip(s,kind){
     // From Drive take only the media subfolders (photos/, videos/, audio/):
     // anything loose at the root is an old report copy or a stale session.json,
     // and the current ones were just built above.
+    //
+    // And only the media the report still SHOWS. Deleting a photo, or a whole
+    // entry, never deletes the file from Drive, so the folder keeps orphans and
+    // the pack used to carry them: photos the technician had thrown out came
+    // back in the ZIP handed to the client. Matched by Drive id, falling back to
+    // the file name for anything attached before the id was recorded. The
+    // orphans stay in Drive — this only decides what goes in the pack.
     expBusy("Multimèdia…");
-    var media=files.filter(function(f){return f.path.indexOf("/")>=0});
+    var keepIds={},keepNames={};
+    (s.entries||[]).forEach(function(e){(e.images||[]).forEach(function(im){
+      if(im.driveId)keepIds[im.driveId]=1;
+      if(im.name)keepNames[im.name]=1;
+    })});
+    var media=files.filter(function(f){
+      if(f.path.indexOf("/")<0)return false;
+      return keepIds[f.id]||keepNames[f.path.slice(f.path.lastIndexOf("/")+1)];
+    });
     for(var i=0;i<media.length;i++){
       var f=media[i];
       var r=await fetch("https://www.googleapis.com/drive/v3/files/"+f.id+"?alt=media",{headers:{Authorization:"Bearer "+token}});

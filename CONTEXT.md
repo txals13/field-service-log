@@ -184,11 +184,26 @@ Field Service Log/
     row** as the problem, so the table stays one line per entry. HTML and DOCX
     mark it with ✔; the PDF must not — ✔ is outside WinAnsi and would flip the
     line to UTF-16, exactly like the ▶/🎧 emoji.
+- **The PDF's entry table is laid out like the HTML report's**: the spare parts
+  as a QT./REF./RECANVI table with its own grey header, and the outcome as a
+  block with a coloured bar in its severity. autoTable can't nest a table in a
+  cell, so both are DRAWN in `didDrawCell` — and the room for them is booked by
+  padding the cell's text with blank lines (`LH` = autoTable's own line height,
+  font size ÷ scaleFactor × 1.15). That leaves autoTable in charge of row height
+  and page breaks instead of fighting it with `minCellHeight`. `rowPageBreak:
+  "avoid"` is required: the blocks are painted at absolute positions inside the
+  cell, so half a row on the next page would strand them.
+  - Photos stay in the appendix at the end, not inline in the table as in HTML —
+    inline images would blow the row heights up. Say so if it comes up again.
   - Search and machine translation cover its text too (cached separately in
     `entry.trF[lang]`, same hash rule as `entry.tr`).
-  - **Counters are unchanged**: a resolved PROBLEMA still counts as a problem in
-    the totals, because it still happened. If that should read "1 problema (1
-    resolt)" instead, it's a deliberate open question, not an oversight.
+  - **Resolved is its own counter**, not a subtraction: a fixed PROBLEMA still
+    counts as a problem — it happened — and a "✔ n resolts" figure sits beside
+    it, in the status bar and in every report. `isResolved` only counts a
+    resolution that ends in OK or Info; one that still says AVÍS or PROBLEMA is
+    not a close.
+  - Its attachments can be renamed like the entry's own (`rNames(bk)`, one field
+    list per bucket) — the name is what you read in the Drive folder later.
   - Attachments can now be composed in three places, so the `isEdit` boolean
     that ran through the media code became a bucket key (`MB.pend` / `MB.edit` /
     `MB.fix`), each with its own array, strip, record button and pending

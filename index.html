@@ -162,7 +162,10 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .btn-g:hover{background:var(--bg2)}
 .btn-danger{background:var(--redbg);border-color:rgba(239,68,68,.4);color:var(--red)}
 /* inputs */
-textarea,input[type=text],select{background:var(--bg2);border:1px solid var(--br2);border-radius:6px;color:var(--tx1);font-family:inherit;font-size:13px;padding:7px 10px;outline:none;width:100%;-webkit-appearance:none;transition:border-color .15s}
+textarea,input[type=text],input[type=date],input[type=datetime-local],select{background:var(--bg2);border:1px solid var(--br2);border-radius:6px;color:var(--tx1);font-family:inherit;font-size:13px;padding:7px 10px;outline:none;width:100%;transition:border-color .15s}
+textarea,input[type=text],select{-webkit-appearance:none}
+/* native pickers (date/time, scrollbars) follow the app's theme */
+:root{color-scheme:dark}:root.light{color-scheme:light}
 textarea:focus,input[type=text]:focus,select:focus{border-color:var(--gold)}
 textarea{resize:none;line-height:1.4}
 #eText{min-height:72px} /* ~3 lines: comfortable to read and edit even when short */
@@ -431,6 +434,14 @@ textarea{resize:none;line-height:1.4}
   <div class="modal-back" id="editBack" style="display:none">
     <div class="modal">
       <div class="modal-title">&#9998; Edita l'entrada</div>
+      <div class="field"><label>Data i hora</label>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <input type="datetime-local" id="eTs" step="60" style="width:auto;flex:1;min-width:190px">
+          <button class="btn-sm" id="eTsRound" title="Arrodoneix als 5 minuts més propers">:05</button>
+          <button class="btn-sm" id="eTsRound15" title="Arrodoneix al quart d'hora més proper">:15</button>
+          <button class="btn-sm" id="eTsHour" title="Arrodoneix a l'hora en punt més propera">:00</button>
+        </div>
+      </div>
       <div class="field"><label>Gravetat</label>
         <select id="eSev"><option value="info">&#9675; Info</option><option value="ok">&#9679; OK</option><option value="warning">&#9650; Avís</option><option value="issue">&#9632; Problema</option></select>
       </div>
@@ -2433,11 +2444,30 @@ function addEntry(){
   }
   tryAdd();
 }
+// -- Entry timestamp, editable in the edit modal (mostly to round a 08:03 to
+//    08:00 before the report goes out). <input type=datetime-local> speaks
+//    LOCAL wall-clock time with no zone, while entry.ts is a UTC ISO string. --
+function tsToInput(iso){
+  var d=new Date(iso);if(isNaN(d.getTime()))return"";
+  function p(n){return("0"+n).slice(-2)}
+  return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+"T"+p(d.getHours())+":"+p(d.getMinutes());
+}
+function inputToTs(v){var d=new Date(v);return isNaN(d.getTime())?null:d.toISOString()}
+// Rounds the field to the nearest `m` minutes (seconds always land on :00).
+function tsRoundField(m){
+  var el=$$("eTs");if(!el||!el.value)return;
+  var d=new Date(el.value);if(isNaN(d.getTime()))return;
+  d.setSeconds(0,0);
+  var step=m*60000;
+  d=new Date(Math.round(d.getTime()/step)*step);
+  el.value=tsToInput(d.toISOString());
+}
 function openEdit(entryId){
   var active=sessions.find(function(s){return s.id===aid});if(!active)return;
   var entry=(active.entries||[]).find(function(x){return x.id===entryId});if(!entry)return;
   editingId=entryId;eImgs=(entry.images||[]).slice();
   eParts=(entry.parts||[]).map(function(p){return Object.assign({},p)});
+  $$("eTs").value=tsToInput(entry.ts);
   $$("eSev").value=entry.severity||"info";
   $$("eTag").value=entry.tag||"";
   $$("eText").value=entry.text||"";
@@ -2458,10 +2488,20 @@ function saveEdit(){
   if(!editingId)return;
   var entId=editingId,newSev=$$("eSev").value,newTag=$$("eTag").value.trim(),waited=0;
   var captText=text||(eImgs.length?"[Multimèdia — afegeix-hi una descripció]":"");
+  // Only touch the timestamp if the field was actually changed: untouched, the
+  // original keeps its seconds (the field only shows minutes). A hand-set time
+  // is no longer the photo's, so the 📷 mark goes.
+  var active0=sessions.find(function(s){return s.id===aid});
+  var entry0=active0&&(active0.entries||[]).find(function(x){return x.id===entId});
+  var tsVal=$$("eTs").value,newTs=null;
+  if(entry0&&tsVal&&tsVal!==tsToInput(entry0.ts))newTs=inputToTs(tsVal);
+  if(tsVal&&!newTs&&tsVal!==tsToInput(entry0&&entry0.ts)){alert("La data i hora no són vàlides.");return}
   function tryS(){
     if(pExifEdit>0&&waited<3000){var b=$$("eSave");if(b){b.disabled=true;b.textContent="Processant…"}waited+=150;setTimeout(tryS,150);return}
     var b2=$$("eSave");if(b2){b2.disabled=false;b2.innerHTML="✓ Desa els canvis"}
-    sessions=sessions.map(function(s){if(s.id!==aid)return s;return Object.assign({},s,{entries:(s.entries||[]).map(function(en){if(en.id!==entId)return en;return Object.assign({},en,{text:captText,severity:newSev,tag:newTag,images:eImgs.slice(),parts:eParts.slice(),editedAt:now()})})})});
+    sessions=sessions.map(function(s){if(s.id!==aid)return s;return Object.assign({},s,{entries:(s.entries||[]).map(function(en){if(en.id!==entId)return en;var up=Object.assign({},en,{text:captText,severity:newSev,tag:newTag,images:eImgs.slice(),parts:eParts.slice(),editedAt:now()});
+      if(newTs){up.ts=newTs;delete up.tsFromPhoto}
+      return up;})})});
     closeEdit();scheduleSave();renderAll();
   }tryS();
 }
@@ -2477,6 +2517,9 @@ $$("eCancel").addEventListener("click",closeEdit);
 $$("editBack").addEventListener("click",function(e){if(e.target===$$("editBack"))closeEdit()});
 $$("eSave").addEventListener("click",saveEdit);
 $$("eText").addEventListener("input",function(){autoH($$("eText"))});
+$$("eTsRound").addEventListener("click",function(){tsRoundField(5)});
+$$("eTsRound15").addEventListener("click",function(){tsRoundField(15)});
+$$("eTsHour").addEventListener("click",function(){tsRoundField(60)});
 $$("eAddPhoto").addEventListener("click",function(){$$("eFileIn").click()});
 $$("eFileIn").addEventListener("change",function(e){handleFiles(e,true)});
 $$("eRec").addEventListener("click",function(){if(mediaRec&&recIsEdit)stopRec();else if(!mediaRec)startRec(true)});

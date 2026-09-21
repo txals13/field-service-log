@@ -124,6 +124,26 @@ Field Service Log/
 - Root folder created automatically on first login
 - Session subfolders created automatically on first media upload
 - Backup JSON saved here when a session is deleted
+- **A session's folder is found by the ID it wrote down** (`session.folderId` +
+  `folderName`), never by its name alone. The name is built from client +
+  machine + technician, so editing any of the three used to make
+  `getSessionFolder` (find-or-create **by name**) conjure a NEW, empty folder:
+  Desa then filled it with `photos/`, `videos/` and `session.json` while every
+  photo already uploaded stayed behind in the old one. `renameSessionFolder`
+  was supposed to keep them in step, but it only runs if you happen to be signed
+  in at that moment and says nothing when it fails.
+  - Renaming the session renames the folder — but only while the folder still
+    carries the name this session gave it. Sessions with the same client,
+    machine and technician **share** a folder, and one of them must not rename
+    it out from under the others.
+  - **Saving also puts stray media back.** Every attachment with a `driveId` is
+    checked: gone from Drive and we still hold the bytes → re-uploaded; sitting
+    in another folder → moved into this session's `photos/`, `videos/` or
+    `audio/` (a move, not a re-upload: it's the only way to recover a video,
+    whose original file is never kept). The summary says how many were moved.
+    Costs one metadata request per attachment on each manual save.
+  - The old, now-empty folder is left on Drive: emptying it is the technician's
+    call, not the app's.
 
 ---
 

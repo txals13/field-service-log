@@ -3163,9 +3163,12 @@ function setReportLang(id,lang){
   sessions=sessions.map(function(x){return x.id===id?Object.assign({},x,{reportLang:lang}):x});
   saveLocal();isDirty=true;if(isLoggedIn)saveToDrive();
 }
-// Same Google Cloud project and key as the Drive Picker. The Cloud Translation
-// API has to be enabled there and allowed on this key — see CONTEXT.md.
-var TR_KEY=PICKER_KEY, TR_URL="https://translation.googleapis.com/language/translate/v2";
+// Translation goes through our own proxy (worker/), never straight to Google.
+// The Translation API is billed per character, so its key must not travel
+// inside this file: anyone who opens the app would be able to spend with it.
+// PICKER_KEY stays because the Picker needs it in the browser — but it must no
+// longer be allowed to call Translation. See CONTEXT.md.
+var TR_URL="https://fsl-translate.SUBDOMINI.workers.dev/translate";
 function txHash(str){var h=5381;for(var i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))|0;return (h>>>0).toString(36)+"."+str.length}
 // A lone letter or a code ("M", "OK", "ZO-003-04", "6208-2RS") gives the
 // translator nothing to go on and it guesses — "M" came back as "METRO". Only
@@ -3201,7 +3204,7 @@ async function gTranslate(texts,target){
     // batches well under the API's limits (128 strings per call, ~30k chars)
     var batch=[],chars=0;
     while(i<texts.length&&batch.length<100&&(!batch.length||chars+texts[i].length<20000)){batch.push(texts[i]);chars+=texts[i].length;i++}
-    var r=await fetch(TR_URL+"?key="+encodeURIComponent(TR_KEY),{method:"POST",headers:{"Content-Type":"application/json"},
+    var r=await fetch(TR_URL,{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({q:batch.map(txToHtml),target:target,format:"html"})});
     if(!r.ok){var m="HTTP "+r.status;try{var j=await r.json();if(j&&j.error&&j.error.message)m=j.error.message}catch(e){}throw new Error(m)}
     var d=await r.json();

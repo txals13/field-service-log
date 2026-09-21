@@ -1,0 +1,6 @@
+name = "fsl-translate"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# TRANSLATE_KEY is NOT set here — it is a secret, and this file goes to git.
+# Set it with:  npx wrangler secret put TRANSLATE_KEY

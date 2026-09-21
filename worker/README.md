@@ -31,7 +31,10 @@ cp .dev.vars.example .dev.vars    # then paste the server key into it
 npx wrangler dev
 ```
 
-That is the proxy, on `http://localhost:8787`. In a second terminal, serve the
+That is the proxy, on `http://localhost:8787`. **Wrangler needs Node 22** and it
+says so and stops if you are on an older one — `fnm install 22` puts it next to
+whatever you already have without changing your default. The tests below run on
+Node 20 just fine; it is only wrangler that insists. In a second terminal, serve the
 app from the **repository root** (not from here):
 
 ```bash

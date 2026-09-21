@@ -197,6 +197,12 @@ Field Service Log/
     inline images would blow the row heights up. Say so if it comes up again.
   - Search and machine translation cover its text too (cached separately in
     `entry.trF[lang]`, same hash rule as `entry.tr`).
+  - **An outcome marked INFO is coloured like OK** (`fixTx` / `fixBg`, used by
+    the log, the HTML report, the PDF and the Word file). It closes the problem
+    just as OK does — `isResolved` counts both — so Info's own pale grey
+    (#9ca3af) read as "nothing happened here". Only the label still says INFO.
+    An outcome that says AVÍS or PROBLEMA keeps its own colour, which is also
+    the one the counter doesn't add up.
   - **Resolved is its own counter**, not a subtraction: a fixed PROBLEMA still
     counts as a problem — it happened — and a "✔ n resolts" figure sits beside
     it, in the status bar and in every report. `isResolved` only counts a

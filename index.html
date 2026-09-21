@@ -596,6 +596,12 @@ var SM = {
   warning:{label:"AVÍS",dot:"▲",dc:"#f97316",bg:"rgba(249,115,22,.1)",tx:"#f97316"},
   issue:  {label:"PROBLEMA",  dot:"■",dc:"#ef4444",bg:"rgba(239,68,68,.1)",tx:"#ef4444"}
 };
+// An outcome marked INFO still closes the problem — isResolved counts it the
+// same as OK — so it wears OK's green wherever it is drawn: the log, the HTML
+// report, the PDF and the Word file. Only the label keeps saying INFO. Info's
+// own pale grey (#9ca3af) read as "nothing happened here".
+function fixTx(sev){return (SM[sev==="info"?"ok":sev]||SM.ok).tx}
+function fixBg(sev){return (SM[sev==="info"?"ok":sev]||SM.ok).bg}
 // Tally of entry severities — shared by the sidebar badge, the status bar and
 // both report formats (previously four copies of the same filter().length trio).
 // A problem counts as RESOLVED once its entry carries a resolution that ends
@@ -2116,11 +2122,11 @@ function logImgAt(e,t){
 }
 function logFixHTML(e){
   var fx=e.fix;if(!fx)return "";
-  var fsm=SM[fx.severity]||SM.ok;
-  return "<div class=\"log-fix\">"
+  var fsm=SM[fx.severity]||SM.ok,ftx=fixTx(fx.severity);
+  return "<div class=\"log-fix\" style=\"border-left-color:"+ftx+"\">"
     +"<div class=\"log-meta\">"
-    +"<span class=\"log-fix-lbl\">✔ COM HA QUEDAT</span>"
-    +"<span class=\"log-sev\" style=\"background:"+fsm.bg+";color:"+fsm.tx+"\">"+highlightText(fsm.label,filterTxt)+"</span>"
+    +"<span class=\"log-fix-lbl\" style=\"color:"+ftx+"\">✔ COM HA QUEDAT</span>"
+    +"<span class=\"log-sev\" style=\"background:"+fixBg(fx.severity)+";color:"+ftx+"\">"+highlightText(fsm.label,filterTxt)+"</span>"
     +(fx.ts?"<span class=\"log-ts\">"+fts(fx.ts)+"</span>":"")
     +"</div>"
     +(fx.text?"<div class=\"log-text\">"+highlightText(fx.text,filterTxt)+"</div>":"")
@@ -3206,9 +3212,9 @@ function expBusy(t){var b=$$("btnExp");if(b){b.disabled=!!t;b.innerHTML=t?esc(t)
 // The outcome, inside the same row as the problem it closes.
 function fixReportHTML(e,R){
   var fx=e.fix;if(!fx)return "";
-  var fsm=SM[fx.severity]||SM.ok;
-  return "<div style=\"margin-top:6px;padding:6px 8px;border-left:3px solid "+fsm.tx+";background:#f9fafb;border-radius:0 4px 4px 0\">"
-    +"<div style=\"font-size:10px;font-weight:700;letter-spacing:.5px;color:"+fsm.tx+"\">✔ "+esc(R.fix.toUpperCase())+" &middot; "+esc(R.sev[fx.severity]||R.sev.ok)+(fx.ts?" &middot; "+fts(fx.ts):"")+"</div>"
+  var ftx=fixTx(fx.severity);
+  return "<div style=\"margin-top:6px;padding:6px 8px;border-left:3px solid "+ftx+";background:#f9fafb;border-radius:0 4px 4px 0\">"
+    +"<div style=\"font-size:10px;font-weight:700;letter-spacing:.5px;color:"+ftx+"\">✔ "+esc(R.fix.toUpperCase())+" &middot; "+esc(R.sev[fx.severity]||R.sev.ok)+(fx.ts?" &middot; "+fts(fx.ts):"")+"</div>"
     +(fx.text?"<div style=\"font-size:12px;margin-top:2px\">"+esc(fx.text)+"</div>":"")
     +"</div>";
 }
@@ -4405,7 +4411,7 @@ async function buildPdfBlob(s,lang){
         doc.line(x,tblTop+PT_LH+1.2,x+w,tblTop+PT_LH+1.2);
       }
       if(X.fixH){
-        var fy=yy+X.partsH+1.2,fh=X.fixH-2,fsm=SM[entries[d.row.index].fix.severity]||SM.ok,fc=hexRgb(fsm.tx);
+        var fy=yy+X.partsH+1.2,fh=X.fixH-2,fc=hexRgb(fixTx(entries[d.row.index].fix.severity));
         doc.setFillColor(249,250,251);doc.rect(x,fy,w,fh,"F");
         doc.setFillColor(fc[0],fc[1],fc[2]);doc.rect(x,fy,0.8,fh,"F");
         doc.setFont("helvetica","bold");doc.setFontSize(FX_FS-0.4);doc.setTextColor(fc[0],fc[1],fc[2]);
@@ -4700,7 +4706,7 @@ async function buildDocxDocument(D,s,lang){
   }
   // How it ended: shaded block with a bar in its severity's colour, as in the PDF.
   function fixBlock(fx,descMm){
-    var fsm=SM[fx.severity]||SM.ok,fc=fsm.tx.replace("#","");
+    var fc=fixTx(fx.severity).replace("#","");
     var label=R.fix.toUpperCase()+" ("+(R.sev[fx.severity]||R.sev.ok)+")"+(fx.ts?" · "+fts(fx.ts):"");
     var cellCh=[P({spacing:{after:20},children:[T({text:label,bold:true,size:hp(6.8),font:"Arial",color:fc})]})];
     if(fx.text)cellCh.push(P({children:[T({text:fx.text,size:hp(7.2),font:"Arial",color:"374151"})]}));

@@ -2,5 +2,11 @@ name = "fsl-translate"
 main = "src/index.js"
 compatibility_date = "2026-09-01"
 
-# TRANSLATE_KEY is NOT set here — it is a secret, and this file goes to git.
-# Set it with:  npx wrangler secret put TRANSLATE_KEY
+# Read by src/index.js to decide whether localhost may call the proxy. This is
+# what the DEPLOYED Worker sees; `wrangler dev` overrides it from .dev.vars.
+[vars]
+ENVIRONMENT = "production"
+
+# TRANSLATE_KEY is NOT here — it is a secret, and this file goes to git.
+# Deployed:  npx wrangler secret put TRANSLATE_KEY
+# Local dev: put it in .dev.vars (gitignored)

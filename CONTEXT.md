@@ -19,12 +19,20 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
 - Auth method: Google Identity Services implicit token flow (no redirect URI needed)
 - Status: **Testing mode** — new users must be added manually to Google Cloud Console
   → APIs & Services → OAuth consent screen → Test users
-- The same PICKER_KEY also calls **Cloud Translation API v2** (`TR_KEY`) to
-  translate reports. For that, in project field-service-log-500615: enable
-  "Cloud Translation API", link a billing account (first 500 000 characters a
-  month are free), and on the key (APIs & Services → Credentials) add Cloud
-  Translation API to its API restrictions. Until then every export shows a
-  "couldn't translate" prompt and can still go out with the original texts.
+- **Translation does NOT go straight to Google any more.** It is billed per
+  character, so its key would be spendable by anyone who opened the app — it now
+  lives as a secret in a Cloudflare Worker (`worker/`, see its README) and the
+  app calls that proxy through `TR_URL`. Two keys, and this is the point:
+  - a **server key**, Cloud Translation only, no referrer restriction, only ever
+    in the Worker secret `TRANSLATE_KEY`;
+  - **PICKER_KEY**, still in index.html because the Picker runs in the browser,
+    restricted to Picker + Drive with **Cloud Translation removed from it**. If
+    that restriction is not applied, the old key still translates and the proxy
+    has protected nothing.
+  The project also needs "Cloud Translation API" enabled and a billing account
+  linked (first 500 000 characters a month are free). If the proxy is down or
+  misconfigured, every export shows a "couldn't translate" prompt and can still
+  go out with the original texts.
 
 ---
 
@@ -563,6 +571,8 @@ Must use Safari (not Chrome) on iOS. Chrome on iOS cannot install PWAs.
 ---
 
 ## Deployment procedure
+The Worker and the app deploy separately — the Worker only when `worker/`
+changes (`cd worker && npx wrangler deploy`).
 1. Edit `index.html`
 2. In VS Code: Source Control → write commit message → ✓ Commit → **Sync Changes**
 3. Wait 1-2 min → GitHub Pages rebuilds

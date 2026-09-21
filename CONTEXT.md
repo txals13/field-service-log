@@ -399,6 +399,42 @@ Field Service Log/
 
 ---
 
+## Report revisions
+- A report goes out in **revisions**: Rev. 01, Rev. 02… Each one is a FILE kept
+  on Drive, not a snapshot of the data. Editing an entry afterwards does not
+  rewrite what was already handed over — what preserves Rev. 01 is the PDF that
+  was sent. Snapshotting the content (photos included) at every revision would
+  double the storage for little gain.
+- `session.revisions=[{n,date,note,issuedAt}]`. `date` is what the report
+  prints and the technician can correct; `issuedAt` is when it was actually
+  written out, and it is what says whether the session has moved on since
+  (`changedSinceRev`). Picking a language or caching a translation deliberately
+  leaves `updatedAt` alone, so neither counts as a change — nor should it.
+- **The number is decided by the folder** (`nextRevNumber`): the next one is
+  after the highest `_revNN_` already in the session's Drive folder. Exporting
+  from another device, or deleting a file by hand, would otherwise let the app's
+  own count drift from what has actually been handed over. Signed out it falls
+  back to the local list and says so in the dialog.
+- **When it asks**: only when the session changed since the current revision.
+  Rev. 01 is issued silently on the first export ("Primera emissió") — there is
+  nothing to compare it with. Otherwise a dialog offers the next number (date,
+  defaulting to today, and a note that is required) or a re-issue of the current
+  one, which overwrites its own files and keeps the number.
+- **The base name is frozen with Rev. 01** (`session.baseName`). Every revision
+  of one report has to share a base, or the numbering can't tell that rev01 and
+  rev02 are the same document. The date in it is the session's **end** date —
+  the last entry's — which keeps moving while the session is open, hence the
+  freeze. Sessions exported before this keep their old, unnumbered files; the
+  first export after it writes `_rev01_` alongside them.
+- Stamped on the PDF, Word, HTML, spare-parts Excel and both ZIPs. The timesheet
+  stays out of the numbering (it carries its own date and signatures) but its
+  file name uses the same frozen base.
+- Printed only in the header: `Posada en marxa · Rev. 02 · 25/09/2026`. The
+  history lives in the app, under ↓ Informe → Revisions…, where the current
+  revision's date and note can also be corrected after the fact.
+
+---
+
 ## Export / Report details
 - **HTML:** videos embedded with `<video controls>`, photo+video filenames shown
 - **PDF:** real file via `jspdf@2.5.1` + `jspdf-autotable@3.8.2` (unpkg, fallback

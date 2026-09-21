@@ -216,6 +216,14 @@ textarea{resize:none;line-height:1.4}
 .fol-sub{padding-left:18px;border-left:2px solid var(--gold)}
 .fol-head{font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:10px 8px 4px}
 .fol-sel{font-size:11px;padding:2px 4px;max-width:150px}
+.rev-row{display:flex;align-items:baseline;gap:8px;padding:5px 8px;border-bottom:1px solid var(--br);font-size:12px}
+.rev-row.on{background:var(--bg2);border-radius:6px}
+.rev-n{font-family:monospace;font-weight:700;color:var(--gold);flex-shrink:0}
+.rev-d{font-family:monospace;color:var(--tx3);font-size:11px;flex-shrink:0}
+.rev-t{color:var(--tx2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.exp-rev{display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--br);font-size:11px;color:var(--tx3);white-space:nowrap}
+.exp-rev span{margin-right:auto;padding-right:10px}
+.exp-menu .exp-rev button{display:inline-block;width:auto;padding:3px 8px;border:1px solid var(--br2);border-radius:5px;font-size:11px;font-family:monospace;color:var(--tx2)}
 .fix-wrap{border:1px solid var(--br2);border-left:3px solid var(--green);border-radius:8px;padding:10px;margin-top:10px;background:var(--bg2)}
 .fix-head{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--green);margin-bottom:8px}
 .fix-head button{margin-left:auto}
@@ -411,6 +419,25 @@ textarea{resize:none;line-height:1.4}
         <button id="tsCancel">Cancel·la</button>
         <button class="btn-sm" id="tsSave">&#10003; Desa</button>
         <button class="btn-gold" id="tsPdf">&#128196; Desa i PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report revisions: the prompt when a changed session is exported again,
+       and the place to look them up or fix the date of the current one. -->
+  <div class="modal-back" id="revBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,520px)">
+      <div class="modal-title">&#128209; <span id="revTitle">Revisions de l'informe</span></div>
+      <div id="revNote2" class="ts-note" style="margin-bottom:10px">&mdash;</div>
+      <div id="revLog" style="max-height:30vh;overflow:auto;margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <div class="field" style="margin:0"><label>Data de la revisi&oacute;</label><input type="date" id="revDate" style="width:auto"></div>
+        <div class="field" style="margin:0;flex:1;min-width:180px"><label>Qu&egrave; ha canviat</label><input type="text" id="revTxt" placeholder="p. ex. Afegit el canvi del rodament"></div>
+      </div>
+      <div class="modal-actions">
+        <button id="revCancel">Cancel&middot;la</button>
+        <button class="btn-sm" id="revKeep">&#8635; Reemet</button>
+        <button class="btn-gold" id="revNew">&#43; Nova revisi&oacute;</button>
       </div>
     </div>
   </div>
@@ -2330,6 +2357,10 @@ function renderContent(){
       :"<span style=\"margin-left:auto;font-size:11px;color:var(--tx3)\">🔴 Tancada</span><button class=\"btn-sm\" id=\"btnReopen\" style=\"font-size:11px\">↺ Reobre</button>")
     +"<div class=\"exp-wrap\"><button class=\"btn-sm\" id=\"btnExp\">&#8595; Informe &#9662;</button>"
     +"<div class=\"exp-menu\" id=\"expMenu\">"
+    +"<div class=\"exp-rev\"><span>"+(curRev(active)
+        ?"Revisió "+revNo(curRev(active).n).replace("Rev. ","")+" · "+dmy(curRev(active).date)
+        :"Encara sense revisió")+"</span>"
+    +"<button data-rev=\"1\" title=\"Revisions de l'informe: consulta-les, corregeix la data de la vigent o emet-ne una de nova\">Revisions…</button></div>"
     +"<div class=\"exp-lang\"><span>Idioma de l'informe</span>"
     +REPORT_LANGS.map(function(l){return "<button data-lang=\""+l[0]+"\" class=\""+(reportLang(active)===l[0]?"on":"")+"\" title=\""+l[2]+"\">"+l[1]+"</button>"}).join("")
     +"</div>"
@@ -2411,6 +2442,7 @@ function renderContent(){
         }
         return;
       }
+      if(e.target.closest("[data-rev]")){$$("expMenu").style.display="none";openRevisions();return}
       var f=e.target.dataset.fmt;if(f){$$("expMenu").style.display="none";exportRep(active,f)}
     });
   }
@@ -3111,7 +3143,7 @@ var RPT={
       sev:{info:"INFO",ok:"OK",warning:"AVÍS",issue:"PROBLEMA"},
       client:"Client",project:"Número de projecte",machine:"Màquina",location:"Ubicació",tech:"Tècnic",
       start:"Inici",status:"Estat",manual:"Manual",open:"Oberta",closed:"Tancada",
-      issues:"Problemes",warnings:"Avisos",ok:"OK",total:"Total",res1:"resolt",resN:"resolts",resolved:"Resolts",
+      issues:"Problemes",warnings:"Avisos",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resolt",resN:"resolts",resolved:"Resolts",
       ts:"Data i hora",severity:"Gravetat",tag:"Etiqueta",desc:"Descripció",att:"Adjunts",
       fix:"Com ha quedat",edited:"editat",noEntries:"Sense entrades",photos:"Fotos",notes:"Notes generals",
       sigTech:"Signatura del tècnic",sigCli:"Signatura del client / receptor",
@@ -3126,7 +3158,7 @@ var RPT={
       sev:{info:"INFO",ok:"OK",warning:"AVISO",issue:"PROBLEMA"},
       client:"Cliente",project:"Número de proyecto",machine:"Máquina",location:"Ubicación",tech:"Técnico",
       start:"Inicio",status:"Estado",manual:"Manual",open:"Abierta",closed:"Cerrada",
-      issues:"Problemas",warnings:"Avisos",ok:"OK",total:"Total",res1:"resuelto",resN:"resueltos",resolved:"Resueltos",
+      issues:"Problemas",warnings:"Avisos",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resuelto",resN:"resueltos",resolved:"Resueltos",
       ts:"Fecha y hora",severity:"Gravedad",tag:"Etiqueta",desc:"Descripción",att:"Adjuntos",
       fix:"Cómo ha quedado",edited:"editado",noEntries:"Sin entradas",photos:"Fotos",notes:"Notas generales",
       sigTech:"Firma del técnico",sigCli:"Firma del cliente / receptor",
@@ -3141,7 +3173,7 @@ var RPT={
       sev:{info:"INFO",ok:"OK",warning:"WARNING",issue:"ISSUE"},
       client:"Client",project:"Project Number",machine:"Machine",location:"Location",tech:"Technician",
       start:"Start",status:"Status",manual:"Manual",open:"Open",closed:"Closed",
-      issues:"Issues",warnings:"Warnings",ok:"OK",total:"Total",res1:"resolved",resN:"resolved",resolved:"Resolved",
+      issues:"Issues",warnings:"Warnings",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resolved",resN:"resolved",resolved:"Resolved",
       ts:"Timestamp",severity:"Severity",tag:"Tag",desc:"Description",att:"Attachments",
       fix:"Outcome",edited:"edited",noEntries:"No entries",photos:"Photos",notes:"General notes",
       sigTech:"Technician signature",sigCli:"Client / Recipient signature",
@@ -3156,7 +3188,191 @@ var RPT={
 var REPORT_LANGS=[["ca","CA","Català","al català"],["es","ES","Castellano","al castellà"],["en","EN","English","a l'anglès"]];
 function reportLang(s){return (s&&RPT[s.reportLang])?s.reportLang:"ca"}
 function langInto(l){var x=REPORT_LANGS.filter(function(r){return r[0]===l})[0];return x?x[3]:l}
-function reportBase(s,lang){return (s.client||"sessio").replace(/\s+/g,"_")+"_"+s.createdAt.slice(0,10)+"_"+lang}
+// ── REPORT REVISIONS ─────────────────────────────────────────────────────────
+// A report is issued in revisions: Rev. 01, Rev. 02… Each one is a FILE kept on
+// Drive, not a snapshot of the data — re-editing an entry doesn't rewrite what
+// was already handed over, and what preserves Rev. 01 is the PDF you sent.
+// `session.revisions=[{n,date,note,issuedAt}]`: `date` is what the report
+// prints (editable), `issuedAt` is when it was actually written out, and it is
+// what tells us whether the session has moved on since.
+function revList(s){return (s&&s.revisions)||[]}
+function curRev(s){var r=revList(s);return r.length?r[r.length-1]:null}
+function revNo(n){return "Rev. "+("0"+n).slice(-2)}
+function dmy(isoDate){var p=String(isoDate||"").slice(0,10).split("-");return p.length===3?p[2]+"/"+p[1]+"/"+p[0]:""}
+function todayISO(){var d=new Date();function p(n){return("0"+n).slice(-2)}return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())}
+// "The end date": the day the work actually finished — the last entry's — with
+// the session's own date as the fallback while there are none.
+function sessionEndDate(s){
+  var es=(s&&s.entries)||[];
+  for(var i=es.length-1;i>=0;i--){if(es[i]&&es[i].ts)return String(es[i].ts).slice(0,10)}
+  return String((s&&s.createdAt)||now()).slice(0,10);
+}
+// FROZEN with Rev. 01: every revision of one report has to share a base name,
+// or the numbering can't tell that rev01 and rev02 are the same document. The
+// end date moves while the session is open, so it is nailed down on first issue.
+function reportBaseName(s){
+  return s.baseName||((s.client||"sessio").replace(/\s+/g,"_")+"_"+sessionEndDate(s));
+}
+function freezeBaseName(id){
+  var s=sessions.find(function(x){return x.id===id});
+  if(!s||s.baseName)return;
+  var b=reportBaseName(s);
+  sessions=sessions.map(function(x){return x.id===id?Object.assign({},x,{baseName:b}):x});
+  return b;
+}
+// rev: a number stamps the file name, nothing leaves it out (the timesheet).
+function reportBase(s,lang,rev){
+  return reportBaseName(s)+(rev?"_rev"+("0"+rev).slice(-2):"")+"_"+lang;
+}
+// The next number is decided by the FOLDER, not by the app's own count: export
+// from another device, or delete a file by hand, and the count here would drift
+// away from what has actually been handed over. `checked` says whether we got
+// to look — signed out, we can only trust the local list.
+async function nextRevNumber(s){
+  var local=revList(s).reduce(function(m,r){return Math.max(m,r.n||0)},0);
+  if(!isLoggedIn)return {n:local+1,checked:false};
+  try{
+    var token=await getToken();if(!token)return {n:local+1,checked:false};
+    var folderId=await getSessionFolder(token,s);if(!folderId)return {n:local+1,checked:false};
+    var files=[];await collectDriveFiles(token,folderId,"",files);
+    var hi=local;
+    files.forEach(function(f){
+      var m=/_rev(\d+)_/i.exec(f.name||"");
+      if(m)hi=Math.max(hi,parseInt(m[1],10));
+    });
+    return {n:hi+1,checked:true};
+  }catch(e){return {n:local+1,checked:false}}
+}
+// Has the visit moved on since the current revision was written out? Picking a
+// report language or caching a translation deliberately leaves updatedAt alone,
+// so neither of those counts as a change — and neither should they.
+function changedSinceRev(s){
+  var r=curRev(s);
+  if(!r)return true;
+  return String(s.updatedAt||"")>String(r.issuedAt||r.date||"");
+}
+function pushRevision(id,n,date,note){
+  var rec={n:n,date:date,note:note||"",issuedAt:now()};
+  sessions=sessions.map(function(x){
+    return x.id===id?Object.assign({},x,{revisions:revList(x).concat([rec])}):x;
+  });
+  saveLocal();isDirty=true;if(isLoggedIn)saveToDrive();
+  return rec;
+}
+function touchRevision(id){ // re-issued: same number, new moment
+  sessions=sessions.map(function(x){
+    var r=revList(x);
+    if(x.id!==id||!r.length)return x;
+    var last=Object.assign({},r[r.length-1],{issuedAt:now()});
+    return Object.assign({},x,{revisions:r.slice(0,-1).concat([last])});
+  });
+  saveLocal();isDirty=true;if(isLoggedIn)saveToDrive();
+}
+function editRevision(id,date,note){
+  sessions=sessions.map(function(x){
+    var r=revList(x);
+    if(x.id!==id||!r.length)return x;
+    var last=Object.assign({},r[r.length-1],{date:date,note:note});
+    return Object.assign({},x,{revisions:r.slice(0,-1).concat([last])});
+  });
+  saveLocal();isDirty=true;if(isLoggedIn)saveToDrive();
+}
+// ── REVISIONS · the dialog ───────────────────────────────────────────────────
+// One dialog, two jobs: asking on export (resolves with what to do) and
+// managing them from the menu (resolves with nothing).
+var revWired=false,revResolve=null;
+function revLogHTML(s){
+  var rs=revList(s);
+  if(!rs.length)return "<div class=\"ts-note\" style=\"padding:8px\">Encara no s'ha emès cap revisió.</div>";
+  return rs.slice().reverse().map(function(r,i){
+    return "<div class=\"rev-row"+(i===0?" on":"")+"\">"
+      +"<span class=\"rev-n\">"+revNo(r.n)+"</span>"
+      +"<span class=\"rev-d\">"+dmy(r.date)+"</span>"
+      +"<span class=\"rev-t\">"+esc(r.note||"")+"</span></div>";
+  }).join("");
+}
+function wireRev(){
+  if(revWired)return;revWired=true;
+  function close(v){$$("revBack").style.display="none";var f=revResolve;revResolve=null;if(f)f(v)}
+  $$("revCancel").addEventListener("click",function(){close(null)});
+  $$("revBack").addEventListener("click",function(e){if(e.target===$$("revBack"))close(null)});
+  $$("revKeep").addEventListener("click",function(){
+    // In "manage" mode this button saves the current revision's date and note
+    // instead — the date of the report is meant to be fixable after the fact.
+    if(!revResolve){
+      var s=sessions.find(function(x){return x.id===aid});
+      if(s&&curRev(s)){editRevision(s.id,$$("revDate").value||todayISO(),$$("revTxt").value.trim());renderContent()}
+      $$("revBack").style.display="none";return;
+    }
+    close({action:"keep"});
+  });
+  $$("revNew").addEventListener("click",function(){
+    var note=$$("revTxt").value.trim();
+    if(!note){alert("Escriu què ha canviat en aquesta revisió.");return}
+    var date=$$("revDate").value||todayISO();
+    if(!revResolve){
+      var s=sessions.find(function(x){return x.id===aid});
+      if(s){nextRevNumber(s).then(function(nx){pushRevision(s.id,nx.n,date,note);freezeBaseName(s.id);saveLocal();renderContent();$$("revBack").style.display="none"})}
+      return;
+    }
+    close({action:"new",date:date,note:note});
+  });
+}
+// Opened from the menu: look them up, fix the current one's date or note, or
+// write a new one down before exporting it.
+function openRevisions(){
+  var s=sessions.find(function(x){return x.id===aid});if(!s)return;
+  wireRev();
+  var cur=curRev(s);
+  $$("revTitle").textContent="Revisions de l'informe";
+  $$("revNote2").innerHTML=cur
+    ?"Vigent: <strong>"+revNo(cur.n)+"</strong> del "+dmy(cur.date)+". Pots corregir-ne la data o la nota, o emetre'n una de nova."
+    :"Encara no n'hi ha cap: la primera surt sola quan exportis l'informe.";
+  $$("revLog").innerHTML=revLogHTML(s);
+  $$("revDate").value=(cur&&cur.date)||todayISO();
+  $$("revTxt").value=(cur&&cur.note)||"";
+  $$("revKeep").innerHTML="&#10003; Desa els canvis";
+  $$("revKeep").style.display=cur?"":"none";
+  $$("revNew").innerHTML="&#43; Nova revisió";
+  revResolve=null;
+  $$("revBack").style.display="flex";
+}
+// Asked on export when the session has moved on since the last revision.
+function askRevision(s,next){
+  return new Promise(function(res){
+    wireRev();
+    var cur=curRev(s);
+    $$("revTitle").textContent="Aquesta sessió ha canviat";
+    $$("revNote2").innerHTML="Des de la <strong>"+revNo(cur.n)+"</strong> ("+dmy(cur.date)+") hi has tocat alguna cosa. Vols emetre la <strong>"+revNo(next.n)+"</strong>, o tornar a emetre la mateixa?"
+      +(next.checked?"":"<br>No s'ha pogut mirar la carpeta de Drive: el número surt del compte d'aquest dispositiu.");
+    $$("revLog").innerHTML=revLogHTML(s);
+    $$("revDate").value=todayISO();
+    $$("revTxt").value="";
+    $$("revKeep").innerHTML="&#8635; Reemet la "+revNo(cur.n);
+    $$("revKeep").style.display="";
+    $$("revNew").innerHTML="&#43; "+revNo(next.n);
+    revResolve=res;
+    $$("revBack").style.display="flex";
+  });
+}
+// Every export goes through here first. Returns the revision to stamp, or null
+// if the technician backed out.
+async function ensureRevision(s){
+  var cur=curRev(s);
+  if(!cur){
+    // Nothing to compare with: the first issue is Rev. 01, no questions asked.
+    var first=await nextRevNumber(s);
+    freezeBaseName(s.id);
+    return pushRevision(s.id,first.n,todayISO(),"Primera emissió");
+  }
+  if(!changedSinceRev(s)){touchRevision(s.id);return curRev(sessions.find(function(x){return x.id===s.id})||s)}
+  var next=await nextRevNumber(s);
+  var ans=await askRevision(s,next);
+  if(!ans)return null;
+  if(ans.action==="keep"){touchRevision(s.id);return curRev(sessions.find(function(x){return x.id===s.id})||s)}
+  freezeBaseName(s.id);
+  return pushRevision(s.id,next.n,ans.date,ans.note);
+}
 // A preference, not a change to the visit, so updatedAt stays put: bumping it
 // would make the delete dialog think the last project ZIP is out of date.
 function setReportLang(id,lang){
@@ -3299,7 +3515,15 @@ function fixReportHTML(e,R){
     +(fx.text?"<div style=\"font-size:12px;margin-top:2px\">"+esc(fx.text)+"</div>":"")
     +"</div>";
 }
-function buildReportHTML(s,forPrint,lang){
+// What the four reports print under the title: which revision this is and the
+// date it carries — the date the technician set, not the moment Export was
+// pressed, so re-issuing the same revision doesn't move it.
+function revLine(R,rev,tl){
+  var d=rev?dmy(rev.date):"";
+  return tl+"  ·  "+(rev?R.revLbl+" "+("0"+rev.n).slice(-2)+"  ·  "+d
+                          :R.gen+" "+fts(new Date().toISOString()));
+}
+function buildReportHTML(s,forPrint,lang,rev){
   lang=RPT[lang]?lang:"ca";
   var R=RPT[lang],tm=TM[s.type]||TM.commissioning,tl=R.types[s.type]||R.types.commissioning;
   var entries=s.entries||[];
@@ -3340,7 +3564,7 @@ function buildReportHTML(s,forPrint,lang){
     +"<div style=\"border-bottom:3px solid #f59e0b;padding-bottom:14px;margin-bottom:16px\">"
     +"<span style=\"background:"+tm.bg+";color:"+tm.tx+";border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700;letter-spacing:1px\">"+esc(tl.toUpperCase())+"</span>"
     +"<h1>"+esc(R.title)+"</h1>"
-    +"<div style=\"color:#6b7280;font-size:13px\">"+esc(R.gen)+" "+fts(new Date().toISOString())+"</div></div>"
+    +"<div style=\"color:#6b7280;font-size:13px\">"+esc(revLine(R,rev,tl))+"</div></div>"
     +"<div class=\"meta\">"
     +"<div><div class=\"ml\">"+esc(R.client)+"</div><div class=\"mv\">"+esc(s.client||"—")+"</div></div>"
     +"<div><div class=\"ml\">"+esc(R.project)+"</div><div class=\"mv\">"+esc(s.project||"—")+"</div></div>"
@@ -3378,13 +3602,20 @@ async function exportRep(s,fmt){
   if(fmt==="zip"){exportSessionZip(s,"project");return}
   if(fmt==="zipdocx"){exportSessionZip(s,"docx");return}
   if(fmt==="xlsx"&&!collectSessionParts(s).length){alert("Aquesta sessió encara no té recanvis.\n\nTria'ls d'un dibuix o afegeix-los a mà en una entrada.");return}
+  // Which revision this is goes first: it stamps both the file name and the
+  // header, and it's the one question worth asking before any work is done.
+  var rev=await ensureRevision(s);
+  if(!rev)return;
+  s=sessions.find(function(x){return x.id===s.id})||s;
+  renderContent(); // the menu row shows which revision this is
   var R;
   expBusy("Traduint…");
   try{R=await reportSession(s)}finally{expBusy("")}
   if(!R)return;
-  var base=reportBase(s,R.lang),P=RPT[R.lang].pre;
+  R.rev=rev;
+  var base=reportBase(s,R.lang,rev.n),P=RPT[R.lang].pre;
   if(fmt==="html"){
-    var htmlBlob=new Blob([buildReportHTML(R.s,false,R.lang)],{type:"text/html;charset=utf-8"});
+    var htmlBlob=new Blob([buildReportHTML(R.s,false,R.lang,R.rev)],{type:"text/html;charset=utf-8"});
     var hn=P.report+"_"+base+".html";
     dlBlob(htmlBlob,hn);
     uploadReportCopy(s,htmlBlob,hn,"text/html");
@@ -4325,14 +4556,14 @@ function pdfFitCol(doc,texts,minW,maxW,pad,ar){
 function hexRgb(h){var m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h||"");return m?[parseInt(m[1],16),parseInt(m[2],16),parseInt(m[3],16)]:[17,24,39]}
 // s = the real session (Drive folder, file names); R = {s: its localized copy, lang}
 async function exportPDF(s,R,base){
-  var blob=await buildPdfBlob(R.s,R.lang);
+  var blob=await buildPdfBlob(R.s,R.lang,R.rev);
   if(!blob){alert("No s'ha pogut carregar la llibreria PDF. Comprova la connexió.");return}
   var fn=RPT[R.lang].pre.report+"_"+base+".pdf";
   dlBlob(blob,fn);
   uploadReportCopy(s,blob,fn,"application/pdf");
 }
 // Returns the report as PDF bytes so both the download and the ZIP can use it.
-async function buildPdfBlob(s,lang){
+async function buildPdfBlob(s,lang,rev){
   var L=await loadPdfLibs();
   if(!L)return null;
   var R=RPT[lang]||RPT.ca;
@@ -4356,7 +4587,7 @@ async function buildPdfBlob(s,lang){
   doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(17,24,39);
   doc.text(R.title,M,y+6);
   doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(107,114,128);
-  doc.text(tl+"  ·  "+R.gen+" "+fts(new Date().toISOString()),M,y+12);
+  doc.text(revLine(R,rev,tl),M,y+12);
   doc.setDrawColor(245,158,11);doc.setLineWidth(0.8);doc.line(M,y+15,W-M,y+15);
   y+=21;
 
@@ -4629,7 +4860,7 @@ function autoCols(rows,min,max){
   return w.map(function(len){return {wch:Math.min(max||55,Math.max(min||6,(len||0)+2))}});
 }
 async function exportXLSX(s,R,base){
-  var blob=await buildXlsxBlob(R.s,R.lang);
+  var blob=await buildXlsxBlob(R.s,R.lang,R.rev);
   if(!blob){alert("No s'ha pogut carregar la llibreria d'Excel. Comprova la connexió.");return}
   var fn=RPT[R.lang].pre.parts+"_"+base+".xlsx";
   dlBlob(blob,fn);
@@ -4637,7 +4868,7 @@ async function exportXLSX(s,R,base){
 }
 // Returns the spare-parts workbook, or null when the library fails or there are
 // no parts (the ZIP just leaves it out then, without nagging).
-async function buildXlsxBlob(s,lang){
+async function buildXlsxBlob(s,lang,rev){
   var items=collectSessionParts(s);
   if(!items.length)return null;
   var X=await loadXlsxLib();
@@ -4672,6 +4903,7 @@ async function buildXlsxBlob(s,lang){
   var info=[[R.client,s.client||""],[C.project,s.project||""],[R.machine,s.machine||""],[R.location,s.location||""],
             [R.tech,s.tech||""],[C.type,R.types[s.type]||R.types.commissioning],[R.start,fts(s.createdAt)],
             [R.status,s.status==="open"?R.open:R.closed],[R.manual,(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||""],
+            [R.revLbl,rev?("0"+rev.n).slice(-2)+" · "+dmy(rev.date):""],
             [C.gen,fts(new Date().toISOString())],[C.lines,items.length],[C.refs,sum.length]];
   var wsI=X.utils.aoa_to_sheet(info);
   wsI["!cols"]=autoCols(info);
@@ -4698,14 +4930,14 @@ function loadDocxLib(){
   });
 }
 var DOCX_MIME="application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-async function buildDocxBlob(s,lang){
+async function buildDocxBlob(s,lang,rev){
   var D=await loadDocxLib();
   if(!D)return null;
-  return await D.Packer.toBlob(await buildDocxDocument(D,s,lang));
+  return await D.Packer.toBlob(await buildDocxDocument(D,s,lang,rev));
 }
 async function exportDOCX(s,R,base){
   try{
-    var blob=await buildDocxBlob(R.s,R.lang);
+    var blob=await buildDocxBlob(R.s,R.lang,R.rev);
     if(!blob){alert("No s'ha pogut carregar la llibreria de Word. Comprova la connexió.");return}
     var fn=RPT[R.lang].pre.report+"_"+base+".docx";
     dlBlob(blob,fn);
@@ -4720,7 +4952,7 @@ async function exportDOCX(s,R,base){
 // to twips), and every block is the PDF's block in Word's vocabulary. Page
 // breaks will still fall where Word decides — that's the one thing this can't
 // control.
-async function buildDocxDocument(D,s,lang){
+async function buildDocxDocument(D,s,lang,rev){
   var R=RPT[lang]||RPT.ca;
   var tl=R.types[s.type]||R.types.commissioning,entries=s.entries||[];
   var cnt=severityCounts(entries),errs=cnt.issue,warns=cnt.warning,oks=cnt.ok;
@@ -4865,7 +5097,7 @@ async function buildDocxDocument(D,s,lang){
   var children=[
     P({spacing:{after:60},children:[T({text:R.title,bold:true,size:hp(18),font:"Arial",color:"111827"})]}),
     P({spacing:{after:120},border:{bottom:{style:D.BorderStyle.SINGLE,size:6,color:"F59E0B",space:4}},
-       children:[T({text:tl+"  ·  "+R.gen+" "+fts(new Date().toISOString()),size:hp(9),font:"Arial",color:"6B7280"})]}),
+       children:[T({text:revLine(R,rev,tl),size:hp(9),font:"Arial",color:"6B7280"})]}),
     metaTable,
     P({spacing:{before:120,after:120},children:counters}),
     new D.Table({width:{size:TBLW,type:D.WidthType.DXA},columnWidths:COLW,layout:D.TableLayoutType.FIXED,
@@ -4998,10 +5230,15 @@ async function exportSessionZip(s,kind){
   var archive=(kind||"project")==="project";
   if(!isLoggedIn){alert("Primer inicia la sessió amb Google: s'exporten els fitxers guardats a la carpeta de Drive de la sessió.");return}
   var token=await ensureToken();if(!token){alert("No s'ha pogut autenticar amb Drive.");return}
+  var rev=await ensureRevision(s);
+  if(!rev)return;
+  s=sessions.find(function(x){return x.id===s.id})||s;
+  renderContent(); // the menu row shows which revision this is
   expBusy("Traduint…");
   var R;
   try{R=await reportSession(s)}catch(e){R=null}
   if(!R){expBusy("");return}
+  R.rev=rev;
   // the real session again: the translations just cached are part of what the
   // archive's session.json should carry
   s=sessions.find(function(x){return x.id===s.id})||s;
@@ -5014,7 +5251,7 @@ async function exportSessionZip(s,kind){
     var files=[];
     await collectDriveFiles(token,folderId,"",files);
     var zip=new JSZipLib();
-    var base=reportBase(s,R.lang),P=RPT[R.lang].pre;
+    var base=reportBase(s,R.lang,rev.n),P=RPT[R.lang].pre;
 
     // The reports are BUILT here rather than copied from Drive: the folder only
     // holds whichever formats happened to be exported (and, from before the
@@ -5022,13 +5259,13 @@ async function exportSessionZip(s,kind){
     // ZIP always carries one current copy of each — pdf, xlsx, html and docx —
     // in the language chosen for this session's reports.
     expBusy("Informes…");
-    var docxBlob=await buildDocxBlob(R.s,R.lang);
+    var docxBlob=await buildDocxBlob(R.s,R.lang,R.rev);
     if(docxBlob)zip.file(P.report+"_"+base+".docx",docxBlob);
     else if(!archive)throw new Error("no s'ha pogut generar l'informe Word");
     if(archive){
-      zip.file(P.report+"_"+base+".html",new Blob([buildReportHTML(R.s,false,R.lang)],{type:"text/html;charset=utf-8"}));
-      var pdfBlob=await buildPdfBlob(R.s,R.lang); if(pdfBlob)zip.file(P.report+"_"+base+".pdf",pdfBlob);
-      var xlsxBlob=await buildXlsxBlob(R.s,R.lang); if(xlsxBlob)zip.file(P.parts+"_"+base+".xlsx",xlsxBlob);
+      zip.file(P.report+"_"+base+".html",new Blob([buildReportHTML(R.s,false,R.lang,R.rev)],{type:"text/html;charset=utf-8"}));
+      var pdfBlob=await buildPdfBlob(R.s,R.lang,R.rev); if(pdfBlob)zip.file(P.report+"_"+base+".pdf",pdfBlob);
+      var xlsxBlob=await buildXlsxBlob(R.s,R.lang,R.rev); if(xlsxBlob)zip.file(P.parts+"_"+base+".xlsx",xlsxBlob);
       var tsBlob=await buildTimesheetBlob(s); if(tsBlob)zip.file(tsFileName(s),tsBlob);
       // Built too, not copied: Drive only gets a session.json when the technician
       // presses Save, so a session that was never synced had none at all. Always
@@ -5055,7 +5292,7 @@ async function exportSessionZip(s,kind){
     }
     expBusy("Comprimint…");
     var zipBlob=await zip.generateAsync({type:"blob"});
-    dlBlob(zipBlob,sanitize(s.client)+"_"+sanitize(s.machine)+(archive?"_projecte_":"_docx_multimedia_")+R.lang+".zip");
+    dlBlob(zipBlob,sanitize(s.client)+"_"+sanitize(s.machine)+(archive?"_projecte_":"_docx_multimedia_")+"rev"+("0"+rev.n).slice(-2)+"_"+R.lang+".zip");
     // Only the archive stamps zipAt: the delete dialog reads it as "a complete
     // copy of this session exists", and the DOCX pack carries no session.json,
     // so nothing could be restored from it.

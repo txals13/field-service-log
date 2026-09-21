@@ -1,0 +1,6 @@
+# The Cloud Translation key in plain text — the very thing worker/ exists to
+# keep out of anything that gets published. Never commit it.
+worker/.dev.vars
+
+worker/node_modules/
+worker/.wrangler/

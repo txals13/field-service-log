@@ -3168,7 +3168,11 @@ function setReportLang(id,lang){
 // inside this file: anyone who opens the app would be able to spend with it.
 // PICKER_KEY stays because the Picker needs it in the browser — but it must no
 // longer be allowed to call Translation. See CONTEXT.md.
-var TR_URL="https://fsl-translate.SUBDOMINI.workers.dev/translate";
+// Opened from localhost it talks to the proxy that `wrangler dev` runs, so a
+// local copy never reaches the live Worker and the two can be tested apart.
+var TR_URL=/^(localhost|127\.0\.0\.1)$/.test(location.hostname)
+  ? "http://localhost:8787/translate"
+  : "https://fsl-translate.SUBDOMINI.workers.dev/translate";
 function txHash(str){var h=5381;for(var i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))|0;return (h>>>0).toString(36)+"."+str.length}
 // A lone letter or a code ("M", "OK", "ZO-003-04", "6208-2RS") gives the
 // translator nothing to go on and it guesses — "M" came back as "METRO". Only

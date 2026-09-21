@@ -996,11 +996,54 @@ async function getRootId(token){
   if(id){rootFolderId=id;try{localStorage.setItem(LS_ROOT,id)}catch(e){}}
   return id;
 }
+function sessFolderName(sess){return sanitize(sess.client)+"_"+sanitize(sess.machine)+"_"+sanitize(sess.tech||"tech")}
+async function driveFileInfo(token,id){
+  try{
+    var r=await fetch("https://www.googleapis.com/drive/v3/files/"+id+"?fields=id,name,trashed,parents",{headers:{Authorization:"Bearer "+token}});
+    if(!r.ok)return null;
+    return await r.json();
+  }catch(e){return null}
+}
+async function drivePatch(token,id,body,params){
+  try{
+    var r=await fetch("https://www.googleapis.com/drive/v3/files/"+id+(params||""),
+      {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify(body||{})});
+    return r.ok;
+  }catch(e){return false}
+}
+// The folder id, remembered on the session (no updatedAt bump — it's not a
+// change to the report).
+function rememberFolder(sessId,folderId,name){
+  sessions=sessions.map(function(x){
+    return x.id===sessId?Object.assign({},x,{folderId:folderId,folderName:name}):x;
+  });
+  saveLocal();
+}
+// The session's folder is found by the id we wrote down, NOT by its name. The
+// name is built from client + machine + technician, so editing any of the three
+// used to conjure a new, empty folder and strand every photo already uploaded
+// in the old one — the session looked "saved" with nothing inside.
 async function getSessionFolder(token,sess){
   var rootId=await getRootId(token);if(!rootId)return null;
   var outId=await driveFolder(token,OUT_NAME,rootId);if(!outId)return null;
-  var name=sanitize(sess.client)+"_"+sanitize(sess.machine)+"_"+sanitize(sess.tech||"tech");
-  return await driveFolder(token,name,outId);
+  var name=sessFolderName(sess);
+  if(sess.folderId){
+    var info=await driveFileInfo(token,sess.folderId);
+    if(info&&!info.trashed){
+      // Renaming the session renames its folder — but only while the folder
+      // still carries the name this session gave it: sessions that share a
+      // client, machine and technician also share the folder, and one of them
+      // must not rename it out from under the others.
+      if(info.name!==name&&(!sess.folderName||sess.folderName===info.name)){
+        if(await drivePatch(token,sess.folderId,{name:name}))info.name=name;
+      }
+      if(info.name!==sess.folderName)rememberFolder(sess.id,sess.folderId,info.name);
+      return sess.folderId;
+    }
+  }
+  var id=await driveFolder(token,name,outId);
+  if(id)rememberFolder(sess.id,id,name);
+  return id;
 }
 async function getMediaFolder(token,sess,kind){
   var sessId=await getSessionFolder(token,sess);if(!sessId)return null;
@@ -1037,9 +1080,15 @@ async function saveSessionJsonToDrive(token,sess,folderId){
   }
 }
 async function syncSessionToDrive(token,sess){
-  var res={uploaded:0,missingVideos:0};
+  var res={uploaded:0,missingVideos:0,moved:0};
   var folderId=await getSessionFolder(token,sess);
   if(folderId){try{await driveFolder(token,"photos",folderId);await driveFolder(token,"videos",folderId)}catch(e){}}
+  var kindIds={};
+  async function kindFolder(kind){
+    if(!folderId)return null;
+    if(!(kind in kindIds))kindIds[kind]=await driveFolder(token,kind,folderId);
+    return kindIds[kind];
+  }
   var entries=(sess.entries||[]).slice(),changed=false;
   for(var j=0;j<entries.length;j++){
     var e=entries[j];
@@ -1051,6 +1100,27 @@ async function syncSessionToDrive(token,sess){
     var entryChanged=false;
     for(var k=0;k<imgs.length;k++){
       var img=imgs[k];
+      // An attachment that already has a Drive copy: make sure it is still
+      // there, and still in THIS session's folder. Sessions renamed before the
+      // folder was remembered left their photos behind in the old one, and a
+      // re-upload can't bring back a video, only a move can.
+      if(img.driveId){
+        var info=await driveFileInfo(token,img.driveId);
+        if(!info||info.trashed){
+          if(img.type!=="video"&&img.data){
+            img=Object.assign({},img);delete img.driveId;
+            imgs[k]=img;entryChanged=true;   // falls through to the upload below
+          } else if(img.type==="video"){res.missingVideos++;continue}
+          else continue;
+        } else {
+          var home=await kindFolder(img.type==="audio"?"audio":img.type==="video"?"videos":"photos");
+          if(home&&(info.parents||[]).indexOf(home)<0){
+            if(await drivePatch(token,img.driveId,{},"?addParents="+encodeURIComponent(home)
+              +"&removeParents="+encodeURIComponent((info.parents||[]).join(","))+"&fields=id"))res.moved++;
+          }
+          continue;
+        }
+      }
       if(img.type==="video"){if(!img.driveId)res.missingVideos++;continue}
       if(img.driveId||!img.data)continue;
       var blob=dataUrlToBlob(img.data);if(!blob)continue;
@@ -1078,6 +1148,7 @@ async function syncSessionToDrive(token,sess){
 }
 function syncSummary(res,n){
   return res.uploaded+" fitxer(s) pujat(s) (fotos / notes de veu)"+(n?" a "+n+" sessió(ns)":"")+"."
+    +(res.moved?"\n"+res.moved+" fitxer(s) que havien quedat en una altra carpeta s'han tornat a la d'aquesta sessió.":"")
     +(res.missingVideos?"\n"+res.missingVideos+" vídeo(s) no s'han pogut recuperar (el fitxer original no es va guardar mai, només la miniatura).":"");
 }
 async function syncActiveSessionToDrive(){
@@ -1098,12 +1169,12 @@ async function syncAllToDrive(){
   if(!isLoggedIn){alert("Primer inicia la sessió amb Google.");return}
   var token=await ensureToken();if(!token){alert("No s'ha pogut autenticar amb Drive.");return}
   var btn=$$("btnFullSync");if(btn){btn.disabled=true;btn.textContent="Sincronitzant…"}
-  var total={uploaded:0,missingVideos:0};
+  var total={uploaded:0,missingVideos:0,moved:0};
   try{
     await flushTrash(); // deletions made offline go through here too
     for(var i=0;i<sessions.length;i++){
       var res=await syncSessionToDrive(token,sessions[i]);
-      total.uploaded+=res.uploaded;total.missingVideos+=res.missingVideos;
+      total.uploaded+=res.uploaded;total.missingVideos+=res.missingVideos;total.moved+=res.moved||0;
     }
     saveLocal();
     if(total.uploaded>0){isDirty=true;await saveToDrive()}
@@ -2829,11 +2900,16 @@ $$("delConfirm").addEventListener("click",async function(){
       setSyncSt("loading","Enviant la carpeta de Drive a la paperera…");
       try{
         // look the folder up WITHOUT creating it — getSessionFolder() is
-        // find-or-create and would conjure an empty folder just to bin it
-        var rootId=await getRootId(token);
-        var outId=rootId?await driveFind(token,OUT_NAME,rootId,FOLDER_MIME):null;
-        var fname=sanitize(s.client)+"_"+sanitize(s.machine)+"_"+sanitize(s.tech||"tech");
-        var folderId=outId?await driveFind(token,fname,outId,FOLDER_MIME):null;
+        // find-or-create and would conjure an empty folder just to bin it.
+        // The remembered id first: after a rename it's the only way to find it.
+        var folderId=null;
+        if(s.folderId){var fi=await driveFileInfo(token,s.folderId);if(fi&&!fi.trashed)folderId=s.folderId}
+        if(!folderId){
+          var rootId=await getRootId(token);
+          var outId=rootId?await driveFind(token,OUT_NAME,rootId,FOLDER_MIME):null;
+          var fname=sessFolderName(s);
+          folderId=outId?await driveFind(token,fname,outId,FOLDER_MIME):null;
+        }
         if(folderId){
           var r=await fetch("https://www.googleapis.com/drive/v3/files/"+folderId,
             {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({trashed:true})});
@@ -2863,12 +2939,17 @@ function closeNewModal(){$$("newBack").style.display="none";editingSessId=null}
 // Keeps the Drive folder name in sync when client/machine/tech change, so
 // future uploads land next to the session's existing photos/videos instead
 // of silently creating a second, differently-named folder.
+// Renaming the session renames its Drive folder. This only runs if you happen
+// to be signed in at that moment, and it says nothing when it fails — which is
+// how folders drifted out of sync with their sessions in the first place. The
+// safety net is that the folder is remembered by ID (see getSessionFolder), so
+// a drifted name is corrected, and its media found, at the next save.
 async function renameSessionFolder(oldSess,newFields){
   var token=await ensureToken();if(!token)return;
   try{
     var folderId=await getSessionFolder(token,oldSess);if(!folderId)return;
     var newName=sanitize(newFields.client)+"_"+sanitize(newFields.machine)+"_"+sanitize(newFields.tech||"tech");
-    await driveRename(folderId,newName);
+    if(await driveRename(folderId,newName))rememberFolder(oldSess.id,folderId,newName);
   }catch(e){}
 }
 $$("btnNew").addEventListener("click",function(){openNewModal()});

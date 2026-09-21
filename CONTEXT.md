@@ -573,6 +573,13 @@ Must use Safari (not Chrome) on iOS. Chrome on iOS cannot install PWAs.
 ## Deployment procedure
 The Worker and the app deploy separately — the Worker only when `worker/`
 changes (`cd worker && npx wrangler deploy`).
+
+To try a change before publishing it, the app runs locally: `TR_URL` switches on
+`location.hostname`, so a copy served from localhost:8080 talks to the proxy that
+`wrangler dev` runs on 8787 and never touches the live one. Needs
+`http://localhost:8080` among the OAuth client'"'"'s authorized JavaScript origins —
+Google will not sign you in otherwise, and `file://` never works. Full recipe in
+`worker/README.md`.
 1. Edit `index.html`
 2. In VS Code: Source Control → write commit message → ✓ Commit → **Sync Changes**
 3. Wait 1-2 min → GitHub Pages rebuilds

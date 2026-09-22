@@ -452,7 +452,10 @@ textarea{resize:none;line-height:1.4}
       <div id="folNote" class="ts-note" style="margin-bottom:10px">&mdash;</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <button class="btn-sm" id="folReload" title="Torna a llegir la carpeta de Drive">&#8635; Actualitza</button>
+        <button class="btn-gold btn-sm" id="folAdd" title="Puja fotos o vídeos a la carpeta com a material de complement, sense lligar-los a cap entrada">&#65291; Afegeix fotos / vídeos</button>
+        <button class="btn-sm" id="folPick" title="Agafa fitxers que ja tens a Drive: en triar-los, l'app hi guanya accés i els pot llistar i endur-se'ls al ZIP">&#65291; Agafa'n de Drive</button>
         <button class="btn-sm" id="folOpenDrive" title="Obre la carpeta d'aquesta sessió a Drive">&#8599; Obre-la a Drive</button>
+        <input type="file" id="folFileIn" accept="image/*,video/*,audio/*" multiple style="display:none">
       </div>
       <div id="folList" style="max-height:56vh;overflow:auto"></div>
       <div class="modal-actions"><button id="folClose">Tanca</button></div>
@@ -3830,6 +3833,9 @@ function openFolder(){
     $$("folBack").addEventListener("click",function(e){if(e.target===$$("folBack"))$$("folBack").style.display="none"});
     $$("folReload").addEventListener("click",function(){loadFolder(true)});
     $$("folList").addEventListener("click",folAct);
+    $$("folAdd").addEventListener("click",function(){$$("folFileIn").click()});
+    $$("folFileIn").addEventListener("change",folUpload);
+    $$("folPick").addEventListener("click",folPickFromDrive);
     $$("folOpenDrive").addEventListener("click",async function(){
       var t=await ensureToken();if(!t)return;
       var sx=sessions.find(function(x){return x.id===aid});if(!sx)return;
@@ -3848,7 +3854,7 @@ async function loadFolder(force){
     var token=await ensureToken();if(!token)throw new Error("sense accés a Drive");
     var folderId=await getSessionFolder(token,s);
     if(!folderId)throw new Error("aquesta sessió encara no té carpeta a Drive");
-    var all=[];await collectDriveFiles(token,folderId,"",all);
+    var all=await sessionFolderFiles(token,s,folderId);
     // EVERYTHING the folder holds, not just the media: a screen called "the
     // folder's files" that quietly drops some is a screen that makes you count
     // twice and doubt the app. What doesn't travel in the media pack is shown
@@ -3857,6 +3863,84 @@ async function loadFolder(force){
     renderFolder();
   }catch(e){folNote("No s'ha pogut llegir la carpeta: "+((e&&e.message)||e));$$("folList").innerHTML=""}
   finally{folBusy=false}
+}
+// ── Complementary media, added from the app ──────────────────────────────────
+// Uploaded straight into photos/ videos/ audio/ and attached to NO entry: they
+// round out what the report says without being printed in it. The app uploads
+// them, so `drive.file` lets it see them afterwards — which is the whole point.
+async function folUpload(ev){
+  var s=sessions.find(function(x){return x.id===aid});
+  var files=Array.from(ev.target.files||[]);
+  ev.target.value="";
+  if(!s||!files.length)return;
+  if(!isLoggedIn){alert("Inicia la sessió amb Google per afegir fitxers a la carpeta.");return}
+  var done=0,failed=0;
+  for(var i=0;i<files.length;i++){
+    folNote("<span class=\"spinner\"></span> Pujant "+(i+1)+" de "+files.length+"…");
+    var kind=/^video\//.test(files[i].type)?"videos":/^audio\//.test(files[i].type)?"audio":"photos";
+    var r=await uploadMedia(s,files[i],kind);
+    if(r)done++;else failed++;
+  }
+  await loadFolder(true);
+  if(failed)alert(failed+" fitxer(s) no s'han pogut pujar. Comprova la connexió i torna-ho a provar.");
+}
+// ── Files that were already in Drive ─────────────────────────────────────────
+// `drive.file` hides everything this app didn't create, so a photo dropped into
+// the folder from Drive is invisible to it. The Picker is the sanctioned way
+// for the technician to hand over access to those files, one pick at a time;
+// their ids are remembered on the session so the listing and the ZIP can find
+// them again.
+var pickerP=null;
+function loadPicker(){
+  if(pickerP)return pickerP;
+  pickerP=new Promise(function(res){
+    function ready(){
+      if(!window.gapi||!gapi.load){res(null);return}
+      gapi.load("picker",{callback:function(){res(window.google&&google.picker?google.picker:null)},
+                          onerror:function(){res(null)}});
+    }
+    if(window.gapi&&window.gapi.load){ready();return}
+    var sc=document.createElement("script");sc.src="https://apis.google.com/js/api.js";
+    sc.onload=ready;sc.onerror=function(){pickerP=null;res(null)};
+    document.head.appendChild(sc);
+  });
+  return pickerP;
+}
+async function folPickFromDrive(){
+  var s=sessions.find(function(x){return x.id===aid});if(!s)return;
+  if(!isLoggedIn){alert("Inicia la sessió amb Google per triar fitxers de Drive.");return}
+  var token=await ensureToken();if(!token)return;
+  folNote("<span class=\"spinner\"></span> Obrint el selector de Drive…");
+  var P=await loadPicker();
+  if(!P){folNote("No s'ha pogut carregar el selector de Google. Comprova la connexió.");return}
+  var folderId=await getSessionFolder(token,s);
+  try{
+    var view=new P.DocsView(P.ViewId.DOCS);
+    view.setIncludeFolders(true);
+    if(folderId)try{view.setParent(folderId)}catch(e){}
+    var picker=new P.PickerBuilder()
+      .setOAuthToken(token).setDeveloperKey(PICKER_KEY).setAppId(PICKER_APP)
+      .enableFeature(P.Feature.MULTISELECT_ENABLED)
+      .addView(view)
+      .setTitle("Tria els fitxers d'aquesta sessió")
+      .setCallback(function(d){
+        if(d.action===P.Action.PICKED)folAdopt((d[P.Response.DOCUMENTS]||[]).map(function(x){return x.id}));
+        else if(d.action===P.Action.CANCEL)renderFolder();
+      }).build();
+    picker.setVisible(true);
+  }catch(e){folNote("El selector de Google ha fallat: "+((e&&e.message)||e))}
+}
+function folAdopt(ids){
+  ids=(ids||[]).filter(Boolean);
+  if(!ids.length){renderFolder();return}
+  sessions=sessions.map(function(x){
+    if(x.id!==aid)return x;
+    var have=(x.extraFiles||[]).slice();
+    ids.forEach(function(i){if(have.indexOf(i)<0)have.push(i)});
+    return Object.assign({},x,{extraFiles:have});
+  });
+  saveLocal();isDirty=true;if(isLoggedIn)saveToDrive();
+  loadFolder(true);
 }
 function folRow(f,kind,extra){
   return "<div class=\"fol-row"+(kind==="rep"?" fol-rep":"")+"\" data-id=\""+esc(f.id)+"\">"
@@ -4019,6 +4103,11 @@ async function folDoDelete(f){
       })});
     });
   }
+  // If it was adopted through the Picker, forget it too, or the listing would
+  // keep trying to fetch a file that is in the bin.
+  sessions=sessions.map(function(x){
+    return x.id===aid?Object.assign({},x,{extraFiles:(x.extraFiles||[]).filter(function(i){return i!==f.id})}):x;
+  });
   folSetLink(f.id,null);          // saves too
   queueTrash(aid,[f.id]);
   await flushTrash();
@@ -5235,8 +5324,38 @@ var FOLDER_MIME="application/vnd.google-apps.folder";
 // dropped straight into the folder — the reports are pdf/docx/xlsx/html/json
 // and never match, so old copies of them still stay out. The ZIP and the
 // folder screen share this, so what you see is what you get.
+// What counts as this session's MEDIA: what is in photos/, videos/ or audio/,
+// full stop. Nothing at the folder's root — that's where the reports and
+// session.json live — and nothing from any other subfolder.
 function isSessionMedia(f){
-  return f.path.indexOf("/")>=0||/^(image|video|audio)\//.test(f.mimeType||"");
+  return /^(photos|videos|audio)\//i.test(f.path||"");
+}
+// Every file in the session's folder, PLUS the ones the technician adopted
+// through the Google Picker. The app's OAuth scope is `drive.file`, which only
+// ever shows it files it created itself: a photo dropped into photos/ from
+// Drive is invisible to it until the Picker hands over that one file. Those
+// ids are remembered on the session and fetched one by one.
+async function sessionFolderFiles(token,s,folderId){
+  var all=[];
+  await collectDriveFiles(token,folderId,"",all);
+  var seen={};all.forEach(function(f){seen[f.id]=1});
+  var extra=(s&&s.extraFiles)||[];
+  if(!extra.length)return all;
+  var kinds={};
+  for(var i=0;i<3;i++){
+    var k=["photos","videos","audio"][i];
+    try{kinds[await driveFolder(token,k,folderId)]=k}catch(e){}
+  }
+  for(var j=0;j<extra.length;j++){
+    if(seen[extra[j]])continue;
+    var info=await driveFileInfo(token,extra[j]);
+    if(!info||info.trashed)continue;
+    var kind=null;
+    (info.parents||[]).forEach(function(p){if(kinds[p])kind=kinds[p]});
+    if(!kind)kind=/^video\//.test(info.mimeType||"")?"videos":/^audio\//.test(info.mimeType||"")?"audio":"photos";
+    all.push({id:info.id,name:info.name,mimeType:info.mimeType,path:kind+"/"+info.name});
+  }
+  return all;
 }
 async function collectDriveFiles(token,folderId,pathPrefix,out){
   var children=await driveListChildren(token,folderId);
@@ -5279,8 +5398,7 @@ async function exportSessionZip(s,kind){
     if(!folderId){alert("Aquesta sessió encara no té carpeta a Drive.");return}
     var JSZipLib=await loadJSZip();
     if(!JSZipLib){alert("No s'ha pogut carregar la llibreria ZIP. Comprova la connexió.");return}
-    var files=[];
-    await collectDriveFiles(token,folderId,"",files);
+    var files=await sessionFolderFiles(token,s,folderId);
     var zip=new JSZipLib();
     var base=reportBase(s,R.lang,rev.n),P=RPT[R.lang].pre;
 

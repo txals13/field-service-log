@@ -1110,7 +1110,7 @@ async function syncSessionToDrive(token,sess){
   var res={uploaded:0,missingVideos:0,moved:0};
   var folderId=await getSessionFolder(token,sess);
   if(folderId){try{await driveFolder(token,"photos",folderId);await driveFolder(token,"videos",folderId)}catch(e){}}
-  var kindIds={};
+  var kindIds={},strayParents={};
   async function kindFolder(kind){
     if(!folderId)return null;
     if(!(kind in kindIds))kindIds[kind]=await driveFolder(token,kind,folderId);
@@ -1142,6 +1142,7 @@ async function syncSessionToDrive(token,sess){
         } else {
           var home=await kindFolder(img.type==="audio"?"audio":img.type==="video"?"videos":"photos");
           if(home&&(info.parents||[]).indexOf(home)<0){
+            (info.parents||[]).forEach(function(pp){strayParents[pp]=1});
             if(await drivePatch(token,img.driveId,{},"?addParents="+encodeURIComponent(home)
               +"&removeParents="+encodeURIComponent((info.parents||[]).join(","))+"&fields=id"))res.moved++;
           }
@@ -1163,6 +1164,26 @@ async function syncSessionToDrive(token,sess){
       var up=Object.assign({},e,{images:imgs.slice(0,nOwn)});
       if(e.fix)up.fix=Object.assign({},e.fix,{images:imgs.slice(nOwn)});
       entries[j]=up;changed=true;
+    }
+  }
+  // Whatever is still sitting in the folder those files came from is the loose
+  // media put there by hand — photos that round out the report without being in
+  // it. Bringing only the attachments across is how "4 files here, 5 in Drive"
+  // happens, so the rest of the media comes too.
+  var strays=Object.keys(strayParents);
+  for(var q=0;q<strays.length;q++){
+    var pid=strays[q];
+    if([kindIds.photos,kindIds.videos,kindIds.audio].indexOf(pid)>=0)continue;
+    var kids=[];
+    try{kids=await driveListChildren(token,pid)}catch(e){}
+    for(var w=0;w<kids.length;w++){
+      var kf=kids[w];
+      if(kf.mimeType===FOLDER_MIME||!/^(image|video|audio)\//.test(kf.mimeType||""))continue;
+      var kind2=/^video\//.test(kf.mimeType)?"videos":/^audio\//.test(kf.mimeType)?"audio":"photos";
+      var home2=await kindFolder(kind2);
+      if(!home2)continue;
+      if(await drivePatch(token,kf.id,{},"?addParents="+encodeURIComponent(home2)
+        +"&removeParents="+encodeURIComponent(pid)+"&fields=id"))res.moved++;
     }
   }
   var latest=sess;
@@ -3787,7 +3808,7 @@ var folFiles=[],folBusy=false,folWired=false,folLinking=null;
 function folderChipHTML(sess){
   var n=(sess.driveLinks&&Object.keys(sess.driveLinks).length)||0;
   return "<span id=\"folChip\" style=\"cursor:pointer\" title=\"Els fitxers de la carpeta de Drive d'aquesta sessió: canvia'ls el nom o vincula'ls a una foto de l'informe\">&#128451; Carpeta"
-    +(n?" · "+n+" vinculada"+(n===1?"":"s"):"")+"</span>";
+    +(n?" · "+pl(n,"vinculada","vinculades"):"")+"</span>";
 }
 function folNote(t){var e=$$("folNote");if(e)e.innerHTML=t}
 // Every attachment the report shows, flattened, so a loose file can be tied to one.
@@ -3828,7 +3849,11 @@ async function loadFolder(force){
     var folderId=await getSessionFolder(token,s);
     if(!folderId)throw new Error("aquesta sessió encara no té carpeta a Drive");
     var all=[];await collectDriveFiles(token,folderId,"",all);
-    folFiles=all.filter(isSessionMedia);
+    // EVERYTHING the folder holds, not just the media: a screen called "the
+    // folder's files" that quietly drops some is a screen that makes you count
+    // twice and doubt the app. What doesn't travel in the media pack is shown
+    // apart and labelled instead of hidden.
+    folFiles=all.map(function(f){return Object.assign({},f,{media:isSessionMedia(f)})});
     renderFolder();
   }catch(e){folNote("No s'ha pogut llegir la carpeta: "+((e&&e.message)||e));$$("folList").innerHTML=""}
   finally{folBusy=false}
@@ -3848,8 +3873,10 @@ function renderFolder(){
   var box=$$("folList");if(!box)return;
   var links=s.driveLinks||{};
   var att=reportAttachments(s),attById={};att.forEach(function(a){attById[a.driveId]=a});
-  var inReport=folFiles.filter(function(f){return attById[f.id]});
-  var loose=folFiles.filter(function(f){return !attById[f.id]});
+  var media=folFiles.filter(function(f){return f.media});
+  var others=folFiles.filter(function(f){return !f.media});
+  var inReport=media.filter(function(f){return attById[f.id]});
+  var loose=media.filter(function(f){return !attById[f.id]});
   var byTarget={};
   loose.forEach(function(f){var L=links[f.id];if(L&&L.to&&attById[L.to])(byTarget[L.to]=byTarget[L.to]||[]).push(f)});
   var free=loose.filter(function(f){var L=links[f.id];return !(L&&L.to&&attById[L.to])});
@@ -3864,11 +3891,15 @@ function renderFolder(){
     h+="<div class=\"fol-head\">Sense vincular</div>";
     free.forEach(function(f){h+=folRow(f,"free","<button class=\"btn-xs\" data-fol=\"link\">&#128279; Vincula</button>")});
   }
-  box.innerHTML=h||"<div class=\"ts-note\" style=\"padding:10px\">La carpeta no té cap fitxer multimèdia.</div>";
-  var nLoose=loose.length;
+  if(others.length){
+    h+="<div class=\"fol-head\">Altres fitxers &mdash; no van al paquet multimèdia</div>";
+    others.forEach(function(f){h+=folRow(f,"other","")});
+  }
+  box.innerHTML=h||"<div class=\"ts-note\" style=\"padding:10px\">La carpeta és buida.</div>";
   folNote(pl(folFiles.length,"fitxer","fitxers")+" · "+inReport.length+" a l'informe · "
-    +(nLoose?pl(nLoose,"de complement","de complement"):"cap de complement")
-    +". Tot plegat va al ZIP; només el que és a l'informe hi surt imprès.");
+    +(loose.length?pl(loose.length,"de complement","de complement"):"cap de complement")
+    +(others.length?" · "+others.length+" altres":"")
+    +". El multimèdia va tot al ZIP; només el que és a l'informe hi surt imprès.");
 }
 // One delegated handler for the whole list.
 function folAct(ev){

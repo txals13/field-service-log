@@ -140,7 +140,12 @@ Field Service Log/
     checked: gone from Drive and we still hold the bytes → re-uploaded; sitting
     in another folder → moved into this session's `photos/`, `videos/` or
     `audio/` (a move, not a re-upload: it's the only way to recover a video,
-    whose original file is never kept). The summary says how many were moved.
+    whose original file is never kept). **Whatever media is left in the folder
+    they came from comes across too** — the loose photos put there by hand are
+    session media as much as the attachments, and bringing only the attachments
+    is how "4 files here, 5 in Drive" happens. Documents left there are not
+    touched: a stray PDF is more likely an old report than session media. The
+    summary says how many were moved.
     Costs one metadata request per attachment on each manual save.
   - The old, now-empty folder is left on Drive: emptying it is the technician's
     call, not the app's.
@@ -293,6 +298,12 @@ Field Service Log/
     so the grouping survives further renames — and renaming the parent drags its
     tied files along, or they would be left pointing at a name that is gone.
   - Untying leaves the file name as it is (the button's tooltip says so).
+  - **It lists everything the folder holds**, media or not. It used to drop
+    whatever wasn't an image, video or sound at the folder's root — reports,
+    `session.json`, a delivery note dropped in by hand — and a screen called
+    "the folder's files" that quietly hides some is a screen that makes you
+    count twice and doubt the app. What doesn't travel in the media pack is
+    shown under "Altres fitxers" and labelled, not hidden.
 - Import JSON **or a session ZIP** (↑ Import button in topbar and on empty screen).
   A ZIP restores the media too: photos and voice notes ride along inside
   session.json as base64, but a video is only ever a thumbnail + a Drive id, and

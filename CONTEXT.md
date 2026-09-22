@@ -298,6 +298,24 @@ Field Service Log/
     so the grouping survives further renames — and renaming the parent drags its
     tied files along, or they would be left pointing at a name that is gone.
   - Untying leaves the file name as it is (the button's tooltip says so).
+  - **`drive.file` only ever shows the app its own files.** A photo dropped into
+    `photos/` from Drive's web interface is INVISIBLE to it: it doesn't come
+    back in the folder listing at all, so it can't be shown, renamed, linked or
+    packed. This was documented backwards for a while ("photos you drop in from
+    Drive travel in the ZIP") — they don't, unless one of these two happens:
+    - **＋ Afegeix fotos / vídeos** uploads them from the app straight into
+      `photos/`, `videos/` or `audio/`, attached to no entry. The app created
+      them, so it can see them from then on. This is the path to prefer.
+    - **＋ Agafa'n de Drive** opens the **Google Picker** over the session's
+      folder. Picking a file is what hands `drive.file` access to that one file;
+      the ids are remembered in `session.extraFiles` and `sessionFolderFiles`
+      fetches them one by one, since a picked file may still not come back in a
+      plain folder listing. Needs the **Google Picker API** enabled in the Cloud
+      project and allowed on `PICKER_KEY` — the key is API-restricted for
+      Translation, so it has to be added there too.
+  - **Media is what lives in `photos/`, `videos/` or `audio/`** — nothing at the
+    folder's root (that's reports and `session.json`) and nothing from any other
+    subfolder. That's the rule the ZIP packs by, too.
   - **It lists everything the folder holds**, media or not. It used to drop
     whatever wasn't an image, video or sound at the folder's root — reports,
     `session.json`, a delivery note dropped in by hand — and a screen called

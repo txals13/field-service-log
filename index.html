@@ -401,7 +401,8 @@ textarea{resize:none;line-height:1.4}
         <button class="btn-xs" id="tsAll">Tots</button><button class="btn-xs" id="tsNone">Cap</button>
         <span id="tsTot" style="font-family:monospace;font-size:12px;color:var(--tx2);margin-left:auto"></span>
       </div>
-      <div class="field" style="margin-top:12px"><label>Observacions (s'imprimeixen al full)</label><textarea id="tsRem" rows="2" class="inp-notes"></textarea></div>
+      <div class="field" style="margin-top:12px"><label>Observacions (s'imprimeixen al full)</label><textarea id="tsRem" rows="2" class="inp-notes"></textarea>
+        <button class="btn-sm" id="tsCorr" style="margin-top:6px" title="Corregeix ortografia i gramàtica">&#10003; Corregeix</button></div>
       <div style="border-top:1px solid var(--br);margin-top:12px;padding-top:12px">
         <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap"><strong style="font-size:12px;color:var(--tx2)">Signatures</strong><span class="ts-note">signa amb el dit o amb un llapis tàctil &mdash; deixa-ho en blanc per imprimir línies buides</span></div>
         <div id="tsSigGrid">
@@ -511,6 +512,7 @@ textarea{resize:none;line-height:1.4}
       </div>
       <datalist id="tagOptions"></datalist>
       <div class="field"><label>Descripció</label><textarea id="eText" rows="4" style="resize:vertical"></textarea>
+        <button class="btn-sm" id="eCorr" style="margin-top:6px" title="Corregeix ortografia i gramàtica. No toca el que va entre cometes ni les referències.">&#10003; Corregeix</button>
         <button class="btn-sm" id="eTextPickDraw" style="margin-top:6px;display:none" title="Toca un número de posició al dibuix per escriure'n el nom i la referència al text">&#128208; Insereix un recanvi des del dibuix</button>
       </div>
       <div class="field">
@@ -551,7 +553,8 @@ textarea{resize:none;line-height:1.4}
             <option value="issue">&#9632; Problema &mdash; segueix obert</option>
           </select>
         </div>
-        <div class="field"><label>Qu&egrave; s'hi ha fet</label><textarea id="fText" rows="3" style="resize:vertical"></textarea></div>
+        <div class="field"><label>Qu&egrave; s'hi ha fet</label><textarea id="fText" rows="3" style="resize:vertical"></textarea>
+          <button class="btn-sm" id="fCorr" style="margin-top:6px" title="Corregeix ortografia i gramàtica">&#10003; Corregeix</button></div>
         <div id="fThumbs" class="thumbs"></div>
         <div id="fFileNames" class="fnames"></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -652,6 +655,7 @@ function severityCounts(entries){
 // ── STATE ───────────────────────────────────────────────────────────────────
 var sessions=[], aid=null, pImgs=[], filterTxt="", sessFilterTxt="";
 var pExif=0, pExifEdit=0, pExifFix=0;
+var corrPrev={};   // "✓ Corregeix": the text as it was, so one more tap undoes it
 // The resolution being edited: its media, and whether the entry has one at all.
 var fImgs=[], fixOn=false;
 var accessToken=null, tokenExp=0, driveFileId=null, rootFolderId=null;
@@ -2425,9 +2429,11 @@ function renderContent(){
         +"<button class=\"btn-gold btn-sm\" id=\"btnAdd\">↵ Afegeix</button>"
         +"<button class=\"btn-sm\" id=\"btnPhoto\">📷</button>"
         +"<button class=\"btn-sm\" id=\"btnRec\" title=\"Grava una nota de veu\">🎙</button>"
+        +"<button class=\"btn-sm\" id=\"entCorr\" title=\"Corregeix ortografia i gramàtica de la descripció\">✓</button>"
         +"<input type=\"file\" id=\"fileIn\" accept=\"image/*,video/*\" multiple style=\"display:none\">"
         +"</div></div>"
         +"<textarea id=\"notesIn\" class=\"inp-notes\" placeholder=\"Notes generals d'aquesta sessió…\"></textarea>"
+        +"<button class=\"btn-sm\" id=\"notesCorr\" style=\"margin-top:4px\" title=\"Corregeix ortografia i gramàtica de les notes\">✓ Corregeix</button>"
         +"</div>"
       :"<div class=\"closed-bar\"><span>🔴 Sessió tancada el "+(active.closedAt?fts(active.closedAt):"—")+"</span></div>")
     // status bar
@@ -2482,6 +2488,8 @@ function renderContent(){
     $$("btnPhoto").addEventListener("click",function(){$$("fileIn").click()});
     $$("fileIn").addEventListener("change",function(e){handleFiles(e,"pend")});
     $$("btnRec").addEventListener("click",function(){if(mediaRec&&recBk==="pend")stopRec();else if(!mediaRec)startRec("pend")});
+    wireCorrect("entCorr","entIn",true);
+    wireCorrect("notesCorr","notesIn");
   }
 }
 
@@ -2873,6 +2881,8 @@ $$("eAddPhoto").addEventListener("click",function(){$$("eFileIn").click()});
 $$("eFileIn").addEventListener("change",function(e){handleFiles(e,"edit")});
 $$("eRec").addEventListener("click",function(){if(mediaRec&&recBk==="edit")stopRec();else if(!mediaRec)startRec("edit")});
 $$("eSev").addEventListener("change",renderFixUI);
+wireCorrect("eCorr","eText");
+wireCorrect("fCorr","fText");
 $$("fixAdd").addEventListener("click",function(){fixOn=true;renderFixUI();rFThumbs();setTimeout(function(){$$("fText").focus()},50)});
 $$("fixDel").addEventListener("click",function(){
   if(($$("fText").value.trim()||fImgs.length)&&!confirm("Vols treure la resolució d'aquesta entrada? El problema i la seva descripció es queden com estan."))return;
@@ -3212,6 +3222,45 @@ var RPT={
 var REPORT_LANGS=[["ca","CA","Català","al català"],["es","ES","Castellano","al castellà"],["en","EN","English","a l'anglès"]];
 function reportLang(s){return (s&&RPT[s.reportLang])?s.reportLang:"ca"}
 function langInto(l){var x=REPORT_LANGS.filter(function(r){return r[0]===l})[0];return x?x[3]:l}
+// ── The ✓ Corregeix button ───────────────────────────────────────────────────
+// Manual, never on export: a corrector that rewrites what you wrote without
+// being asked is the translator's old sin under another name. One press
+// corrects, the next one puts your words back — the original is kept until the
+// field changes, so nothing you typed is ever one tap away from being lost.
+function wireCorrect(btnId,fieldId,compact){
+  var b=$$(btnId),f=$$(fieldId);
+  if(!b||!f)return;
+  // Re-rendered pane = a new, empty field: an undo left from the session before
+  // would paste its text into this one.
+  delete corrPrev[fieldId];delete corrPrev[fieldId+"|out"];
+  function rest(){b.disabled=false;b.innerHTML=corrPrev[fieldId]!=null?(compact?"&#8630;":"&#8630; Desfés"):(compact?"&#10003;":"&#10003; Corregeix")}
+  f.addEventListener("input",function(){if(corrPrev[fieldId]!=null&&f.value!==corrPrev[fieldId+"|out"]){delete corrPrev[fieldId];delete corrPrev[fieldId+"|out"];rest()}});
+  b.addEventListener("click",async function(){
+    if(corrPrev[fieldId]!=null){                       // undo
+      f.value=corrPrev[fieldId];
+      delete corrPrev[fieldId];delete corrPrev[fieldId+"|out"];
+      f.dispatchEvent(new Event("input",{bubbles:true}));
+      rest();return;
+    }
+    var src=f.value;
+    if(!src.trim())return;
+    b.disabled=true;b.innerHTML=compact?"…":"Corregint…";
+    try{
+      var out=await gemCorrect(src);
+      if(out===null){rest();return}
+      if(out===src.trim()){b.innerHTML=compact?"&#10003;&#10003;":"&#10003; Ja estava bé";b.title="El text ja era correcte";setTimeout(rest,1600);return}
+      corrPrev[fieldId]=src;corrPrev[fieldId+"|out"]=out;
+      f.value=out;
+      f.dispatchEvent(new Event("input",{bubbles:true}));
+      autoH(f);
+    }catch(e){
+      alert("No s'ha pogut corregir el text: "+((e&&e.message)||e)
+        +"\n\nComprova la connexió, i que l'API de Gemini estigui activada al projecte de Google Cloud i permesa per a la clau.");
+    }
+    rest();
+  });
+  rest();
+}
 // ── REPORT REVISIONS ─────────────────────────────────────────────────────────
 // A report is issued in revisions: Rev. 01, Rev. 02… Each one is a FILE kept on
 // Drive, not a snapshot of the data — re-editing an entry doesn't rewrite what
@@ -3406,6 +3455,59 @@ function setReportLang(id,lang){
 // Same Google Cloud project and key as the Drive Picker. The Cloud Translation
 // API has to be enabled there and allowed on this key — see CONTEXT.md.
 var TR_KEY=PICKER_KEY, TR_URL="https://translation.googleapis.com/language/translate/v2";
+// ── SPELLING AND GRAMMAR ─────────────────────────────────────────────────────
+// Gemini, same Google Cloud project and key (the Generative Language API has to
+// be enabled there and allowed on the key). NOT the translator: asked to
+// "translate" Catalan into Catalan it rewrites and invents — "Sense data" came
+// back as "Dades sensorials" — which is why the report path throws those
+// answers away. Correcting is a different job and needs a model that takes an
+// instruction: leave the quoted runs, the references and the meaning alone.
+//
+// Billing is on, so this runs on the PAID tier, where Google's terms say
+// prompts aren't used to improve their products. On the free tier they are, and
+// a human may read them — not something to do with a client's report.
+var GEM_URL="https://generativelanguage.googleapis.com/v1beta/interactions";
+var GEM_MODEL="gemini-3.5-flash-lite", GEM_REV="2026-05-20";
+var GEM_SYS="Ets un corrector de textos tècnics d'informes de servei de camp. "
+  +"Corregeix NOMÉS ortografia, accents, puntuació i concordança, en la mateixa llengua en què està escrit el text. "
+  +"No canviïs el sentit, l'estil ni el registre; no afegeixis ni treguis informació; no resumeixis ni reordenis. "
+  +"No toquis MAI el que vagi entre cometes, ni codis, referències ni noms de peces (per exemple 3025.1478 o 6208-2RS). "
+  +"Si el text ja és correcte, torna'l exactament igual. "
+  +"Respon únicament amb el text corregit: sense cometes que l'envoltin, sense explicacions i sense cap preàmbul.";
+// The REST answer has changed shape across revisions, so take the text from
+// whichever place it turns up in rather than betting on one path.
+function gemText(j){
+  if(!j)return null;
+  if(typeof j.output_text==="string"&&j.output_text.trim())return j.output_text;
+  var found=null;
+  (function walk(v,depth){
+    if(found||depth>6||!v)return;
+    if(Array.isArray(v)){v.forEach(function(x){walk(x,depth+1)});return}
+    if(typeof v!=="object")return;
+    if(typeof v.text==="string"&&v.text.trim()){found=v.text;return}
+    Object.keys(v).forEach(function(k){walk(v[k],depth+1)});
+  })(j,0);
+  return found;
+}
+async function gemCorrect(text){
+  var src=String(text||"").trim();
+  if(!src)return null;
+  var r=await fetch(GEM_URL,{method:"POST",
+    headers:{"Content-Type":"application/json","x-goog-api-key":TR_KEY,"Api-Revision":GEM_REV},
+    body:JSON.stringify({model:GEM_MODEL,input:src,system_instruction:GEM_SYS,generation_config:{temperature:0}})});
+  if(!r.ok){
+    var m="HTTP "+r.status;
+    try{var j=await r.json();if(j&&j.error&&j.error.message)m=j.error.message}catch(e){}
+    throw new Error(m);
+  }
+  var out=gemText(await r.json());
+  if(!out)throw new Error("resposta buida del corrector");
+  out=out.trim();
+  // A model that decides to quote its own answer would otherwise turn the whole
+  // entry into protected-from-translation text.
+  if(/^"[\s\S]*"$/.test(out)&&!/^"/.test(src))out=out.slice(1,-1).trim();
+  return out;
+}
 function txHash(str){var h=5381;for(var i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))|0;return (h>>>0).toString(36)+"."+str.length}
 // A lone letter or a code ("M", "OK", "ZO-003-04", "6208-2RS") gives the
 // translator nothing to go on and it guesses — "M" came back as "METRO". Only
@@ -4304,6 +4406,7 @@ function openTimesheet(){
   tsPads.cli=tsInitPad("tsCliSig",T.cliSig||"");
   if(!tsWired){
     tsWired=true;
+    wireCorrect("tsCorr","tsRem");
     $$("tsCancel").addEventListener("click",closeTimesheet);
     $$("tsBack").addEventListener("click",function(e){if(e.target===$$("tsBack"))closeTimesheet()});
     $$("tsReload").addEventListener("click",function(){tsLoad(true)});

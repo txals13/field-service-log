@@ -43,6 +43,28 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
   so text written in Spanish also comes out right). The manual's data — part
   names, references — is never translated; neither are client/machine/location
   names, tags or file names.
+- **✓ Corregeix — spelling and grammar, on demand** (`gemCorrect`, `wireCorrect`).
+  Gemini (`gemini-3.5-flash-lite`, temperature 0) on the **same Google Cloud
+  project and key** as the translator; the Generative Language API has to be
+  enabled there and allowed on the key, like the Picker.
+  - **Not the translator.** Asked to "translate" Catalan into Catalan, Cloud
+    Translation rewrites and invents — that's the bug the report path guards
+    against. Correcting needs a model that can be told what to leave alone: the
+    quoted runs, the references, the meaning, the register.
+  - **Never automatic, never on export.** A button beside each free-text field
+    (entry, edit, resolution, general notes, timesheet remarks); one press
+    corrects, the next puts the original back, and typing after a correction
+    drops the undo. `corrPrev` is declared with the other state on purpose —
+    `wireCorrect` is called from markup wiring far above the helper, and a `var`
+    initialised beside the function is `undefined` when it runs (it threw, and
+    took the whole boot with it).
+  - The REST answer's shape has moved across revisions, so `gemText` takes the
+    first non-empty `text` it finds instead of betting on one path, and strips a
+    quote pair the model may have wrapped the answer in — which would otherwise
+    mark the whole entry as protected-from-translation.
+  - **Paid tier on purpose.** Google's terms: on the free tier prompts are used
+    to improve their products and a human may read them; on the paid tier they
+    are not. Client names and faults don't belong in the free tier.
 - **Text already in the report's language is kept exactly as written.** Google
   answers even when the source IS the target, and it quietly rewrites: a Catalan
   report turned "B migdia 11:15" into "B 23:15" and "Sense data" into "Dades

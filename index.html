@@ -315,6 +315,7 @@ textarea{resize:none;line-height:1.4}
       </div>
       <div style="padding:6px 10px;border-bottom:1px solid var(--br);flex-shrink:0">
         <button class="btn-g btn-sm" id="btnManuals" style="width:100%;font-size:12px" title="Manuals de recanvis guardats a Drive">&#128218; Manuals de recanvis</button>
+        <button class="btn-g btn-sm" id="btnGemKey" style="width:100%;font-size:12px;margin-top:6px" title="La clau de Gemini que fa servir el corrector i la traducció dels informes; es desa només en aquest navegador">&#128273; Clau de Gemini</button>
       </div>
       <div class="s-list" id="sList"></div>
     </div>
@@ -439,6 +440,22 @@ textarea{resize:none;line-height:1.4}
         <button id="revCancel">Cancel&middot;la</button>
         <button class="btn-sm" id="revKeep">&#8635; Reemet</button>
         <button class="btn-gold" id="revNew">&#43; Nova revisi&oacute;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- The Gemini key never ships with the app: this source is public and an AI
+       Studio key can't be pinned to a domain. Typed once per browser, here. -->
+  <div class="modal-back" id="gemBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,520px)">
+      <div class="modal-title">&#128273; Clau de Gemini</div>
+      <div id="gemNote" class="ts-note" style="margin-bottom:10px">&mdash;</div>
+      <div class="field"><label>Clau de l'API</label><input type="password" id="gemIn" placeholder="AQ.&hellip;" autocomplete="off" spellcheck="false"></div>
+      <div class="ts-note">El corrector i la traducci&oacute; dels informes van amb Gemini. La clau no viatja amb l'aplicaci&oacute;: es desa nom&eacute;s en aquest navegador, i no va ni a Drive ni als ZIP ni a les c&ograve;pies de seguretat &mdash; per aix&ograve; cal escriure-la un cop a cada dispositiu.</div>
+      <div class="modal-actions">
+        <button id="gemCancel">Tanca</button>
+        <button class="btn-sm" id="gemClear">&#10005; Treu-la d'aqu&iacute;</button>
+        <button class="btn-gold" id="gemSave">Desa</button>
       </div>
     </div>
   </div>
@@ -603,11 +620,22 @@ textarea{resize:none;line-height:1.4}
 // ── CONFIG ──────────────────────────────────────────────────────────────────
 var CLIENT_ID  = "514772123815-ncjsebgvc01t8arftqp8bo43jr4fgneb.apps.googleusercontent.com";
 var PICKER_KEY = "AIzaSyBQwgZQYFJMwlA3ipZrqYjfZYUI9c813O4";
+// The Gemini auth key is a DIFFERENT credential: AI Studio keys are scoped to
+// the Gemini API alone, and since September 2026 that API rejects the classic
+// AIza keys. One key can't do both jobs.
+//
+// And that one is NOT in this file. This source is public. PICKER_KEY can live
+// here because Cloud Console pins a browser key to a domain, so a copy of it is
+// worth nothing anywhere else; an AI Studio key can't be pinned that way, and
+// whoever reads it spends on the billing account behind it. So it is typed once
+// into "Clau de Gemini" and stays in this browser's localStorage — which means
+// each device needs it once, and it never reaches Drive, the ZIP or the repo.
 var PICKER_APP = "514772123815";
 var LS_DATA    = "fsl_v6_data";
 var LS_TOKEN   = "fsl_v6_tok";
 var LS_THEME   = "fsl_v6_thm";
 var LS_ROOT    = "fsl_v6_root";
+var LS_GEM     = "fsl_v6_gem";
 var DATA_FILE  = "field_service_log_data.json";
 var ROOT_NAME  = "Field Service Log";
 var OUT_NAME   = "Outputs";
@@ -1486,6 +1514,7 @@ async function deleteManual(idx){
   var token=await ensureToken();if(token){try{await saveManualsIndex(token)}catch(e){}}
 }
 $$("btnManuals").addEventListener("click",openManuals);
+$$("btnGemKey").addEventListener("click",function(){openGemKey()});
 $$("manualsClose").addEventListener("click",closeManuals);
 $$("manualsBack").addEventListener("click",function(e){if(e.target===$$("manualsBack"))closeManuals()});
 $$("mfPdfBtn").addEventListener("click",function(){$$("mfPdfIn").click()});
@@ -3227,6 +3256,42 @@ function langInto(l){var x=REPORT_LANGS.filter(function(r){return r[0]===l})[0];
 // being asked is the translator's old sin under another name. One press
 // corrects, the next one puts your words back — the original is kept until the
 // field changes, so nothing you typed is ever one tap away from being lost.
+// ── THE GEMINI KEY · typed here, never shipped ───────────────────────────────
+// A single public HTML file can't hide a credential, so it doesn't try to: the
+// key is the user's own, it goes in once per browser, and it stays there. A
+// password field because this runs on a laptop that gets passed around a plant.
+var gemWired=false;
+function gemMask(k){return k.length<12?"•••":k.slice(0,6)+"…"+k.slice(-4)}
+function wireGem(){
+  if(gemWired)return;gemWired=true;
+  function close(){$$("gemBack").style.display="none";$$("gemIn").value=""}
+  $$("gemCancel").addEventListener("click",close);
+  $$("gemBack").addEventListener("click",function(e){if(e.target===$$("gemBack"))close()});
+  $$("gemSave").addEventListener("click",function(){
+    var k=$$("gemIn").value.trim();
+    if(!k){$$("gemNote").textContent="Escriu la clau, o tanca sense desar-ne cap.";return}
+    try{localStorage.setItem(LS_GEM,k)}
+    catch(err){alert("No s'ha pogut desar la clau en aquest navegador: "+((err&&err.message)||err));return}
+    close();
+  });
+  $$("gemClear").addEventListener("click",function(){
+    if(!gemKey()){close();return}
+    if(!confirm("Vols treure la clau d'aquest navegador?\nEl corrector i la traducció dels informes deixaran de funcionar fins que la tornis a escriure."))return;
+    try{localStorage.removeItem(LS_GEM)}catch(err){}
+    close();
+  });
+  $$("gemIn").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();$$("gemSave").click()}});
+}
+function openGemKey(msg){
+  wireGem();
+  var k=gemKey();
+  $$("gemNote").innerHTML=msg?esc(msg)
+    :(k?"Aquest navegador ja en té una: <code>"+esc(gemMask(k))+"</code>. Escriu-ne una altra només si la vols substituir."
+       :"Aquest navegador encara no en té cap. La treus d'AI Studio, del projecte que tingui la facturació activada.");
+  $$("gemIn").value="";
+  $$("gemBack").style.display="flex";
+  setTimeout(function(){var i=$$("gemIn");if(i)i.focus()},30);
+}
 function wireCorrect(btnId,fieldId,compact){
   var b=$$(btnId),f=$$(fieldId);
   if(!b||!f)return;
@@ -3254,7 +3319,10 @@ function wireCorrect(btnId,fieldId,compact){
       f.dispatchEvent(new Event("input",{bubbles:true}));
       autoH(f);
     }catch(e){
-      alert("No s'ha pogut corregir el text: "+((e&&e.message)||e)
+      var m=(e&&e.message)||String(e);
+      // Missing key isn't a breakdown to explain, it's a field to fill in.
+      if(m===GEM_NOKEY){rest();openGemKey("Per corregir el text cal la clau de Gemini. Escriu-la aquí i torna-ho a provar.");return}
+      alert("No s'ha pogut corregir el text: "+m
         +"\n\nComprova la connexió, i que l'API de Gemini estigui activada al projecte de Google Cloud i permesa per a la clau.");
     }
     rest();
@@ -3454,7 +3522,6 @@ function setReportLang(id,lang){
 }
 // Same Google Cloud project and key as the Drive Picker. The Cloud Translation
 // API has to be enabled there and allowed on this key — see CONTEXT.md.
-var TR_KEY=PICKER_KEY, TR_URL="https://translation.googleapis.com/language/translate/v2";
 // ── SPELLING AND GRAMMAR ─────────────────────────────────────────────────────
 // Gemini, same Google Cloud project and key (the Generative Language API has to
 // be enabled there and allowed on the key). NOT the translator: asked to
@@ -3466,43 +3533,55 @@ var TR_KEY=PICKER_KEY, TR_URL="https://translation.googleapis.com/language/trans
 // Billing is on, so this runs on the PAID tier, where Google's terms say
 // prompts aren't used to improve their products. On the free tier they are, and
 // a human may read them — not something to do with a client's report.
-var GEM_URL="https://generativelanguage.googleapis.com/v1beta/interactions";
-var GEM_MODEL="gemini-3.5-flash-lite", GEM_REV="2026-05-20";
+// The docs' curl example uses /v1beta/interactions with an x-goog-api-key
+// header — from a BROWSER that dies on "Failed to fetch": the endpoint doesn't
+// answer the CORS preflight those custom headers trigger. The classic
+// :generateContent with the key in the query string does, so that's what this
+// uses. Checked against the real API, not a mock.
+var GEM_BASE="https://generativelanguage.googleapis.com/v1beta/models/";
+var GEM_MODEL="gemini-3.5-flash-lite";
+// Read on every call, never cached in a variable: the key modal writes it and
+// the very next correction has to see it, without a reload.
+function gemKey(){try{return localStorage.getItem(LS_GEM)||""}catch(e){return ""}}
+function gemUrl(){return GEM_BASE+GEM_MODEL+":generateContent?key="+encodeURIComponent(gemKey())}
+var GEM_NOKEY="falta la clau de Gemini";
 var GEM_SYS="Ets un corrector de textos tècnics d'informes de servei de camp. "
   +"Corregeix NOMÉS ortografia, accents, puntuació i concordança, en la mateixa llengua en què està escrit el text. "
   +"No canviïs el sentit, l'estil ni el registre; no afegeixis ni treguis informació; no resumeixis ni reordenis. "
   +"No toquis MAI el que vagi entre cometes, ni codis, referències ni noms de peces (per exemple 3025.1478 o 6208-2RS). "
   +"Si el text ja és correcte, torna'l exactament igual. "
   +"Respon únicament amb el text corregit: sense cometes que l'envoltin, sense explicacions i sense cap preàmbul.";
-// The REST answer has changed shape across revisions, so take the text from
-// whichever place it turns up in rather than betting on one path.
+// A part can carry a thoughtSignature and no text, so join the ones that have
+// text rather than taking parts[0] blind.
 function gemText(j){
-  if(!j)return null;
-  if(typeof j.output_text==="string"&&j.output_text.trim())return j.output_text;
-  var found=null;
-  (function walk(v,depth){
-    if(found||depth>6||!v)return;
-    if(Array.isArray(v)){v.forEach(function(x){walk(x,depth+1)});return}
-    if(typeof v!=="object")return;
-    if(typeof v.text==="string"&&v.text.trim()){found=v.text;return}
-    Object.keys(v).forEach(function(k){walk(v[k],depth+1)});
-  })(j,0);
-  return found;
+  var parts=((((j||{}).candidates||[])[0]||{}).content||{}).parts||[];
+  var t=parts.map(function(p){return p&&typeof p.text==="string"?p.text:""}).join("");
+  return t.trim()?t:null;
+}
+// One call. Throws with the API's own message, which is what says "not enabled"
+// or "quota" in words worth showing.
+async function gemAsk(sys,input,json){
+  if(!gemKey())throw new Error(GEM_NOKEY);
+  var cfg={temperature:0};
+  if(json)cfg.responseMimeType="application/json";
+  var r=await fetch(gemUrl(),{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({systemInstruction:{parts:[{text:sys}]},
+      contents:[{role:"user",parts:[{text:input}]}],
+      generationConfig:cfg})});
+  var j=null;try{j=await r.json()}catch(e){}
+  if(!r.ok){
+    var m="HTTP "+r.status;
+    if(j&&j.error&&j.error.message)m=j.error.message;
+    throw new Error(m);
+  }
+  var out=gemText(j);
+  if(!out)throw new Error("resposta buida del model");
+  return out;
 }
 async function gemCorrect(text){
   var src=String(text||"").trim();
   if(!src)return null;
-  var r=await fetch(GEM_URL,{method:"POST",
-    headers:{"Content-Type":"application/json","x-goog-api-key":TR_KEY,"Api-Revision":GEM_REV},
-    body:JSON.stringify({model:GEM_MODEL,input:src,system_instruction:GEM_SYS,generation_config:{temperature:0}})});
-  if(!r.ok){
-    var m="HTTP "+r.status;
-    try{var j=await r.json();if(j&&j.error&&j.error.message)m=j.error.message}catch(e){}
-    throw new Error(m);
-  }
-  var out=gemText(await r.json());
-  if(!out)throw new Error("resposta buida del corrector");
-  out=out.trim();
+  var out=(await gemAsk(GEM_SYS,src)).trim();
   // A model that decides to quote its own answer would otherwise turn the whole
   // entry into protected-from-translation text.
   if(/^"[\s\S]*"$/.test(out)&&!/^"/.test(src))out=out.slice(1,-1).trim();
@@ -3521,42 +3600,47 @@ function worthTranslating(t){return /[A-Za-zÀ-ÖØ-öø-ÿ]{3,}/.test(t||"")}
 var TX_Q=/"[^"\n]*"/g;
 function txBare(t){return String(t||"").replace(TX_Q," ")}          // what's left for the translator
 function needsTranslation(t){return worthTranslating(txBare(t))}
-// Google only honours "don't touch this" markers in HTML mode, so the text
-// travels as HTML: quoted runs inside <span translate="no">, newlines as <br>.
-function txEsc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>")}
-function txToHtml(t){
-  return String(t||"").split(/("[^"\n]*")/).map(function(p){
-    if(!p)return "";
-    return /^"[^"\n]*"$/.test(p) ? '<span translate="no">'+txEsc(p)+'</span>' : txEsc(p);
-  }).join("");
+// Gemini translates the reports too, not Cloud Translation. It is ~20x cheaper
+// per character, and the things the old path had to trick it into — protecting
+// the quoted runs by wrapping the text in HTML with <span translate="no">, and
+// throwing the answer away when the detected source already was the target —
+// are a sentence in the instructions here.
+//
+// What a model can do that a translator can't is paraphrase, drop or embellish,
+// and this is a document a client signs. Hence temperature 0, a JSON array in
+// and out, and the count check below: as many texts back as went in, all
+// strings, or the originals stand.
+var TR_LANG={ca:"català",es:"castellà",en:"anglès"};
+function txParseArray(raw){
+  var t=String(raw||"").trim().replace(/^```(?:json)?\s*/i,"").replace(/```\s*$/,"").trim();
+  try{var v=JSON.parse(t);if(Array.isArray(v))return v}catch(e){}
+  var m=/\[[\s\S]*\]/.exec(t);                      // a preamble in front of it
+  if(m){try{var v2=JSON.parse(m[0]);if(Array.isArray(v2))return v2}catch(e){}}
+  return null;
 }
-// back to plain text: the browser both drops the tags and decodes the entities
-function txFromHtml(h){
-  var d=document.createElement("div");
-  d.innerHTML=String(h==null?"":h).replace(/<br\s*\/?>/gi,"\n");
-  // Google hands back "…correcta.<br> Todo…" — tidy the space it adds
-  return d.textContent.replace(/[ \t]+\n/g,"\n").replace(/\n[ \t]+/g,"\n");
+async function txBatch(batch,target){
+  var lang=TR_LANG[target]||target;
+  var sys="Ets un traductor tècnic d'informes de servei de camp. Tradueixes al "+lang+".\n"
+    +"REGLES:\n"
+    +"1. Tradueix el sentit amb naturalitat, però no afegeixis, no treguis ni resumeixis res.\n"
+    +"2. El que vagi ENTRE COMETES es copia EXACTAMENT igual, sense traduir, cometes incloses: són noms i referències del manual de la màquina.\n"
+    +"3. Els codis i les referències (3025.1478, 6208-2RS, M8, ZO-003-04) es copien igual.\n"
+    +"4. Si un text ja està escrit en "+lang+", torna'l EXACTAMENT igual.\n"
+    +"5. Conserva els salts de línia de cada text.\n"
+    +"FORMAT: reps un JSON array de textos. Respon NOMÉS amb un JSON array de la MATEIXA llargada i el MATEIX ordre, amb les traduccions com a cadenes.";
+  var arr=txParseArray(await gemAsk(sys,JSON.stringify(batch),true));
+  if(!arr||arr.length!==batch.length||!arr.every(function(x){return typeof x==="string"}))
+    throw new Error("el traductor ha tornat "+(arr?arr.length:"res")+" textos de "+batch.length);
+  return arr;
 }
 async function gTranslate(texts,target){
   var out=[],i=0;
   while(i<texts.length){
-    // batches well under the API's limits (128 strings per call, ~30k chars)
+    // Smaller batches than the old API took: one call that comes back the wrong
+    // length costs every text in it, so don't put the whole report in one.
     var batch=[],chars=0;
-    while(i<texts.length&&batch.length<100&&(!batch.length||chars+texts[i].length<20000)){batch.push(texts[i]);chars+=texts[i].length;i++}
-    var r=await fetch(TR_URL+"?key="+encodeURIComponent(TR_KEY),{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({q:batch.map(txToHtml),target:target,format:"html"})});
-    if(!r.ok){var m="HTTP "+r.status;try{var j=await r.json();if(j&&j.error&&j.error.message)m=j.error.message}catch(e){}throw new Error(m)}
-    var d=await r.json();
-    // Text already written in the report's language is KEPT AS WRITTEN. Google
-    // still "translates" it and quietly rewrites it — "B migdia 11:15" came
-    // back as "B 23:15", "Sense data" as "Dades sensorials" — so when the
-    // detected source is the target, the answer is thrown away. The reply
-    // carries the detection, so this costs no extra call, and the original is
-    // what gets cached: a second export of the same text sends nothing at all.
-    ((d.data&&d.data.translations)||[]).forEach(function(t,k){
-      var det=(t.detectedSourceLanguage||"").slice(0,2).toLowerCase();
-      out.push(det===String(target).slice(0,2).toLowerCase()?batch[k]:txFromHtml(t.translatedText));
-    });
+    while(i<texts.length&&batch.length<25&&(!batch.length||chars+texts[i].length<8000)){batch.push(texts[i]);chars+=texts[i].length;i++}
+    out=out.concat(await txBatch(batch,target));
   }
   if(out.length!==texts.length)throw new Error("resposta incompleta del traductor");
   return out;
@@ -3625,7 +3709,14 @@ async function reportSession(s){
   var lang=reportLang(s);
   try{return {s:await localizeSession(s,lang),lang:lang}}
   catch(e){
-    if(!confirm("No s'han pogut traduir els textos "+langInto(lang)+":\n"+((e&&e.message)||e)
+    var m=(e&&e.message)||String(e);
+    if(m===GEM_NOKEY){
+      if(!confirm("Aquest informe s'ha de traduir "+langInto(lang)+", i en aquest navegador no hi ha cap clau de Gemini."
+        +"\n\nAccepta per escriure-la ara, o cancel·la per generar-lo amb els textos tal com els vas escriure."))return {s:s,lang:lang};
+      openGemKey("L'informe s'ha de traduir "+langInto(lang)+". Escriu la clau i torna a exportar-lo.");
+      return null;
+    }
+    if(!confirm("No s'han pogut traduir els textos "+langInto(lang)+":\n"+m
       +"\n\nVols generar l'informe igualment, amb els textos tal com els vas escriure?"))return null;
     return {s:s,lang:lang};
   }

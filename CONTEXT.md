@@ -357,7 +357,8 @@ Field Service Log/
     back in the folder listing at all, so it can't be shown, renamed, linked or
     packed. This was documented backwards for a while ("photos you drop in from
     Drive travel in the ZIP") — they don't, unless one of these two happens:
-    - **＋ Afegeix fotos / vídeos** uploads them from the app straight into
+    - **＋ Afegeix fotos / vídeos** (and every other media button) uploads them
+      from the app straight into
       `photos/`, `videos/` or `audio/`, attached to no entry. The app created
       them, so it can see them from then on. This is the path to prefer.
     - **＋ Agafa'n de Drive** opens the **Google Picker** over the session's
@@ -376,6 +377,30 @@ Field Service Log/
     "the folder's files" that quietly hides some is a screen that makes you
     count twice and doubt the app. What doesn't travel in the media pack is
     shown under "Altres fitxers" and labelled, not hidden.
+- **📁 Carpeta del projecte — the file dialog opens where the photos are**
+  (`pickMedia`, `fsaPick`, `startDirFor`; sidebar button `btnOutDir`).
+  - Drive for desktop mirrors `Outputs` onto a drive letter, so a session's
+    photos are already in its own folder on the machine — but `<input
+    type="file">` opens wherever the browser last was and cannot be pointed
+    anywhere. `showOpenFilePicker` takes a directory handle as `startIn`, so the
+    user picks `Outputs` once and the handle is kept in IndexedDB (`kv` store,
+    key `outputsDir`, loaded into `outDir` at boot).
+  - **The handle is a starting point, never read.** The files come back through
+    the pick itself, which carries its own access, so there is no permission to
+    request and none to renew. Stepping into the session's subfolder
+    (`sessFolderName`) does need read permission on `Outputs`; when that has
+    lapsed, or the folder hasn't synced down, or it was renamed by hand, the
+    dialog opens at `Outputs` instead — one click away, and better than a
+    permission prompt in the way. Verified for all three cases.
+  - `startIn` and `id` are alternatives, never both: with an `id` the browser
+    reopens wherever it was last, which is the whole problem. `id: "fslMedia"`
+    is only the fallback when no folder has been picked.
+  - All four media buttons go through `pickMedia(inputId, handler, audio)`,
+    which hands the handler the same `{target:{files,value}}` shape the change
+    event had, so `handleFiles` and `folUpload` are untouched. Dismissing the
+    dialog does nothing; anything else falls through to `<input>.click()`.
+  - **Chromium desktop only.** Firefox, Safari and every phone keep the hidden
+    input exactly as before — `fsaOK()` decides, and the dialog says so.
 - Import JSON **or a session ZIP** (↑ Import button in topbar and on empty screen).
   A ZIP restores the media too: photos and voice notes ride along inside
   session.json as base64, but a video is only ever a thumbnail + a Drive id, and

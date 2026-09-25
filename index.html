@@ -316,6 +316,7 @@ textarea{resize:none;line-height:1.4}
       <div style="padding:6px 10px;border-bottom:1px solid var(--br);flex-shrink:0">
         <button class="btn-g btn-sm" id="btnManuals" style="width:100%;font-size:12px" title="Manuals de recanvis guardats a Drive">&#128218; Manuals de recanvis</button>
         <button class="btn-g btn-sm" id="btnGemKey" style="width:100%;font-size:12px;margin-top:6px" title="La clau de Gemini que fa servir el corrector i la traducció dels informes; es desa només en aquest navegador">&#128273; Clau de Gemini</button>
+        <button class="btn-g btn-sm" id="btnOutDir" style="width:100%;font-size:12px;margin-top:6px" title="Obre el diàleg de fotos directament a la carpeta de la sessió, si tens Drive sincronitzat en aquest ordinador">&#128193; Carpeta del projecte</button>
       </div>
       <div class="s-list" id="sList"></div>
     </div>
@@ -446,6 +447,21 @@ textarea{resize:none;line-height:1.4}
 
   <!-- The Gemini key never ships with the app: this source is public and an AI
        Studio key can't be pinned to a domain. Typed once per browser, here. -->
+  <!-- Where the file dialog should open: the session's folder in the local
+       mirror of Drive, not wherever the browser was last. Chromium desktop. -->
+  <div class="modal-back" id="fsaBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,520px)">
+      <div class="modal-title">&#128193; Carpeta del projecte</div>
+      <div id="fsaNote" class="ts-note" style="margin-bottom:10px">&mdash;</div>
+      <div class="ts-note">Si tens Drive per a escriptori sincronitzant <code>Field Service Log/Outputs</code> en una unitat d'aquest ordinador, tria-la un cop i cada &laquo;afegeix foto&raquo; s'obrir&agrave; ja dins la carpeta de la sessi&oacute;. Nom&eacute;s serveix per dir-li al di&agrave;leg on ha de comen&ccedil;ar: l'aplicaci&oacute; no llegeix res de la carpeta pel seu compte, i els fitxers hi entren perqu&egrave; els tries tu.</div>
+      <div class="modal-actions">
+        <button id="fsaCancel">Tanca</button>
+        <button class="btn-sm" id="fsaClear">&#10005; Oblida-la</button>
+        <button class="btn-gold" id="fsaPickBtn">&#128193; Tria la carpeta&hellip;</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-back" id="gemBack" style="display:none">
     <div class="modal" style="max-width:min(96vw,520px)">
       <div class="modal-title">&#128273; Clau de Gemini</div>
@@ -1515,6 +1531,7 @@ async function deleteManual(idx){
 }
 $$("btnManuals").addEventListener("click",openManuals);
 $$("btnGemKey").addEventListener("click",function(){openGemKey()});
+$$("btnOutDir").addEventListener("click",function(){openFsa()});
 $$("manualsClose").addEventListener("click",closeManuals);
 $$("manualsBack").addEventListener("click",function(e){if(e.target===$$("manualsBack"))closeManuals()});
 $$("mfPdfBtn").addEventListener("click",function(){$$("mfPdfIn").click()});
@@ -2514,7 +2531,7 @@ function renderContent(){
     $$("btnAdd").addEventListener("click",addEntry);
     $$("entIn").addEventListener("keydown",function(e){if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){e.preventDefault();addEntry()}});
     ni.addEventListener("input",function(e){autoH(e.target);sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{notes:e.target.value}):s});scheduleSave()});
-    $$("btnPhoto").addEventListener("click",function(){$$("fileIn").click()});
+    $$("btnPhoto").addEventListener("click",function(){pickMedia("fileIn",function(e){handleFiles(e,"pend")})});
     $$("fileIn").addEventListener("change",function(e){handleFiles(e,"pend")});
     $$("btnRec").addEventListener("click",function(){if(mediaRec&&recBk==="pend")stopRec();else if(!mediaRec)startRec("pend")});
     wireCorrect("entCorr","entIn",true);
@@ -2716,6 +2733,93 @@ function buildAudioAttachment(blob,dur,bk){
 }
 // ── FILE HANDLING ─────────────────────────────────────────────────────────────
 function isVidFile(f){return f.type.startsWith("video")||/\.(mp4|mov|m4v)$/i.test(f.name||"")}
+// ── THE PROJECT FOLDER ON THIS MACHINE ───────────────────────────────────────
+// Drive for desktop mirrors Outputs onto a real drive letter, so the photos the
+// technician is after are already sitting in this session's own folder — but a
+// file input opens wherever the browser happened to be last, which is never
+// there. showOpenFilePicker takes a directory as its starting point: pick
+// Outputs once, keep the handle in IndexedDB, and every "afegeix foto" from
+// then on opens inside the right session's folder.
+//
+// The handle is a STARTING POINT and nothing else. The files come back through
+// the pick itself, which carries its own access, so there is no permission to
+// ask for and none to renew. Stepping into the session's subfolder does need
+// read permission on Outputs, and when that has lapsed the dialog just opens at
+// Outputs instead — one click away, which beats a prompt in the way.
+//
+// Chromium on the desktop only. Everywhere else — Firefox, Safari, every phone
+// — the hidden <input type="file"> does exactly what it always did.
+var outDir=null;
+var FSA_KEY="outputsDir";
+function fsaOK(){return typeof window.showOpenFilePicker==="function"}
+async function outDirLoad(){if(!idb)return;try{outDir=(await idbGet(idb,FSA_KEY))||null}catch(e){outDir=null}}
+async function outDirSave(h){outDir=h||null;if(!idb)return;try{await idbSet(idb,FSA_KEY,outDir)}catch(e){}}
+async function startDirFor(s){
+  if(!outDir)return null;
+  if(!s)return outDir;
+  try{
+    if(outDir.queryPermission&&(await outDir.queryPermission({mode:"read"}))!=="granted")return outDir;
+    return await outDir.getDirectoryHandle(sessFolderName(s));
+  }catch(e){return outDir}     // not synced down yet, renamed by hand, no permission
+}
+var FSA_IMG=[".jpg",".jpeg",".png",".gif",".webp",".heic",".heif",".bmp"];
+var FSA_VID=[".mp4",".mov",".m4v",".avi",".mkv",".webm",".3gp"];
+var FSA_AUD=[".m4a",".mp3",".wav",".ogg",".oga",".aac"];
+function fsaTypes(audio){
+  var acc={"image/*":FSA_IMG,"video/*":FSA_VID};
+  if(audio)acc["audio/*"]=FSA_AUD;
+  return [{description:audio?"Fotos, vídeos i àudio":"Fotos i vídeos",accept:acc}];
+}
+// The picked Files, or null when the dialog was dismissed. Throws only if the
+// picker itself is unusable, and the caller falls back to the input.
+async function fsaPick(s,audio){
+  var opt={multiple:true,types:fsaTypes(audio)};
+  var start=await startDirFor(s);
+  // startIn and id are alternatives: given an id the browser reopens wherever
+  // it was last, which is the very thing this is here to stop.
+  if(start)opt.startIn=start; else opt.id="fslMedia";
+  var hs;
+  try{hs=await window.showOpenFilePicker(opt)}
+  catch(e){if(e&&(e.name==="AbortError"||e.name==="NotAllowedError"))return null;throw e}
+  return await Promise.all(hs.map(function(h){return h.getFile()}));
+}
+// One door, two routes. It hands over the same change-event shape both
+// handlers already read, so nothing downstream knows which way the files came.
+async function pickMedia(inputId,handler,audio){
+  if(fsaOK()&&outDir){
+    try{
+      var files=await fsaPick(sessions.find(function(x){return x.id===aid}),audio);
+      if(files===null)return;
+      if(files.length)handler({target:{files:files,value:""}});
+      return;
+    }catch(e){}                // picker unusable → the input still works
+  }
+  $$(inputId).click();
+}
+var fsaWired=false;
+function wireFsa(){
+  if(fsaWired)return;fsaWired=true;
+  function close(){$$("fsaBack").style.display="none"}
+  $$("fsaCancel").addEventListener("click",close);
+  $$("fsaBack").addEventListener("click",function(e){if(e.target===$$("fsaBack"))close()});
+  $$("fsaClear").addEventListener("click",async function(){await outDirSave(null);openFsa()});
+  $$("fsaPickBtn").addEventListener("click",async function(){
+    try{
+      var h=await window.showDirectoryPicker({id:"fslOutputs",mode:"read"});
+      await outDirSave(h);openFsa();
+    }catch(e){if(e&&e.name!=="AbortError")alert("No s'ha pogut obrir la carpeta: "+((e&&e.message)||e))}
+  });
+}
+function openFsa(){
+  wireFsa();
+  var ok=fsaOK();
+  $$("fsaPickBtn").disabled=!ok;
+  $$("fsaNote").innerHTML=!ok
+    ?"Aquest navegador no ho permet: va a Chrome i a Edge d'escriptori. A la resta, el botó de la foto obre el diàleg de sempre i no et falta res més."
+    :(outDir?"Ara mateix comença a <code>"+esc(outDir.name)+"</code>."
+            :"Encara no n'hi ha cap, o sigui que el diàleg s'obre on el vas deixar l'últim cop.");
+  $$("fsaBack").style.display="flex";
+}
 function handleFiles(e,bk){
   var B=MB[bk];
   var active=sessions.find(function(s){return s.id===aid});
@@ -2906,7 +3010,7 @@ $$("eText").addEventListener("input",function(){autoH($$("eText"))});
 $$("eTsRound").addEventListener("click",function(){tsRoundField(5)});
 $$("eTsRound15").addEventListener("click",function(){tsRoundField(15)});
 $$("eTsHour").addEventListener("click",function(){tsRoundField(60)});
-$$("eAddPhoto").addEventListener("click",function(){$$("eFileIn").click()});
+$$("eAddPhoto").addEventListener("click",function(){pickMedia("eFileIn",function(e){handleFiles(e,"edit")})});
 $$("eFileIn").addEventListener("change",function(e){handleFiles(e,"edit")});
 $$("eRec").addEventListener("click",function(){if(mediaRec&&recBk==="edit")stopRec();else if(!mediaRec)startRec("edit")});
 $$("eSev").addEventListener("change",renderFixUI);
@@ -2917,7 +3021,7 @@ $$("fixDel").addEventListener("click",function(){
   if(($$("fText").value.trim()||fImgs.length)&&!confirm("Vols treure la resolució d'aquesta entrada? El problema i la seva descripció es queden com estan."))return;
   fixOn=false;fImgs=[];$$("fText").value="";renderFixUI();
 });
-$$("fAddPhoto").addEventListener("click",function(){$$("fFileIn").click()});
+$$("fAddPhoto").addEventListener("click",function(){pickMedia("fFileIn",function(e){handleFiles(e,"fix")})});
 $$("fFileIn").addEventListener("change",function(e){handleFiles(e,"fix")});
 $$("fRec").addEventListener("click",function(){if(mediaRec&&recBk==="fix")stopRec();else if(!mediaRec)startRec("fix")});
 $$("eTagSel").addEventListener("change",function(){if(this.value)$$("eTag").value=this.value;this.selectedIndex=0});
@@ -4026,7 +4130,7 @@ function openFolder(){
     $$("folBack").addEventListener("click",function(e){if(e.target===$$("folBack"))$$("folBack").style.display="none"});
     $$("folReload").addEventListener("click",function(){loadFolder(true)});
     $$("folList").addEventListener("click",folAct);
-    $$("folAdd").addEventListener("click",function(){$$("folFileIn").click()});
+    $$("folAdd").addEventListener("click",function(){pickMedia("folFileIn",folUpload,true)});
     $$("folFileIn").addEventListener("change",folUpload);
     $$("folPick").addEventListener("click",folPickFromDrive);
     $$("folOpenDrive").addEventListener("click",async function(){
@@ -5664,6 +5768,7 @@ function renderAll(){renderSidebar();renderContent()}
 $$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><div style=\"font-size:13px;color:var(--tx3)\">Carregant les sessions…</div></div>";
 (async function(){
   sessions=orderSessions(await loadSessions());
+  outDirLoad();                     // idb is open by now; nothing waits on this
   if(loadTok()&&accessToken&&Date.now()<tokenExp){
     isLoggedIn=true;
     loadFromDrive().then(function(){renderAll();scheduleSync();flushTrash()});

@@ -10,7 +10,7 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
 
 ---
 
-## Google Cloud credentials (hardcoded in app)
+## Google Cloud credentials (in the app, except the Gemini one)
 - CLIENT_ID: `514772123815-ncjsebgvc01t8arftqp8bo43jr4fgneb.apps.googleusercontent.com`
 - PICKER_KEY: `AIzaSyBQwgZQYFJMwlA3ipZrqYjfZYUI9c813O4`
 - PICKER_APP: `514772123815`
@@ -19,12 +19,30 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
 - Auth method: Google Identity Services implicit token flow (no redirect URI needed)
 - Status: **Testing mode** — new users must be added manually to Google Cloud Console
   → APIs & Services → OAuth consent screen → Test users
-- The same PICKER_KEY also calls **Cloud Translation API v2** (`TR_KEY`) to
-  translate reports. For that, in project field-service-log-500615: enable
-  "Cloud Translation API", link a billing account (first 500 000 characters a
-  month are free), and on the key (APIs & Services → Credentials) add Cloud
-  Translation API to its API restrictions. Until then every export shows a
-  "couldn't translate" prompt and can still go out with the original texts.
+- **Two API credentials, and they are not interchangeable:**
+  - `PICKER_KEY` — the classic `AIza…` Cloud key, for the Drive Picker.
+  - The Gemini key — an **AI Studio auth key** (`AQ.…`), which does both the
+    report translations and the ✓ Corregeix button. The Gemini API stopped
+    accepting classic keys in September 2026, and an auth key is scoped to
+    Gemini alone, so one key cannot do both jobs. Created at
+    aistudio.google.com/apikey against project field-service-log-500615, with
+    billing set up there (AI Studio → Projects → Billing Tier) so calls run on
+    the **paid tier** — `usageMetadata.serviceTier: "standard"` in a reply
+    confirms it.
+  - Cloud Translation is no longer used at all.
+- **The Gemini key is NOT in index.html, and must never be put there.** This
+  repo is public. `PICKER_KEY` can live in the source because Cloud Console pins
+  a browser key to a domain, so a copy of it is worth nothing anywhere else; an
+  AI Studio key cannot be pinned that way, and whoever reads it spends on the
+  billing account. It is typed once per browser in 🔑 **Clau de Gemini**
+  (sidebar, under Manuals de recanvis) and kept in `localStorage` under
+  `fsl_v6_gem` — deliberately outside `LS_DATA`, so it never reaches Drive, a
+  ZIP or a backup. `gemKey()` reads it on every call; `gemAsk` throws
+  `GEM_NOKEY` before fetching when it's empty, and the two callers turn that
+  into the key dialog rather than an error: ✓ Corregeix opens it outright, and
+  an export that needs translating asks first, so cancelling still gets you the
+  report with the originals. The real fix for distribution is the Worker — see
+  "Distribution" — which is where this key belongs once the app is shared.
 
 ---
 
@@ -39,14 +57,24 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
   file-name prefixes `informe_/recanvis_`, `informe_/recambios_`,
   `report_/spare_parts_`). File names end in `_<lang>`.
 - **The technician's own words are machine-translated**: entry descriptions and
-  the session's general notes, via Google Cloud Translation (source auto-detected,
-  so text written in Spanish also comes out right). The manual's data — part
-  names, references — is never translated; neither are client/machine/location
-  names, tags or file names.
+  the session's general notes, **by Gemini** (`gTranslate` → `txBatch`), not by
+  Cloud Translation. ~20× cheaper per character, and the rules the old path had
+  to trick the translator into are one sentence of instructions here. The
+  manual's data — part names, references — is never translated; neither are
+  client/machine/location names, tags or file names.
+  - **The guard is the point.** A model can paraphrase, drop or embellish, and
+    this is a document a client signs. So: temperature 0, a JSON array in and
+    out, batches of at most 25 texts (a batch that comes back wrong costs every
+    text in it), and a check that **as many strings come back as went in**.
+    Anything else throws, and `reportSession` falls back to asking whether to
+    export with the texts as written. Verified: 3 sent, 2 returned → the report
+    went out with the three originals intact.
+  - What it cannot catch is a wrong translation of the right shape. That is the
+    trade for the price and the instructions.
 - **✓ Corregeix — spelling and grammar, on demand** (`gemCorrect`, `wireCorrect`).
-  Gemini (`gemini-3.5-flash-lite`, temperature 0) on the **same Google Cloud
-  project and key** as the translator; the Generative Language API has to be
-  enabled there and allowed on the key, like the Picker.
+  Gemini (`gemini-3.5-flash-lite`, temperature 0) on the AI Studio auth key the
+  user typed into 🔑 Clau de Gemini — see the credentials section: NOT the
+  Picker's key, and not in the source.
   - **Not the translator.** Asked to "translate" Catalan into Catalan, Cloud
     Translation rewrites and invents — that's the bug the report path guards
     against. Correcting needs a model that can be told what to leave alone: the
@@ -58,29 +86,33 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
     `wireCorrect` is called from markup wiring far above the helper, and a `var`
     initialised beside the function is `undefined` when it runs (it threw, and
     took the whole boot with it).
-  - The REST answer's shape has moved across revisions, so `gemText` takes the
-    first non-empty `text` it finds instead of betting on one path, and strips a
-    quote pair the model may have wrapped the answer in — which would otherwise
-    mark the whole entry as protected-from-translation.
+  - **Not the endpoint the docs show.** Their curl example posts to
+    `/v1beta/interactions` with an `x-goog-api-key` header; from a browser that
+    dies on "Failed to fetch", because the endpoint doesn't answer the CORS
+    preflight those custom headers trigger. `gemAsk` uses the classic
+    `models/<model>:generateContent?key=…` with only `Content-Type`, which does.
+    `gemText` joins the `parts[].text` of the first candidate (a part can carry
+    a `thoughtSignature` and no text) and strips a quote pair the model may have
+    wrapped the answer in — which would otherwise mark the whole entry as
+    protected-from-translation.
   - **Paid tier on purpose.** Google's terms: on the free tier prompts are used
     to improve their products and a human may read them; on the paid tier they
     are not. Client names and faults don't belong in the free tier.
-- **Text already in the report's language is kept exactly as written.** Google
-  answers even when the source IS the target, and it quietly rewrites: a Catalan
-  report turned "B migdia 11:15" into "B 23:15" and "Sense data" into "Dades
-  sensorials". The reply carries `detectedSourceLanguage`, so when it matches the
-  target the answer is thrown away and the original kept — no extra API call. The
-  original is what gets cached, so from the second export on nothing is sent at
-  all (verified: 0 requests). A different source still translates normally.
+- **Text already in the report's language is kept exactly as written** — a rule
+  in the instructions now, and it holds: a Catalan report of Catalan entries came
+  back character for character identical. Under Cloud Translation this needed a
+  trick (it answered even when source == target, and rewrote: "B migdia 11:15"
+  became "B 23:15", "Sense data" became "Dades sensorials"), which is why the old
+  path had to throw those answers away by reading `detectedSourceLanguage`.
 - **Anything in double quotes is never translated.** "Insereix un recanvi des
   del dibuix" wraps what it writes in `"…"`, so a name and reference out of the
   manual reach the report exactly as the manual has them ("Separador" must not
   come back as "Separator"); typing quotes by hand protects anything else the
-  same way. Mechanics: the text travels to Google as **HTML** with the quoted
-  runs in `<span translate="no">` and newlines as `<br>`, and comes back through
-  `txFromHtml` (a div's textContent drops the tags and decodes the entities).
-  Verified against the live API: protected runs return character for character,
-  accents and Ø included, with the surrounding spaces intact.
+  same way. It is now simply a rule in the instructions, verified against the
+  live API in all three languages: an English report kept
+  `"Rodamiento de bolas - 3025.1478"` word for word. (Cloud Translation only
+  honoured "leave this alone" in HTML mode, so the text used to travel wrapped
+  in `<span translate="no">` with newlines as `<br>` — all of that is gone.)
 - What decides whether a text is sent is what is left OUTSIDE the quotes
   (`needsTranslation`), so an entry that is only an inserted part is never sent.
 - Only text with at least one real word (3+ letters) is sent to the translator
@@ -333,8 +365,8 @@ Field Service Log/
       the ids are remembered in `session.extraFiles` and `sessionFolderFiles`
       fetches them one by one, since a picked file may still not come back in a
       plain folder listing. Needs the **Google Picker API** enabled in the Cloud
-      project and allowed on `PICKER_KEY` — the key is API-restricted for
-      Translation, so it has to be added there too.
+      project and allowed on `PICKER_KEY`, which is API-restricted, so the
+      Picker API has to be added to its allow-list. Still pending.
   - **Media is what lives in `photos/`, `videos/` or `audio/`** — nothing at the
     folder's root (that's reports and `session.json`) and nothing from any other
     subfolder. That's the rule the ZIP packs by, too.

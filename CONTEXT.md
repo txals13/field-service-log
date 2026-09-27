@@ -71,16 +71,27 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
     went out with the three originals intact.
   - What it cannot catch is a wrong translation of the right shape. That is the
     trade for the price and the instructions.
-  - **A Catalan report is never sent anywhere** (`WRITE_LANG`, the first line of
-    `localizeSession`). The technician writes in Catalan and ✓ Corregeix
-    corrects in place without moving the language, so `lang === "ca"` already
-    has the text it needs: no call, no cost, and no key asked for on the export
-    most reports take. It used to go out to the model and come back identical —
-    which worked, but paid for the round trip and, once the key moved to
-    localStorage, stopped a Catalan export dead on a browser that had no key.
-    The price is that an entry typed in Spanish inside a Catalan report stays in
-    Spanish, which is how it read on screen anyway. Verified with a key present:
-    Catalan 0 calls, English 1.
+  - **A report in the language it was written in is never sent anywhere**
+    (`writeLang`, the first line of `localizeSession`). It used to go out and
+    come back identical — which worked, but paid for the round trip and, once
+    the key moved to localStorage, stopped such an export dead on a browser
+    with no key. ✓ Corregeix corrects in place without moving the language, so
+    a corrected entry is still what the session declares.
+    - **Which language that is, the session says**, in ↓ Informe under "Escrit
+      en" (`session.writeLang`, default `ca`, set beside the report language and
+      like it not bumping `updatedAt`). Nothing can tell a Catalan entry from a
+      Spanish one without asking a model, and that call is the whole thing being
+      saved. Get it wrong and the text simply goes out as typed.
+    - The cache needs no invalidating when it changes: `txBatch` names only the
+      TARGET language in the prompt, never the source.
+    - **Only the free text is skipped.** Every fixed label — title, metadata,
+      severities, column heads, the file-name prefix — comes from `RPT[lang]`
+      and is in the report's language either way. Verified: written es, report
+      es, 0 Gemini calls, and the HTML still says "Informe de servicio
+      técnico", Problemas / Avisos / Resueltos / Fecha y hora / Gravedad /
+      Descripción / Adjuntos, with the technician's own sentences untouched.
+    - Verified with a key present, all four combinations: ca→ca 0 calls,
+      ca→es 1, es→es 0, es→ca 1.
 - **✓ Corregeix — spelling and grammar, on demand** (`gemCorrect`, `wireCorrect`).
   Gemini (`gemini-3.5-flash-lite`, temperature 0) on the AI Studio auth key the
   user typed into 🔑 Clau de Gemini — see the credentials section: NOT the

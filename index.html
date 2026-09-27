@@ -2884,14 +2884,34 @@ async function arxPermission(ask){
     return await arxDir.requestPermission({mode:"readwrite"})==="granted";
   }catch(e){return false}
 }
+// The first free name. `create:true` writes straight over a file that is
+// already there without a word, and the name carries the revision, so two
+// files called the same thing are two goes at the same document — keep both
+// and let the folder say so, rather than have the last one quietly win.
+async function arxFreeName(dir,name){
+  var dot=name.lastIndexOf("."),base=dot>0?name.slice(0,dot):name,ext=dot>0?name.slice(dot):"";
+  for(var i=1;i<100;i++){
+    var n=(i===1)?name:base+"_"+i+ext;
+    try{
+      await dir.getFileHandle(n);            // it resolves, so the name is taken
+    }catch(e){
+      // Not there: free. Anything else and we can't tell — hand the name back
+      // and let the write itself fail into the download.
+      return n;
+    }
+  }
+  return base+"_"+Date.now()+ext;            // a folder with 99 of them: stop counting
+}
+// Returns the name it actually wrote, or false.
 async function saveToArxiu(name,blob){
   if(!arxDir||!arxDir.getFileHandle)return false;
   try{
     if(!await arxPermission(true))return false;
-    var fh=await arxDir.getFileHandle(name,{create:true});
+    var fn=await arxFreeName(arxDir,name);
+    var fh=await arxDir.getFileHandle(fn,{create:true});
     var w=await fh.createWritable();
     await w.write(blob);await w.close();
-    return true;
+    return fn;
   }catch(e){return false}
 }
 async function startDirFor(s){
@@ -6367,7 +6387,9 @@ async function exportSessionZip(s,kind){
     }
   }catch(e){alert("No s'ha pogut exportar el ZIP: "+((e&&e.message)||e))}
   finally{expBusy("")}
-  if(arxOk){expBusy("\ud83d\uddc4 Desat a la carpeta d'arxiu");setTimeout(function(){expBusy("")},3000)}
+  // Says WHICH file, because a suffix means the folder now holds more than one
+  // go at this revision and that is worth noticing when it happens.
+  if(arxOk){expBusy("\ud83d\uddc4 "+(arxOk===zipName?"Desat a la carpeta d'arxiu":"Desat com a "+arxOk));setTimeout(function(){expBusy("")},4000)}
 }
 
 // ── CLOSE DROPDOWNS ───────────────────────────────────────────────────────────

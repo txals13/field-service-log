@@ -3754,7 +3754,15 @@ async function gTranslate(texts,target){
 // cached on the session (entry.tr / session.notesTr, keyed by a hash of the
 // source text), so re-exporting costs nothing and works offline, and editing a
 // text simply makes its old translation stale.
+// The technician writes in Catalan — the app is Catalan, and ✓ Corregeix
+// corrects in whatever language it finds without moving it. So a Catalan
+// report is already in its language: no call, no cost, no key asked for, and
+// nothing that could come back quietly reworded. The price of the assumption
+// is that an entry typed in Spanish inside a Catalan report stays in Spanish,
+// which is how it read on screen anyway.
+var WRITE_LANG="ca";
 async function localizeSession(s,lang){
+  if(lang===WRITE_LANG)return s;
   var jobs=[];
   (s.entries||[]).forEach(function(e){
     var src=(e.text||"").trim();

@@ -93,6 +93,22 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
       the English beside each, editable, plus "torna-les a traduir". A wrong
       sentence is wrong once; a wrong column heading is wrong in every row of
       every page of something a client signs.
+  - **The timesheet has a language of its own and gets the same two things**
+    (`localizeTimesheet`, and `ensureLabels` in `exportTimesheet` and in the
+    ZIP). The report can go to head office in English while the sheet is signed
+    on site in Polish, so `T.lang` is picked separately — from the same 29-line
+    table, not the three it used to offer — and both the labels and the words
+    the technician typed into it are translated at export.
+    - **Remarks and the per-day notes go through the translator; the
+      destination does not.** A destination is a place name, for the same
+      reason the client and the machine aren't translated.
+    - Nothing is cached: a sheet is exported once or twice, and the frozen copy
+      has to keep the words it was signed with rather than a translation of
+      them.
+    - The modal's preview is drawn with whatever labels the app already has,
+      which for a new language means English, and it says so under the picker.
+      Asking Gemini for a table because a dropdown moved would be a charge
+      nobody asked for.
   - **The PDF swaps its font when it has to** (`needsUni`, `pdfUniFont`). Noto
     Sans — Latin Extended, Greek and Cyrillic in one 550 KB file — is fetched
     on demand and **registered under the name "helvetica"**, so all 28 existing

@@ -67,8 +67,41 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
 ## Languages
 - **The app is Catalan only.** No UI language switch — every UI string is written
   in Catalan in the code (`<html lang="ca">`, TM/SM labels included).
-- **Reports go out in ca / es / en**, chosen in the ↓ Informe menu (top row,
-  CA · ES · EN) and remembered per session as `session.reportLang` (default ca).
+- **Reports go out in any of 29 languages** (`LANGS`), chosen in the ↓ Informe
+  menu — chips for CA · ES · EN, a dropdown for the other 26 — and remembered
+  per session as `session.reportLang` (default ca).
+  - **Latin, Greek and Cyrillic only, and that is the PDF's limit, not the
+    translator's.** The model would do Arabic or Japanese perfectly well. A
+    report in Arabic or Hebrew needs the whole page mirrored — today Arabic
+    survives only as a field inside an otherwise left-to-right page — and CJK
+    needs a font measured in megabytes and a line-breaker that works without
+    spaces. Both are their own job.
+  - **The labels of the other 26 are translated once and kept** (`ensureLabels`,
+    `labelsFetch`, IndexedDB key `reportLabels`). 66 report labels plus 26
+    timesheet ones is not a table to type out, and a language nobody picks
+    costs nothing until they do. `ca`/`es`/`en` stay hand-written and are never
+    shadowed by a cached table.
+    - The reply is checked against `RPT.en`'s **shape** — same keys, same
+      nesting, same list lengths, every leaf a non-empty string — and thrown
+      away whole if it doesn't match. English labels make a report in the wrong
+      language, which you can see; a table with a key missing makes a report
+      with holes, which you may not.
+    - The file-name fragments (`pre.report`, `pre.parts`, `TSL.file`) are
+      rebuilt by `fileSafe` rather than trusted: they land on a disk and in a
+      Drive folder.
+    - **↓ Informe › Revisa les etiquetes** (`openLabels`) lists all of them with
+      the English beside each, editable, plus "torna-les a traduir". A wrong
+      sentence is wrong once; a wrong column heading is wrong in every row of
+      every page of something a client signs.
+  - **The PDF swaps its font when it has to** (`needsUni`, `pdfUniFont`). Noto
+    Sans — Latin Extended, Greek and Cyrillic in one 550 KB file — is fetched
+    on demand and **registered under the name "helvetica"**, so all 28 existing
+    `setFont` calls and every autoTable style block pick it up untouched. That
+    reads like a trick and is one; the alternative was threading a font name
+    through all of them and getting one wrong, which is a row of mojibake
+    nobody notices until a client has it. Arabic still gets Amiri by name.
+    Verified by rendering: Łódź, řešení, şanzıman, țeavă, árvíztűrő,
+    Αντικατάσταση, Замена — head, body, parts table and captions.
   Changing it does NOT bump `updatedAt` — it's a preference, and bumping would
   make the delete dialog call the last project ZIP stale.
 - Fixed report labels live in `RPT[lang]` (HTML, PDF, DOCX, XLSX, parts table,

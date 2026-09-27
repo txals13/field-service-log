@@ -481,13 +481,23 @@ textarea{resize:none;line-height:1.4}
 
   <div class="modal-back" id="fsaBack" style="display:none">
     <div class="modal" style="max-width:min(96vw,520px)">
-      <div class="modal-title">&#128193; Carpeta del projecte</div>
-      <div id="fsaNote" class="ts-note" style="margin-bottom:10px">&mdash;</div>
+      <div class="modal-title">&#128193; Carpetes d'aquest ordinador</div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:.4px">CARPETA DEL PROJECTE</div>
+      <div id="fsaNote" class="ts-note" style="margin:4px 0 6px">&mdash;</div>
       <div class="ts-note">Si tens Drive per a escriptori sincronitzant <code>Field Service Log/Outputs</code> en una unitat d'aquest ordinador, tria-la un cop i cada &laquo;afegeix foto&raquo; s'obrir&agrave; ja dins la carpeta de la sessi&oacute;. Nom&eacute;s serveix per dir-li al di&agrave;leg on ha de comen&ccedil;ar: l'aplicaci&oacute; no llegeix res de la carpeta pel seu compte, i els fitxers hi entren perqu&egrave; els tries tu.</div>
-      <div class="modal-actions">
-        <button id="fsaCancel">Tanca</button>
+      <div style="display:flex;gap:6px;justify-content:flex-end;margin:8px 0 16px;flex-wrap:wrap">
         <button class="btn-sm" id="fsaClear">&#10005; Oblida-la</button>
         <button class="btn-gold" id="fsaPickBtn">&#128193; Tria la carpeta&hellip;</button>
+      </div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:.4px">CARPETA D'ARXIU</div>
+      <div id="fsaArxNote" class="ts-note" style="margin:4px 0 6px">&mdash;</div>
+      <div class="ts-note">On es desa el <strong>ZIP del projecte</strong>, directament i sense passar per Baixades. Tria <code>G:\My Drive\Field Service Log\Arxiu</code> un cop i cada exportaci&oacute; hi anir&agrave; sola; Drive per a escriptori ja se n'encarrega de pujar-la. El paquet Word + multim&egrave;dia, que &eacute;s per lliurar, se segueix baixant com sempre. Si un dia no s'hi pot escriure, el ZIP es baixa i no es perd.</div>
+      <div style="display:flex;gap:6px;justify-content:flex-end;margin:8px 0 0;flex-wrap:wrap">
+        <button class="btn-sm" id="fsaArxClear">&#10005; Oblida-la</button>
+        <button class="btn-gold" id="fsaArxPick">&#128452; Tria la carpeta&hellip;</button>
+      </div>
+      <div class="modal-actions">
+        <button id="fsaCancel">Tanca</button>
       </div>
     </div>
   </div>
@@ -2850,11 +2860,40 @@ function isVidFile(f){return f.type.startsWith("video")||/\.(mp4|mov|m4v)$/i.tes
 //
 // Chromium on the desktop only. Everywhere else — Firefox, Safari, every phone
 // — the hidden <input type="file"> does exactly what it always did.
-var outDir=null;
+var outDir=null,arxDir=null;
 var FSA_KEY="outputsDir";
+// Where the project ZIP lands. A directory handle picked once and kept in
+// IndexedDB, exactly like the project folder — a browser can't be given a path,
+// only a folder the user has pointed at. Unlike that one this needs WRITE
+// permission, because the app puts a file in it instead of just starting a
+// dialog there.
+var ARX_KEY="archiveDir";
 function fsaOK(){return typeof window.showOpenFilePicker==="function"}
 async function outDirLoad(){if(!idb)return;try{outDir=(await idbGet(idb,FSA_KEY))||null}catch(e){outDir=null}}
 async function outDirSave(h){outDir=h||null;if(!idb)return;try{await idbSet(idb,FSA_KEY,outDir)}catch(e){}}
+async function arxDirLoad(){if(!idb)return;try{arxDir=(await idbGet(idb,ARX_KEY))||null}catch(e){arxDir=null}}
+async function arxDirSave(h){arxDir=h||null;if(!idb)return;try{await idbSet(idb,ARX_KEY,arxDir)}catch(e){}}
+// Asking has to happen while the click that started the export is still fresh:
+// after a minute of translating and zipping the browser no longer counts it as
+// a gesture and the prompt is refused outright.
+async function arxPermission(ask){
+  if(!arxDir||!arxDir.queryPermission)return !!arxDir;
+  try{
+    if(await arxDir.queryPermission({mode:"readwrite"})==="granted")return true;
+    if(!ask)return false;
+    return await arxDir.requestPermission({mode:"readwrite"})==="granted";
+  }catch(e){return false}
+}
+async function saveToArxiu(name,blob){
+  if(!arxDir||!arxDir.getFileHandle)return false;
+  try{
+    if(!await arxPermission(true))return false;
+    var fh=await arxDir.getFileHandle(name,{create:true});
+    var w=await fh.createWritable();
+    await w.write(blob);await w.close();
+    return true;
+  }catch(e){return false}
+}
 async function startDirFor(s){
   if(!outDir)return null;
   if(!s)return outDir;
@@ -2932,6 +2971,15 @@ function wireFsa(){
       await outDirSave(h);openFsa();
     }catch(e){if(e&&e.name!=="AbortError")alert("No s'ha pogut obrir la carpeta: "+((e&&e.message)||e))}
   });
+  $$("fsaArxClear").addEventListener("click",async function(){await arxDirSave(null);openFsa()});
+  $$("fsaArxPick").addEventListener("click",async function(){
+    try{
+      // readwrite from the start: the permission is granted here, with the
+      // click in hand, and not in the middle of an export.
+      var h=await window.showDirectoryPicker({id:"fslArxiu",mode:"readwrite"});
+      await arxDirSave(h);openFsa();
+    }catch(e){if(e&&e.name!=="AbortError")alert("No s'ha pogut obrir la carpeta: "+((e&&e.message)||e))}
+  });
 }
 function openFsa(){
   wireFsa();
@@ -2941,6 +2989,11 @@ function openFsa(){
     ?"Aquest navegador no ho permet: va a Chrome i a Edge d'escriptori. A la resta, el botó de la foto obre el diàleg de sempre i no et falta res més."
     :(outDir?"Ara mateix comença a <code>"+esc(outDir.name)+"</code>."
             :"Encara no n'hi ha cap, o sigui que el diàleg s'obre on el vas deixar l'últim cop.");
+  $$("fsaArxPick").disabled=!ok;
+  $$("fsaArxNote").innerHTML=!ok
+    ?"Aquest navegador no ho permet: va a Chrome i a Edge d'escriptori. A la resta, el ZIP es baixa com sempre."
+    :(arxDir?"El ZIP del projecte es desa a <code>"+esc(arxDir.name)+"</code>."
+            :"Encara no n'hi ha cap: el ZIP del projecte es baixa a Baixades.");
   $$("fsaBack").style.display="flex";
 }
 function handleFiles(e,bk){
@@ -6203,6 +6256,10 @@ async function exportSessionZip(s,kind){
   if(!isLoggedIn){alert("Primer inicia la sessió amb Google: s'exporten els fitxers guardats a la carpeta de Drive de la sessió.");return}
   var token=await ensureToken();if(!token){alert("No s'ha pogut autenticar amb Drive.");return}
   if(!await ensureLabels(reportLang(s)))return;   // same gate as a single report
+  // While the click is still counted as a gesture: after this comes a minute
+  // of translating and zipping, and by then the permission prompt is refused.
+  var arxOn=archive&&arxDir?await arxPermission(true):false;
+  var arxOk=false;
   var rev=await ensureRevision(s);
   if(!rev)return;
   s=sessions.find(function(x){return x.id===s.id})||s;
@@ -6275,7 +6332,12 @@ async function exportSessionZip(s,kind){
     }
     expBusy("Comprimint…");
     var zipBlob=await zip.generateAsync({type:"blob"});
-    dlBlob(zipBlob,sanitize(s.client)+"_"+sanitize(s.machine)+(archive?"_projecte_":"_docx_multimedia_")+"rev"+("0"+rev.n).slice(-2)+"_"+R.lang+".zip");
+    var zipName=sanitize(s.client)+"_"+sanitize(s.machine)+(archive?"_projecte_":"_docx_multimedia_")+"rev"+("0"+rev.n).slice(-2)+"_"+R.lang+".zip";
+    // The archive goes to the archive folder when there is one; anything that
+    // gets in the way (no permission, folder gone, disk full) falls back to the
+    // download, so the ZIP is never lost on the way out.
+    if(arxOn)arxOk=await saveToArxiu(zipName,zipBlob);
+    if(!arxOk)dlBlob(zipBlob,zipName);
     // Only the archive stamps zipAt: the delete dialog reads it as "a complete
     // copy of this session exists", and the DOCX pack carries no session.json,
     // so nothing could be restored from it.
@@ -6286,6 +6348,7 @@ async function exportSessionZip(s,kind){
     }
   }catch(e){alert("No s'ha pogut exportar el ZIP: "+((e&&e.message)||e))}
   finally{expBusy("")}
+  if(arxOk){expBusy("\ud83d\uddc4 Desat a la carpeta d'arxiu");setTimeout(function(){expBusy("")},3000)}
 }
 
 // ── CLOSE DROPDOWNS ───────────────────────────────────────────────────────────
@@ -6304,7 +6367,7 @@ function renderAll(){renderSidebar();renderContent()}
 $$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><div style=\"font-size:13px;color:var(--tx3)\">Carregant les sessions…</div></div>";
 (async function(){
   sessions=orderSessions(await loadSessions());
-  outDirLoad();                     // idb is open by now; nothing waits on this
+  outDirLoad();arxDirLoad();        // idb is open by now; nothing waits on this
   labelsLoad();                     // so a language translated earlier is ready offline
   if(loadTok()&&accessToken&&Date.now()<tokenExp){
     isLoggedIn=true;

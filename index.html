@@ -160,6 +160,8 @@ mark{background:var(--goldbg);color:var(--goldtx);padding:0 1px;border-radius:2p
 .exp-lang span{margin-right:auto;padding-right:10px}
 .exp-menu .exp-lang button{display:inline-block;width:auto;padding:3px 8px;border:1px solid var(--br2);border-radius:5px;font-size:11px;font-family:monospace;color:var(--tx2)}
 .exp-menu .exp-lang button.on{background:var(--gold);border-color:var(--golddim);color:#000;font-weight:700}
+.exp-menu .exp-lang select{width:auto;max-width:110px;padding:3px 4px;border:1px solid var(--br2);border-radius:5px;font-size:11px;background:var(--bg2);color:var(--tx2)}
+.exp-menu .exp-lang select.on{background:var(--gold);border-color:var(--golddim);color:#000;font-weight:700}
 /* buttons */
 button{background:var(--bg2);border:1px solid var(--br2);border-radius:6px;color:var(--tx1);font-size:13px;padding:7px 12px;cursor:pointer;font-family:inherit;transition:background .15s,opacity .15s;white-space:nowrap;-webkit-appearance:none;line-height:1.2}
 button:hover{background:var(--br2)}
@@ -460,6 +462,22 @@ textarea{resize:none;line-height:1.4}
        Studio key can't be pinned to a domain. Typed once per browser, here. -->
   <!-- Where the file dialog should open: the session's folder in the local
        mirror of Drive, not wherever the browser was last. Chromium desktop. -->
+  <!-- Every label of a translated language, with the English it came from
+       beside it. A wrong column heading is wrong in every row of every page,
+       so there has to be somewhere to fix one. -->
+  <div class="modal-back" id="lblBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,880px)">
+      <div class="modal-title">&#127991; <span id="lblTitle">Etiquetes de l'informe</span></div>
+      <div id="lblNote" class="ts-note" style="margin-bottom:10px">&mdash;</div>
+      <div id="lblList" style="max-height:58vh;overflow:auto"></div>
+      <div class="modal-actions">
+        <button id="lblCancel">Cancel&middot;la</button>
+        <button class="btn-sm" id="lblRedo" title="Llença aquestes i torna a demanar-les a Gemini">&#8635; Torna-les a traduir</button>
+        <button class="btn-gold" id="lblSave">&#10003; Desa</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-back" id="fsaBack" style="display:none">
     <div class="modal" style="max-width:min(96vw,520px)">
       <div class="modal-title">&#128193; Carpeta del projecte</div>
@@ -2462,12 +2480,12 @@ function renderContent(){
         ?"Revisió "+revNo(curRev(active).n).replace("Rev. ","")+" · "+dmy(curRev(active).date)
         :"Encara sense revisió")+"</span>"
     +"<button data-rev=\"1\" title=\"Revisions de l'informe: consulta-les, corregeix la data de la vigent o emet-ne una de nova\">Revisions…</button></div>"
-    +"<div class=\"exp-lang\"><span>Idioma de l'informe</span>"
-    +REPORT_LANGS.map(function(l){return "<button data-lang=\""+l[0]+"\" class=\""+(reportLang(active)===l[0]?"on":"")+"\" title=\""+l[2]+"\">"+l[1]+"</button>"}).join("")
-    +"</div>"
-    +"<div class=\"exp-lang\"><span title=\"L'idioma en què has escrit les entrades. Si és el mateix que el de l'informe, no s'envia res a traduir.\">Escrit en</span>"
-    +REPORT_LANGS.map(function(l){return "<button data-wlang=\""+l[0]+"\" class=\""+(writeLang(active)===l[0]?"on":"")+"\" title=\""+l[2]+"\">"+l[1]+"</button>"}).join("")
-    +"</div>"
+    +langRowHTML("Idioma de l'informe","",reportLang(active),"lang")
+    +langRowHTML("Escrit en","L'idioma en què has escrit les entrades. Si és el mateix que el de l'informe, no s'envia res a traduir.",writeLang(active),"wlang")
+    +(CHIP_LANGS.indexOf(reportLang(active))<0&&RPT[reportLang(active)]
+      ?"<div class=\"exp-rev\"><span>Etiquetes en "+esc(langNative(reportLang(active)))+"</span>"
+        +"<button data-lbl=\"1\" title=\"Les ha traduïdes Gemini i surten a cada fila de cada pàgina: val la pena mirar-les un cop\">Revisa-les…</button></div>"
+      :"")
     +"<button data-fmt=\"pdf\">📄 PDF</button><button data-fmt=\"docx\">📄 Word (DOCX)</button><button data-fmt=\"html\">📄 HTML</button><button data-fmt=\"xlsx\">📊 Recanvis (Excel)</button><button data-fmt=\"timesheet\">🧾 Full d'hores…</button><button data-fmt=\"zip\" title=\"Tot: tots els informes, els fitxers multimèdia i session.json — la còpia que es pot tornar a importar\">🗄 ZIP del projecte (arxiu)</button><button data-fmt=\"zipdocx\" title=\"L'informe Word amb totes les fotos, vídeos i notes de veu — per lliurar. No es pot tornar a importar.\">📦 ZIP Word + multimèdia</button></div></div>"
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSync\" title=\"Sincronitza ara\">⟳</button>":"")
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSessSync\" title=\"Recrea les carpetes de Drive i puja-hi les fotos que hi faltin, d'aquesta sessió\">&#9729; Desa</button>":"")
@@ -2543,6 +2561,16 @@ function renderContent(){
   var btnR=$$("btnReopen");if(btnR)btnR.addEventListener("click",function(){if(confirm("Vols reobrir aquesta sessió?")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"open",closedAt:null}):s});scheduleSave();renderAll()}});
   var btnEx=$$("btnExp");if(btnEx){
     btnEx.addEventListener("click",function(e){e.stopPropagation();var m=$$("expMenu");if(m.style.display==="block")m.style.display="none";else openExpMenu(btnEx,m)});
+    // The dropdown of the other languages: change, not click.
+    $$("expMenu").addEventListener("change",function(e){
+      var sel=e.target;if(!sel||sel.tagName!=="SELECT")return;
+      e.stopPropagation();
+      var v=sel.value;if(!v)return;
+      if(sel.dataset.langsel)setReportLang(active.id,v);else setWriteLang(active.id,v);
+      var row=sel.closest(".exp-lang");
+      Array.prototype.forEach.call(row.querySelectorAll("button"),function(b){b.classList.remove("on")});
+      sel.classList.add("on");sel.options[0].textContent=langNative(v);
+    });
     $$("expMenu").addEventListener("click",function(e){
       // The language row keeps the menu open (the document-level click would
       // close it): pick the language, then the format.
@@ -2553,10 +2581,15 @@ function renderContent(){
         if(lb)setReportLang(active.id,lb.dataset.lang);
         if(wb)setWriteLang(active.id,wb.dataset.wlang);
         var hit=lb||wb;
-        if(hit)Array.prototype.forEach.call(row.querySelectorAll("button"),function(b){b.classList.toggle("on",b===hit)});
+        if(hit){
+          Array.prototype.forEach.call(row.querySelectorAll("button"),function(b){b.classList.toggle("on",b===hit)});
+          var sel=row.querySelector("select");
+          if(sel){sel.value="";sel.classList.remove("on");sel.options[0].textContent="···"}
+        }
         return;
       }
       if(e.target.closest("[data-rev]")){$$("expMenu").style.display="none";openRevisions();return}
+      if(e.target.closest("[data-lbl]")){$$("expMenu").style.display="none";openLabels(reportLang(active));return}
       var f=e.target.dataset.fmt;if(f){$$("expMenu").style.display="none";exportRep(active,f)}
     });
   }
@@ -3420,10 +3453,72 @@ var RPT={
          date:"Date",sev:"Severity",tag:"Tag",entry:"Entry",pos:"Pos.",conj:"Assembly",grup:"Group / Drawing",
          page:"Page",project:"Project",type:"Type",gen:"Generated",lines:"Spare parts (lines)",refs:"Distinct references"}}
 };
-// [code, menu label, name, "into <language>" phrase for messages]
-var REPORT_LANGS=[["ca","CA","Català","al català"],["es","ES","Castellano","al castellà"],["en","EN","English","a l'anglès"]];
-function reportLang(s){return (s&&RPT[s.reportLang])?s.reportLang:"ca"}
-function langInto(l){var x=REPORT_LANGS.filter(function(r){return r[0]===l})[0];return x?x[3]:l}
+// ── REPORT LANGUAGES ─────────────────────────────────────────────────────────
+// [code, native name, Catalan name (what the model is told to translate into),
+//  "into <language>" phrase for the app's own messages]
+//
+// Latin, Greek and Cyrillic. That is not a limit of the translator — the model
+// will do Arabic or Japanese perfectly well — it is a limit of the PDF: a
+// report in Arabic or Hebrew needs the whole page mirrored, and CJK needs a
+// font measured in megabytes and a line-breaker that works without spaces.
+// Both are their own job, and promising them here would be promising something
+// that cannot be shown working.
+var LANGS=[
+  ["ca","Català","català","al català"],
+  ["es","Castellano","castellà","al castellà"],
+  ["en","English","anglès","a l'anglès"],
+  ["fr","Français","francès","al francès"],
+  ["de","Deutsch","alemany","a l'alemany"],
+  ["it","Italiano","italià","a l'italià"],
+  ["pt","Português","portuguès","al portuguès"],
+  ["nl","Nederlands","neerlandès","al neerlandès"],
+  ["gl","Galego","gallec","al gallec"],
+  ["eu","Euskara","basc","al basc"],
+  ["pl","Polski","polonès","al polonès"],
+  ["cs","Čeština","txec","al txec"],
+  ["sk","Slovenčina","eslovac","a l'eslovac"],
+  ["sl","Slovenščina","eslovè","a l'eslovè"],
+  ["hr","Hrvatski","croat","al croat"],
+  ["ro","Română","romanès","al romanès"],
+  ["hu","Magyar","hongarès","a l'hongarès"],
+  ["tr","Türkçe","turc","al turc"],
+  ["el","Ελληνικά","grec","al grec"],
+  ["bg","Български","búlgar","al búlgar"],
+  ["ru","Русский","rus","al rus"],
+  ["uk","Українська","ucraïnès","a l'ucraïnès"],
+  ["da","Dansk","danès","al danès"],
+  ["sv","Svenska","suec","al suec"],
+  ["nb","Norsk","noruec","al noruec"],
+  ["fi","Suomi","finès","al finès"],
+  ["et","Eesti","estonià","a l'estonià"],
+  ["lv","Latviešu","letó","al letó"],
+  ["lt","Lietuvių","lituà","al lituà"]
+];
+// The three that get chips in the menu, because they are almost all the work.
+var CHIP_LANGS=["ca","es","en"];
+function langRow(c){for(var i=0;i<LANGS.length;i++)if(LANGS[i][0]===c)return LANGS[i];return null}
+function knownLang(c){return !!langRow(c)}
+function langName(c){var r=langRow(c);return r?r[2]:c}      // for the model
+function langNative(c){var r=langRow(c);return r?r[1]:c}    // for the menu
+function langInto(c){var r=langRow(c);return r?r[3]:c}      // for our messages
+function reportLang(s){return (s&&knownLang(s.reportLang))?s.reportLang:"ca"}
+// One row of the export menu: three chips for the everyday languages and a
+// dropdown for the other twenty-six, so the common case stays one tap and the
+// rare one is still there. When a rare language is picked the chips go quiet
+// and the dropdown carries the choice.
+function langRowHTML(label,tip,cur,attr){
+  var chip=CHIP_LANGS.indexOf(cur)>=0;
+  return "<div class=\"exp-lang\"><span"+(tip?" title=\""+esc(tip)+"\"":"")+">"+esc(label)+"</span>"
+    +CHIP_LANGS.map(function(c){
+        return "<button data-"+attr+"=\""+c+"\" class=\""+(cur===c?"on":"")+"\" title=\""+esc(langNative(c))+"\">"+c.toUpperCase()+"</button>";
+      }).join("")
+    +"<select data-"+attr+"sel=\"1\" class=\""+(chip?"":"on")+"\" title=\"Altres idiomes\">"
+    +"<option value=\"\">"+(chip?"···":esc(langNative(cur)))+"</option>"
+    +LANGS.filter(function(l){return CHIP_LANGS.indexOf(l[0])<0}).map(function(l){
+        return "<option value=\""+l[0]+"\""+(cur===l[0]?" selected":"")+">"+esc(l[1])+"</option>";
+      }).join("")
+    +"</select></div>";
+}
 // ── The ✓ Corregeix button ───────────────────────────────────────────────────
 // Manual, never on export: a corrector that rewrites what you wrote without
 // being asked is the translator's old sin under another name. One press
@@ -3792,7 +3887,6 @@ function needsTranslation(t){return worthTranslating(txBare(t))}
 // and this is a document a client signs. Hence temperature 0, a JSON array in
 // and out, and the count check below: as many texts back as went in, all
 // strings, or the originals stand.
-var TR_LANG={ca:"català",es:"castellà",en:"anglès"};
 function txParseArray(raw){
   var t=String(raw||"").trim().replace(/^```(?:json)?\s*/i,"").replace(/```\s*$/,"").trim();
   try{var v=JSON.parse(t);if(Array.isArray(v))return v}catch(e){}
@@ -3801,7 +3895,7 @@ function txParseArray(raw){
   return null;
 }
 async function txBatch(batch,target){
-  var lang=TR_LANG[target]||target;
+  var lang=langName(target);
   var sys="Ets un traductor tècnic d'informes de servei de camp. Tradueixes al "+lang+".\n"
     +"REGLES:\n"
     +"1. Tradueix el sentit amb naturalitat, però no afegeixis, no treguis ni resumeixis res.\n"
@@ -4008,6 +4102,9 @@ async function exportRep(s,fmt){
   if(fmt==="zip"){exportSessionZip(s,"project");return}
   if(fmt==="zipdocx"){exportSessionZip(s,"docx");return}
   if(fmt==="xlsx"&&!collectSessionParts(s).length){alert("Aquesta sessió encara no té recanvis.\n\nTria'ls d'un dibuix o afegeix-los a mà en una entrada.");return}
+  // A language the app has no labels for yet has to get them before anything
+  // is built, or the report comes out with Catalan headings on foreign text.
+  if(!await ensureLabels(reportLang(s)))return;
   // Which revision this is goes first: it stamps both the file name and the
   // header, and it's the one question worth asking before any work is done.
   var rev=await ensureRevision(s);
@@ -4758,8 +4855,10 @@ async function buildTimesheetBlob(s){
   var doc=new L.jsPDF({unit:"mm",format:"a4"});
   var M=14,W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),CW=W-M*2;
   var y=M;
-  var ar=await pdfArabicFont(doc,[s.client,s.project,s.machine,s.location,s.tech,T.techName,T.cliName,T.remarks]
-    .concat(T.rows.map(function(r){return r.dest||r.note||""})));
+  var tsTexts=[s.client,s.project,s.machine,s.location,s.tech,T.techName,T.cliName,T.remarks]
+    .concat(T.rows.map(function(r){return r.dest||r.note||""}));
+  var ar=await pdfArabicFont(doc,tsTexts);
+  await pdfUniFont(doc,tsTexts.concat(labelTexts(t)));
 
   // header
   doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(17,24,39);
@@ -4938,6 +5037,243 @@ var AR_FONT_URL="https://cdn.jsdelivr.net/npm/@expo-google-fonts/amiri/Amiri_400
 var AR_RE=/[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/;
 var arFontB64=null,arFontP=null;
 function hasArabic(t){return AR_RE.test(t==null?"":String(t))}
+// ── Everything else helvetica can't draw ─────────────────────────────────────
+// WinAnsi stops at Latin-1 plus a handful: ł ř ș ő ğ α б are all outside it and
+// come out as mojibake, exactly as Arabic did. Noto Sans carries Latin
+// Extended, Greek and Cyrillic in one 550 KB file — so a report in Polish,
+// Czech, Turkish, Romanian, Hungarian, Greek, Russian or Ukrainian is drawn in
+// it. Not the run, the WHOLE document: swapping fonts cell by cell looks like a
+// defect, and Noto's Latin is perfectly good next to its Greek.
+//
+// It is registered UNDER THE NAME "helvetica". That reads like a trick and it
+// is one, but the alternative is threading a font name through twenty-eight
+// setFont calls and every autoTable style block, and getting one wrong means a
+// row of mojibake nobody notices until a client has it. The name is a key in
+// this document's font table and nothing else; jsPDF has no opinion about it.
+// Arabic still gets Amiri by name, since it is the one that shapes the letters.
+var UNI_FONT_URL={normal:"https://cdn.jsdelivr.net/npm/@expo-google-fonts/noto-sans/NotoSans_400Regular.ttf",
+                  bold:"https://cdn.jsdelivr.net/npm/@expo-google-fonts/noto-sans/NotoSans_700Bold.ttf"};
+// WinAnsi's own additions above U+00FF — these are fine as they are.
+var WINANSI_HI="€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ";
+function needsUni(t){
+  t=t==null?"":String(t);
+  for(var i=0;i<t.length;i++){
+    var ch=t.charAt(i);
+    // Arabic is Amiri's job; it must not drag the document into a font that
+    // hasn't got it.
+    if(t.charCodeAt(i)>0xFF&&WINANSI_HI.indexOf(ch)<0&&!AR_RE.test(ch))return true;
+  }
+  return false;
+}
+var uniB64={},uniP={};
+function fontB64(url){
+  return fetch(url).then(function(r){
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    return r.arrayBuffer();
+  }).then(function(ab){
+    var b=new Uint8Array(ab),s="";
+    for(var i=0;i<b.length;i+=8192)s+=String.fromCharCode.apply(null,b.subarray(i,i+8192));
+    return btoa(s);
+  });
+}
+// Every string in a label table, however deep (types, sev and the rest).
+// ── LABELS FOR THE OTHER LANGUAGES ───────────────────────────────────────────
+// 66 report labels and 26 timesheet ones per language. Three are written by
+// hand; the rest are translated once by the same model that does the entries
+// and then kept, so a language costs one call ever and a language nobody picks
+// costs nothing at all.
+//
+// This is a heavier promise than translating an entry. A wrong sentence is
+// wrong once; a wrong column heading is wrong in every row of every page of
+// something a client signs. Hence the shape check below, hence the file names
+// are rebuilt in code rather than trusted, and hence "Revisa les etiquetes".
+var LBL_KEY="reportLabels";
+var labelsReady=null;
+function labelsLoad(){
+  if(labelsReady)return labelsReady;
+  labelsReady=(async function(){
+    if(!idb)return;
+    var v=null;try{v=await idbGet(idb,LBL_KEY)}catch(e){}
+    if(!v)return;
+    Object.keys(v).forEach(function(c){
+      if(CHIP_LANGS.indexOf(c)>=0||!knownLang(c))return;  // never shadow a hand-written table
+      if(v[c].rpt)RPT[c]=v[c].rpt;
+      if(v[c].tsl)TSL[c]=v[c].tsl;
+    });
+  })();
+  return labelsReady;
+}
+async function labelsSave(){
+  if(!idb)return;
+  var out={};
+  LANGS.forEach(function(l){
+    var c=l[0];
+    if(CHIP_LANGS.indexOf(c)>=0)return;
+    if(RPT[c]||TSL[c])out[c]={rpt:RPT[c]||null,tsl:TSL[c]||null};
+  });
+  try{await idbSet(idb,LBL_KEY,out)}catch(e){}
+}
+// Same keys, same nesting, same list lengths, every leaf a non-empty string.
+// Anything else and the whole table goes in the bin: falling back to English
+// labels makes a report in the wrong language, which you can see; a table with
+// a key missing makes a report with holes in it, which you may not.
+function sameShape(model,got){
+  if(typeof model==="string")return typeof got==="string"&&got.trim()!=="";
+  if(Array.isArray(model))return Array.isArray(got)&&got.length===model.length
+    &&model.every(function(m,i){return sameShape(m,got[i])});
+  if(model&&typeof model==="object"){
+    if(!got||typeof got!=="object"||Array.isArray(got))return false;
+    return Object.keys(model).every(function(k){return sameShape(model[k],got[k])});
+  }
+  return false;
+}
+// A file-name fragment is not a label: it lands on a disk and in a Drive
+// folder, so it is rebuilt here instead of being taken on trust.
+function fileSafe(s,fallback){
+  var t=String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"")
+        .toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"");
+  return t||fallback;
+}
+function txParseObj(raw){
+  var t=String(raw||"").trim().replace(/^```(?:json)?\s*/i,"").replace(/```\s*$/,"").trim();
+  try{var v=JSON.parse(t);if(v&&typeof v==="object"&&!Array.isArray(v))return v}catch(e){}
+  var m=/\{[\s\S]*\}/.exec(t);
+  if(m){try{var v2=JSON.parse(m[0]);if(v2&&typeof v2==="object")return v2}catch(e){}}
+  return null;
+}
+var LBL_SYS="Tradueixes les etiquetes fixes d'un informe de servei tècnic. "
+  +"Reps un objecte JSON i respons amb un objecte JSON amb EXACTAMENT les mateixes claus, la mateixa estructura i les llistes de la mateixa llargada. Només en tradueixes els valors. "
+  +"REGLES: són encapçalaments de taula i etiquetes d'un document que signa un client — curtes, i en el registre tècnic habitual del sector, no en el literari. "
+  +"\"OK\" es deixa tal com està. El que ve en MAJÚSCULES torna en majúscules. "
+  +"\"[photo]\" manté els claudàtors. "
+  +"Els valors de dins de \"pre\" i la clau \"file\" són trossos de nom de fitxer: en minúscules, sense accents ni espais, amb guió baix. "
+  +"La llista \"wd\" són els set dies de la setmana abreujats, començant per diumenge. "
+  +"Respon NOMÉS amb el JSON.";
+async function labelsFetch(lang){
+  var into=" Tradueix al "+langName(lang)+".";
+  var rpt=txParseObj(await gemAsk(LBL_SYS+into,JSON.stringify(RPT.en),true));
+  var tsl=txParseObj(await gemAsk(LBL_SYS+into,JSON.stringify(TSL.en),true));
+  if(!sameShape(RPT.en,rpt)||!sameShape(TSL.en,tsl))
+    throw new Error("les etiquetes han tornat amb una forma que no encaixa amb la taula original");
+  rpt.pre={report:fileSafe(rpt.pre.report,"report"),parts:fileSafe(rpt.pre.parts,"spare_parts")};
+  tsl.file=fileSafe(tsl.file,"timesheet");
+  return {rpt:rpt,tsl:tsl};
+}
+// Before anything is exported. True when the language is ready to be used.
+async function ensureLabels(lang){
+  await labelsLoad();
+  if(RPT[lang]&&TSL[lang])return true;
+  if(!knownLang(lang))return false;
+  var t=langNative(lang);
+  if(!gemKey()){
+    openGemKey("Per estrenar un informe en "+t+" cal traduir-ne les etiquetes un cop, i això demana la clau de Gemini.");
+    return false;
+  }
+  expBusy("Preparant "+t+"…");
+  try{
+    var got=await labelsFetch(lang);
+    RPT[lang]=got.rpt;TSL[lang]=got.tsl;
+    await labelsSave();
+  }catch(e){
+    alert("No s'han pogut preparar les etiquetes en "+t+": "+((e&&e.message)||e)
+      +"\n\nL'informe no s'ha generat. Torna-ho a provar, o tria un altre idioma.");
+    return false;
+  }finally{expBusy("")}
+  alert("Les etiquetes en "+t+" ja hi són, traduïdes per Gemini i guardades en aquest navegador.\n\n"
+    +"Com que surten a cada fila de cada pàgina, val la pena mirar-les un cop: ↓ Informe › Revisa les etiquetes.");
+  return true;
+}
+// ── THE LABEL REVIEW SCREEN ──────────────────────────────────────────────────
+// Flatten to dotted paths so a nested table and a seven-day array both come out
+// as a flat list of rows, and go back the same way.
+function lblFlat(o,pre,out){
+  out=out||[];pre=pre||"";
+  if(typeof o==="string"){out.push([pre,o]);return out}
+  if(Array.isArray(o)){o.forEach(function(v,i){lblFlat(v,pre+"."+i,out)});return out}
+  Object.keys(o||{}).forEach(function(k){lblFlat(o[k],pre?pre+"."+k:k,out)});
+  return out;
+}
+function lblSet(o,path,val){
+  var ks=path.split("."),cur=o;
+  for(var i=0;i<ks.length-1;i++)cur=cur[ks[i]];
+  cur[ks[ks.length-1]]=val;
+}
+var lblLang=null,lblWired=false;
+function lblRowsHTML(lang){
+  var groups=[["rpt","Informe",RPT.en,RPT[lang]],["tsl","Full d'hores",TSL.en,TSL[lang]]];
+  return groups.map(function(g){
+    var en=lblFlat(g[2]);
+    return "<div class=\"ts-note\" style=\"padding:8px 2px;font-weight:600\">"+g[1]+"</div>"
+      +"<table style=\"width:100%;border-collapse:collapse;font-size:12px\">"
+      +en.map(function(p){
+          var cur=lblFlat(g[3]).filter(function(q){return q[0]===p[0]})[0];
+          return "<tr>"
+            +"<td style=\"width:38%;padding:3px 6px 3px 0;color:var(--tx3)\">"+esc(p[1])+"</td>"
+            +"<td style=\"padding:3px 0\"><input type=\"text\" data-lbl=\""+g[0]+"|"+esc(p[0])+"\" value=\""+esc(cur?cur[1]:"")+"\" style=\"font-size:12px;padding:3px 6px\"></td>"
+            +"</tr>";
+        }).join("")
+      +"</table>";
+  }).join("");
+}
+function wireLbl(){
+  if(lblWired)return;lblWired=true;
+  function close(){$$("lblBack").style.display="none";lblLang=null}
+  $$("lblCancel").addEventListener("click",close);
+  $$("lblBack").addEventListener("click",function(e){if(e.target===$$("lblBack"))close()});
+  $$("lblSave").addEventListener("click",async function(){
+    var lang=lblLang;if(!lang)return;
+    var rpt=JSON.parse(JSON.stringify(RPT[lang])),tsl=JSON.parse(JSON.stringify(TSL[lang]));
+    var bad=0;
+    Array.prototype.forEach.call($$("lblList").querySelectorAll("[data-lbl]"),function(i){
+      var v=i.value.trim();if(!v){bad++;return}
+      var p=i.dataset.lbl.split("|");
+      lblSet(p[0]==="rpt"?rpt:tsl,p[1],v);
+    });
+    if(bad){alert("Hi ha "+bad+" etiqueta(es) buida(es). Omple-les: una etiqueta en blanc deixa un forat a l'informe.");return}
+    rpt.pre={report:fileSafe(rpt.pre.report,"report"),parts:fileSafe(rpt.pre.parts,"spare_parts")};
+    tsl.file=fileSafe(tsl.file,"timesheet");
+    RPT[lang]=rpt;TSL[lang]=tsl;
+    await labelsSave();close();
+  });
+  $$("lblRedo").addEventListener("click",async function(){
+    var lang=lblLang;if(!lang)return;
+    if(!confirm("Vols llençar aquestes etiquetes i tornar-les a demanar a Gemini?\nEls canvis que hi hagis fet a mà es perdran."))return;
+    if(!gemKey()){openGemKey("Per tornar a traduir les etiquetes cal la clau de Gemini.");return}
+    var b=$$("lblRedo");b.disabled=true;b.textContent="Traduint…";
+    try{
+      var got=await labelsFetch(lang);
+      RPT[lang]=got.rpt;TSL[lang]=got.tsl;
+      await labelsSave();
+      $$("lblList").innerHTML=lblRowsHTML(lang);
+    }catch(e){alert("No s'han pogut tornar a traduir: "+((e&&e.message)||e))}
+    b.disabled=false;b.innerHTML="&#8635; Torna-les a traduir";
+  });
+}
+function openLabels(lang){
+  if(!RPT[lang]||!TSL[lang])return;
+  wireLbl();lblLang=lang;
+  $$("lblTitle").textContent="Etiquetes en "+langNative(lang);
+  $$("lblNote").textContent="A l'esquerra, l'anglès d'on surten; a la dreta, el que sortirà a l'informe. "
+    +"Les ha traduïdes Gemini i es guarden en aquest navegador, o sigui que el que corregeixis aquí es queda.";
+  $$("lblList").innerHTML=lblRowsHTML(lang);
+  $$("lblBack").style.display="flex";
+}
+function labelTexts(o){
+  var out=[];
+  Object.keys(o||{}).forEach(function(k){
+    var v=o[k];
+    if(typeof v==="string")out.push(v);
+    else if(v&&typeof v==="object")out=out.concat(labelTexts(v));
+  });
+  return out;
+}
+function loadUniFont(style){
+  if(uniB64[style])return Promise.resolve(uniB64[style]);
+  if(!uniP[style])uniP[style]=fontB64(UNI_FONT_URL[style])
+    .then(function(b){uniB64[style]=b;return b})
+    .catch(function(){uniP[style]=null;return null});
+  return uniP[style];
+}
 // Which way the line runs: the first letter that has a direction decides.
 function startsRtl(t){var m=/[A-Za-zÀ-ɏ؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]/.exec(t==null?"":String(t));return !!m&&hasArabic(m[0])}
 function loadArabicFont(){
@@ -4960,6 +5296,20 @@ async function pdfArabicFont(doc,texts){
   if(!b64)return null;
   try{doc.addFileToVFS("Amiri.ttf",b64);doc.addFont("Amiri.ttf","Amiri","normal");return "Amiri"}
   catch(e){return null}
+}
+// Swaps this document's "helvetica" for Noto Sans when anything in it needs a
+// letter WinAnsi hasn't got. Both weights or neither: half of them registered
+// means setFont(...,"bold") throws in the middle of a report.
+// Returns true when the document now has the glyphs it needs.
+async function pdfUniFont(doc,texts){
+  if(!(texts||[]).some(needsUni))return true;      // nothing to do is a success
+  var n=await loadUniFont("normal"),b=await loadUniFont("bold");
+  if(!n||!b)return false;
+  try{
+    doc.addFileToVFS("NotoSans.ttf",n);doc.addFont("NotoSans.ttf","helvetica","normal");
+    doc.addFileToVFS("NotoSans-Bold.ttf",b);doc.addFont("NotoSans-Bold.ttf","helvetica","bold");
+    return true;
+  }catch(e){return false}
 }
 // Picks the font for one piece of text. Amiri is registered in one weight, so
 // Arabic never goes bold — the labels that are bold are all fixed Latin.
@@ -5085,6 +5435,10 @@ async function buildPdfBlob(s,lang,rev){
   });
   var ar=await pdfArabicFont(doc,typed);
   if(!ar&&typed.some(hasArabic))alert("No s'ha pogut carregar la tipografia àrab (cal connexió el primer cop): el text en àrab d'aquest PDF no sortirà bé.");
+  // The labels count too: a report in Greek has Greek column heads even when
+  // every word the technician typed is Latin.
+  if(!await pdfUniFont(doc,typed.concat(labelTexts(R))))
+    alert("No s'ha pogut carregar la tipografia ampliada (cal connexió el primer cop): les lletres que no són del llatí bàsic no sortiran bé en aquest PDF.");
 
   // header
   doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(17,24,39);
@@ -5854,6 +6208,7 @@ $$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><di
 (async function(){
   sessions=orderSessions(await loadSessions());
   outDirLoad();                     // idb is open by now; nothing waits on this
+  labelsLoad();                     // so a language translated earlier is ready offline
   if(loadTok()&&accessToken&&Date.now()<tokenExp){
     isLoggedIn=true;
     loadFromDrive().then(function(){renderAll();scheduleSync();flushTrash()});

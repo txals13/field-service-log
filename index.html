@@ -1237,6 +1237,11 @@ async function syncSessionToDrive(token,sess){
           } else if(img.type==="video"){res.missingVideos++;continue}
           else continue;
         } else {
+          // It is in Drive: a spinner left over from an upload that never came
+          // back has nothing left to wait for.
+          if(img.uploadStatus&&img.uploadStatus!=="ok"){
+            imgs[k]=img=Object.assign({},img,{uploadStatus:"ok"});entryChanged=true;
+          }
           var home=await kindFolder(img.type==="audio"?"audio":img.type==="video"?"videos":"photos");
           if(home&&(info.parents||[]).indexOf(home)<0){
             (info.parents||[]).forEach(function(pp){strayParents[pp]=1});
@@ -1255,7 +1260,7 @@ async function syncSessionToDrive(token,sess){
       var defName=isAudio?("voice_"+uid()+".webm"):("photo_"+uid()+".jpg");
       var defMime=isAudio?(blob.type||"audio/webm"):(blob.type||"image/jpeg");
       var r=await driveUploadBlob(token,blob,img.name||defName,defMime,kindId);
-      if(r){imgs[k]=Object.assign({},img,{driveId:r.id,name:r.name});entryChanged=true;res.uploaded++}
+      if(r){imgs[k]=Object.assign({},img,{driveId:r.id,name:r.name,uploadStatus:"ok"});entryChanged=true;res.uploaded++}
     }
     if(entryChanged){
       var up=Object.assign({},e,{images:imgs.slice(0,nOwn)});
@@ -1385,11 +1390,20 @@ async function uploadReportCopy(sess,blob,fname,mime){
     await driveUploadBlob(token,blob,fname,mime,folderId);
   }catch(e){}
 }
+// Every failure has to come back as null, never as a rejected promise. The
+// thumbnails set "loading" before calling and only leave that state inside
+// .then(), so a fetch that throws on the way — looking up the folder, creating
+// it, uploading — left the spinner turning for ever, with no ! to tap and no
+// way to retry. It happens most with the camera: the phone hands the app over
+// to the camera app, and what comes back is a page that has been in the
+// background with the connection dropped underneath it.
 async function uploadMedia(sess,file,kind){
-  var token=await ensureToken();if(!token)return null;
-  var folderId=await getMediaFolder(token,sess,kind);if(!folderId)return null;
-  var r=await driveUploadBlob(token,file,file.name||("file_"+Date.now()),file.type||"application/octet-stream",folderId);
-  return r?{driveId:r.id,name:r.name}:null;
+  try{
+    var token=await ensureToken();if(!token)return null;
+    var folderId=await getMediaFolder(token,sess,kind);if(!folderId)return null;
+    var r=await driveUploadBlob(token,file,file.name||("file_"+Date.now()),file.type||"application/octet-stream",folderId);
+    return r?{driveId:r.id,name:r.name}:null;
+  }catch(e){return null}
 }
 function driveStreamUrl(driveId){if(!accessToken||!driveId)return null;return"https://www.googleapis.com/drive/v3/files/"+driveId+"?alt=media&access_token="+encodeURIComponent(accessToken)}
 async function driveRename(driveId,name){
@@ -2384,7 +2398,7 @@ function renderLogArea(){
         if(up)up.addEventListener("click",function(ev){
           ev.stopPropagation();
           var img=logImgAt(e,t);if(!img)return;
-          var file=fileCache.get(img);
+          var file=fileCache.get(img)||fileFromLocal(img);
           if(!file){alert("No es pot tornar a provar: el fitxer original ja no està disponible en aquesta sessió. Treu-lo i torna'l a afegir des d'Edita.");return}
           img.uploadStatus="loading";renderLogArea();
           uploadMedia(active,file,img.type==="video"?"videos":"photos").then(function(r){
@@ -2637,9 +2651,20 @@ var MB={
         get:function(){return fImgs},set:function(v){fImgs=v},
         busy:function(n){if(n===undefined)return pExifFix;pExifFix+=n}}
 };
+// The original File only lives in memory, so after a reload —easy on a phone,
+// where the camera app can push the page out— there is nothing to retry with.
+// For a photo or a voice note the local copy is enough to upload something
+// instead of nothing: it is the downscaled version, and that beats losing it.
+// A video has no local copy at all, only its poster, so there it really is gone.
+function fileFromLocal(img){
+  if(!img||!img.data||img.type==="video")return null;
+  var b=dataUrlToBlob(img.data);if(!b)return null;
+  var nm=img.name||((img.type==="audio"?"voice_":"photo_")+uid()+(img.type==="audio"?".webm":".jpg"));
+  try{return new File([b],nm,{type:b.type||(img.type==="audio"?"audio/webm":"image/jpeg")})}catch(e){return b}
+}
 function retryUpload(img,bk){
   var active=sessions.find(function(s){return s.id===aid});
-  var file=fileCache.get(img);
+  var file=fileCache.get(img)||fileFromLocal(img);
   if(!active||!file){alert("No es pot tornar a provar: treu aquest adjunt i torna'l a afegir.");return}
   img.uploadStatus="loading";
   renderThumbs(bk);

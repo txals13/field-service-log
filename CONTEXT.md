@@ -487,6 +487,23 @@ Field Service Log/
   - The composer's button column **becomes a row under the description** below
     640 px. It starved the description down to a three-word ribbon even before
     the camera buttons made the stack taller.
+- **🗄 Carpeta d'arxiu — the project ZIP is written there, not downloaded**
+  (`arxDir`, `saveToArxiu`, IndexedDB key `archiveDir`; picked in the same
+  dialog as the project folder). Unlike that one this needs **write**
+  permission, which is why it is asked for while the export click is still
+  fresh: after a minute of translating and zipping the browser no longer counts
+  it as a gesture and refuses the prompt outright. Anything in the way — no
+  permission, folder gone, disk full — falls back to the download, so the ZIP
+  is never lost on the way out. Only the archive; the Word + media pack is for
+  handing over and still downloads.
+  - **A name already there gets a suffix** (`arxFreeName`): `…_rev01_ca.zip`,
+    then `…_rev01_ca_2.zip`. `create:true` writes straight over an existing
+    file without a word, and since the name carries the revision, two files
+    called the same thing are two goes at the same document — worth keeping
+    both. The busy line names the file when it isn't the plain one, because a
+    suffix appearing is worth noticing. Verified against a real directory
+    handle (OPFS): three writes of one name, three files, each with its own
+    contents.
 - **📁 Carpeta del projecte — the file dialog opens where the photos are**
   (`pickMedia`, `fsaPick`, `startDirFor`; sidebar button `btnOutDir`).
   - Drive for desktop mirrors `Outputs` onto a drive letter, so a session's

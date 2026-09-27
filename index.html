@@ -2438,6 +2438,9 @@ function renderContent(){
     +"<div class=\"exp-lang\"><span>Idioma de l'informe</span>"
     +REPORT_LANGS.map(function(l){return "<button data-lang=\""+l[0]+"\" class=\""+(reportLang(active)===l[0]?"on":"")+"\" title=\""+l[2]+"\">"+l[1]+"</button>"}).join("")
     +"</div>"
+    +"<div class=\"exp-lang\"><span title=\"L'idioma en què has escrit les entrades. Si és el mateix que el de l'informe, no s'envia res a traduir.\">Escrit en</span>"
+    +REPORT_LANGS.map(function(l){return "<button data-wlang=\""+l[0]+"\" class=\""+(writeLang(active)===l[0]?"on":"")+"\" title=\""+l[2]+"\">"+l[1]+"</button>"}).join("")
+    +"</div>"
     +"<button data-fmt=\"pdf\">📄 PDF</button><button data-fmt=\"docx\">📄 Word (DOCX)</button><button data-fmt=\"html\">📄 HTML</button><button data-fmt=\"xlsx\">📊 Recanvis (Excel)</button><button data-fmt=\"timesheet\">🧾 Full d'hores…</button><button data-fmt=\"zip\" title=\"Tot: tots els informes, els fitxers multimèdia i session.json — la còpia que es pot tornar a importar\">🗄 ZIP del projecte (arxiu)</button><button data-fmt=\"zipdocx\" title=\"L'informe Word amb totes les fotos, vídeos i notes de veu — per lliurar. No es pot tornar a importar.\">📦 ZIP Word + multimèdia</button></div></div>"
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSync\" title=\"Sincronitza ara\">⟳</button>":"")
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSessSync\" title=\"Recrea les carpetes de Drive i puja-hi les fotos que hi faltin, d'aquesta sessió\">&#9729; Desa</button>":"")
@@ -2511,11 +2514,11 @@ function renderContent(){
       var row=e.target.closest?e.target.closest(".exp-lang"):null;
       if(row){
         e.stopPropagation();
-        var lb=e.target.closest("[data-lang]");
-        if(lb){
-          setReportLang(active.id,lb.dataset.lang);
-          Array.prototype.forEach.call(row.querySelectorAll("[data-lang]"),function(b){b.classList.toggle("on",b===lb)});
-        }
+        var lb=e.target.closest("[data-lang]"),wb=e.target.closest("[data-wlang]");
+        if(lb)setReportLang(active.id,lb.dataset.lang);
+        if(wb)setWriteLang(active.id,wb.dataset.wlang);
+        var hit=lb||wb;
+        if(hit)Array.prototype.forEach.call(row.querySelectorAll("button"),function(b){b.classList.toggle("on",b===hit)});
         return;
       }
       if(e.target.closest("[data-rev]")){$$("expMenu").style.display="none";openRevisions();return}
@@ -3624,8 +3627,17 @@ function setReportLang(id,lang){
   sessions=sessions.map(function(x){return x.id===id?Object.assign({},x,{reportLang:lang}):x});
   saveLocal();isDirty=true;if(isLoggedIn)saveToDrive();
 }
-// Same Google Cloud project and key as the Drive Picker. The Cloud Translation
-// API has to be enabled there and allowed on this key — see CONTEXT.md.
+// The language the entries were TYPED in, which is a different question from
+// the one the report goes out in. Nothing can tell a Catalan entry from a
+// Spanish one without asking a model, and that call is the whole thing being
+// saved — so the session says so, and says Catalan unless told otherwise,
+// because that is what the app is written in. Only the technician's own words
+// are at stake: every fixed label comes from RPT[lang] either way.
+function writeLang(s){return (s&&RPT[s.writeLang])?s.writeLang:"ca"}
+function setWriteLang(id,lang){
+  sessions=sessions.map(function(x){return x.id===id?Object.assign({},x,{writeLang:lang}):x});
+  saveLocal();isDirty=true;if(isLoggedIn)saveToDrive();
+}
 // ── SPELLING AND GRAMMAR ─────────────────────────────────────────────────────
 // Gemini, same Google Cloud project and key (the Generative Language API has to
 // be enabled there and allowed on the key). NOT the translator: asked to
@@ -3754,15 +3766,14 @@ async function gTranslate(texts,target){
 // cached on the session (entry.tr / session.notesTr, keyed by a hash of the
 // source text), so re-exporting costs nothing and works offline, and editing a
 // text simply makes its old translation stale.
-// The technician writes in Catalan — the app is Catalan, and ✓ Corregeix
-// corrects in whatever language it finds without moving it. So a Catalan
-// report is already in its language: no call, no cost, no key asked for, and
-// nothing that could come back quietly reworded. The price of the assumption
-// is that an entry typed in Spanish inside a Catalan report stays in Spanish,
-// which is how it read on screen anyway.
-var WRITE_LANG="ca";
+// A report in the language it was written in is already in its language:
+// nothing is sent, nothing is paid for, no key is asked for, and nothing can
+// come back quietly reworded. ✓ Corregeix corrects in place without moving the
+// language, so a corrected entry is still the language the session declares.
+// Only the free text is skipped — the labels, the severities and the dates
+// come from RPT[lang] and are in the report's language regardless.
 async function localizeSession(s,lang){
-  if(lang===WRITE_LANG)return s;
+  if(lang===writeLang(s))return s;
   var jobs=[];
   (s.entries||[]).forEach(function(e){
     var src=(e.text||"").trim();

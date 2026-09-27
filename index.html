@@ -6330,6 +6330,25 @@ async function exportSessionZip(s,kind){
       if(!r.ok)continue;
       zip.file(f.path,await r.blob());
     }
+    // The spare-parts manual sits outside the session folder — one copy per
+    // machine, shared by every session of that machine — so nothing above
+    // catches it. An archive is meant to be enough on its own years later,
+    // when what the entries call "the part on drawing 4" has to mean
+    // something, so the drawings and the catalog go in too. Only in the
+    // archive: the hand-over pack is the report and the photos, not the
+    // machine's manual. A manual that won't download doesn't stop the ZIP.
+    if(archive&&s.manualRef&&s.manualRef.pdfId){
+      expBusy("Manual…");
+      var mr=s.manualRef,mBase=mr.base||mr.serial||"manual";
+      try{
+        var pr=await fetch("https://www.googleapis.com/drive/v3/files/"+mr.pdfId+"?alt=media",{headers:{Authorization:"Bearer "+token}});
+        if(pr.ok)zip.file("manual/"+(mr.pdfName||(mBase+".pdf")),await pr.blob());
+        if(mr.jsonId){
+          var jr=await fetch("https://www.googleapis.com/drive/v3/files/"+mr.jsonId+"?alt=media",{headers:{Authorization:"Bearer "+token}});
+          if(jr.ok)zip.file("manual/"+(mr.jsonName||(mBase+".json")),await jr.blob());
+        }
+      }catch(e){}
+    }
     expBusy("Comprimint…");
     var zipBlob=await zip.generateAsync({type:"blob"});
     var zipName=sanitize(s.client)+"_"+sanitize(s.machine)+(archive?"_projecte_":"_docx_multimedia_")+"rev"+("0"+rev.n).slice(-2)+"_"+R.lang+".zip";

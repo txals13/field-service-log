@@ -126,6 +126,17 @@ mark{background:var(--goldbg);color:var(--goldtx);padding:0 1px;border-radius:2p
 .input-bar{border-top:1px solid var(--br);padding:8px 12px;background:var(--bg1);flex-shrink:0;display:flex;flex-direction:column;gap:6px}
 .input-row{display:flex;gap:6px;align-items:flex-end}
 .input-ctrl{display:flex;flex-direction:column;gap:5px;flex-shrink:0}
+/* On a phone the side column starved the description down to a three-word
+   ribbon, and the camera buttons made the stack taller still. Same pieces,
+   laid out in bands: what it is, what happened, what to attach. */
+@media(max-width:640px){
+  .input-row{flex-wrap:wrap}
+  .input-row>.input-ctrl{flex-direction:row;width:100%}
+  .input-row>.input-ctrl>*{flex:1;min-width:0}
+  .input-row>textarea{order:1;flex:1 0 100%;width:100%}
+  .input-row>.input-ctrl:last-child{order:2}
+  .input-row>.input-ctrl:last-child>#btnAdd{flex:2.4}
+}
 /* status / closed bars */
 .stat-bar{padding:5px 12px;border-top:1px solid var(--br);background:var(--bg1);font-size:11px;color:var(--tx3);display:flex;align-items:center;gap:12px;flex-shrink:0;font-family:monospace;flex-wrap:wrap}
 .closed-bar{padding:7px 12px;border-top:1px solid var(--br);background:var(--redbg);font-size:12px;color:var(--tx2);display:flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0;flex-wrap:wrap}
@@ -552,9 +563,13 @@ textarea{resize:none;line-height:1.4}
         <label>Adjunts</label>
         <div id="eThumbs" class="thumbs"></div>
         <div id="eFileNames" class="fnames"></div>
+        <button class="btn-sm cap-only" id="eCam" style="margin-top:6px;display:none">&#128247; Fes una foto</button>
+        <button class="btn-sm cap-only" id="eVid" style="margin-top:6px;display:none">&#127909; Grava un v&iacute;deo</button>
         <button class="btn-sm" id="eAddPhoto" style="margin-top:6px">&#128247; Afegeix foto / vídeo</button>
         <button class="btn-sm" id="eRec" title="Grava una nota de veu" style="margin-top:6px">&#127897; Grava una nota de veu</button>
         <input type="file" id="eFileIn" accept="image/*,video/*" multiple style="display:none">
+        <input type="file" id="eCamIn" accept="image/*" capture="environment" style="display:none">
+        <input type="file" id="eVidIn" accept="video/*" capture="environment" style="display:none">
       </div>
       <div class="field">
         <label>Recanvis</label>
@@ -591,9 +606,13 @@ textarea{resize:none;line-height:1.4}
         <div id="fThumbs" class="thumbs"></div>
         <div id="fFileNames" class="fnames"></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn-sm cap-only" id="fCam" style="display:none">&#128247; Fes una foto</button>
+          <button class="btn-sm cap-only" id="fVid" style="display:none">&#127909; Grava un v&iacute;deo</button>
           <button class="btn-sm" id="fAddPhoto">&#128247; Foto / v&iacute;deo</button>
           <button class="btn-sm" id="fRec" title="Grava una nota de veu">&#127897; Grava una nota de veu</button>
           <input type="file" id="fFileIn" accept="image/*,video/*" multiple style="display:none">
+          <input type="file" id="fCamIn" accept="image/*" capture="environment" style="display:none">
+          <input type="file" id="fVidIn" accept="video/*" capture="environment" style="display:none">
         </div>
       </div>
       <div class="modal-actions">
@@ -792,6 +811,14 @@ function autoH(ta){
 }
 function sanitize(s){return(s||"untitled").toString().trim().replace(/[\/:*?"<>|]/g,"_").replace(/\s+/g,"_").slice(0,60)||"untitled"}
 function mob(){return window.innerWidth<=640}
+// A phone or tablet in the hand, which is a different question from a narrow
+// window: a laptop dragged to half the screen is still a laptop, and pointing
+// its webcam at a pump helps nobody. Coarse pointer AND real touch points, so
+// a touchscreen laptop with a mouse doesn't count either.
+function handheld(){
+  try{return matchMedia("(pointer:coarse)").matches&&(navigator.maxTouchPoints||0)>0}
+  catch(e){return false}
+}
 // Drops the export menu under its button but clamped inside the viewport. It
 // used to be absolutely positioned with right:0, which on a phone (where the
 // button sits far left after the header wraps) pushed the menu off the left
@@ -2476,10 +2503,18 @@ function renderContent(){
         +"<textarea id=\"entIn\" rows=\"3\" placeholder=\"Descripció (opcional si hi ha foto)… Ctrl+Retorn per afegir\"></textarea>"
         +"<div class=\"input-ctrl\">"
         +"<button class=\"btn-gold btn-sm\" id=\"btnAdd\">↵ Afegeix</button>"
-        +"<button class=\"btn-sm\" id=\"btnPhoto\">📷</button>"
+        // On a phone the point of the thing is the camera; on a laptop it is the
+        // folder. Same button row, different first button.
+        +(handheld()
+          ?"<button class=\"btn-sm\" id=\"btnCam\" title=\"Fes una foto\">📷</button>"
+           +"<button class=\"btn-sm\" id=\"btnVid\" title=\"Grava un vídeo\">🎥</button>"
+           +"<button class=\"btn-sm\" id=\"btnPhoto\" title=\"Tria una foto o un vídeo que ja tens\">🖼</button>"
+          :"<button class=\"btn-sm\" id=\"btnPhoto\" title=\"Afegeix una foto o un vídeo\">📷</button>")
         +"<button class=\"btn-sm\" id=\"btnRec\" title=\"Grava una nota de veu\">🎙</button>"
         +"<button class=\"btn-sm\" id=\"entCorr\" title=\"Corregeix ortografia i gramàtica de la descripció\">✓</button>"
         +"<input type=\"file\" id=\"fileIn\" accept=\"image/*,video/*\" multiple style=\"display:none\">"
+        +"<input type=\"file\" id=\"camIn\" accept=\"image/*\" capture=\"environment\" style=\"display:none\">"
+        +"<input type=\"file\" id=\"vidIn\" accept=\"video/*\" capture=\"environment\" style=\"display:none\">"
         +"</div></div>"
         +"<textarea id=\"notesIn\" class=\"inp-notes\" placeholder=\"Notes generals d'aquesta sessió…\"></textarea>"
         +"<button class=\"btn-sm\" id=\"notesCorr\" style=\"margin-top:4px\" title=\"Corregeix ortografia i gramàtica de les notes\">✓ Corregeix</button>"
@@ -2535,6 +2570,10 @@ function renderContent(){
     $$("entIn").addEventListener("keydown",function(e){if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){e.preventDefault();addEntry()}});
     ni.addEventListener("input",function(e){autoH(e.target);sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{notes:e.target.value}):s});scheduleSave()});
     $$("btnPhoto").addEventListener("click",function(){pickMedia("fileIn",function(e){handleFiles(e,"pend")})});
+    // Capture goes straight at the hidden input: there is no folder to start in
+    // and nothing to pick — the camera app is the picker.
+    wireCapture("btnCam","camIn","pend");
+    wireCapture("btnVid","vidIn","pend");
     $$("fileIn").addEventListener("change",function(e){handleFiles(e,"pend")});
     $$("btnRec").addEventListener("click",function(){if(mediaRec&&recBk==="pend")stopRec();else if(!mediaRec)startRec("pend")});
     wireCorrect("entCorr","entIn",true);
@@ -2788,6 +2827,28 @@ async function fsaPick(s,audio){
 }
 // One door, two routes. It hands over the same change-event shape both
 // handlers already read, so nothing downstream knows which way the files came.
+// ── CAPTURE · the camera, on the device that has one in your hand ────────────
+// <input capture> is the whole mechanism: a phone opens the camera or the
+// camcorder instead of a file list, and a desktop browser ignores the attribute
+// entirely — which is why the desktop buttons are simply never shown rather
+// than disabled. What comes back is a File like any other, so it lands in
+// handleFiles and goes up to the session's Drive folder along the usual path.
+function wireCapture(btnId,inputId,bk){
+  var b=$$(btnId),i=$$(inputId);
+  if(!b||!i)return;
+  b.addEventListener("click",function(){i.click()});
+  i.addEventListener("change",function(e){handleFiles(e,bk)});
+}
+// Shows the capture buttons only where capturing means something, and renames
+// the old one for what it now is: once the camera has its own button, "afegeix
+// una foto" is the gallery.
+function showCaptureButtons(){
+  if(!handheld())return;
+  Array.prototype.forEach.call(document.querySelectorAll(".cap-only"),function(b){b.style.display=""});
+  ["eAddPhoto","fAddPhoto"].forEach(function(id){
+    var b=$$(id);if(b){b.innerHTML="&#128444;&#65039; De la galeria";b.title="Tria una foto o un vídeo que ja tens al telèfon"}
+  });
+}
 async function pickMedia(inputId,handler,audio){
   if(fsaOK()&&outDir){
     try{
@@ -3014,6 +3075,8 @@ $$("eTsRound").addEventListener("click",function(){tsRoundField(5)});
 $$("eTsRound15").addEventListener("click",function(){tsRoundField(15)});
 $$("eTsHour").addEventListener("click",function(){tsRoundField(60)});
 $$("eAddPhoto").addEventListener("click",function(){pickMedia("eFileIn",function(e){handleFiles(e,"edit")})});
+wireCapture("eCam","eCamIn","edit");
+wireCapture("eVid","eVidIn","edit");
 $$("eFileIn").addEventListener("change",function(e){handleFiles(e,"edit")});
 $$("eRec").addEventListener("click",function(){if(mediaRec&&recBk==="edit")stopRec();else if(!mediaRec)startRec("edit")});
 $$("eSev").addEventListener("change",renderFixUI);
@@ -3025,6 +3088,9 @@ $$("fixDel").addEventListener("click",function(){
   fixOn=false;fImgs=[];$$("fText").value="";renderFixUI();
 });
 $$("fAddPhoto").addEventListener("click",function(){pickMedia("fFileIn",function(e){handleFiles(e,"fix")})});
+wireCapture("fCam","fCamIn","fix");
+wireCapture("fVid","fVidIn","fix");
+showCaptureButtons();
 $$("fFileIn").addEventListener("change",function(e){handleFiles(e,"fix")});
 $$("fRec").addEventListener("click",function(){if(mediaRec&&recBk==="fix")stopRec();else if(!mediaRec)startRec("fix")});
 $$("eTagSel").addEventListener("change",function(){if(this.value)$$("eTag").value=this.value;this.selectedIndex=0});

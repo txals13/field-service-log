@@ -398,6 +398,28 @@ Field Service Log/
     "the folder's files" that quietly hides some is a screen that makes you
     count twice and doubt the app. What doesn't travel in the media pack is
     shown under "Altres fitxers" and labelled, not hidden.
+- **On a phone the buttons open the camera; on a laptop they open a folder**
+  (`handheld`, `wireCapture`, `showCaptureButtons`).
+  - `<input capture="environment">` is the whole mechanism: a phone opens the
+    camera or the camcorder instead of a file list, and a desktop browser
+    ignores the attribute — which is why the capture buttons are never *shown*
+    on the desktop rather than shown and disabled. What comes back is a `File`
+    like any other, so it lands in `handleFiles` and rides the usual path up to
+    the session's Drive folder.
+  - `handheld()` is **coarse pointer AND real touch points**, not
+    `mob()`/width: a laptop dragged to half the screen is still a laptop and
+    pointing its webcam at a pump helps nobody, and a touchscreen laptop with a
+    mouse is not a phone either.
+  - Capture and gallery are **separate buttons**, in the composer (📷 🎥 🖼)
+    and in the edit and resolution panels. Losing the gallery to gain the
+    camera would be a bad trade: half the photos of a visit were taken before
+    the app was open. The old "afegeix una foto" is renamed "De la galeria"
+    where the camera has its own button, because that is what it now is.
+  - **Voice notes are unchanged**: 🎙 records through `getUserMedia` on every
+    device, phone or laptop — the user asked to keep dictating from the laptop.
+  - The composer's button column **becomes a row under the description** below
+    640 px. It starved the description down to a three-word ribbon even before
+    the camera buttons made the stack taller.
 - **📁 Carpeta del projecte — the file dialog opens where the photos are**
   (`pickMedia`, `fsaPick`, `startDirFor`; sidebar button `btnOutDir`).
   - Drive for desktop mirrors `Outputs` onto a drive letter, so a session's

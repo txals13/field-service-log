@@ -12,7 +12,9 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
 
 ## Google Cloud credentials (in the app, except the Gemini one)
 - CLIENT_ID: `514772123815-ncjsebgvc01t8arftqp8bo43jr4fgneb.apps.googleusercontent.com`
-- PICKER_KEY: `AIzaSyBQwgZQYFJMwlA3ipZrqYjfZYUI9c813O4`
+- PICKER_KEY: in `index.html` — not repeated here. It has to ship in the page,
+  but a second copy in the notes is one more thing for a scanner to find and
+  one more place to forget when it is rotated.
 - PICKER_APP: `514772123815`
 - Project ID: `field-service-log-500615`
 - OAuth scope: `https://www.googleapis.com/auth/drive.file` (minimum required)
@@ -30,6 +32,22 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
     the **paid tier** — `usageMetadata.serviceTier: "standard"` in a reply
     confirms it.
   - Cloud Translation is no longer used at all.
+- **PICKER_KEY is public on purpose, and restricted so that doesn't matter.**
+  A browser key ships in the page to every visitor; hiding it from GitHub would
+  change nothing. What makes a copy of it worthless is the restrictions, set on
+  2026-09-27: **Websites** (`https://txals13.github.io/*` and
+  `http://localhost:8420/*`) and **one API**, Google Picker. Cloud Translation
+  was removed the same day — it was still allowed months after the app stopped
+  using it, and it bills.
+  - GitGuardian mails an alert on every push because it cannot see the
+    restrictions. The answer is not to rotate: a new key would be in the next
+    push's page too. The restrictions are the defence, not the secrecy.
+  - **It was being probed.** When the restrictions were saved, the console
+    listed detected usage for `geocoding-backend.googleapis.com` — an API this
+    app has never called in any commit, ever. Somebody harvested the key off
+    GitHub and tried it against a billable API. It was refused, because the key
+    was already API-restricted. That is the whole argument for restricting a
+    key you cannot hide.
 - **The Gemini key is NOT in index.html, and must never be put there.** This
   repo is public. `PICKER_KEY` can live in the source because Cloud Console pins
   a browser key to a domain, so a copy of it is worth nothing anywhere else; an

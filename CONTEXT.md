@@ -71,6 +71,16 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
     went out with the three originals intact.
   - What it cannot catch is a wrong translation of the right shape. That is the
     trade for the price and the instructions.
+  - **A Catalan report is never sent anywhere** (`WRITE_LANG`, the first line of
+    `localizeSession`). The technician writes in Catalan and ✓ Corregeix
+    corrects in place without moving the language, so `lang === "ca"` already
+    has the text it needs: no call, no cost, and no key asked for on the export
+    most reports take. It used to go out to the model and come back identical —
+    which worked, but paid for the round trip and, once the key moved to
+    localStorage, stopped a Catalan export dead on a browser that had no key.
+    The price is that an entry typed in Spanish inside a Catalan report stays in
+    Spanish, which is how it read on screen anyway. Verified with a key present:
+    Catalan 0 calls, English 1.
 - **✓ Corregeix — spelling and grammar, on demand** (`gemCorrect`, `wireCorrect`).
   Gemini (`gemini-3.5-flash-lite`, temperature 0) on the AI Studio auth key the
   user typed into 🔑 Clau de Gemini — see the credentials section: NOT the

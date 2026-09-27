@@ -401,7 +401,8 @@ textarea{resize:none;line-height:1.4}
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px">
         <div class="field" style="margin:0"><label>Des de</label><input type="date" id="tsFrom" style="width:auto"></div>
         <div class="field" style="margin:0"><label>Fins a</label><input type="date" id="tsTo" style="width:auto"></div>
-        <div class="field" style="margin:0"><label>Idioma del full</label><select id="tsLang" style="width:auto"><option value="en">English</option><option value="es">Castellano</option><option value="ca">Catal&agrave;</option></select></div>
+        <div class="field" style="margin:0"><label>Idioma del full</label><select id="tsLang" style="width:auto"></select>
+          <div id="tsLangNote" class="ts-note" style="display:none"></div></div>
         <button class="btn-sm" id="tsReload" title="Torna a llegir el calendari de Drive">&#8635; Recarrega</button>
         <button class="btn-sm" id="tsImportBtn" title="Fes servir un JSON exportat des de l'app Calendari laboral (&#9881; Exporta c&ograve;pia)">&#8593; Importa JSON</button>
         <input type="file" id="tsImportIn" accept="application/json,.json" style="display:none">
@@ -4766,7 +4767,11 @@ function openTimesheet(){
   var T=active.timesheet||{},R=tsRange(active);
   $$("tsFrom").value=T.from||R.from;
   $$("tsTo").value=T.to||R.to;
+  // Built from the same table as the report's, so the sheet is not stuck at
+  // three languages while the report has twenty-nine.
+  $$("tsLang").innerHTML=LANGS.map(function(l){return "<option value=\""+l[0]+"\">"+esc(l[1])+"</option>"}).join("");
   $$("tsLang").value=T.lang||reportLang(active);
+  tsLangNote();
   // A saved sheet keeps the columns it was signed with; a new one starts from
   // whatever was chosen last.
   tsCols=(T.cols&&T.cols.length)?TSCOL_ALL.filter(function(k){return T.cols.indexOf(k)>=0}):tsColDef();
@@ -4789,7 +4794,7 @@ function openTimesheet(){
     $$("tsReload").addEventListener("click",function(){tsLoad(true)});
     $$("tsFrom").addEventListener("change",function(){tsPick=null;tsLoad(false)});
     $$("tsTo").addEventListener("change",function(){tsPick=null;tsLoad(false)});
-    $$("tsLang").addEventListener("change",tsRenderRows);
+    $$("tsLang").addEventListener("change",function(){tsRenderRows();tsLangNote()});
     $$("tsColReset").addEventListener("click",function(){tsCols=TSCOL_ALL.slice();tsColSaveDef(tsCols);tsRenderRows()});
     $$("tsAll").addEventListener("click",function(){tsAll.forEach(function(r){tsPick[r.date]=true});tsRenderRows()});
     $$("tsNone").addEventListener("click",function(){tsAll.forEach(function(r){tsPick[r.date]=false});tsRenderRows()});
@@ -4806,6 +4811,16 @@ function openTimesheet(){
     });
   }
   tsLoad(undefined);
+}
+// The preview below is drawn with whatever labels the app already has, which
+// for a language it hasn't met yet means English. Saying so beats letting it
+// look broken — and asking Gemini for a table just because a dropdown moved
+// would be a charge nobody asked for.
+function tsLangNote(){
+  var el=$$("tsLangNote");if(!el)return;
+  var l=$$("tsLang").value,missing=!TSL[l];
+  el.style.display=missing?"":"none";
+  if(missing)el.textContent="Les etiquetes en "+langNative(l)+" es traduiran en exportar; aquí sota encara es veuen en anglès.";
 }
 function closeTimesheet(){$$("tsBack").style.display="none";tsSess=null}
 function tsImportFile(e){
@@ -4992,9 +5007,54 @@ function tsFileName(s){
   var lang=(s.timesheet&&TSL[s.timesheet.lang])?s.timesheet.lang:"ca";
   return TSL[lang].file+"_"+reportBase(s,lang)+".pdf";
 }
+// Remarks and the per-day notes are the technician's own words and go through
+// the translator; the destination is a place name and does not, for the same
+// reason the client and the machine don't. Nothing is cached: a sheet is
+// exported once or twice, and the frozen copy must keep the words it was
+// signed with, not a translation of them.
+async function localizeTimesheet(s,lang){
+  var T=s.timesheet;
+  if(lang===writeLang(s))return T;
+  var jobs=[],paths=[];
+  if((T.remarks||"").trim()&&needsTranslation(T.remarks)){jobs.push(T.remarks.trim());paths.push(-1)}
+  (T.rows||[]).forEach(function(r,i){
+    if((r.note||"").trim()&&needsTranslation(r.note)){jobs.push(r.note.trim());paths.push(i)}
+  });
+  if(!jobs.length)return T;
+  var got;
+  try{
+    expBusy("Traduint…");
+    got=await gTranslate(jobs,lang);
+  }catch(e){
+    var m=(e&&e.message)||String(e);
+    if(m===GEM_NOKEY){
+      if(!confirm("El full d'hores va "+langInto(lang)+", i en aquest navegador no hi ha cap clau de Gemini."
+        +"\n\nAccepta per escriure-la ara, o cancel·la per generar-lo amb els textos tal com els vas escriure."))return T;
+      openGemKey("El full d'hores va "+langInto(lang)+". Escriu la clau i torna a exportar-lo.");
+      return null;
+    }
+    if(!confirm("No s'han pogut traduir els textos del full d'hores "+langInto(lang)+":\n"+m
+      +"\n\nVols generar-lo igualment, amb els textos tal com els vas escriure?"))return null;
+    return T;
+  }finally{expBusy("")}
+  var out=Object.assign({},T,{rows:(T.rows||[]).map(function(r){return Object.assign({},r)})});
+  paths.forEach(function(p,k){
+    if(p<0)out.remarks=got[k];else out.rows[p].note=got[k];
+  });
+  return out;
+}
+// The timesheet has a language of its own — the report can go to head office in
+// English while the sheet is signed on site in Polish — so it gets the same two
+// things a report gets, in its own language: labels, and the words the
+// technician typed into it.
 async function exportTimesheet(s){
   if(!s)return;
   if(!s.timesheet||!s.timesheet.rows||!s.timesheet.rows.length){openTimesheet();return}
+  var lang=(s.timesheet.lang&&knownLang(s.timesheet.lang))?s.timesheet.lang:"ca";
+  if(!await ensureLabels(lang))return;
+  var T=await localizeTimesheet(s,lang);
+  if(!T)return;
+  s=Object.assign({},s,{timesheet:T});
   var blob=await buildTimesheetBlob(s);
   if(!blob){alert("No s'ha pogut carregar la llibreria PDF. Comprova la connexió.");return}
   var fn=tsFileName(s);
@@ -6117,6 +6177,7 @@ async function exportSessionZip(s,kind){
   var archive=(kind||"project")==="project";
   if(!isLoggedIn){alert("Primer inicia la sessió amb Google: s'exporten els fitxers guardats a la carpeta de Drive de la sessió.");return}
   var token=await ensureToken();if(!token){alert("No s'ha pogut autenticar amb Drive.");return}
+  if(!await ensureLabels(reportLang(s)))return;   // same gate as a single report
   var rev=await ensureRevision(s);
   if(!rev)return;
   s=sessions.find(function(x){return x.id===s.id})||s;
@@ -6152,7 +6213,18 @@ async function exportSessionZip(s,kind){
       zip.file(P.report+"_"+base+".html",new Blob([buildReportHTML(R.s,false,R.lang,R.rev)],{type:"text/html;charset=utf-8"}));
       var pdfBlob=await buildPdfBlob(R.s,R.lang,R.rev); if(pdfBlob)zip.file(P.report+"_"+base+".pdf",pdfBlob);
       var xlsxBlob=await buildXlsxBlob(R.s,R.lang,R.rev); if(xlsxBlob)zip.file(P.parts+"_"+base+".xlsx",xlsxBlob);
-      var tsBlob=await buildTimesheetBlob(s); if(tsBlob)zip.file(tsFileName(s),tsBlob);
+      // The sheet has its own language and its own words: same treatment here
+      // as when it is exported on its own, or the ZIP's copy comes out in the
+      // language it was typed in while the loose one is translated.
+      var tsS=s;
+      if(s.timesheet&&s.timesheet.rows&&s.timesheet.rows.length){
+        var tsLang=knownLang(s.timesheet.lang)?s.timesheet.lang:"ca";
+        if(await ensureLabels(tsLang)){
+          var tsT=await localizeTimesheet(s,tsLang);
+          if(tsT)tsS=Object.assign({},s,{timesheet:tsT});
+        }
+      }
+      var tsBlob=await buildTimesheetBlob(tsS); if(tsBlob)zip.file(tsFileName(tsS),tsBlob);
       // Built too, not copied: Drive only gets a session.json when the technician
       // presses Save, so a session that was never synced had none at all. Always
       // the ORIGINAL texts — this is what gets imported back.

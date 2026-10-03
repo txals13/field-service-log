@@ -671,6 +671,13 @@ textarea{resize:none;line-height:1.4}
       </div>
       <!-- How the problem ended. Lives INSIDE the entry: the original severity
            and description stay exactly as they were written. -->
+      <!-- A problem dragged in from an earlier visit can only be closed from a
+           NEW entry: the old report has already been signed saying it was open,
+           and rewriting it would be rewriting something that was handed over. -->
+      <div class="field" id="eClosesWrap" style="display:none;margin-top:8px">
+        <label>Tanca un problema d'una visita anterior</label>
+        <select id="eCloses"></select>
+      </div>
       <button class="btn-sm" id="fixAdd" style="margin-top:4px;display:none">&#10004; Afegeix com ha quedat</button>
       <div id="fixWrap" class="fix-wrap" style="display:none">
         <div class="fix-head">
@@ -3196,6 +3203,35 @@ function tsRoundField(m){
   d=new Date(Math.round(d.getTime()/step)*step);
   el.value=tsToInput(d.toISOString());
 }
+// What this entry could close: anything still open on this machine, from any
+// visit but this one. Hidden entirely when there is nothing — a dead control on
+// every single entry would be noise on the ninety-nine that close nothing.
+function fillCloses(active,entry){
+  var wrap=$$("eClosesWrap"),sel=$$("eCloses");
+  if(!wrap||!sel)return;
+  var all=machineSessions(active),closed=closedRefs(all),opts=[];
+  all.forEach(function(x){
+    if(x.id===active.id)return;
+    openEntries(x,closed).forEach(function(e){opts.push({s:x,e:e})});
+  });
+  // The one this entry already closes has to stay on the list even though it no
+  // longer counts as open, or editing the entry again would silently drop it.
+  var cur=entry&&entry.closes;
+  if(cur&&!opts.some(function(o){return o.s.id===cur.s&&o.e.id===cur.e})){
+    var sx=sessions.find(function(x){return x.id===cur.s});
+    var ex=sx&&(sx.entries||[]).find(function(x){return x.id===cur.e});
+    if(sx&&ex)opts.push({s:sx,e:ex});
+  }
+  if(!opts.length){wrap.style.display="none";sel.innerHTML="";return}
+  opts.sort(function(a,b){return String(b.e.ts).localeCompare(String(a.e.ts))});
+  sel.innerHTML="<option value=\"\">\u2014 cap \u2014</option>"+opts.map(function(o){
+    var t=String(o.e.text||"").replace(/\s+/g," ");
+    return "<option value=\""+esc(o.s.id+"|"+o.e.id)+"\">"
+      +esc(fts(o.e.ts).split(" ")[0]+" \u00b7 "+(o.e.tag||(SM[o.e.severity]||SM.info).label)+" \u00b7 "+t.slice(0,60))+"</option>";
+  }).join("");
+  sel.value=cur?(cur.s+"|"+cur.e):"";
+  wrap.style.display="";
+}
 function openEdit(entryId){
   var active=sessions.find(function(s){return s.id===aid});if(!active)return;
   var entry=(active.entries||[]).find(function(x){return x.id===entryId});if(!entry)return;
@@ -3209,6 +3245,7 @@ function openEdit(entryId){
   fixOn=!!fx;fImgs=fx&&fx.images?fx.images.slice():[];
   $$("fSev").value=(fx&&fx.severity)||"ok";
   $$("fText").value=(fx&&fx.text)||"";
+  fillCloses(active,entry);
   rEThumbs();rFThumbs();rEParts();clearPartForm();renderFixUI();
   var sessR=sessions.find(function(s){return s.id===aid});
   var hasManual=!!(sessR&&sessR.manualRef);
@@ -3254,6 +3291,8 @@ function saveEdit(){
     var had=((entry0&&entry0.images)||[]).concat((entry0&&entry0.fix&&entry0.fix.images)||[]);
     queueTrash(aid,had.map(function(im){return im.driveId}).filter(function(id){return id&&!kept[id]}));
     sessions=sessions.map(function(s){if(s.id!==aid)return s;return Object.assign({},s,{entries:sortEntries((s.entries||[]).map(function(en){if(en.id!==entId)return en;var up=Object.assign({},en,{text:captText,severity:newSev,tag:newTag,images:eImgs.slice(),parts:eParts.slice(),editedAt:now()});
+      var cl=($$("eCloses")&&$$("eCloses").value)||"";
+      if(cl){var pp=cl.split("|");up.closes={s:pp[0],e:pp[1]}}else delete up.closes;
       // A hand-set time wins for good (tsManual): otherwise the photo would
       // take it back the next time this entry is saved.
       if(newTs){up.ts=newTs;up.tsManual=true;delete up.tsFromPhoto}
@@ -3996,16 +4035,32 @@ function machineSessions(s){
 // Open means: a problem or a warning that got an outcome, or got one
 // that still says it is a problem. isResolved only counts ok/info outcomes, so
 // one test covers both.
-function openEntries(sess){
+// Everything any entry of this machine says it closes, as "sessionId|entryId".
+// Built once per question and passed down, because the alternative is walking
+// every session's entries once per entry.
+function closedRefs(list){
+  var out={};
+  (list||[]).forEach(function(x){
+    (x.entries||[]).forEach(function(e){
+      if(e&&e.closes&&e.closes.s&&e.closes.e)out[e.closes.s+"|"+e.closes.e]=e;
+    });
+  });
+  return out;
+}
+// Open: a problem or a warning with no outcome, or one whose outcome still says
+// it is a problem — AND that no later visit has since closed. isResolved only
+// counts ok/info outcomes, so one test covers the first two.
+function openEntries(sess,closed){
   return (sess.entries||[]).filter(function(e){
-    return e&&(e.severity==="issue"||e.severity==="warning")&&!isResolved(e);
+    if(!e||(e.severity!=="issue"&&e.severity!=="warning")||isResolved(e))return false;
+    return !(closed&&closed[sess.id+"|"+e.id]);
   });
 }
 function mhChipHTML(sess){
   var all=machineSessions(sess);
   if(all.length<2)return "";
-  var open=0;
-  all.forEach(function(x){if(x.id!==sess.id)open+=openEntries(x).length});
+  var closed=closedRefs(all),open=0;
+  all.forEach(function(x){if(x.id!==sess.id)open+=openEntries(x,closed).length});
   return "<span id=\"mhChip\" style=\"cursor:pointer\" title=\"Totes les visites a aquesta màquina: què es va fer i què va quedar obert\">&#128220; "
     +all.length+" visites"+(open?" · <span style=\"color:var(--orange)\">"+open+" pendent"+(open>1?"s":"")+"</span>":"")+"</span>";
 }
@@ -4041,9 +4096,17 @@ function openMachineHistory(){
     +". S'agrupen per client i màquina tal com els escrius.";
 
   // What is still open, from the OTHER visits: this one you already have on screen.
-  var pend=[];
-  all.forEach(function(x){if(x.id!==cur.id)openEntries(x).forEach(function(e){pend.push({e:e,s:x})})});
+  var closed=closedRefs(all),pend=[],done=[];
+  all.forEach(function(x){
+    if(x.id===cur.id)return;
+    openEntries(x,closed).forEach(function(e){pend.push({e:e,s:x})});
+    (x.entries||[]).forEach(function(e){
+      var by=e&&closed[x.id+"|"+e.id];
+      if(by)done.push({e:e,s:x,by:by});
+    });
+  });
   pend.sort(function(a,b){return String(b.e.ts).localeCompare(String(a.e.ts))});
+  done.sort(function(a,b){return String(b.by.ts).localeCompare(String(a.by.ts))});
 
   var h="";
   if(pend.length){
@@ -4052,6 +4115,17 @@ function openMachineHistory(){
     h+="<div style=\"height:14px\"></div>";
   }
 
+  if(done.length){
+    h+="<div style=\"font-weight:700;margin:2px 0 6px;color:var(--green)\">\u2713 Tancats en una visita posterior ("+done.length+")</div>";
+    h+=done.map(function(d){
+      return "<div style=\"display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--br);opacity:.75\">"
+        +"<span style=\"flex-shrink:0;font-size:11px;font-family:monospace;color:var(--tx3)\">"+fts(d.e.ts).split(" ")[0]+"</span>"
+        +"<span style=\"flex:1\">"+(d.e.tag?"<strong>"+esc(d.e.tag)+"</strong> \u2014 ":"")
+        +esc(String(d.e.text||"").replace(/\s+/g," ").slice(0,110))
+        +"<div style=\"color:var(--green);font-size:11px\">\u2713 tancat el "+fts(d.by.ts).split(" ")[0]+"</div></span></div>";
+    }).join("");
+    h+="<div style=\"height:14px\"></div>";
+  }
   h+="<div style=\"font-weight:700;margin:2px 0 6px\">Visites</div>";
   h+=all.map(function(x){
     var c=severityCounts(x.entries||[]),r=curRev(x),isCur=x.id===cur.id;

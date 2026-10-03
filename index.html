@@ -146,6 +146,7 @@ mark{background:var(--goldbg);color:var(--goldtx);padding:0 1px;border-radius:2p
 .auth-bar{padding:6px 12px;background:var(--redbg);border-bottom:1px solid rgba(239,68,68,.3);font-size:12px;color:var(--red);display:flex;align-items:center;gap:8px;flex-shrink:0}
 /* storage-full bar */
 .store-bar{padding:6px 12px;background:var(--orangebg);border-bottom:1px solid rgba(249,115,22,.4);font-size:12px;color:var(--orange);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.share-bar{padding:6px 12px;background:var(--greenbg);border-bottom:1px solid rgba(34,197,94,.4);font-size:12px;color:var(--green);display:flex;align-items:center;gap:8px;flex-shrink:0}
 .store-bar.hard{background:var(--redbg);border-color:rgba(239,68,68,.4);color:var(--red)}
 /* install bar */
 .inst-bar{background:var(--goldbg);border-bottom:1px solid rgba(245,158,11,.3);padding:6px 12px;display:flex;align-items:center;gap:8px;font-size:12px;flex-shrink:0;color:var(--goldtx)}
@@ -302,6 +303,15 @@ textarea{resize:none;line-height:1.4}
     <span style="flex:1" id="storeMsg">&#9888; L'emmagatzematge del dispositiu és gairebé ple</span>
     <button class="btn-sm" id="btnStoreBackup" style="background:var(--gold);color:#000;border-color:var(--golddim);font-weight:700">&#8681; Descarrega una còpia</button>
     <button class="btn-g btn-sm" id="btnStoreX">&#10005;</button>
+  </div>
+  <!-- Appears when a file has just been exported and this device can hand it to
+       another app. A bar and not a step inside the export because navigator.share
+       wants a FRESH gesture, and by the time a PDF is built the tap that asked
+       for it is a minute old and no longer counts. -->
+  <div id="shareBar" class="share-bar" style="display:none">
+    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="shareMsg">&mdash;</span>
+    <button class="btn-sm" id="btnShare" style="background:var(--green);color:#fff;border-color:var(--green);font-weight:700">&#9993; Comparteix</button>
+    <button class="btn-g btn-sm" id="btnShareX">&#10005;</button>
   </div>
   <div class="topbar">
     <button class="btn-g" id="btnSide" style="font-size:20px;padding:4px 8px">&#9776;</button>
@@ -2258,6 +2268,23 @@ $$("btnReconnect").addEventListener("click",async function(){
 });
 $$("btnStoreBackup").addEventListener("click",exportAllBackup);
 $$("btnStoreX").addEventListener("click",function(){storeDismissed=true;hideStoreWarning()});
+$$("btnShareX").addEventListener("click",hideShare);
+$$("btnShare").addEventListener("click",async function(){
+  if(!lastDl)return;
+  var b=$$("btnShare");b.disabled=true;
+  try{
+    await navigator.share({files:[lastDl.file],title:lastDl.name});
+    hideShare();                       // it went somewhere; the bar has done its job
+  }catch(e){
+    // AbortError is the share sheet being dismissed, which is not a failure and
+    // must not nag. Anything else is worth saying out loud, because the file is
+    // in Downloads either way and the technician needs to know to go get it.
+    if(e&&e.name!=="AbortError")
+      alert("No s'ha pogut compartir el fitxer: "+((e&&e.message)||e)
+        +"\n\nEl tens igualment a les descàrregues.");
+  }
+  b.disabled=false;
+});
 $$("btnLoginTop").addEventListener("click",async function(){
   var btn=$$("btnLoginTop");btn.disabled=true;btn.textContent="Connectant…";
   var t=await googleLogin();
@@ -3539,7 +3566,48 @@ $$("importFile").addEventListener("change",function(e){
 });
 
 // ── EXPORT ────────────────────────────────────────────────────────────────────
-function dlBlob(blob,filename){var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
+function dlBlob(blob,filename){
+  var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  offerShare(blob,filename);
+}
+// ── SHARING WHAT WAS JUST EXPORTED ───────────────────────────────────────────
+// Signing the report in front of the client and then leaving the app to hunt
+// for the file in Downloads was the whole trip undone at the last step.
+// navigator.share hands it straight to mail, WhatsApp or whatever is installed.
+//
+// It needs a FRESH user gesture, and the tap that asked for the report is a
+// minute old by the time the PDF exists — translated, laid out, rendered. So
+// this is not a step inside the export: the file is kept, a bar appears, and
+// the tap on the bar is the gesture. It also means you get to look at the
+// report before deciding to send it, which is how it should have been anyway.
+//
+// Offered wherever the browser says it can, not where a device test guesses it
+// can: `canShare({files})` is the honest question, and a laptop that can do it
+// is welcome to.
+var lastDl=null;
+function shareMime(name){
+  var e=(name||"").split(".").pop().toLowerCase();
+  return {pdf:"application/pdf",html:"text/html",zip:"application/zip",json:"application/json",
+          docx:"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          xlsx:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}[e]||"application/octet-stream";
+}
+function shareFileOf(blob,name){
+  try{return new File([blob],name,{type:blob.type||shareMime(name)})}catch(e){return null}
+}
+function hideShare(){
+  var b=$$("shareBar");if(b)b.style.display="none";
+  lastDl=null;   // and let the blob go: no reason to hold a ZIP in memory after this
+}
+function offerShare(blob,filename){
+  var bar=$$("shareBar");if(!bar||!blob||!filename)return;
+  if(!navigator.canShare)return;
+  var f=shareFileOf(blob,filename);
+  if(!f||!navigator.canShare({files:[f]}))return;
+  lastDl={file:f,name:filename};
+  $$("shareMsg").textContent="✓ "+filename;
+  bar.style.display="flex";
+}
 
 // ── REPORT LANGUAGE ──────────────────────────────────────────────────────────
 // The app itself is in Catalan; a report goes out in whichever language its

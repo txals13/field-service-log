@@ -707,6 +707,27 @@ Field Service Log/
 ---
 
 ## Export / Report details
+- **✉ Comparteix — what was just exported goes straight to another app**
+  (`offerShare`, `lastDl`, hooked into `dlBlob`, so all eight export paths get
+  it for free). Signing the report in front of the client and then leaving the
+  app to hunt through Downloads was the whole trip undone at the last step.
+  - **It is a bar, not a step inside the export, because of the gesture.**
+    `navigator.share` needs a *fresh* user activation, and by the time a PDF
+    exists — translated, laid out, rendered — the tap that asked for it is a
+    minute old and no longer counts. So the file is kept, a bar appears, and
+    the tap on the bar is the gesture. The side effect is the right one: you
+    get to look at the report before deciding to send it.
+  - Offered where `navigator.canShare({files})` says yes, never by sniffing the
+    device: that is the honest question, and a laptop that can do it may.
+  - **AbortError is not an error** — it is the share sheet being dismissed, and
+    it leaves the bar up to try again without a word. Anything else does say so
+    out loud, and says the file is in Downloads anyway.
+  - Dismissing the bar drops the reference, so a 200 MB project ZIP isn't held
+    in memory for the rest of the session.
+  - Verified: with no Web Share API the bar stays hidden after a real export;
+    with it, the share receives the actual PDF (right name, `application/pdf`,
+    177 KB), the bar closes on success, a cancelled sheet is silent, and a real
+    failure alerts.
 - **HTML:** videos embedded with `<video controls>`, photo+video filenames shown
 - **PDF:** real file via `jspdf@2.5.1` + `jspdf-autotable@3.8.2` (unpkg, fallback
   jsdelivr). Printing was dropped: it can't hand the bytes back to JS, so no PDF

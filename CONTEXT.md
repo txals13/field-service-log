@@ -635,6 +635,38 @@ Field Service Log/
 ---
 
 ## Report revisions
+- **✍ Signa… — the report is signed on the glass, like the timesheet**
+  (`openReportSign`, `revSign`, `setRevSign`; reuses `tsInitPad`, pointer
+  events, which is what works on Android). Two pads, two names, drawn into the
+  PDF, the DOCX and the HTML; when a revision was never signed, the same blank
+  line as always comes out, for signing a printout.
+  - **The signature belongs to the REVISION, not the session.** That is the
+    whole point of revisions: a reissued report is a different document, and a
+    signature carried from Rev. 01 to Rev. 02 would put the client's name under
+    text they never read. Issue a new revision and the pads come up blank;
+    Rev. 01 keeps its signature and re-exports with it. Verified both ways.
+  - Signing goes through `ensureRevision` first, so there is one place that
+    decides what revision this is, and a signature always has a document to be
+    the signature of.
+  - `revSign` resolves out of the session's list **by number**, never off the
+    `rev` object the export carries: that object was taken before signing, and
+    trusting its `.sign` would lose a signature made between issuing and
+    exporting — which is the normal order of events.
+  - Writing it does not bump `updatedAt`: signing is part of issuing, not a
+    change to the content, so it must not make the revision look stale.
+  - It is a signature on glass, not a qualified electronic one — the same
+    weight the timesheet has always had, and the same as ink on a printout.
+- **The client's contact heads the report and starts both signature pads**
+  (`session.contact`, `session.contactRole`, `contactLine`). Entered beside the
+  client in the session dialog, shown as `Nom · Càrrec` in the PDF, DOCX and
+  HTML headers, and used as the suggested signer name — suggested, because
+  often the contact signs and sometimes whoever is on site that day does.
+  - Not translated, for the same reason the client and the machine aren't: a
+    person's name and the title they go by, said the way they wrote it.
+  - Adding `contact` to `RPT` made every **cached translated table stale**, so
+    `labelsLoad` now checks each one against `RPT.en`/`TSL.en` with `sameShape`
+    and drops what no longer fits. The next export retranslates that language —
+    one call, once — instead of printing `undefined` in a heading.
 - A report goes out in **revisions**: Rev. 01, Rev. 02… Each one is a FILE kept
   on Drive, not a snapshot of the data. Editing an entry afterwards does not
   rewrite what was already handed over — what preserves Rev. 01 is the PDF that

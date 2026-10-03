@@ -248,6 +248,7 @@ textarea{resize:none;line-height:1.4}
 .ts-col.lock{opacity:.5;cursor:default}
 #tsSigGrid{display:grid;grid-template-columns:1fr;gap:12px}
 @media(min-width:620px){#tsSigGrid{grid-template-columns:1fr 1fr}}
+@media(min-width:620px){#rsGrid{grid-template-columns:1fr 1fr}}
 /* misc */
 .no-ent{font-family:monospace;font-size:12px;color:var(--tx3);padding:24px 0;text-align:center}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -342,6 +343,12 @@ textarea{resize:none;line-height:1.4}
     <div class="modal">
       <div class="modal-title" id="newModalTitle">&#9658; Nova visita de servei</div>
       <div class="field"><label>Client / Empresa *</label><input type="text" id="nClient" placeholder="Nom del client"></div>
+      <div class="field"><label>Persona de contacte</label>
+        <div style="display:flex;gap:6px">
+          <input type="text" id="nContact" placeholder="Nom i cognoms" style="flex:2">
+          <input type="text" id="nContactRole" placeholder="C&agrave;rrec" style="flex:1">
+        </div>
+      </div>
       <div class="field"><label>Número de projecte</label><input type="text" id="nProject" placeholder="Núm. de projecte"></div>
       <div class="field"><label>Màquina / Equip *</label><input type="text" id="nMachine" placeholder="Model o referència"></div>
       <div class="field"><label>Ubicació</label><input type="text" id="nLoc" placeholder="Planta, línia, adreça…"></div>
@@ -442,6 +449,32 @@ textarea{resize:none;line-height:1.4}
 
   <!-- Report revisions: the prompt when a changed session is exported again,
        and the place to look them up or fix the date of the current one. -->
+  <!-- Signing the report on the glass, the way the timesheet already is. The
+       signature belongs to a REVISION, not to the session: the whole point of
+       revisions is that a reissued report is a different document, and a
+       signature carried across would put the client's name on something they
+       never read. -->
+  <div class="modal-back" id="rsBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,760px)">
+      <div class="modal-title">&#9997; <span id="rsTitle">Signa l'informe</span></div>
+      <div id="rsNote" class="ts-note" style="margin-bottom:10px">&mdash;</div>
+      <div id="rsGrid" style="display:grid;grid-template-columns:1fr;gap:12px">
+        <div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:11px;color:var(--tx3);flex-shrink:0">T&egrave;cnic</span><input type="text" id="rsTechName" placeholder="Nom" style="flex:1;font-size:12px;padding:4px 8px"><button class="btn-xs" id="rsTechClr">Esborra</button></div>
+          <canvas class="ts-sig" id="rsTechSig"></canvas>
+        </div>
+        <div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:11px;color:var(--tx3);flex-shrink:0">Client</span><input type="text" id="rsCliName" placeholder="Nom / c&agrave;rrec" style="flex:1;font-size:12px;padding:4px 8px"><button class="btn-xs" id="rsCliClr">Esborra</button></div>
+          <canvas class="ts-sig" id="rsCliSig"></canvas>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="rsCancel">Cancel&middot;la</button>
+        <button class="btn-gold" id="rsSave">&#10003; Desa la signatura</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-back" id="revBack" style="display:none">
     <div class="modal" style="max-width:min(96vw,520px)">
       <div class="modal-title">&#128209; <span id="revTitle">Revisions de l'informe</span></div>
@@ -2505,6 +2538,8 @@ function renderContent(){
         ?"Revisió "+revNo(curRev(active).n).replace("Rev. ","")+" · "+dmy(curRev(active).date)
         :"Encara sense revisió")+"</span>"
     +"<button data-rev=\"1\" title=\"Revisions de l'informe: consulta-les, corregeix la data de la vigent o emet-ne una de nova\">Revisions…</button></div>"
+    +"<div class=\"exp-rev\"><span>"+(revSign(active)?"&#9997; Signat":"Sense signar")+"</span>"
+    +"<button data-sign=\"1\" title=\"Signa l'informe aquí mateix: la signatura queda lligada a aquesta revisió i surt al PDF, al Word i a l'HTML\">Signa…</button></div>"
     +langRowHTML("Idioma de l'informe","",reportLang(active),"lang")
     +langRowHTML("Escrit en","L'idioma en què has escrit les entrades. Si és el mateix que el de l'informe, no s'envia res a traduir.",writeLang(active),"wlang")
     +(CHIP_LANGS.indexOf(reportLang(active))<0&&RPT[reportLang(active)]
@@ -2615,6 +2650,7 @@ function renderContent(){
       }
       if(e.target.closest("[data-rev]")){$$("expMenu").style.display="none";openRevisions();return}
       if(e.target.closest("[data-lbl]")){$$("expMenu").style.display="none";openLabels(reportLang(active));return}
+      if(e.target.closest("[data-sign]")){$$("expMenu").style.display="none";openReportSign();return}
       var f=e.target.dataset.fmt;if(f){$$("expMenu").style.display="none";exportRep(active,f)}
     });
   }
@@ -3332,6 +3368,8 @@ function openNewModal(editSess){
   $$("nMachine").value=editSess?(editSess.machine||""):"";
   $$("nLoc").value=editSess?(editSess.location||""):"";
   $$("nTech").value=editSess?(editSess.tech||""):"";
+  $$("nContact").value=editSess?(editSess.contact||""):"";
+  $$("nContactRole").value=editSess?(editSess.contactRole||""):"";
   $$("nType").value=editSess?(editSess.type||"commissioning"):"commissioning";
   $$("newBack").style.display="flex";setTimeout(function(){$$("nClient").focus()},80);
 }
@@ -3359,17 +3397,20 @@ $$("nSave").addEventListener("click",function(){
   var c=$$("nClient").value.trim(),m=$$("nMachine").value.trim();
   if(!c||!m){alert("El client i la màquina són obligatoris.");return}
   var proj=$$("nProject").value.trim(),loc=$$("nLoc").value.trim(),tech=$$("nTech").value.trim(),type=$$("nType").value;
+  // Who signs on the client's side. Kept apart from the company name because it
+  // is a person: it heads the report AND is what the signature pads start with.
+  var cont=$$("nContact").value.trim(),crole=$$("nContactRole").value.trim();
   if(editingSessId){
     var editId=editingSessId,old=sessions.find(function(s){return s.id===editId});
     var folderChanged=old&&(old.client!==c||old.machine!==m||(old.tech||"")!==tech);
-    sessions=sessions.map(function(s){return s.id===editId?Object.assign({},s,{client:c,project:proj,machine:m,location:loc,tech:tech,type:type}):s});
-    closeNewModal();["nClient","nProject","nMachine","nLoc","nTech"].forEach(function(id){$$(id).value=""});
+    sessions=sessions.map(function(s){return s.id===editId?Object.assign({},s,{client:c,project:proj,machine:m,location:loc,tech:tech,type:type,contact:cont,contactRole:crole}):s});
+    closeNewModal();["nClient","nProject","nMachine","nLoc","nTech","nContact","nContactRole"].forEach(function(id){$$(id).value=""});
     scheduleSave();renderAll();
     if(isLoggedIn&&old&&folderChanged)renameSessionFolder(old,{client:c,machine:m,tech:tech});
   } else {
-    var s={id:uid(),client:c,project:proj,machine:m,location:loc,tech:tech,type:type,status:"open",createdAt:now(),entries:[],notes:""};
+    var s={id:uid(),client:c,project:proj,machine:m,location:loc,tech:tech,type:type,contact:cont,contactRole:crole,status:"open",createdAt:now(),entries:[],notes:""};
     sessions=[s].concat(sessions);aid=s.id;
-    closeNewModal();["nClient","nProject","nMachine","nLoc","nTech"].forEach(function(id){$$(id).value=""});
+    closeNewModal();["nClient","nProject","nMachine","nLoc","nTech","nContact","nContactRole"].forEach(function(id){$$(id).value=""});
     scheduleSave();renderAll();
     if(isLoggedIn)ensureSessionFolders(s.id); // create Drive folders up front, not on first upload
   }
@@ -3509,7 +3550,7 @@ var RPT={
   ca:{title:"Informe de servei tècnic",gen:"Generat el",
       types:{commissioning:"Posada en marxa",maintenance:"Manteniment",retrofit:"Millora / Retrofit"},
       sev:{info:"INFO",ok:"OK",warning:"AVÍS",issue:"PROBLEMA"},
-      client:"Client",project:"Número de projecte",machine:"Màquina",location:"Ubicació",tech:"Tècnic",
+      client:"Client",contact:"Persona de contacte",project:"Número de projecte",machine:"Màquina",location:"Ubicació",tech:"Tècnic",
       start:"Inici",status:"Estat",manual:"Manual",open:"Oberta",closed:"Tancada",
       issues:"Problemes",warnings:"Avisos",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resolt",resN:"resolts",resolved:"Resolts",
       ts:"Data i hora",severity:"Gravetat",tag:"Etiqueta",desc:"Descripció",att:"Adjunts",
@@ -3524,7 +3565,7 @@ var RPT={
   es:{title:"Informe de servicio técnico",gen:"Generado el",
       types:{commissioning:"Puesta en marcha",maintenance:"Mantenimiento",retrofit:"Mejora / Retrofit"},
       sev:{info:"INFO",ok:"OK",warning:"AVISO",issue:"PROBLEMA"},
-      client:"Cliente",project:"Número de proyecto",machine:"Máquina",location:"Ubicación",tech:"Técnico",
+      client:"Cliente",contact:"Persona de contacto",project:"Número de proyecto",machine:"Máquina",location:"Ubicación",tech:"Técnico",
       start:"Inicio",status:"Estado",manual:"Manual",open:"Abierta",closed:"Cerrada",
       issues:"Problemas",warnings:"Avisos",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resuelto",resN:"resueltos",resolved:"Resueltos",
       ts:"Fecha y hora",severity:"Gravedad",tag:"Etiqueta",desc:"Descripción",att:"Adjuntos",
@@ -3539,7 +3580,7 @@ var RPT={
   en:{title:"Field Service Report",gen:"Generated on",
       types:{commissioning:"Commissioning",maintenance:"Maintenance",retrofit:"Upgrade / Retrofit"},
       sev:{info:"INFO",ok:"OK",warning:"WARNING",issue:"ISSUE"},
-      client:"Client",project:"Project Number",machine:"Machine",location:"Location",tech:"Technician",
+      client:"Client",contact:"Contact",project:"Project Number",machine:"Machine",location:"Location",tech:"Technician",
       start:"Start",status:"Status",manual:"Manual",open:"Open",closed:"Closed",
       issues:"Issues",warnings:"Warnings",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resolved",resN:"resolved",resolved:"Resolved",
       ts:"Timestamp",severity:"Severity",tag:"Tag",desc:"Description",att:"Attachments",
@@ -3758,6 +3799,95 @@ function changedSinceRev(s){
   var r=curRev(s);
   if(!r)return true;
   return String(s.updatedAt||"")>String(r.issuedAt||r.date||"");
+}
+// ── SIGNING THE REPORT ───────────────────────────────────────────────────────
+// The signature hangs off the REVISION, never off the session. Revisions exist
+// precisely so that a reissued report is a different document; carrying a
+// signature from Rev. 01 to Rev. 02 would put the client's name under text
+// they never read. Issue a new revision and the pads come up blank, while
+// Rev. 01 keeps the signature it was signed with and re-exports with it.
+//
+// This is a signature on glass, not a qualified electronic one: it is evidence
+// that somebody signed off in front of you, the same weight the timesheet has
+// always had, and the same weight as ink on a printout.
+// Always resolved out of the session's own list by number: the `rev` object the
+// export carries around was taken before signing, so trusting its `.sign` would
+// lose a signature made between issuing and exporting — which is the normal
+// order of events.
+function revSign(s,rev){
+  var list=revList(s),n=rev&&rev.n;
+  var r=n?list.filter(function(x){return x.n===n})[0]:list[list.length-1];
+  return (r&&r.sign)||null;
+}
+// height/width of a PNG, read straight out of its IHDR (8-byte signature, then
+// length + "IHDR", then width and height as big-endian 32-bit). 0.35 is the
+// shape of a typical cropped signature, used when the bytes aren't a PNG.
+function pngRatio(b){
+  if(!b||b.length<24||b[0]!==0x89||b[1]!==0x50)return 0.35;
+  function u32(o){return (b[o]<<24|b[o+1]<<16|b[o+2]<<8|b[o+3])>>>0}
+  var w=u32(16),h=u32(20);
+  return (w>0&&h>0)?h/w:0.35;
+}
+function setRevSign(id,n,sign){
+  sessions=sessions.map(function(x){
+    if(x.id!==id)return x;
+    return Object.assign({},x,{revisions:revList(x).map(function(r){
+      return r.n===n?Object.assign({},r,{sign:sign}):r;
+    })});
+  });
+  // Like the language choice: signing is part of issuing, not a change to the
+  // content, so it must not make the revision look stale afterwards.
+  saveLocal();isDirty=true;if(isLoggedIn)saveToDrive();
+}
+var rsPads={},rsWired=false,rsRev=null;
+function wireReportSign(){
+  if(rsWired)return;rsWired=true;
+  function close(){$$("rsBack").style.display="none";rsRev=null}
+  $$("rsCancel").addEventListener("click",close);
+  $$("rsBack").addEventListener("click",function(e){if(e.target===$$("rsBack"))close()});
+  $$("rsTechClr").addEventListener("click",function(){if(rsPads.tech)rsPads.tech.clear()});
+  $$("rsCliClr").addEventListener("click",function(){if(rsPads.cli)rsPads.cli.clear()});
+  $$("rsSave").addEventListener("click",function(){
+    var s=sessions.find(function(x){return x.id===aid});
+    if(!s||!rsRev)return;
+    setRevSign(s.id,rsRev.n,{
+      techName:$$("rsTechName").value.trim(),cliName:$$("rsCliName").value.trim(),
+      techSig:rsPads.tech?rsPads.tech.data():"",cliSig:rsPads.cli?rsPads.cli.data():"",
+      signedAt:now()
+    });
+    close();renderContent();
+  });
+}
+async function openReportSign(){
+  var s=sessions.find(function(x){return x.id===aid});if(!s)return;
+  // A signature needs something to be a signature OF. Reuses the export's own
+  // dialog, so there is one place that decides what revision this is.
+  var rev=await ensureRevision(s);
+  if(!rev)return;
+  s=sessions.find(function(x){return x.id===aid})||s;
+  wireReportSign();
+  rsRev=rev;
+  var g=revSign(s,rev)||{};
+  $$("rsTitle").textContent="Signa l'informe · "+revNo(rev.n);
+  $$("rsNote").textContent="La signatura queda lligada a aquesta revisió. Si n'emets una de nova, es firma de nou: "
+    +revNo(rev.n)+" conserva la seva i se segueix exportant amb ella.";
+  $$("rsTechName").value=g.techName||s.tech||"";
+  // Suggested, not imposed: usually the contact signs, sometimes whoever is on
+  // site that day does.
+  $$("rsCliName").value=g.cliName||contactLine(s)||"";
+  $$("rsBack").style.display="flex";
+  // After the box has a size, or the canvas comes up 0×0.
+  setTimeout(function(){
+    rsPads.tech=tsInitPad("rsTechSig",g.techSig||"");
+    rsPads.cli=tsInitPad("rsCliSig",g.cliSig||"");
+  },40);
+}
+// The client's contact as one line. Not translated, for the same reason the
+// client and the machine aren't: it is a person's name and the title they go
+// by, and a report they sign should say it the way they wrote it.
+function contactLine(s){
+  var c=(s&&s.contact||"").trim(),r=(s&&s.contactRole||"").trim();
+  return c?(r?c+" · "+r:c):(r||"");
 }
 function pushRevision(id,n,date,note){
   var rec={n:n,date:date,note:note||"",issuedAt:now()};
@@ -4166,6 +4296,7 @@ function buildReportHTML(s,forPrint,lang,rev){
     +"<div style=\"color:#6b7280;font-size:13px\">"+esc(revLine(R,rev,tl))+"</div></div>"
     +"<div class=\"meta\">"
     +"<div><div class=\"ml\">"+esc(R.client)+"</div><div class=\"mv\">"+esc(s.client||"—")+"</div></div>"
+    +"<div><div class=\"ml\">"+esc(R.contact)+"</div><div class=\"mv\">"+esc(contactLine(s)||"—")+"</div></div>"
     +"<div><div class=\"ml\">"+esc(R.project)+"</div><div class=\"mv\">"+esc(s.project||"—")+"</div></div>"
     +"<div><div class=\"ml\">"+esc(R.machine)+"</div><div class=\"mv\">"+esc(s.machine||"—")+"</div></div>"
     +"<div><div class=\"ml\">"+esc(R.location)+"</div><div class=\"mv\">"+esc(s.location||"—")+"</div></div>"
@@ -4182,7 +4313,20 @@ function buildReportHTML(s,forPrint,lang,rev){
     +"</div>"
     +"<table><thead><tr><th>"+esc(R.ts)+"</th><th>"+esc(R.severity)+"</th><th>"+esc(R.tag)+"</th><th>"+esc(R.desc)+"</th><th>"+esc(R.att)+"</th></tr></thead><tbody>"+rows+"</tbody></table>"
     +(s.notes?"<div style=\"margin-top:18px;padding:12px;background:#f9fafb;border-radius:6px;border-left:3px solid #f59e0b\"><strong>"+esc(R.notes)+":</strong><br>"+esc(s.notes)+"</div>":"")
-    +"<div class=\"sig\"><div><div class=\"sl\">"+esc(R.sigTech)+"<br><strong>"+esc(s.tech||"_________________")+"</strong></div></div><div><div class=\"sl\">"+esc(R.sigCli)+"</div></div></div>"
+    +(function(){
+      // Signed on the glass, or the same blank line as always to sign on paper.
+      // The image sits ON the rule, so the margin above it shrinks by its height.
+      var g=revSign(s,rev)||{};
+      function half(lbl,name,img){
+        var ink=img?"<img src=\""+img+"\" style=\"display:block;max-width:100%;max-height:70px;margin:0 0 -2px\">":"";
+        return "<div>"+ink+"<div class=\"sl\""+(img?" style=\"margin-top:0\"":"")+">"+esc(lbl)
+          +(name?"<br><strong>"+esc(name)+"</strong>":"")+"</div></div>";
+      }
+      return "<div class=\"sig\">"
+        +half(R.sigTech,g.techName||s.tech||"_________________",g.techSig)
+        +half(R.sigCli,g.cliName||"",g.cliSig)
+        +"</div>";
+    })()
     +"<div class=\"ft\"><span>ID: "+s.id+"</span><span>Field Service Log</span></div>"
     +"</body></html>";
 }
@@ -4876,7 +5020,7 @@ function openTimesheet(){
   if(tsCols.indexOf("date")<0)tsCols.unshift("date");
   $$("tsRem").value=T.remarks||"";
   $$("tsTechName").value=T.techName||active.tech||"";
-  $$("tsCliName").value=T.cliName||"";
+  $$("tsCliName").value=T.cliName||contactLine(active)||"";
   $$("tsBack").style.display="flex";
   // The canvases have no size until the modal is laid out — but reading a
   // rect inside tsInitPad flushes the pending layout, so this is safe right
@@ -5255,6 +5399,11 @@ function labelsLoad(){
     if(!v)return;
     Object.keys(v).forEach(function(c){
       if(CHIP_LANGS.indexOf(c)>=0||!knownLang(c))return;  // never shadow a hand-written table
+      // A table cached before a label was added to the app no longer fits the
+      // English one, and using it would print "undefined" in a heading. Drop it
+      // and let the next export translate the language again: one call, once.
+      if(v[c].rpt&&!sameShape(RPT.en,v[c].rpt))return;
+      if(v[c].tsl&&!sameShape(TSL.en,v[c].tsl))return;
       if(v[c].rpt)RPT[c]=v[c].rpt;
       if(v[c].tsl)TSL[c]=v[c].tsl;
     });
@@ -5607,7 +5756,7 @@ async function buildPdfBlob(s,lang,rev){
   y+=21;
 
   // metadata, two columns
-  var meta=[[R.client,s.client||"—"],[R.project,s.project||"—"],[R.machine,s.machine||"—"],
+  var meta=[[R.client,s.client||"—"],[R.contact,contactLine(s)||"—"],[R.project,s.project||"—"],[R.machine,s.machine||"—"],
             [R.location,s.location||"—"],[R.tech,s.tech||"—"],[R.start,fts(s.createdAt)],
             [R.status,s.status==="open"?R.open:R.closed],[R.manual,(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||"—"]];
   // Values used to sit at a fixed x, which the widest label ran straight into.
@@ -5796,14 +5945,32 @@ async function buildPdfBlob(s,lang,rev){
     nl.forEach(function(l,k){doc.text(l,M+(nr?CW-doc.getTextWidth(l):0),y+k*4)});
     y+=nl.length*4+4;
   }
-  if(y>H-32){doc.addPage();y=M}
-  y=Math.max(y+14,H-32);
-  doc.setDrawColor(107,114,128);doc.setLineWidth(0.2);
-  doc.line(M,y,M+CW/2-10,y);doc.line(M+CW/2+10,y,W-M,y);
-  doc.setFontSize(8);doc.setTextColor(107,114,128);
-  var sig=R.sigTech+(s.tech?" — "+s.tech:"");
-  pdfFont(doc,ar,sig,"normal");doc.text(sig,M,y+4);
-  doc.setFont("helvetica","normal");doc.text(R.sigCli,M+CW/2+10,y+4);
+  // The signature of THIS revision if it was signed on the glass, otherwise the
+  // same empty line as always, for signing the printout. The box is taller when
+  // there is ink to sit on the line, so it needs more room before deciding
+  // whether the page still fits it.
+  var gs=revSign(s,rev)||{};
+  var inked=!!(gs.techSig||gs.cliSig),sigH=inked?26:0;
+  if(y>H-32-sigH){doc.addPage();y=M}
+  y=Math.max(y+14,H-32-sigH)+sigH;
+  var hw=CW/2-10;
+  [[R.sigTech,gs.techName||s.tech||"",gs.techSig,M],
+   [R.sigCli,gs.cliName||"",gs.cliSig,M+CW/2+10]].forEach(function(b){
+    if(b[2])try{
+      // On the line and at its own proportions: stretched to the box it reads
+      // as a different hand than the one that signed.
+      var pr=doc.getImageProperties(b[2]);
+      var iw=hw,ih=iw*pr.height/pr.width;
+      if(ih>sigH){ih=sigH;iw=ih*pr.width/pr.height}
+      doc.addImage(b[2],"PNG",b[3],y-ih,iw,ih);
+    }catch(err){}
+    doc.setDrawColor(107,114,128);doc.setLineWidth(0.2);
+    doc.line(b[3],y,b[3]+hw,y);
+    doc.setFontSize(8);doc.setTextColor(107,114,128);
+    var lbl=b[0]+(b[1]?" — "+b[1]:"");
+    pdfFont(doc,ar,lbl,"normal");doc.text(lbl,b[3],y+4);
+  });
+  doc.setFont("helvetica","normal");
 
   // page numbers
   var n=doc.internal.getNumberOfPages();
@@ -5996,7 +6163,7 @@ async function buildDocxDocument(D,s,lang,rev){
     colMm=[COL.ts,COL.sev,COL.tagC.cellWidth,COL.desc(),COL.attC.cellWidth];
     tagPt=COL.tagC.fontSize;attPt=COL.attC.fontSize;
     mdoc.setFont("helvetica","normal");mdoc.setFontSize(8.5);
-    valX=0;[R.client,R.project,R.machine,R.location,R.tech,R.start,R.status,R.manual].forEach(function(l){
+    valX=0;[R.client,R.contact,R.project,R.machine,R.location,R.tech,R.start,R.status,R.manual].forEach(function(l){
       valX=Math.max(valX,mdoc.getTextWidth(String(l).toUpperCase()));
     });
     valX+=4;
@@ -6083,7 +6250,7 @@ async function buildDocxDocument(D,s,lang,rev){
   });
 
   // Metadata: the PDF's two-column LABEL / value grid, as a borderless table.
-  var meta=[[R.client,s.client||"—"],[R.project,s.project||"—"],[R.machine,s.machine||"—"],
+  var meta=[[R.client,s.client||"—"],[R.contact,contactLine(s)||"—"],[R.project,s.project||"—"],[R.machine,s.machine||"—"],
             [R.location,s.location||"—"],[R.tech,s.tech||"—"],[R.start,fts(s.createdAt)],
             [R.status,s.status==="open"?R.open:R.closed],[R.manual,(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||"—"]];
   var halfW=CW/2,metaCols=[valX,halfW-valX,valX,halfW-valX].map(tw);
@@ -6159,19 +6326,39 @@ async function buildDocxDocument(D,s,lang,rev){
     children.push(P({spacing:{before:120,after:40},children:[T({text:R.notes,bold:true,size:hp(9),font:"Arial",color:"111827"})]}));
     children.push(P({spacing:{after:200},children:[T({text:s.notes,size:hp(8.5),font:"Arial",color:"374151"})]}));
   }
-  // Signature lines side by side, as the PDF draws them.
-  var sigW=tw(CW/2-10);
+  // Signature lines side by side, as the PDF draws them — carrying the ink of
+  // this revision when it was signed on the glass, and bare when it wasn't.
+  // The image goes in the cell ABOVE the rule, which is where the PDF puts it.
+  var sigW=tw(CW/2-10),gsD=revSign(s,rev)||{};
+  function sigCell(lbl,name,img){
+    var ch=[];
+    if(img){
+      var id=toImg(img);
+      if(id)try{
+        // Keep the drawing's own proportions: a signature squeezed into a fixed
+        // box reads as a different hand. The pad always writes PNG, whose IHDR
+        // carries width and height at a fixed offset — no decoding, and no
+        // waiting for an Image to load in the middle of building a document.
+        var ar=pngRatio(id.bytes),wMm=Math.min(CW/2-10,60),hMm=wMm*ar;
+        if(hMm>22){hMm=22;wMm=hMm/ar}
+        ch.push(P({spacing:{after:0},children:[new D.ImageRun({data:id.bytes,type:id.type,
+          transformation:{width:Math.round(wMm*72/25.4),height:Math.round(hMm*72/25.4)}})]}));
+      }catch(err){}
+    }
+    ch.push(P({children:[T({text:lbl+(name?" — "+name:""),size:hp(8),font:"Arial",color:"6B7280"})]}));
+    return ch;
+  }
   children.push(new D.Table({width:{size:tw(CW),type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED,
     columnWidths:[sigW,tw(20),sigW],
     borders:{top:NONE,bottom:NONE,left:NONE,right:NONE,insideHorizontal:NONE,insideVertical:NONE},
     rows:[new D.TableRow({children:[
       new D.TableCell({borders:{top:{style:D.BorderStyle.SINGLE,size:4,color:"6B7280"},bottom:NONE,left:NONE,right:NONE},
         margins:{top:80,bottom:0,left:0,right:0},width:{size:sigW,type:D.WidthType.DXA},
-        children:[P({children:[T({text:R.sigTech+(s.tech?" — "+s.tech:""),size:hp(8),font:"Arial",color:"6B7280"})]})]}),
+        children:sigCell(R.sigTech,gsD.techName||s.tech||"",gsD.techSig)}),
       new D.TableCell({borders:noBorders,width:{size:tw(20),type:D.WidthType.DXA},children:[P({})]}),
       new D.TableCell({borders:{top:{style:D.BorderStyle.SINGLE,size:4,color:"6B7280"},bottom:NONE,left:NONE,right:NONE},
         margins:{top:80,bottom:0,left:0,right:0},width:{size:sigW,type:D.WidthType.DXA},
-        children:[P({children:[T({text:R.sigCli,size:hp(8),font:"Arial",color:"6B7280"})]})]})
+        children:sigCell(R.sigCli,gsD.cliName||"",gsD.cliSig)})
     ]})]}));
 
   // The PDF's footer: session id on the left, page x / y on the right.

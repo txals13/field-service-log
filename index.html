@@ -464,6 +464,18 @@ textarea{resize:none;line-height:1.4}
        revisions is that a reissued report is a different document, and a
        signature carried across would put the client's name on something they
        never read. -->
+  <!-- Every visit to this machine, because a service engineer goes back. What
+       was left open last time is the first thing you want on arriving, and the
+       hardest thing to find in a pile of PDFs. -->
+  <div class="modal-back" id="mhBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,820px)">
+      <div class="modal-title">&#128220; <span id="mhTitle">Historial de la m&agrave;quina</span></div>
+      <div id="mhNote" class="ts-note" style="margin-bottom:10px">&mdash;</div>
+      <div id="mhBody" style="max-height:62vh;overflow:auto"></div>
+      <div class="modal-actions"><button id="mhClose">Tanca</button></div>
+    </div>
+  </div>
+
   <div class="modal-back" id="rsBack" style="display:none">
     <div class="modal" style="max-width:min(96vw,760px)">
       <div class="modal-title">&#9997; <span id="rsTitle">Signa l'informe</span></div>
@@ -2586,6 +2598,7 @@ function renderContent(){
     +"<span>🕐 "+fts(active.createdAt)+"</span>"
     +manualChipHTML(active)
     +drawingsChipHTML(active)
+    +mhChipHTML(active)
     +folderChipHTML(active)
     +tsChipHTML(active)
     +"</div></div>"
@@ -2645,6 +2658,7 @@ function renderContent(){
   var dChip=$$("drawingsChip");if(dChip)dChip.addEventListener("click",function(){openDrawings()});
   var tChip=$$("tsChip");if(tChip)tChip.addEventListener("click",openTimesheet);
   var fChip=$$("folChip");if(fChip)fChip.addEventListener("click",openFolder);
+  var hChip=$$("mhChip");if(hChip)hChip.addEventListener("click",openMachineHistory);
   var btnC=$$("btnClose");if(btnC)btnC.addEventListener("click",function(){if(confirm("Vols tancar aquesta sessió? La pots reobrir més endavant.")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"closed",closedAt:now()}):s});scheduleSave();renderAll()}});
   var btnR=$$("btnReopen");if(btnR)btnR.addEventListener("click",function(){if(confirm("Vols reobrir aquesta sessió?")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"open",closedAt:null}):s});scheduleSave();renderAll()}});
   var btnEx=$$("btnExp");if(btnEx){
@@ -3957,6 +3971,132 @@ async function openReportSign(){
 function contactLine(s){
   var c=(s&&s.contact||"").trim(),r=(s&&s.contactRole||"").trim();
   return c?(r?c+" · "+r:c):(r||"");
+}
+// ── MACHINE HISTORY ──────────────────────────────────────────────────────────
+// A service engineer goes back to the same machines. What was left open on the
+// last visit is the first thing you want when you arrive, and the hardest thing
+// to find once it is buried in a pile of PDFs.
+//
+// A machine is CLIENT + MACHINE, normalised for case and stray spaces. Not the
+// serial number: a serial only exists once a manual has been linked, so keying
+// on it would split a machine's own history down the middle on the day you link
+// one. The serial is shown, not used to decide. The cost of this rule is that
+// two identical machines at one client share a history until you name them
+// apart in the Màquina field — which is also how you fix it.
+function machineKey(s){
+  function norm(t){return String(t||"").trim().replace(/\s+/g," ").toLowerCase()}
+  return norm(s&&s.client)+"|"+norm(s&&s.machine);
+}
+function machineSessions(s){
+  if(!s||!s.machine)return [];
+  var k=machineKey(s);
+  return sessions.filter(function(x){return machineKey(x)===k})
+    .sort(function(a,b){return String(sessionEndDate(b)).localeCompare(String(sessionEndDate(a)))});
+}
+// Open means: a problem or a warning that got an outcome, or got one
+// that still says it is a problem. isResolved only counts ok/info outcomes, so
+// one test covers both.
+function openEntries(sess){
+  return (sess.entries||[]).filter(function(e){
+    return e&&(e.severity==="issue"||e.severity==="warning")&&!isResolved(e);
+  });
+}
+function mhChipHTML(sess){
+  var all=machineSessions(sess);
+  if(all.length<2)return "";
+  var open=0;
+  all.forEach(function(x){if(x.id!==sess.id)open+=openEntries(x).length});
+  return "<span id=\"mhChip\" style=\"cursor:pointer\" title=\"Totes les visites a aquesta màquina: què es va fer i què va quedar obert\">&#128220; "
+    +all.length+" visites"+(open?" · <span style=\"color:var(--orange)\">"+open+" pendent"+(open>1?"s":"")+"</span>":"")+"</span>";
+}
+var mhWired=false;
+function wireMh(){
+  if(mhWired)return;mhWired=true;
+  function close(){$$("mhBack").style.display="none"}
+  $$("mhClose").addEventListener("click",close);
+  $$("mhBack").addEventListener("click",function(e){if(e.target===$$("mhBack"))close()});
+  $$("mhBody").addEventListener("click",function(e){
+    var r=e.target.closest?e.target.closest("[data-sess]"):null;
+    if(!r)return;
+    close();aid=r.dataset.sess;renderAll();
+  });
+}
+function mhLine(e,sess){
+  var sm=SM[e.severity]||SM.info;
+  var txt=String(e.text||"").replace(/\s+/g," ");
+  if(txt.length>150)txt=txt.slice(0,150)+"…";
+  return "<div style=\"display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--br)\">"
+    +"<span style=\"color:"+sm.tx+";flex-shrink:0;font-size:11px;font-family:monospace\">"+fts(e.ts).split(" ")[0]+"</span>"
+    +"<span style=\"flex:1\">"+(e.tag?"<strong>"+esc(e.tag)+"</strong> — ":"")+esc(txt)
+    +(e.fix?"<div style=\"color:var(--tx3);font-size:11px\">↳ "+esc(String(e.fix.text||"").slice(0,110))+"</div>":"")
+    +"</span></div>";
+}
+function openMachineHistory(){
+  var cur=sessions.find(function(x){return x.id===aid});if(!cur)return;
+  wireMh();
+  var all=machineSessions(cur),serial=null;
+  all.forEach(function(x){if(!serial&&x.manualRef&&x.manualRef.serial)serial=x.manualRef.serial});
+  $$("mhTitle").textContent=(cur.machine||"—")+" · "+(cur.client||"—");
+  $$("mhNote").innerHTML=all.length+" visites"+(serial?" · S/N "+esc(serial):"")
+    +". S'agrupen per client i màquina tal com els escrius.";
+
+  // What is still open, from the OTHER visits: this one you already have on screen.
+  var pend=[];
+  all.forEach(function(x){if(x.id!==cur.id)openEntries(x).forEach(function(e){pend.push({e:e,s:x})})});
+  pend.sort(function(a,b){return String(b.e.ts).localeCompare(String(a.e.ts))});
+
+  var h="";
+  if(pend.length){
+    h+="<div style=\"font-weight:700;margin:2px 0 6px;color:var(--orange)\">⚠ Pendent d'altres visites ("+pend.length+")</div>";
+    h+=pend.map(function(p){return mhLine(p.e,p.s)}).join("");
+    h+="<div style=\"height:14px\"></div>";
+  }
+
+  h+="<div style=\"font-weight:700;margin:2px 0 6px\">Visites</div>";
+  h+=all.map(function(x){
+    var c=severityCounts(x.entries||[]),r=curRev(x),isCur=x.id===cur.id;
+    var rng=tsRange(x);
+    return "<div data-sess=\""+esc(x.id)+"\" style=\"cursor:pointer;padding:7px 8px;margin-bottom:4px;border-radius:6px;"
+      +"background:"+(isCur?"var(--bg2)":"transparent")+";border:1px solid var(--br)\">"
+      +"<div style=\"display:flex;gap:8px;align-items:baseline;flex-wrap:wrap\">"
+      +"<strong>"+dmy(rng.from)+(rng.to!==rng.from?" → "+dmy(rng.to):"")+"</strong>"
+      +"<span style=\"font-size:11px;color:var(--tx3)\">"+esc((TM[x.type]||TM.commissioning).label||x.type)+"</span>"
+      +(r?"<span style=\"font-size:11px;color:var(--tx3)\">"+revNo(r.n)+"</span>":"")
+      +(x.status==="closed"?"<span style=\"font-size:11px;color:var(--red)\">Tancada</span>":"")
+      +(isCur?"<span style=\"font-size:11px;color:var(--gold)\">aquesta</span>":"")
+      +"</div>"
+      +"<div style=\"font-size:11px;color:var(--tx3);font-family:monospace;margin-top:2px\">"
+      +(c.issue?"■ "+c.issue+"  ":"")+(c.warning?"▲ "+c.warning+"  ":"")+(c.resolved?"✓ "+c.resolved+"  ":"")
+      +"● "+c.ok+"  ·  "+(x.entries||[]).length+" entrades</div></div>";
+  }).join("");
+
+  // Every part ever fitted to this machine, newest first: "we changed that
+  // bearing eight months ago" is a question you ask on the way there.
+  var parts={};
+  all.forEach(function(x){
+    collectSessionParts(x).forEach(function(it){
+      var k=(it.part.ref||it.part.denominacio||"?");
+      var q=parseFloat(it.part.cant)||0;
+      if(!parts[k])parts[k]={ref:it.part.ref||"",den:it.part.denominacio||"",qty:0,last:""};
+      parts[k].qty+=q;
+      if(String(it.entry.ts)>parts[k].last)parts[k].last=String(it.entry.ts);
+      if(!parts[k].den&&it.part.denominacio)parts[k].den=it.part.denominacio;
+    });
+  });
+  var pk=Object.keys(parts).sort(function(a,b){return parts[b].last.localeCompare(parts[a].last)});
+  if(pk.length){
+    h+="<div style=\"height:14px\"></div><div style=\"font-weight:700;margin:2px 0 6px\">Recanvis muntats ("+pk.length+")</div>";
+    h+="<table style=\"width:100%;border-collapse:collapse;font-size:12px\">"
+      +pk.map(function(k){var p=parts[k];
+        return "<tr><td style=\"padding:3px 6px 3px 0;color:var(--gold);text-align:right;white-space:nowrap\">"+(p.qty?p.qty+"×":"")+"</td>"
+          +"<td style=\"padding:3px 6px 3px 0;font-family:monospace;color:var(--blue)\">"+esc(p.ref)+"</td>"
+          +"<td style=\"padding:3px 6px 3px 0\">"+esc(p.den)+"</td>"
+          +"<td style=\"padding:3px 0;color:var(--tx3);white-space:nowrap\">"+dmy(String(p.last).slice(0,10))+"</td></tr>";
+      }).join("")+"</table>";
+  }
+
+  $$("mhBody").innerHTML=h;
+  $$("mhBack").style.display="flex";
 }
 function pushRevision(id,n,date,note){
   var rec={n:n,date:date,note:note||"",issuedAt:now()};

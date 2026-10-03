@@ -294,6 +294,27 @@ Field Service Log/
 
 ---
 
+## Machine history
+- **📜 N visites — every visit to this machine, from the session header**
+  (`machineKey`, `machineSessions`, `openEntries`, `openMachineHistory`). A
+  service engineer goes back to the same machines, and what was left open last
+  time is the first thing you want on arriving and the hardest thing to find
+  once it is buried in a pile of PDFs.
+- **A machine is CLIENT + MACHINE**, normalised for case and stray spaces.
+  Deliberately **not** the serial number: a serial only exists once a manual has
+  been linked, so keying on it would split a machine's own history down the
+  middle on the day you link one. The serial is shown, never used to decide.
+  The cost is that two identical machines at one client share a history until
+  they are named apart in the Màquina field — which is also the fix.
+- Three blocks, in the order the question gets asked: **what is still open**
+  (from the OTHER visits — this one is already on screen), **the visits**
+  (newest first, counters, revision, click to open), and **every part ever
+  fitted** with its total quantity and the last date it went in.
+- Open means severity issue or warning with no outcome, or one that still says
+  issue. `isResolved` only counts ok/info outcomes, so a single test covers both.
+- The chip carries the pending count, which is the whole point of it being
+  visible without opening anything.
+
 ## Session types
 | Type | Abbr | Color |
 |------|------|-------|

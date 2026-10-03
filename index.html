@@ -2555,6 +2555,7 @@ function renderContent(){
     +(active.machine?"<span>🔧 "+esc(active.machine)+"</span>":"")
     +(active.location?"<span>📍 "+esc(active.location)+"</span>":"")
     +(active.tech?"<span>👤 "+esc(active.tech)+"</span>":"")
+    +(contactLine(active)?"<span>🤝 "+esc(contactLine(active))+"</span>":"")
     +"<span>🕐 "+fts(active.createdAt)+"</span>"
     +manualChipHTML(active)
     +drawingsChipHTML(active)
@@ -4459,19 +4460,19 @@ function tsRange(s){
 
 var TSL={
   en:{title:"Timesheet",file:"timesheet",gen:"Generated on",period:"Period",daysN:"Days",
-      meta:["Client","Project Number","Machine","Location","Technician","Period"],
+      meta:["Client","Contact","Project Number","Machine","Location","Technician","Period"],
       date:"Date",day:"Day",dep:"Depart",arr:"On site",lv:"Off site",ret:"Back",brk:"Break",
       trav:"Travel h",work:"Work h",total:"Total h",dest:"Destination",tot:"TOTAL",
       rem:"Remarks",sigT:"Technician",sigC:"Client / Recipient",sigNote:"Signature",dt:"Date",
       wd:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],none:"No days selected"},
   es:{title:"Hoja de horas",file:"hoja_de_horas",gen:"Generada el",period:"Periodo",daysN:"D\u00edas",
-      meta:["Cliente","N\u00famero de proyecto","M\u00e1quina","Ubicaci\u00f3n","T\u00e9cnico","Periodo"],
+      meta:["Cliente","Persona de contacto","N\u00famero de proyecto","M\u00e1quina","Ubicaci\u00f3n","T\u00e9cnico","Periodo"],
       date:"Fecha",day:"D\u00eda",dep:"Salida",arr:"Llegada",lv:"Fin",ret:"Regreso",brk:"Pausa",
       trav:"H. viaje",work:"H. trabajo",total:"Total h",dest:"Destino",tot:"TOTAL",
       rem:"Observaciones",sigT:"T\u00e9cnico",sigC:"Cliente / Receptor",sigNote:"Firma",dt:"Fecha",
       wd:["dom","lun","mar","mi\u00e9","jue","vie","s\u00e1b"],none:"Ning\u00fan d\u00eda seleccionado"},
   ca:{title:"Full d'hores",file:"full_d_hores",gen:"Generat el",period:"Per\u00edode",daysN:"Dies",
-      meta:["Client","N\u00famero de projecte","M\u00e0quina","Ubicaci\u00f3","T\u00e8cnic","Per\u00edode"],
+      meta:["Client","Persona de contacte","N\u00famero de projecte","M\u00e0quina","Ubicaci\u00f3","T\u00e8cnic","Per\u00edode"],
       date:"Data",day:"Dia",dep:"Sortida",arr:"Arribada",lv:"Fi",ret:"Tornada",brk:"Pausa",
       trav:"H. viatge",work:"H. treball",total:"Total h",dest:"Destinaci\u00f3",tot:"TOTAL",
       rem:"Observacions",sigT:"T\u00e8cnic",sigC:"Client / Receptor",sigNote:"Signatura",dt:"Data",
@@ -5127,8 +5128,8 @@ async function buildTimesheetBlob(s){
 
   // metadata, two columns — same measured-label layout as the service report
   var period=tsDMY(T.rows[0].date)+" – "+tsDMY(T.rows[T.rows.length-1].date);
-  var meta=[[t.meta[0],s.client||"—"],[t.meta[1],s.project||"—"],[t.meta[2],s.machine||"—"],
-            [t.meta[3],s.location||"—"],[t.meta[4],T.techName||s.tech||"—"],[t.meta[5],period]];
+  var meta=[[t.meta[0],s.client||"—"],[t.meta[1],contactLine(s)||"—"],[t.meta[2],s.project||"—"],[t.meta[3],s.machine||"—"],
+            [t.meta[4],s.location||"—"],[t.meta[5],T.techName||s.tech||"—"],[t.meta[6],period]];
   y=pdfMetaBlock(doc,meta,M,CW,y,ar);
 
   // Only the columns this sheet was built with — the chips in the modal are
@@ -6082,7 +6083,7 @@ async function buildXlsxBlob(s,lang,rev){
   wsD["!autofilter"]={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:detall.length-1,c:10}})};
 
   // Sheet 3 — who/what/when this list belongs to
-  var info=[[R.client,s.client||""],[C.project,s.project||""],[R.machine,s.machine||""],[R.location,s.location||""],
+  var info=[[R.client,s.client||""],[R.contact,contactLine(s)],[C.project,s.project||""],[R.machine,s.machine||""],[R.location,s.location||""],
             [R.tech,s.tech||""],[C.type,R.types[s.type]||R.types.commissioning],[R.start,fts(s.createdAt)],
             [R.status,s.status==="open"?R.open:R.closed],[R.manual,(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||""],
             [R.revLbl,rev?("0"+rev.n).slice(-2)+" · "+dmy(rev.date):""],

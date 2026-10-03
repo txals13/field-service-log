@@ -656,11 +656,15 @@ Field Service Log/
     change to the content, so it must not make the revision look stale.
   - It is a signature on glass, not a qualified electronic one — the same
     weight the timesheet has always had, and the same as ink on a printout.
-- **The client's contact heads the report and starts both signature pads**
+- **The client's contact heads everything and starts both signature pads**
   (`session.contact`, `session.contactRole`, `contactLine`). Entered beside the
-  client in the session dialog, shown as `Nom · Càrrec` in the PDF, DOCX and
-  HTML headers, and used as the suggested signer name — suggested, because
-  often the contact signs and sometimes whoever is on site that day does.
+  client in the session dialog, shown as `Nom · Càrrec` and used as the
+  suggested signer name — suggested, because often the contact signs and
+  sometimes whoever is on site that day does.
+  - It appears in **six places**, and all six are the point: the session header
+    on screen (🤝 chip), the PDF, the DOCX and the HTML report headers, the
+    Excel's info sheet, and the **timesheet header** — which meant `TSL.meta`
+    growing from six entries to seven, since that list is positional.
   - Not translated, for the same reason the client and the machine aren't: a
     person's name and the title they go by, said the way they wrote it.
   - Adding `contact` to `RPT` made every **cached translated table stale**, so

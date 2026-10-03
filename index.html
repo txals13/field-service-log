@@ -6327,40 +6327,54 @@ async function buildDocxDocument(D,s,lang,rev){
     children.push(P({spacing:{before:120,after:40},children:[T({text:R.notes,bold:true,size:hp(9),font:"Arial",color:"111827"})]}));
     children.push(P({spacing:{after:200},children:[T({text:s.notes,size:hp(8.5),font:"Arial",color:"374151"})]}));
   }
-  // Signature lines side by side, as the PDF draws them — carrying the ink of
-  // this revision when it was signed on the glass, and bare when it wasn't.
-  // The image goes in the cell ABOVE the rule, which is where the PDF puts it.
-  var sigW=tw(CW/2-10),gsD=revSign(s,rev)||{};
-  function sigCell(lbl,name,img){
-    var ch=[];
-    if(img){
-      var id=toImg(img);
-      if(id)try{
-        // Keep the drawing's own proportions: a signature squeezed into a fixed
-        // box reads as a different hand. The pad always writes PNG, whose IHDR
-        // carries width and height at a fixed offset — no decoding, and no
-        // waiting for an Image to load in the middle of building a document.
-        var ar=pngRatio(id.bytes),wMm=Math.min(CW/2-10,60),hMm=wMm*ar;
-        if(hMm>22){hMm=22;wMm=hMm/ar}
-        ch.push(P({spacing:{after:0},children:[new D.ImageRun({data:id.bytes,type:id.type,
-          transformation:{width:Math.round(wMm*72/25.4),height:Math.round(hMm*72/25.4)}})]}));
-      }catch(err){}
-    }
-    ch.push(P({children:[T({text:lbl+(name?" — "+name:""),size:hp(8),font:"Arial",color:"6B7280"})]}));
-    return ch;
+  // The signature block, as the PDF draws it: room to sign, the rule under it,
+  // the label under that. It used to be one row with the rule on top, which put
+  // the ink BELOW its own line and left nothing to sign on when there was no
+  // ink — a line pressed right up against the paragraph above it.
+  //
+  // Two rows: the first is the signing space (the drawing, or empty) and
+  // carries the rule on its BOTTOM edge; the second holds the label. The space
+  // is a minimum, not a fixed height, so a tall signature still fits.
+  var sigW=tw(CW/2-10),gsD=revSign(s,rev)||{},SIG_MM=20;
+  function sigInk(img){
+    if(!img)return [P({children:[T({text:"",size:hp(8)})]})];
+    var id=toImg(img);
+    if(!id)return [P({children:[T({text:"",size:hp(8)})]})];
+    try{
+      // Its own proportions: a signature squeezed into a fixed box reads as a
+      // different hand. The pad always writes PNG, whose IHDR carries width and
+      // height at a fixed offset — no decoding, and no waiting for an Image to
+      // load in the middle of building a document.
+      var ar=pngRatio(id.bytes),wMm=Math.min(CW/2-10,60),hMm=wMm*ar;
+      if(hMm>SIG_MM-2){hMm=SIG_MM-2;wMm=hMm/ar}
+      return [P({spacing:{before:0,after:0},children:[new D.ImageRun({data:id.bytes,type:id.type,
+        transformation:{width:Math.round(wMm*72/25.4),height:Math.round(hMm*72/25.4)}})]})];
+    }catch(err){return [P({children:[T({text:"",size:hp(8)})]})]}
   }
+  function spaceCell(img){
+    return new D.TableCell({
+      borders:{top:NONE,left:NONE,right:NONE,bottom:{style:D.BorderStyle.SINGLE,size:4,color:"6B7280"}},
+      margins:{top:0,bottom:0,left:0,right:0},
+      width:{size:sigW,type:D.WidthType.DXA},
+      verticalAlign:D.VerticalAlign.BOTTOM,
+      children:sigInk(img)});
+  }
+  function labelCell(lbl,name){
+    return new D.TableCell({borders:noBorders,margins:{top:60,bottom:0,left:0,right:0},
+      width:{size:sigW,type:D.WidthType.DXA},
+      children:[P({children:[T({text:lbl+(name?" \u2014 "+name:""),size:hp(8),font:"Arial",color:"6B7280"})]})]});
+  }
+  function gapCell(){return new D.TableCell({borders:noBorders,width:{size:tw(20),type:D.WidthType.DXA},children:[P({})]})}
+  children.push(P({spacing:{before:240,after:0},children:[T({text:"",size:hp(2)})]}));
   children.push(new D.Table({width:{size:tw(CW),type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED,
     columnWidths:[sigW,tw(20),sigW],
     borders:{top:NONE,bottom:NONE,left:NONE,right:NONE,insideHorizontal:NONE,insideVertical:NONE},
-    rows:[new D.TableRow({children:[
-      new D.TableCell({borders:{top:{style:D.BorderStyle.SINGLE,size:4,color:"6B7280"},bottom:NONE,left:NONE,right:NONE},
-        margins:{top:80,bottom:0,left:0,right:0},width:{size:sigW,type:D.WidthType.DXA},
-        children:sigCell(R.sigTech,gsD.techName||s.tech||"",gsD.techSig)}),
-      new D.TableCell({borders:noBorders,width:{size:tw(20),type:D.WidthType.DXA},children:[P({})]}),
-      new D.TableCell({borders:{top:{style:D.BorderStyle.SINGLE,size:4,color:"6B7280"},bottom:NONE,left:NONE,right:NONE},
-        margins:{top:80,bottom:0,left:0,right:0},width:{size:sigW,type:D.WidthType.DXA},
-        children:sigCell(R.sigCli,gsD.cliName||"",gsD.cliSig)})
-    ]})]}));
+    rows:[
+      new D.TableRow({height:{value:tw(SIG_MM),rule:D.HeightRule.ATLEAST},
+        children:[spaceCell(gsD.techSig),gapCell(),spaceCell(gsD.cliSig)]}),
+      new D.TableRow({children:[
+        labelCell(R.sigTech,gsD.techName||s.tech||""),gapCell(),labelCell(R.sigCli,gsD.cliName||"")]})
+    ]}));
 
   // The PDF's footer: session id on the left, page x / y on the right.
   var footer=new D.Footer({children:[P({

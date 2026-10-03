@@ -312,6 +312,21 @@ Field Service Log/
   fitted** with its total quantity and the last date it went in.
 - Open means severity issue or warning with no outcome, or one that still says
   issue. `isResolved` only counts ok/info outcomes, so a single test covers both.
+- **A problem dragged in from an earlier visit is closed from the NEW entry**
+  (`entry.closes = {s,e}`, `closedRefs`, `fillCloses`). The old report has
+  already been signed saying it was open, and giving the old entry an outcome
+  now would be rewriting a document that was handed over — so the link lives on
+  the entry that closes it, and the old one is never touched. Verified: after
+  linking, the March entry is still `issue`, has no `fix`, and no `editedAt`.
+  - The picker sits in the edit modal beside the outcome, lists every still-open
+    entry from the machine's **other** visits, and is **hidden entirely when
+    there is nothing to close** — a dead control on every entry would be noise
+    on the ninety-nine that close nothing.
+  - What the entry already closes stays in its own list even though it no longer
+    counts as open, or editing the entry again would silently drop the link.
+  - The history then shows it as **✓ Tancats en una visita posterior**, with the
+    date it was closed. Seeing the chain is the point; a pending count that
+    quietly shrinks would just look like a bug.
 - The chip carries the pending count, which is the whole point of it being
   visible without opening anything.
 

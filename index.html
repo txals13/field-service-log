@@ -4094,7 +4094,14 @@ function openMachineHistory(){
   wireMh();
   var all=machineSessions(cur),serial=null;
   all.forEach(function(x){if(!serial&&x.manualRef&&x.manualRef.serial)serial=x.manualRef.serial});
-  $$("mhTitle").textContent=(cur.machine||"—")+" · "+(cur.client||"—");
+  // The newest visit's spelling, not the open one's. They all group to the same
+  // machine whatever the capitals and spacing, so the heading has to pick one —
+  // and the one you typed most recently is the one you have settled on. Stray
+  // spacing is tidied for the heading only; capitals are left alone, because
+  // "CELLER" versus "Celler" is a choice and not a slip.
+  function disp(t){return String(t||"").trim().replace(/\s+/g," ")}
+  var newest=all[0]||cur;
+  $$("mhTitle").textContent=(disp(newest.machine)||"—")+" · "+(disp(newest.client)||"—");
   $$("mhNote").innerHTML=all.length+" visites"+(serial?" · S/N "+esc(serial):"")
     +". S'agrupen per client i màquina tal com els escrius.";
 

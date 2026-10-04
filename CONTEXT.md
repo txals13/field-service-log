@@ -306,6 +306,12 @@ Field Service Log/
   middle on the day you link one. The serial is shown, never used to decide.
   The cost is that two identical machines at one client share a history until
   they are named apart in the Màquina field — which is also the fix.
+  - **The heading takes the newest visit's spelling**, not the open session's.
+    They all group to the same machine whatever the capitals and spacing, so
+    something has to pick one, and the way you typed it most recently is the one
+    you have settled on. Stray spacing is tidied for the heading; capitals are
+    left alone, because `CELLER` versus `Celler` is a choice, not a slip. Each
+    session's own header still shows its own text — that is its data.
 - Three blocks, in the order the question gets asked: **what is still open**
   (from the OTHER visits — this one is already on screen), **the visits**
   (newest first, counters, revision, click to open), and **every part ever

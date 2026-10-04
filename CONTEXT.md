@@ -598,6 +598,23 @@ Field Service Log/
     dialog does nothing; anything else falls through to `<input>.click()`.
   - **Chromium desktop only.** Firefox, Safari and every phone keep the hidden
     input exactly as before — `fsaOK()` decides, and the dialog says so.
+- **The archive ZIP carries every revision's documents**, not only the current
+  one. Everything at the Drive folder's root goes in — the reports of Rev. 01,
+  Rev. 02… each already carrying its number in its name, plus anything dropped
+  in there by hand. `session.json` is skipped (one is written fresh) and so is
+  any name the zip already holds, which is the current revision: the copy built
+  a moment ago beats the copy Drive has from the last export.
+  - This matters because **an old report cannot be rebuilt**. Restore the
+    session and export, and you get today's data, not March's. Without this the
+    archive was born missing the very documents that had been handed over.
+  - Only the archive. The hand-over pack is the report and the media.
+- **Import takes several files at once** (`multiple` on `#importFile`), because
+  an archive is a folder of twenty ZIPs and feeding them in one at a time is not
+  a workflow. Sequential on purpose — each ZIP re-uploads its media to Drive and
+  twenty of those at once is a way to get throttled — with **one** save to Drive
+  at the end and **one** summary alert instead of one per file. A file that
+  won't parse is named in that summary and doesn't stop the rest. Re-importing
+  is safe: sessions are skipped by id.
 - Import JSON **or a session ZIP** (↑ Import button in topbar and on empty screen).
   A ZIP restores the media too: photos and voice notes ride along inside
   session.json as base64, but a video is only ever a thumbnail + a Drive id, and

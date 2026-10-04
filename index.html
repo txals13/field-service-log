@@ -489,10 +489,10 @@ textarea{resize:none;line-height:1.4}
        hardest thing to find in a pile of PDFs. -->
   <div class="modal-back" id="mhBack" style="display:none">
     <div class="modal" style="max-width:min(96vw,820px)">
-      <div class="modal-title">&#128220; <span id="mhTitle">Historial de la m&agrave;quina</span></div>
-      <div id="mhNote" class="ts-note" style="margin-bottom:10px">&mdash;</div>
-      <div id="mhBody" style="max-height:62vh;overflow:auto"></div>
-      <div id="mhPrinted" class="print-only ts-note" style="margin-top:14px">&mdash;</div>
+      <div class="modal-title no-print">&#128220; <span id="mhTitle">Historial de la m&agrave;quina</span></div>
+      <div id="mhNote" class="ts-note no-print" style="margin-bottom:10px">&mdash;</div>
+      <div id="mhBody" class="no-print" style="max-height:62vh;overflow:auto"></div>
+      <div id="mhPrintBox" class="print-only"></div>
       <div class="modal-actions no-print">
         <button id="mhPrint" title="Imprimeix-lo o desa'l com a PDF per enviar-lo">&#128424; Imprimeix</button>
         <button id="mhClose">Tanca</button>
@@ -3855,6 +3855,7 @@ var RPT={
       qty:"QT.",ref:"REF.",part:"RECANVI",photoTag:"[foto]",openDrive:"Obre a Drive",
       voice:"nota de veu",video:"vídeo",photo:"foto",file:"fitxer",
       pre:{report:"informe",parts:"recanvis"},
+      h:{title:"Historial de la màquina",visits:"visites",visitsH:"Visites",sn:"N/S",pending:"Pendents",pendOther:"Pendent d'altres visites",closedLater:"Tancats en una visita posterior",closedOn:"Tancat el",resolvedSt:"Resolt",pendingSt:"Pendent",entries:"entrades",parts:"Recanvis muntats",printed:"Imprès el"},
       x:{sSession:"Sessió",sDetail:"Detall",sSummary:"Resum",qty:"Quantitat",ref:"Ref.",den:"Denominació",
          date:"Data",sev:"Gravetat",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunt",grup:"Grup / Dibuix",
          page:"Pàgina",project:"Projecte",type:"Tipus",gen:"Generat",lines:"Recanvis (línies)",refs:"Referències diferents"}},
@@ -3870,6 +3871,7 @@ var RPT={
       qty:"CANT.",ref:"REF.",part:"RECAMBIO",photoTag:"[foto]",openDrive:"Abrir en Drive",
       voice:"nota de voz",video:"vídeo",photo:"foto",file:"archivo",
       pre:{report:"informe",parts:"recambios"},
+      h:{title:"Historial de la máquina",visits:"visitas",visitsH:"Visitas",sn:"N/S",pending:"Pendientes",pendOther:"Pendiente de otras visitas",closedLater:"Cerrados en una visita posterior",closedOn:"Cerrado el",resolvedSt:"Resuelto",pendingSt:"Pendiente",entries:"entradas",parts:"Recambios montados",printed:"Impreso el"},
       x:{sSession:"Sesión",sDetail:"Detalle",sSummary:"Resumen",qty:"Cantidad",ref:"Ref.",den:"Denominación",
          date:"Fecha",sev:"Gravedad",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunto",grup:"Grupo / Plano",
          page:"Página",project:"Proyecto",type:"Tipo",gen:"Generado",lines:"Recambios (líneas)",refs:"Referencias distintas"}},
@@ -3885,6 +3887,7 @@ var RPT={
       qty:"QTY",ref:"REF.",part:"SPARE PART",photoTag:"[photo]",openDrive:"Open in Drive",
       voice:"voice note",video:"video",photo:"photo",file:"file",
       pre:{report:"report",parts:"spare_parts"},
+      h:{title:"Machine history",visits:"visits",visitsH:"Visits",sn:"S/N",pending:"Open items",pendOther:"Open from other visits",closedLater:"Closed on a later visit",closedOn:"Closed on",resolvedSt:"Resolved",pendingSt:"Open",entries:"entries",parts:"Spare parts fitted",printed:"Printed on"},
       x:{sSession:"Session",sDetail:"Detail",sSummary:"Summary",qty:"Quantity",ref:"Ref.",den:"Designation",
          date:"Date",sev:"Severity",tag:"Tag",entry:"Entry",pos:"Pos.",conj:"Assembly",grup:"Group / Drawing",
          page:"Page",project:"Project",type:"Type",gen:"Generated",lines:"Spare parts (lines)",refs:"Distinct references"}}
@@ -4260,96 +4263,90 @@ function mhChipHTML(sess){
   return "<span id=\"mhChip\" style=\"cursor:pointer\" title=\"Totes les visites a aquesta màquina: què es va fer i què va quedar obert\">&#128220; "
     +all.length+" visites"+(open?" · <span style=\"color:var(--orange)\">"+open+" pendent"+(open>1?"s":"")+"</span>":"")+"</span>";
 }
-var mhWired=false;
+var mhWired=false,mhOldTitle=null;
 function wireMh(){
   if(mhWired)return;mhWired=true;
-  var oldTitle=null;
   function close(){
     $$("mhBack").style.display="none";
     document.body.classList.remove("print-mh");
-    if(oldTitle!==null){document.title=oldTitle;oldTitle=null}
+    $$("mhPrintBox").innerHTML="";
+    if(mhOldTitle!==null){document.title=mhOldTitle;mhOldTitle=null}
   }
   $$("mhClose").addEventListener("click",close);
-  // The browser's own print: on paper, or "Desa com a PDF" to send it, on the
-  // computer and on Android alike. The page title becomes the PDF's file name.
-  $$("mhPrint").addEventListener("click",function(){
-    var cur=sessions.find(function(x){return x.id===aid});
-    var newest=(cur&&machineSessions(cur)[0])||cur||{};
-    if(oldTitle===null)oldTitle=document.title;
-    document.title="Historial_"+sanitize(newest.machine)+"_"+sanitize(newest.client)+"_"+todayISO();
-    $$("mhPrinted").textContent="Imprès el "+dmy(todayISO())+(cur&&cur.tech?" · "+cur.tech:"");
-    document.body.classList.add("print-mh");
-    setTimeout(function(){window.print()},50);
-  });
   $$("mhBack").addEventListener("click",function(e){if(e.target===$$("mhBack"))close()});
   $$("mhBody").addEventListener("click",function(e){
     var r=e.target.closest?e.target.closest("[data-sess]"):null;
     if(!r)return;
     close();aid=r.dataset.sess;renderAll();
   });
+  $$("mhPrint").addEventListener("click",printMachineHistory);
 }
-function mhLine(e,sess){
+// The newest visit's spelling, not the open one's. They all group to the same
+// machine whatever the capitals and spacing, so the heading has to pick one —
+// and the one you typed most recently is the one you have settled on. Stray
+// spacing is tidied for the heading only; capitals are left alone, because
+// "CELLER" versus "Celler" is a choice and not a slip.
+function mhDisp(t){return String(t||"").trim().replace(/\s+/g," ")}
+function mhClean(t){return esc(String(t||"").replace(/\s+/g," ").trim())}
+function mhDate(ts){return fts(ts).split(" ")[0]}
+// One entry carried over from an earlier visit. Whole, never cut: this screen
+// is read to decide what to do about a machine before touching it, and a
+// problem that ends in an ellipsis is one you have to go and look up somewhere
+// else — which is the thing this screen exists to save you.
+function mhLine(e){
   var sm=SM[e.severity]||SM.info;
-  var txt=String(e.text||"").replace(/\s+/g," ");
-  // Whole, never cut. This screen is read to decide what to do about a
-  // machine before touching it, and a problem that ends in an ellipsis is
-  // one you have to go and look up somewhere else — which is the thing this
-  // screen exists to save you.
-  return "<div style=\"display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--br)\">"
-    +"<span style=\"color:"+sm.tx+";flex-shrink:0;font-size:11px;font-family:monospace\">"+fts(e.ts).split(" ")[0]+"</span>"
-    +"<span style=\"flex:1\">"+(e.tag?"<strong>"+esc(e.tag)+"</strong> — ":"")+esc(txt)
-    +(e.fix?"<div style=\"color:var(--tx3);font-size:11px\">↳ "+esc(String(e.fix.text||"").replace(/\s+/g," "))+"</div>":"")
+  return "<div class=\"mh-row\" style=\"display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--br)\">"
+    +"<span style=\"color:"+sm.tx+";flex-shrink:0;font-size:11px;font-family:monospace\">"+mhDate(e.ts)+"</span>"
+    +"<span style=\"flex:1\">"+(e.tag?"<strong>"+esc(e.tag)+"</strong> — ":"")+mhClean(e.text)
+    +(e.fix?"<div style=\"color:var(--tx3);font-size:11px\">↳ "+mhClean(e.fix.text)+"</div>":"")
     +"</span></div>";
 }
 // The visit's problems and warnings on its own card, each with where it stands:
 // resolved on the visit itself, closed by a later one (and how), or still open.
-// Whole text, as everywhere on this screen. This is what the client reads when
-// the history is printed, so it says what happened, not just a count.
-function mhCardIssues(x,closed){
+// This is what the client reads when the history is printed, so it says what
+// happened, not just a count.
+function mhCardIssues(x,closed,all,H){
   var es=sortEntries((x.entries||[]).filter(function(e){return e&&(e.severity==="issue"||e.severity==="warning")}));
   if(!es.length)return "";
-  function clean(t){return esc(String(t||"").replace(/\s+/g," ").trim())}
   return "<div style=\"margin-top:6px\">"+es.map(function(e){
     var sm=SM[e.severity]||SM.info,by=closed&&closed[x.id+"|"+e.id],st;
     if(isResolved(e)){
-      st="<span style=\"color:var(--green);font-weight:600\">✓ Resolt</span>"
-        +(String(e.fix.text||"").trim()?" · "+clean(e.fix.text):"");
+      st="<span style=\"color:var(--green);font-weight:600\">✓ "+esc(H.resolvedSt)+"</span>"
+        +(String(e.fix.text||"").trim()?" · "+mhClean(e.fix.text):"");
     }else if(by){
-      var fx=by.fix,end=fx&&String(fx.text||"").trim()?clean(fx.text):clean(by.text);
-      var on=sessions.find(function(v){return (v.entries||[]).indexOf(by)>=0});
-      st="<span style=\"color:var(--green);font-weight:600\">✓ Tancat el "+fts(by.ts).split(" ")[0]+"</span>"
+      var fx=by.fix,end=fx&&String(fx.text||"").trim()?mhClean(fx.text):mhClean(by.text);
+      var on=all.find(function(v){return (v.entries||[]).indexOf(by)>=0});
+      st="<span style=\"color:var(--green);font-weight:600\">✓ "+esc(H.closedOn)+" "+mhDate(by.ts)+"</span>"
         +(on&&on.id!==x.id&&on.project?" ("+esc(on.project)+")":"")
         +(end?" · "+end:"");
     }else{
-      st="<span style=\"color:var(--orange);font-weight:600\">⚠ Pendent</span>"
-        +(e.fix&&String(e.fix.text||"").trim()?" · "+clean(e.fix.text):"");
+      st="<span style=\"color:var(--orange);font-weight:600\">⚠ "+esc(H.pendingSt)+"</span>"
+        +(e.fix&&String(e.fix.text||"").trim()?" · "+mhClean(e.fix.text):"");
     }
     return "<div class=\"mh-row\" style=\"display:flex;gap:8px;padding:4px 0;border-top:1px solid var(--br);font-size:12px\">"
-      +"<span style=\"color:"+sm.tx+";flex-shrink:0;font-family:monospace;font-size:11px\">"+sm.dot+" "+fts(e.ts).split(" ")[0]+"</span>"
-      +"<span style=\"flex:1\">"+(e.tag?"<strong>"+esc(e.tag)+"</strong> — ":"")+clean(e.text)
+      +"<span style=\"color:"+sm.tx+";flex-shrink:0;font-family:monospace;font-size:11px\">"+sm.dot+" "+mhDate(e.ts)+"</span>"
+      +"<span style=\"flex:1\">"+(e.tag?"<strong>"+esc(e.tag)+"</strong> — ":"")+mhClean(e.text)
       +"<div style=\"margin-top:2px;padding-left:9px;border-left:2px solid var(--br2);color:var(--tx2)\">"+st+"</div></span></div>";
   }).join("")+"</div>";
 }
-function openMachineHistory(){
-  var cur=sessions.find(function(x){return x.id===aid});if(!cur)return;
-  wireMh();
-  var all=machineSessions(cur),serial=null;
+// The whole history, in the language of the label table L. The screen asks
+// for it in Catalan with the visits as typed; the print asks for it in the
+// report's language with the visits already translated (`all` is then the
+// translated copies — the same ids, so the closing links still meet).
+//
+// Two differences for paper. What is still pending comes from EVERY visit,
+// this one included: on screen this visit is the one underneath, on paper
+// there is nothing underneath. And "aquesta" means nothing to a client.
+function mhRender(cur,all,L,forPrint){
+  var H=L.h,serial=null;
   all.forEach(function(x){if(!serial&&x.manualRef&&x.manualRef.serial)serial=x.manualRef.serial});
-  // The newest visit's spelling, not the open one's. They all group to the same
-  // machine whatever the capitals and spacing, so the heading has to pick one —
-  // and the one you typed most recently is the one you have settled on. Stray
-  // spacing is tidied for the heading only; capitals are left alone, because
-  // "CELLER" versus "Celler" is a choice and not a slip.
-  function disp(t){return String(t||"").trim().replace(/\s+/g," ")}
   var newest=all[0]||cur;
-  $$("mhTitle").textContent=(disp(newest.machine)||"—")+" · "+(disp(newest.client)||"—");
-  $$("mhNote").innerHTML=all.length+" visites"+(serial?" · S/N "+esc(serial):"")
-    +".<span class=\"no-print\"> S'agrupen per client i màquina tal com els escrius.</span>";
+  var title=(mhDisp(newest.machine)||"—")+" · "+(mhDisp(newest.client)||"—");
+  var note=all.length+" "+esc(H.visits)+(serial?" · "+esc(H.sn)+" "+esc(serial):"")+".";
 
-  // What is still open, from the OTHER visits: this one you already have on screen.
   var closed=closedRefs(all),pend=[],done=[];
   all.forEach(function(x){
-    if(x.id===cur.id)return;
+    if(x.id===cur.id&&!forPrint)return;
     openEntries(x,closed).forEach(function(e){pend.push({e:e,s:x})});
     (x.entries||[]).forEach(function(e){
       var by=e&&closed[x.id+"|"+e.id];
@@ -4361,13 +4358,12 @@ function openMachineHistory(){
 
   var h="";
   if(pend.length){
-    h+="<div style=\"font-weight:700;margin:2px 0 6px;color:var(--orange)\">⚠ Pendent d'altres visites ("+pend.length+")</div>";
-    h+=pend.map(function(p){return mhLine(p.e,p.s)}).join("");
+    h+="<div style=\"font-weight:700;margin:2px 0 6px;color:var(--orange)\">⚠ "+esc(forPrint?H.pending:H.pendOther)+" ("+pend.length+")</div>";
+    h+=pend.map(function(p){return mhLine(p.e)}).join("");
     h+="<div style=\"height:14px\"></div>";
   }
-
   if(done.length){
-    h+="<div style=\"font-weight:700;margin:2px 0 6px;color:var(--green)\">\u2713 Tancats en una visita posterior ("+done.length+")</div>";
+    h+="<div style=\"font-weight:700;margin:2px 0 6px;color:var(--green)\">✓ "+esc(H.closedLater)+" ("+done.length+")</div>";
     h+=done.map(function(d){
       // How it ended, not just that it did: the outcome of the entry that
       // closed it is the actual answer to "and what happened with the valve?".
@@ -4375,39 +4371,38 @@ function openMachineHistory(){
       // the next best thing, and saying nothing is the worst.
       var fx=d.by.fix,fsm=fx?(SM[fx.severity]||SM.ok):null;
       var end=fx&&String(fx.text||"").trim()
-        ?"<span style=\"color:"+fsm.tx+";font-weight:600\">\u2714 "+esc(fsm.label)+"</span> \u00b7 "
-          +esc(String(fx.text).replace(/\s+/g," "))
-        :esc(String(d.by.text||"").replace(/\s+/g," "));
-      return "<div style=\"display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--br)\">"
-        +"<span style=\"flex-shrink:0;font-size:11px;font-family:monospace;color:var(--tx3)\">"+fts(d.e.ts).split(" ")[0]+"</span>"
+        ?"<span style=\"color:"+fsm.tx+";font-weight:600\">✔ "+esc((L.sev&&L.sev[fx.severity])||fsm.label)+"</span> · "+mhClean(fx.text)
+        :mhClean(d.by.text);
+      return "<div class=\"mh-row\" style=\"display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--br)\">"
+        +"<span style=\"flex-shrink:0;font-size:11px;font-family:monospace;color:var(--tx3)\">"+mhDate(d.e.ts)+"</span>"
         +"<span style=\"flex:1\">"
-        +"<span style=\"opacity:.7\">"+(d.e.tag?"<strong>"+esc(d.e.tag)+"</strong> \u2014 ":"")
-        +esc(String(d.e.text||"").replace(/\s+/g," "))+"</span>"
+        +"<span style=\"opacity:.7\">"+(d.e.tag?"<strong>"+esc(d.e.tag)+"</strong> — ":"")+mhClean(d.e.text)+"</span>"
         +"<div style=\"margin-top:3px;padding-left:9px;border-left:2px solid var(--green);font-size:11.5px\">"
-        +"<span style=\"color:var(--green)\">\u2713 tancat el "+fts(d.by.ts).split(" ")[0]+"</span>"
-        +(d.by.tag?" \u00b7 <strong>"+esc(d.by.tag)+"</strong>":"")
+        +"<span style=\"color:var(--green)\">✓ "+esc(H.closedOn)+" "+mhDate(d.by.ts)+"</span>"
+        +(d.by.tag?" · <strong>"+esc(d.by.tag)+"</strong>":"")
         +"<div style=\"color:var(--tx2);margin-top:2px\">"+end+"</div>"
         +"</div></span></div>";
     }).join("");
     h+="<div style=\"height:14px\"></div>";
   }
-  h+="<div style=\"font-weight:700;margin:2px 0 6px\">Visites</div>";
+  h+="<div style=\"font-weight:700;margin:2px 0 6px\">"+esc(H.visitsH)+"</div>";
   h+=all.map(function(x){
-    var c=severityCounts(x.entries||[]),r=curRev(x),isCur=x.id===cur.id;
+    var c=severityCounts(x.entries||[]),r=curRev(x),isCur=x.id===cur.id&&!forPrint;
     var rng=tsRange(x);
     return "<div class=\"mh-card\" data-sess=\""+esc(x.id)+"\" style=\"cursor:pointer;padding:7px 8px;margin-bottom:4px;border-radius:6px;"
       +"background:"+(isCur?"var(--bg2)":"transparent")+";border:1px solid var(--br)\">"
       +"<div style=\"display:flex;gap:8px;align-items:baseline;flex-wrap:wrap\">"
       +"<strong>"+dmy(rng.from)+(rng.to!==rng.from?" → "+dmy(rng.to):"")+"</strong>"
-      +"<span style=\"font-size:11px;color:var(--tx3)\">"+esc((TM[x.type]||TM.commissioning).label||x.type)+"</span>"
-      +(r?"<span style=\"font-size:11px;color:var(--tx3)\">"+revNo(r.n)+"</span>":"")
-      +(x.status==="closed"?"<span style=\"font-size:11px;color:var(--red)\">Tancada</span>":"")
-      +(isCur?"<span class=\"no-print\" style=\"font-size:11px;color:var(--gold)\">aquesta</span>":"")
+      +"<span style=\"font-size:11px;color:var(--tx3)\">"+esc((L.types&&L.types[x.type])||L.types.commissioning)+"</span>"
+      +(x.project?"<span style=\"font-size:11px;color:var(--tx3)\">"+esc(x.project)+"</span>":"")
+      +(r?"<span style=\"font-size:11px;color:var(--tx3)\">"+esc(L.revLbl)+" "+("0"+r.n).slice(-2)+"</span>":"")
+      +(x.status==="closed"?"<span style=\"font-size:11px;color:var(--red)\">"+esc(L.closed)+"</span>":"")
+      +(isCur?"<span style=\"font-size:11px;color:var(--gold)\">aquesta</span>":"")
       +"</div>"
       +"<div style=\"font-size:11px;color:var(--tx3);font-family:monospace;margin-top:2px\">"
       +(c.issue?"■ "+c.issue+"  ":"")+(c.warning?"▲ "+c.warning+"  ":"")+(c.resolved?"✓ "+c.resolved+"  ":"")
-      +"● "+c.ok+"  ·  "+(x.entries||[]).length+" entrades</div>"
-      +mhCardIssues(x,closed)+"</div>";
+      +"● "+c.ok+"  ·  "+(x.entries||[]).length+" "+esc(H.entries)+"</div>"
+      +mhCardIssues(x,closed,all,H)+"</div>";
   }).join("");
 
   // Every part ever fitted to this machine, newest first: "we changed that
@@ -4425,18 +4420,73 @@ function openMachineHistory(){
   });
   var pk=Object.keys(parts).sort(function(a,b){return parts[b].last.localeCompare(parts[a].last)});
   if(pk.length){
-    h+="<div style=\"height:14px\"></div><div style=\"font-weight:700;margin:2px 0 6px\">Recanvis muntats ("+pk.length+")</div>";
+    h+="<div style=\"height:14px\"></div><div style=\"font-weight:700;margin:2px 0 6px\">"+esc(H.parts)+" ("+pk.length+")</div>";
     h+="<table style=\"width:100%;border-collapse:collapse;font-size:12px\">"
       +pk.map(function(k){var p=parts[k];
-        return "<tr><td style=\"padding:3px 6px 3px 0;color:var(--gold);text-align:right;white-space:nowrap\">"+(p.qty?p.qty+"×":"")+"</td>"
+        return "<tr class=\"mh-row\"><td style=\"padding:3px 6px 3px 0;color:var(--gold);text-align:right;white-space:nowrap\">"+(p.qty?p.qty+"×":"")+"</td>"
           +"<td style=\"padding:3px 6px 3px 0;font-family:monospace;color:var(--blue)\">"+esc(p.ref)+"</td>"
           +"<td style=\"padding:3px 6px 3px 0\">"+esc(p.den)+"</td>"
           +"<td style=\"padding:3px 0;color:var(--tx3);white-space:nowrap\">"+dmy(String(p.last).slice(0,10))+"</td></tr>";
       }).join("")+"</table>";
   }
-
-  $$("mhBody").innerHTML=h;
+  return {title:title,note:note,body:h};
+}
+function openMachineHistory(){
+  var cur=sessions.find(function(x){return x.id===aid});if(!cur)return;
+  wireMh();
+  var v=mhRender(cur,machineSessions(cur),RPT.ca,false);
+  $$("mhTitle").textContent=v.title;
+  $$("mhNote").innerHTML=v.note+" S'agrupen per client i màquina tal com els escrius.";
+  $$("mhBody").innerHTML=v.body;
+  var lang=reportLang(cur);
+  $$("mhPrint").innerHTML="&#128424; Imprimeix"+(lang!=="ca"?" · "+esc(langNative(lang)):"");
+  $$("mhPrint").title="L'imprimeix o el desa com a PDF per enviar-lo, "+langInto(lang)+", com l'informe d'aquesta sessió";
   $$("mhBack").style.display="flex";
+}
+// On paper, in the report's language: the one picked for THIS session's report
+// (↓ Informe), since the history goes to the same client. The labels come from
+// the same tables as the reports, and each visit's texts through the same
+// cache — a visit already exported in that language costs nothing, and one
+// written in it is never sent at all.
+//
+// It is the browser's own print: on paper, or "Desa com a PDF" to send it, on
+// the computer and on Android alike. The page title becomes the PDF's name.
+//
+// What prints is #mhPrintBox, rendered here for the occasion, and not the
+// dialog: the dialog stays in Catalan with the texts as typed, which is what
+// the technician is reading.
+async function printMachineHistory(){
+  var cur=sessions.find(function(x){return x.id===aid});if(!cur)return;
+  var lang=reportLang(cur),b=$$("mhPrint"),label=b.innerHTML;
+  if(!await ensureLabels(lang))return;
+  var all=machineSessions(cur),loc=all;
+  function done(){b.disabled=false;b.innerHTML=label}
+  b.disabled=true;b.textContent="Traduint…";
+  try{
+    loc=[];
+    for(var i=0;i<all.length;i++)loc.push(await localizeSession(all[i],lang));
+  }catch(e){
+    loc=all;done();
+    var m=(e&&e.message)||String(e);
+    if(m===GEM_NOKEY){
+      if(confirm("L'historial s'ha de traduir "+langInto(lang)+", i en aquest navegador no hi ha cap clau de Gemini."
+        +"\n\nAccepta per escriure-la ara, o cancel·la per imprimir-lo amb els textos tal com els vas escriure.")){
+        openGemKey("L'historial s'ha de traduir "+langInto(lang)+". Escriu la clau i torna a imprimir-lo.");return;
+      }
+    }else if(!confirm("No s'han pogut traduir els textos "+langInto(lang)+":\n"+m
+      +"\n\nVols imprimir-lo igualment, amb els textos tal com els vas escriure?"))return;
+  }
+  done();
+  var L=RPT[lang]||RPT.en,v=mhRender(cur,loc,L,true),newest=all[0]||cur;
+  $$("mhPrintBox").innerHTML=
+     "<div style=\"font-size:18px;font-weight:700;color:var(--gold)\">&#128220; "+esc(v.title)+"</div>"
+    +"<div class=\"ts-note\" style=\"margin:2px 0 12px\">"+esc(L.h.title)+" · "+v.note+"</div>"
+    +v.body
+    +"<div class=\"ts-note\" style=\"margin-top:14px\">"+esc(L.h.printed)+" "+dmy(todayISO())+(cur.tech?" · "+esc(cur.tech):"")+"</div>";
+  if(mhOldTitle===null)mhOldTitle=document.title;
+  document.title=fileSafe(L.h.title,"history")+"_"+sanitize(newest.machine)+"_"+sanitize(newest.client)+"_"+todayISO();
+  document.body.classList.add("print-mh");
+  setTimeout(function(){window.print()},50);
 }
 function pushRevision(id,n,date,note){
   var rec={n:n,date:date,note:note||"",issuedAt:now()};
@@ -5929,7 +5979,7 @@ function fontB64(url){
 }
 // Every string in a label table, however deep (types, sev and the rest).
 // ── LABELS FOR THE OTHER LANGUAGES ───────────────────────────────────────────
-// 66 report labels and 26 timesheet ones per language. Three are written by
+// 80 report labels and 26 timesheet ones per language. Three are written by
 // hand; the rest are translated once by the same model that does the entries
 // and then kept, so a language costs one call ever and a language nobody picks
 // costs nothing at all.

@@ -615,10 +615,14 @@ Field Service Log/
   at the end and **one** summary alert instead of one per file. A file that
   won't parse is named in that summary and doesn't stop the rest. Re-importing
   is safe: sessions are skipped by id.
-  - **⬇ Carrega'n tots els projectes** (`fsaArxLoad`, in the folder dialog under
-    the archive folder) reads that whole folder in one go. The app already holds
-    a handle to it, so nothing has to be picked. Shown only when a folder is set
-    and the browser has the API.
+  - **⬇ Tria què carregar…** (`fsaArxLoad` → `openArxPicker`, in the folder
+    dialog under the archive folder) lists that folder with a checkbox per file,
+    size and date, plus Tots / Cap, and loads only what is ticked. **Nothing is
+    ticked to start with**: loading is the kind of thing that should only happen
+    on purpose. Shown only when a folder is set and the browser has the API.
+  - Listing is free: `getFile()` gives size and date without reading contents,
+    so a folder of several gigabytes lists instantly and only what you tick is
+    ever read. Verified — nothing read until the load button.
   - Both doors — the file picker and the archive folder — go through the same
     `importFiles`, so there is one loop and one summary to keep correct.
   - Permission is asked **on the click**: reading twenty ZIPs takes a while and
@@ -627,9 +631,9 @@ Field Service Log/
     turn comes, so a folder of several gigabytes never lands in memory at once.
     Names are sorted, so a project with several goes at it arrives in the order
     it was archived; anything that isn't a `.zip` or `.json` is ignored.
-  - Verified against a stand-in folder: a stray `.txt` skipped, files read in
-    name order rather than folder order, a second run importing nothing and
-    reporting 3 skipped, an empty folder and a denied permission each saying so.
+  - Verified against a stand-in folder: a stray `.txt` left off the list, name
+    order rather than folder order, one ticked loads one, two load two, Tots
+    after that reports 3 skipped, Cap disables the button.
 - Import JSON **or a session ZIP** (↑ Import button in topbar and on empty screen).
   A ZIP restores the media too: photos and voice notes ride along inside
   session.json as base64, but a video is only ever a thumbnail + a Drive id, and

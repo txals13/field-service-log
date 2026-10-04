@@ -534,6 +534,25 @@ textarea{resize:none;line-height:1.4}
     </div>
   </div>
 
+  <!-- What is in the archive folder, to load one, two or all of it. Nothing is
+       ticked to start with: loading is the kind of thing that should only
+       happen on purpose. -->
+  <div class="modal-back" id="arxBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,720px)">
+      <div class="modal-title">&#8681; <span id="arxTitle">Carrega projectes de l'arxiu</span></div>
+      <div id="arxNote" class="ts-note" style="margin-bottom:8px">&mdash;</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <button class="btn-xs" id="arxAll">Tots</button>
+        <button class="btn-xs" id="arxNone">Cap</button>
+      </div>
+      <div id="arxList" style="max-height:52vh;overflow:auto;border:1px solid var(--br);border-radius:8px"></div>
+      <div class="modal-actions">
+        <button id="arxCancel">Cancel&middot;la</button>
+        <button class="btn-gold" id="arxGo" disabled>&#8681; Carrega'n 0</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-back" id="fsaBack" style="display:none">
     <div class="modal" style="max-width:min(96vw,520px)">
       <div class="modal-title">&#128193; Carpetes d'aquest ordinador</div>
@@ -548,7 +567,7 @@ textarea{resize:none;line-height:1.4}
       <div id="fsaArxNote" class="ts-note" style="margin:4px 0 6px">&mdash;</div>
       <div class="ts-note">On es desa el <strong>ZIP del projecte</strong>, directament i sense passar per Baixades. Tria <code>G:\My Drive\Field Service Log\Arxiu</code> un cop i cada exportaci&oacute; hi anir&agrave; sola; Drive per a escriptori ja se n'encarrega de pujar-la. El paquet Word + multim&egrave;dia, que &eacute;s per lliurar, se segueix baixant com sempre. Si un dia no s'hi pot escriure, el ZIP es baixa i no es perd.</div>
       <div style="display:flex;gap:6px;justify-content:flex-end;margin:8px 0 0;flex-wrap:wrap">
-        <button class="btn-sm" id="fsaArxLoad" style="display:none">&#8681; Carrega'n tots els projectes</button>
+        <button class="btn-sm" id="fsaArxLoad" style="display:none">&#8681; Tria qu&egrave; carregar&hellip;</button>
         <button class="btn-sm" id="fsaArxClear">&#10005; Oblida-la</button>
         <button class="btn-gold" id="fsaArxPick">&#128452; Tria la carpeta&hellip;</button>
       </div>
@@ -3084,6 +3103,10 @@ function wireFsa(){
   //
   // The files are handles, not bytes: each one is only read when its turn
   // comes, so a folder of several gigabytes never lands in memory at once.
+  // Lists the archive folder and lets you pick. The permission is asked here,
+  // with the click in hand. getFile() on each handle reads the size and the
+  // date, not the contents: a folder of several gigabytes is listed for free
+  // and only what you tick is ever read.
   $$("fsaArxLoad").addEventListener("click",async function(){
     if(!arxDir||!arxDir.values)return;
     var b=$$("fsaArxLoad");b.disabled=true;
@@ -3092,22 +3115,19 @@ function wireFsa(){
         alert("Sense permís per llegir la carpeta d'arxiu. Torna-la a triar i dona-li permís.");
         return;
       }
-      var picked=[];
+      var found=[];
       for await (var h of arxDir.values()){
         if(h.kind!=="file"||!/\.(zip|json)$/i.test(h.name))continue;
-        picked.push(h);
+        try{found.push(await h.getFile())}catch(e){}
       }
-      if(!picked.length){
+      if(!found.length){
         alert("No hi ha cap ZIP ni cap JSON a "+(arxDir.name||"la carpeta d'arxiu")+".");
         return;
       }
-      // Oldest name first, so a project with several goes at it lands in the
-      // order it was archived.
-      picked.sort(function(x,y){return x.name.localeCompare(y.name)});
-      var files=[];
-      for(var i=0;i<picked.length;i++){try{files.push(await picked[i].getFile())}catch(e){}}
+      // Name order, so a project's several goes sit together and in sequence.
+      found.sort(function(x,y){return x.name.localeCompare(y.name)});
       $$("fsaBack").style.display="none";
-      await importFiles(files);
+      openArxPicker(found);
     }catch(e){alert("No s'ha pogut llegir la carpeta d'arxiu: "+((e&&e.message)||e))}
     finally{b.disabled=false}
   });
@@ -3119,6 +3139,51 @@ function wireFsa(){
       await arxDirSave(h);openFsa();
     }catch(e){if(e&&e.name!=="AbortError")alert("No s'ha pogut obrir la carpeta: "+((e&&e.message)||e))}
   });
+}
+var arxFiles=[],arxWired=false;
+function arxSize(b){return b>=1048576?(b/1048576).toFixed(1)+" MB":Math.max(1,Math.round(b/1024))+" KB"}
+function arxCount(){
+  var n=$$("arxList").querySelectorAll("input[type=checkbox]:checked").length;
+  var go=$$("arxGo");go.disabled=!n;go.innerHTML="&#8681; Carrega'n "+n;
+}
+function wireArx(){
+  if(arxWired)return;arxWired=true;
+  function close(){$$("arxBack").style.display="none";arxFiles=[]}
+  function setAll(v){
+    Array.prototype.forEach.call($$("arxList").querySelectorAll("input[type=checkbox]"),function(c){c.checked=v});
+    arxCount();
+  }
+  $$("arxCancel").addEventListener("click",close);
+  $$("arxBack").addEventListener("click",function(e){if(e.target===$$("arxBack"))close()});
+  $$("arxAll").addEventListener("click",function(){setAll(true)});
+  $$("arxNone").addEventListener("click",function(){setAll(false)});
+  $$("arxList").addEventListener("change",arxCount);
+  $$("arxGo").addEventListener("click",async function(){
+    var pick=[];
+    Array.prototype.forEach.call($$("arxList").querySelectorAll("input[type=checkbox]:checked"),function(c){
+      var f=arxFiles[+c.dataset.i];if(f)pick.push(f);
+    });
+    if(!pick.length)return;
+    close();
+    await importFiles(pick);
+  });
+}
+function openArxPicker(files){
+  wireArx();
+  arxFiles=files;
+  $$("arxNote").textContent=files.length+" fitxer(s) a "+(arxDir&&arxDir.name||"la carpeta d'arxiu")
+    +". Els que ja tinguis aquí se saltaran sols, o sigui que no passa res si en marques algun de repetit.";
+  $$("arxList").innerHTML=files.map(function(f,i){
+    var d=f.lastModified?dmy(new Date(f.lastModified).toISOString().slice(0,10)):"";
+    return "<label style=\"display:flex;align-items:center;gap:10px;padding:7px 10px;border-bottom:1px solid var(--br);cursor:pointer\">"
+      +"<input type=\"checkbox\" data-i=\""+i+"\" style=\"width:auto;flex-shrink:0\">"
+      +"<span style=\"flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px\" title=\""+esc(f.name)+"\">"+esc(f.name)+"</span>"
+      +"<span style=\"flex-shrink:0;font-size:11px;color:var(--tx3);font-family:monospace\">"+arxSize(f.size)+"</span>"
+      +"<span style=\"flex-shrink:0;font-size:11px;color:var(--tx3);font-family:monospace\">"+d+"</span>"
+      +"</label>";
+  }).join("");
+  arxCount();
+  $$("arxBack").style.display="flex";
 }
 function openFsa(){
   wireFsa();

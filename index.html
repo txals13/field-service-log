@@ -2418,16 +2418,20 @@ function renderSidebar(){
   if(!sessions.length){$$("sideCount").textContent="Sessions (0)";list.innerHTML="<div style=\"font-size:12px;color:var(--tx3);padding:20px 10px;text-align:center\">Encara no hi ha cap sessió.<br>Crea'n una de nova.</div>";return}
 
   var q=sessFilterTxt.trim().toLowerCase();
+  // Newest first, by the session's start date — the one the reports print as
+  // "Inici". Only the list is sorted: the array keeps its own order. An import
+  // used to land its sessions wherever the file had them.
+  var ordered=sessions.slice().sort(function(a,b){return String(b.createdAt||"").localeCompare(String(a.createdAt||""))});
   if(!q){
     $$("sideCount").textContent="Sessions ("+sessions.length+")";
-    sessions.forEach(function(s){list.appendChild(buildSitem(s))});
+    ordered.forEach(function(s){list.appendChild(buildSitem(s))});
     return;
   }
 
   // Search mode: match session details, and also search every entry's text
   // and tag across all sessions — matching entries show up as clickable
   // results, not just the session they belong to.
-  var results=sessions.map(function(s){
+  var results=ordered.map(function(s){
     var sessMatch=[s.client,s.machine,s.project,s.tech,s.location].some(function(v){return(v||"").toLowerCase().includes(q)});
     var hits=(s.entries||[]).filter(function(e){return entryMatches(e,q)});
     return{s:s,sessMatch:sessMatch,hits:hits};

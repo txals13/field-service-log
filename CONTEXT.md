@@ -334,6 +334,11 @@ Field Service Log/
     saying nothing there would be the worst of the three.
 - The chip carries the pending count, which is the whole point of it being
   visible without opening anything.
+- **Nothing in this screen is truncated.** It used to cut the problem at 110
+  characters and the outcome at 170, which looked fine until a description ran
+  long — and a problem that ends in an ellipsis is one you have to go and look
+  up somewhere else, which is the thing this screen exists to save you. The
+  modal scrolls; the text doesn't get clipped.
 
 ## Session types
 | Type | Abbr | Color |

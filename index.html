@@ -4079,11 +4079,14 @@ function wireMh(){
 function mhLine(e,sess){
   var sm=SM[e.severity]||SM.info;
   var txt=String(e.text||"").replace(/\s+/g," ");
-  if(txt.length>150)txt=txt.slice(0,150)+"…";
+  // Whole, never cut. This screen is read to decide what to do about a
+  // machine before touching it, and a problem that ends in an ellipsis is
+  // one you have to go and look up somewhere else — which is the thing this
+  // screen exists to save you.
   return "<div style=\"display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--br)\">"
     +"<span style=\"color:"+sm.tx+";flex-shrink:0;font-size:11px;font-family:monospace\">"+fts(e.ts).split(" ")[0]+"</span>"
     +"<span style=\"flex:1\">"+(e.tag?"<strong>"+esc(e.tag)+"</strong> — ":"")+esc(txt)
-    +(e.fix?"<div style=\"color:var(--tx3);font-size:11px\">↳ "+esc(String(e.fix.text||"").slice(0,110))+"</div>":"")
+    +(e.fix?"<div style=\"color:var(--tx3);font-size:11px\">↳ "+esc(String(e.fix.text||"").replace(/\s+/g," "))+"</div>":"")
     +"</span></div>";
 }
 function openMachineHistory(){
@@ -4125,13 +4128,13 @@ function openMachineHistory(){
       var fx=d.by.fix,fsm=fx?(SM[fx.severity]||SM.ok):null;
       var end=fx&&String(fx.text||"").trim()
         ?"<span style=\"color:"+fsm.tx+";font-weight:600\">\u2714 "+esc(fsm.label)+"</span> \u00b7 "
-          +esc(String(fx.text).replace(/\s+/g," ").slice(0,170))
-        :esc(String(d.by.text||"").replace(/\s+/g," ").slice(0,170));
+          +esc(String(fx.text).replace(/\s+/g," "))
+        :esc(String(d.by.text||"").replace(/\s+/g," "));
       return "<div style=\"display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--br)\">"
         +"<span style=\"flex-shrink:0;font-size:11px;font-family:monospace;color:var(--tx3)\">"+fts(d.e.ts).split(" ")[0]+"</span>"
         +"<span style=\"flex:1\">"
         +"<span style=\"opacity:.7\">"+(d.e.tag?"<strong>"+esc(d.e.tag)+"</strong> \u2014 ":"")
-        +esc(String(d.e.text||"").replace(/\s+/g," ").slice(0,110))+"</span>"
+        +esc(String(d.e.text||"").replace(/\s+/g," "))+"</span>"
         +"<div style=\"margin-top:3px;padding-left:9px;border-left:2px solid var(--green);font-size:11.5px\">"
         +"<span style=\"color:var(--green)\">\u2713 tancat el "+fts(d.by.ts).split(" ")[0]+"</span>"
         +(d.by.tag?" \u00b7 <strong>"+esc(d.by.tag)+"</strong>":"")

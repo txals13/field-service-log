@@ -615,6 +615,21 @@ Field Service Log/
   at the end and **one** summary alert instead of one per file. A file that
   won't parse is named in that summary and doesn't stop the rest. Re-importing
   is safe: sessions are skipped by id.
+  - **⬇ Carrega'n tots els projectes** (`fsaArxLoad`, in the folder dialog under
+    the archive folder) reads that whole folder in one go. The app already holds
+    a handle to it, so nothing has to be picked. Shown only when a folder is set
+    and the browser has the API.
+  - Both doors — the file picker and the archive folder — go through the same
+    `importFiles`, so there is one loop and one summary to keep correct.
+  - Permission is asked **on the click**: reading twenty ZIPs takes a while and
+    by the end of it the gesture would be long gone.
+  - The folder yields **handles, not bytes**. Each file is read only when its
+    turn comes, so a folder of several gigabytes never lands in memory at once.
+    Names are sorted, so a project with several goes at it arrives in the order
+    it was archived; anything that isn't a `.zip` or `.json` is ignored.
+  - Verified against a stand-in folder: a stray `.txt` skipped, files read in
+    name order rather than folder order, a second run importing nothing and
+    reporting 3 skipped, an empty folder and a denied permission each saying so.
 - Import JSON **or a session ZIP** (↑ Import button in topbar and on empty screen).
   A ZIP restores the media too: photos and voice notes ride along inside
   session.json as base64, but a video is only ever a thumbnail + a Drive id, and

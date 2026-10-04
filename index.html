@@ -548,6 +548,7 @@ textarea{resize:none;line-height:1.4}
       <div id="fsaArxNote" class="ts-note" style="margin:4px 0 6px">&mdash;</div>
       <div class="ts-note">On es desa el <strong>ZIP del projecte</strong>, directament i sense passar per Baixades. Tria <code>G:\My Drive\Field Service Log\Arxiu</code> un cop i cada exportaci&oacute; hi anir&agrave; sola; Drive per a escriptori ja se n'encarrega de pujar-la. El paquet Word + multim&egrave;dia, que &eacute;s per lliurar, se segueix baixant com sempre. Si un dia no s'hi pot escriure, el ZIP es baixa i no es perd.</div>
       <div style="display:flex;gap:6px;justify-content:flex-end;margin:8px 0 0;flex-wrap:wrap">
+        <button class="btn-sm" id="fsaArxLoad" style="display:none">&#8681; Carrega'n tots els projectes</button>
         <button class="btn-sm" id="fsaArxClear">&#10005; Oblida-la</button>
         <button class="btn-gold" id="fsaArxPick">&#128452; Tria la carpeta&hellip;</button>
       </div>
@@ -3077,6 +3078,39 @@ function wireFsa(){
     }catch(e){if(e&&e.name!=="AbortError")alert("No s'ha pogut obrir la carpeta: "+((e&&e.message)||e))}
   });
   $$("fsaArxClear").addEventListener("click",async function(){await arxDirSave(null);openFsa()});
+  // Everything in the archive folder, in one go. The permission is asked here,
+  // with the click in hand — reading twenty ZIPs takes a while and by the end
+  // of it the gesture would be long gone.
+  //
+  // The files are handles, not bytes: each one is only read when its turn
+  // comes, so a folder of several gigabytes never lands in memory at once.
+  $$("fsaArxLoad").addEventListener("click",async function(){
+    if(!arxDir||!arxDir.values)return;
+    var b=$$("fsaArxLoad");b.disabled=true;
+    try{
+      if(!await arxPermission(true)){
+        alert("Sense permís per llegir la carpeta d'arxiu. Torna-la a triar i dona-li permís.");
+        return;
+      }
+      var picked=[];
+      for await (var h of arxDir.values()){
+        if(h.kind!=="file"||!/\.(zip|json)$/i.test(h.name))continue;
+        picked.push(h);
+      }
+      if(!picked.length){
+        alert("No hi ha cap ZIP ni cap JSON a "+(arxDir.name||"la carpeta d'arxiu")+".");
+        return;
+      }
+      // Oldest name first, so a project with several goes at it lands in the
+      // order it was archived.
+      picked.sort(function(x,y){return x.name.localeCompare(y.name)});
+      var files=[];
+      for(var i=0;i<picked.length;i++){try{files.push(await picked[i].getFile())}catch(e){}}
+      $$("fsaBack").style.display="none";
+      await importFiles(files);
+    }catch(e){alert("No s'ha pogut llegir la carpeta d'arxiu: "+((e&&e.message)||e))}
+    finally{b.disabled=false}
+  });
   $$("fsaArxPick").addEventListener("click",async function(){
     try{
       // readwrite from the start: the permission is granted here, with the
@@ -3095,6 +3129,7 @@ function openFsa(){
     :(outDir?"Ara mateix comença a <code>"+esc(outDir.name)+"</code>."
             :"Encara no n'hi ha cap, o sigui que el diàleg s'obre on el vas deixar l'últim cop.");
   $$("fsaArxPick").disabled=!ok;
+  $$("fsaArxLoad").style.display=(ok&&arxDir)?"":"none";
   $$("fsaArxNote").innerHTML=!ok
     ?"Aquest navegador no ho permet: va a Chrome i a Edge d'escriptori. A la resta, el ZIP es baixa com sempre."
     :(arxDir?"El ZIP del projecte es desa a <code>"+esc(arxDir.name)+"</code>."
@@ -3615,7 +3650,11 @@ function importJsonFile(file){
 $$("importFile").addEventListener("change",async function(e){
   var files=Array.prototype.slice.call(e.target.files||[]);
   e.target.value="";
-  if(!files.length)return;
+  await importFiles(files);
+});
+// One loop for both doors into the app: the file picker and the archive folder.
+async function importFiles(files){
+  if(!files||!files.length)return;
   var sum={added:0,skipped:0,restored:0,failed:0,noLogin:0},bad=[];
   for(var i=0;i<files.length;i++){
     var f=files[i];
@@ -3637,7 +3676,7 @@ $$("importFile").addEventListener("change",async function(e){
       +"\nInicia-la i torna a importar per recuperar els vídeos.";
   if(bad.length)msg+="\n\nNo s'han pogut llegir:\n· "+bad.join("\n· ");
   alert(msg);
-});
+}
 
 // ── EXPORT ────────────────────────────────────────────────────────────────────
 function dlBlob(blob,filename){

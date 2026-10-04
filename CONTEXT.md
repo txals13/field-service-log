@@ -77,7 +77,7 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
     needs a font measured in megabytes and a line-breaker that works without
     spaces. Both are their own job.
   - **The labels of the other 26 are translated once and kept** (`ensureLabels`,
-    `labelsFetch`, IndexedDB key `reportLabels`). 66 report labels plus 26
+    `labelsFetch`, IndexedDB key `reportLabels`). 80 report labels plus 26
     timesheet ones is not a table to type out, and a language nobody picks
     costs nothing until they do. `ca`/`es`/`en` stay hand-written and are never
     shadowed by a cached table.
@@ -369,15 +369,31 @@ Field Service Log/
   entry's outcome when a later visit closed it, **⚠ Pendent** otherwise (with
   the outcome text if one was written that still says it's a problem).
 - **🖨 Imprimeix** prints the history, or saves it as a PDF to send, through
-  the browser's own print dialog (desktop and Android alike). It sets
-  `body.print-mh`, and an `@media print` block hides everything but `#mhBack`
-  and forces light colours. The class comes off when the dialog CLOSES, not on
-  `afterprint`: on Chrome for Android `print()` returns at once and
-  `afterprint` can come before the page is laid out for the printer, which
-  would print the app instead of the history. A precaution, not a seen bug. The page title becomes
-  `Historial_MACHINE_CLIENT_date`, which is the PDF's file name; a print-only
-  line adds "Imprès el … · technician". `.no-print` hides the screen-only bits
-  (the grouping note, "aquesta"). In Catalan, like the rest of the screen.
+  the browser's own print dialog (desktop and Android alike), **in the report
+  language of the open session** (`reportLang(cur)`), since it goes to the same
+  client. The button says which when it isn't Catalan ("Imprimeix · English").
+  - `mhRender(cur, all, L, forPrint)` builds the history from a label table;
+    the dialog calls it with `RPT.ca` and the texts as typed, the print with
+    `RPT[lang]` and each visit passed through `localizeSession` — the same
+    cache as the reports, so a visit already exported in that language costs
+    nothing and one written in it is never sent. Tags and spare-part names stay
+    as written, as in the reports.
+  - The labels are `RPT.<lang>.h` (14 of them), hand-written for ca/es/en and
+    translated with the rest of the table for the others (`ensureLabels`).
+    Adding them changed `RPT.en`'s shape, so tables cached before were dropped
+    and each language is fetched again once.
+  - On paper the pending list comes from EVERY visit, this one included (on
+    screen it leaves the open one out), and "aquesta" isn't printed.
+  - What prints is `#mhPrintBox`, filled just before printing; the dialog's
+    own parts are `.no-print`. It sets `body.print-mh`, and an `@media print`
+    block hides everything else and forces light colours. The class comes off
+    when the dialog CLOSES, not on `afterprint`: on Chrome for Android `print()`
+    returns at once and `afterprint` can come before the page is laid out for
+    the printer, which would print the app instead. A precaution, not a seen
+    bug. The page title, i.e. the PDF's file name, is
+    `<translated "machine history">_MACHINE_CLIENT_date`.
+  - If translating fails, or there is no Gemini key, it asks whether to print
+    with the texts as written — same as the reports.
 
 ## Session types
 | Type | Abbr | Color |

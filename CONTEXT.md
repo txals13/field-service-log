@@ -597,14 +597,37 @@ Field Service Log/
   permission, folder gone, disk full — falls back to the download, so the ZIP
   is never lost on the way out. Only the archive; the Word + media pack is for
   handing over and still downloads.
-  - **A name already there gets a suffix** (`arxFreeName`): `…_rev01_ca.zip`,
-    then `…_rev01_ca_2.zip`. `create:true` writes straight over an existing
-    file without a word, and since the name carries the revision, two files
-    called the same thing are two goes at the same document — worth keeping
-    both. The busy line names the file when it isn't the plain one, because a
-    suffix appearing is worth noticing. Verified against a real directory
-    handle (OPFS): three writes of one name, three files, each with its own
-    contents.
+  - **The same session at the same revision replaces its ZIP** (`saveToArxiu`
+    with the session id → `arxSameSession`). The name carries revision and
+    language, so a second archive under the same name from the same session is
+    a re-issue, and a re-issue replaces its own files — no `_2` beside it.
+    Drive for desktop keeps the old one as an earlier version of the file.
+    Whether it IS the same session is read from the ZIP's `session.json`: the
+    name can't say, since two visits can share client, machine and project.
+  - **Any other clash gets a suffix** (`arxFreeName`): `…_rev01_ca.zip`, then
+    `…_rev01_ca_2.zip` — a different session that happens to share the name,
+    or a ZIP that can't be read (counted as someone else's: the safe way to be
+    wrong). The busy line names the file when it isn't the plain one.
+    Verified with a stand-in folder and real ZIPs: same session twice → one
+    file; another session → `_2`.
+- **🗄 Arxiva sessions…** (sidebar, `openBulkArchive` → `archiveSessions`) —
+  the other half of "Tria què carregar". A list of every session, newest
+  first, with project, dates, revision, open/closed and whether it already has
+  a current project ZIP; tick the finished ones, and each is archived as its
+  **project ZIP** (the same `exportSessionZip` as the menu, one after another,
+  in its report's language) and then **deleted from the app** with its Drive
+  folder sent to the Drive trash (`deleteSession`, shared with the delete
+  dialog). Untick "Esborra-les…" to only archive.
+  - A session is only deleted when THIS export stamped a new `zipAt` and
+    `zipIsCurrent()` passes — the same test the delete dialog trusts. One that
+    failed stays, and the summary says which.
+  - A session changed since its last revision still asks for the revision
+    number, one dialog per session: that's a decision, not a formality.
+  - Works without the archive folder too (tablet): the ZIPs go to Downloads.
+  - **`deleteSession` never trashes a Drive folder another session still
+    holds** (`folderId`). Two visits used to share a folder by name; binning it
+    for one would have taken the other's photos with it.
+
 - **📁 Carpeta del projecte — the file dialog opens where the photos are**
   (`pickMedia`, `fsaPick`, `startDirFor`; sidebar button `btnOutDir`).
   - Drive for desktop mirrors `Outputs` onto a drive letter, so a session's

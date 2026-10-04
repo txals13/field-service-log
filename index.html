@@ -360,6 +360,7 @@ textarea{resize:none;line-height:1.4}
       <div style="padding:6px 10px;border-bottom:1px solid var(--br);flex-shrink:0">
         <button class="btn-g btn-sm" id="btnManuals" style="width:100%;font-size:12px" title="Manuals de recanvis guardats a Drive">&#128218; Manuals de recanvis</button>
         <button class="btn-g btn-sm" id="btnGemKey" style="width:100%;font-size:12px;margin-top:6px" title="La clau de Gemini que fa servir el corrector i la traducció dels informes; es desa només en aquest navegador">&#128273; Clau de Gemini</button>
+        <button class="btn-g btn-sm" id="btnBulkArx" style="width:100%;font-size:12px;margin-top:6px" title="Tria les sessions acabades: cadascuna es desa com el seu ZIP del projecte i surt de l'aplicació">&#128452; Arxiva sessions&hellip;</button>
         <button class="btn-g btn-sm" id="btnOutDir" style="width:100%;font-size:12px;margin-top:6px" title="Obre el diàleg de fotos directament a la carpeta de la sessió, si tens Drive sincronitzat en aquest ordinador">&#128193; Carpeta del projecte</button>
       </div>
       <div class="s-list" id="sList"></div>
@@ -573,6 +574,25 @@ textarea{resize:none;line-height:1.4}
       <div class="modal-actions">
         <button id="arxCancel">Cancel&middot;la</button>
         <button class="btn-gold" id="arxGo" disabled>&#8681; Carrega'n 0</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-back" id="bulkBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,720px)">
+      <div class="modal-title">&#128452; Arxiva sessions</div>
+      <div id="bulkNote" class="ts-note" style="margin-bottom:8px">&mdash;</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn-xs" id="bulkAll">Totes</button>
+        <button class="btn-xs" id="bulkNone">Cap</button>
+        <label style="margin-left:auto;display:flex;gap:6px;align-items:center;font-size:12px;cursor:pointer">
+          <input type="checkbox" id="bulkDel" checked style="width:auto"> Esborra-les de l'aplicaci&oacute; un cop arxivades
+        </label>
+      </div>
+      <div id="bulkList" style="max-height:52vh;overflow:auto;border:1px solid var(--br);border-radius:8px"></div>
+      <div class="modal-actions">
+        <button id="bulkCancel">Cancel&middot;la</button>
+        <button class="btn-gold" id="bulkGo" disabled>&#128452; Arxiva 0 sessions</button>
       </div>
     </div>
   </div>
@@ -3039,9 +3059,10 @@ async function arxPermission(ask){
   }catch(e){return false}
 }
 // The first free name. `create:true` writes straight over a file that is
-// already there without a word, and the name carries the revision, so two
-// files called the same thing are two goes at the same document — keep both
-// and let the folder say so, rather than have the last one quietly win.
+// already there without a word — which is right for one case only, handled in
+// saveToArxiu: the same session's same revision. Any other clash is two
+// different projects that happen to share client, machine and project number,
+// and those keep both and let the folder say so.
 async function arxFreeName(dir,name){
   var dot=name.lastIndexOf("."),base=dot>0?name.slice(0,dot):name,ext=dot>0?name.slice(dot):"";
   for(var i=1;i<100;i++){
@@ -3056,12 +3077,30 @@ async function arxFreeName(dir,name){
   }
   return base+"_"+Date.now()+ext;            // a folder with 99 of them: stop counting
 }
-// Returns the name it actually wrote, or false.
-async function saveToArxiu(name,blob){
+// Is the ZIP already at `name` an archive of this very session? Read from
+// its session.json — the name alone can't say, since two visits can share
+// client, machine and project. Anything unreadable counts as "someone else's",
+// which keeps it and writes alongside: the safe way to be wrong.
+async function arxSameSession(dir,name,sessId){
+  if(!sessId)return false;
+  try{
+    var f=await (await dir.getFileHandle(name)).getFile();
+    var JS=await loadJSZip();if(!JS)return false;
+    var sj=(await JS.loadAsync(f)).file("session.json");if(!sj)return false;
+    var d=JSON.parse(await sj.async("string"));
+    return (Array.isArray(d)?d:[d]).some(function(x){return x&&x.id===sessId});
+  }catch(e){return false}
+}
+// Returns the name it actually wrote, or false. The name carries the revision
+// and the language, so the same session archived again at the same revision
+// is a RE-ISSUE: it replaces its own ZIP, as a re-issue replaces its own
+// reports, instead of leaving a _2 beside it. Drive for desktop keeps the old
+// one as an earlier version of the file.
+async function saveToArxiu(name,blob,sessId){
   if(!arxDir||!arxDir.getFileHandle)return false;
   try{
     if(!await arxPermission(true))return false;
-    var fn=await arxFreeName(arxDir,name);
+    var fn=(await arxSameSession(arxDir,name,sessId))?name:await arxFreeName(arxDir,name);
     var fh=await arxDir.getFileHandle(fn,{create:true});
     var w=await fh.createWritable();
     await w.write(blob);await w.close();
@@ -3549,15 +3588,22 @@ $$("delZipNow").addEventListener("click",async function(){
 });
 function closeDelModal(){$$("delBack").style.display="none";pendingDel=null}
 $$("delCancel").addEventListener("click",closeDelModal);
+$$("btnBulkArx").addEventListener("click",function(){if(mob())closeSide();openBulkArchive()});
 $$("delBack").addEventListener("click",function(e){if(e.target===$$("delBack"))closeDelModal()});
 $$("delConfirm").addEventListener("click",async function(){
   var s=pendingDel;if(!s){closeDelModal();return}
+  closeDelModal();
+  await deleteSession(s);
+});
+// Out of the app, and its Drive folder to the Drive trash. True when the
+// folder went (or there was none to send); false when Drive said no.
+async function deleteSession(s){
   // No backup is written any more: it dropped a JSON in Downloads and another
   // at the Drive root on every delete, and neither carried the photos or
   // videos anyway — the Drive ZIP export does, and the modal points at it.
   sessions=sessions.filter(function(x){return x.id!==s.id});
   if(aid===s.id)aid=null;
-  closeDelModal();scheduleSave();renderAll();
+  scheduleSave();renderAll();
   // The session's Drive folder used to be left behind for good. Send it to the
   // Drive trash instead: the media goes with it and stays recoverable there.
   if(isLoggedIn){
@@ -3576,16 +3622,107 @@ $$("delConfirm").addEventListener("click",async function(){
           var fname=sessFolderName(s);
           folderId=outId?await driveFind(token,fname,outId,FOLDER_MIME):null;
         }
+        // Never a folder another session still writes into: two visits used to
+        // share one by name, and binning it for one would take the other's
+        // photos with it. Found by name, it may be anyone's — same rule.
+        if(folderId&&sessions.some(function(x){return x.folderId===folderId}))folderId=null;
         if(folderId){
           var r=await fetch("https://www.googleapis.com/drive/v3/files/"+folderId,
             {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({trashed:true})});
           if(!r.ok)throw new Error("Drive ha respost "+r.status);
         }
         setSyncSt("ok","");
-      }catch(e){setSyncSt("error","No s'ha pogut enviar la carpeta de Drive a la paperera")}
+      }catch(e){setSyncSt("error","No s'ha pogut enviar la carpeta de Drive a la paperera");return false}
     }
   }
-});
+  return true;
+}
+
+// ── ARCHIVING SEVERAL AT ONCE ────────────────────────────────────────────────
+// The other half of "Tria què carregar": tick the jobs that are done, and each
+// one is archived as its project ZIP and then taken out of the app. The same
+// export as ↓ Informe › ZIP del projecte, one after another — so a session
+// that changed since its last revision still asks whether it is a new one.
+//
+// A session is only deleted when its ZIP came out: the export stamps zipAt,
+// and zipIsCurrent() is the same test the delete dialog trusts. One that
+// failed stays in the app, ticked off in the summary.
+var bulkWired=false;
+function bulkCount(){
+  var n=$$("bulkList").querySelectorAll("input[type=checkbox]:checked").length,del=$$("bulkDel").checked;
+  var go=$$("bulkGo");go.disabled=!n;
+  go.innerHTML="&#128452; Arxiva"+(del?" i esborra":"")+" "+(n===1?"1 sessió":n+" sessions");
+}
+function wireBulk(){
+  if(bulkWired)return;bulkWired=true;
+  function close(){$$("bulkBack").style.display="none"}
+  function setAll(v){
+    Array.prototype.forEach.call($$("bulkList").querySelectorAll("input[type=checkbox]"),function(c){c.checked=v});
+    bulkCount();
+  }
+  $$("bulkCancel").addEventListener("click",close);
+  $$("bulkBack").addEventListener("click",function(e){if(e.target===$$("bulkBack"))close()});
+  $$("bulkAll").addEventListener("click",function(){setAll(true)});
+  $$("bulkNone").addEventListener("click",function(){setAll(false)});
+  $$("bulkList").addEventListener("change",bulkCount);
+  $$("bulkDel").addEventListener("change",bulkCount);
+  $$("bulkGo").addEventListener("click",async function(){
+    var ids=[];
+    Array.prototype.forEach.call($$("bulkList").querySelectorAll("input[type=checkbox]:checked"),function(c){ids.push(c.dataset.id)});
+    if(!ids.length)return;
+    var del=$$("bulkDel").checked;
+    if(del&&!confirm("S'arxivaran "+(ids.length===1?"1 sessió":ids.length+" sessions")+" i després s'esborraran d'aquesta aplicació."
+      +"\n\nLes seves carpetes de Drive aniran a la paperera de Drive, d'on es poden recuperar. Només s'esborra la sessió si el seu ZIP ha sortit bé."))return;
+    close();
+    await archiveSessions(ids,del);
+  });
+}
+function openBulkArchive(){
+  if(!sessions.length){alert("No hi ha cap sessió per arxivar.");return}
+  if(!isLoggedIn){alert("Primer inicia la sessió amb Google: el ZIP del projecte es fa amb els fitxers de la carpeta de Drive de cada sessió.");return}
+  wireBulk();
+  var list=sessions.slice().sort(function(a,b){return String(b.createdAt||"").localeCompare(String(a.createdAt||""))});
+  $$("bulkNote").innerHTML="Cada sessió marcada surt com el seu <strong>ZIP del projecte</strong>"
+    +(arxDir&&fsaOK()?" a <code>"+esc(arxDir.name)+"</code>":" a Baixades")
+    +", en l'idioma del seu informe. Si una sessió ja tenia el ZIP d'aquesta mateixa revisió a la carpeta d'arxiu, se substitueix.";
+  $$("bulkList").innerHTML=list.map(function(x){
+    var rng=tsRange(x),ok=zipIsCurrent(x),r=curRev(x);
+    return "<label style=\"display:flex;align-items:center;gap:10px;padding:7px 10px;border-bottom:1px solid var(--br);cursor:pointer\">"
+      +"<input type=\"checkbox\" data-id=\""+esc(x.id)+"\" style=\"width:auto;flex-shrink:0\">"
+      +"<span style=\"flex:1;min-width:0\">"
+      +"<span style=\"display:block;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\">"+esc(x.client||"—")+(x.machine?" · "+esc(x.machine):"")+"</span>"
+      +"<span style=\"display:block;font-size:11px;color:var(--tx3)\">"+(x.project?esc(x.project)+" · ":"")
+      +dmy(rng.from)+(rng.to!==rng.from?" → "+dmy(rng.to):"")+(r?" · "+revNo(r.n):"")
+      +(x.status==="closed"?" · Tancada":" · Oberta")+"</span></span>"
+      +"<span style=\"flex-shrink:0;font-size:11px;color:"+(ok?"var(--green)":"var(--tx3)")+"\" title=\""+(ok?"Ja té un ZIP del projecte posterior a l'últim canvi":"Encara no té cap ZIP del projecte al dia")+"\">"
+      +(ok?"&#10003; ZIP al dia":"sense ZIP")+"</span>"
+      +"</label>";
+  }).join("");
+  bulkCount();
+  $$("bulkBack").style.display="flex";
+}
+async function archiveSessions(ids,del){
+  var done=[],kept=[],trashFail=0;
+  for(var i=0;i<ids.length;i++){
+    var s=sessions.find(function(x){return x.id===ids[i]});if(!s)continue;
+    var name=(s.client||"—")+(s.machine?" · "+s.machine:"");
+    setSyncSt("loading","Arxivant "+(i+1)+"/"+ids.length+" · "+name+"…");
+    var before=s.zipAt||"";
+    try{await exportSessionZip(s,"project")}catch(e){}
+    var now_=sessions.find(function(x){return x.id===ids[i]});
+    // Stamped by THIS export, not by an older one that happened to be current.
+    if(!now_||!now_.zipAt||now_.zipAt===before||!zipIsCurrent(now_)){kept.push(name);continue}
+    done.push(name);
+    if(del&&!await deleteSession(now_))trashFail++;
+  }
+  setSyncSt("ok","");
+  if(isLoggedIn){isDirty=true;await saveToDrive()}
+  renderAll();
+  var msg=(done.length?(del?"Arxivades i esborrades: ":"Arxivades: ")+done.length+"\n· "+done.join("\n· "):"No s'ha arxivat cap sessió.");
+  if(kept.length)msg+="\n\nNo s'han arxivat"+(del?", i segueixen a l'aplicació":"")+":\n· "+kept.join("\n· ");
+  if(trashFail)msg+="\n\n"+trashFail+" carpeta(es) de Drive no s'han pogut enviar a la paperera: esborra-les a mà a Drive si vols.";
+  alert(msg);
+}
 
 // ── NEW / EDIT SESSION MODAL ───────────────────────────────────────────────────
 var editingSessId=null;
@@ -7199,7 +7336,7 @@ async function exportSessionZip(s,kind){
     // The archive goes to the archive folder when there is one; anything that
     // gets in the way (no permission, folder gone, disk full) falls back to the
     // download, so the ZIP is never lost on the way out.
-    if(arxOn)arxOk=await saveToArxiu(zipName,zipBlob);
+    if(arxOn)arxOk=await saveToArxiu(zipName,zipBlob,s.id);
     if(!arxOk)dlBlob(zipBlob,zipName);
     // Only the archive stamps zipAt: the delete dialog reads it as "a complete
     // copy of this session exists", and the DOCX pack carries no session.json,

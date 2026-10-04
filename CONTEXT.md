@@ -327,6 +327,11 @@ Field Service Log/
   - The history then shows it as **✓ Tancats en una visita posterior**, with the
     date it was closed. Seeing the chain is the point; a pending count that
     quietly shrinks would just look like a bug.
+  - And it shows **how** it ended, not only that it did: the closing entry's
+    outcome ("com ha quedat"), with its severity label in its own colour, since
+    that is the actual answer to "and what happened with the valve?". When the
+    closing entry has no outcome written, its own description stands in —
+    saying nothing there would be the worst of the three.
 - The chip carries the pending count, which is the whole point of it being
   visible without opening anything.
 

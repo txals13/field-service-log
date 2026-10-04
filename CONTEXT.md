@@ -799,10 +799,25 @@ Field Service Log/
   one, which overwrites its own files and keeps the number.
 - **The base name is frozen with Rev. 01** (`session.baseName`). Every revision
   of one report has to share a base, or the numbering can't tell that rev01 and
-  rev02 are the same document. The date in it is the session's **end** date —
-  the last entry's — which keeps moving while the session is open, hence the
-  freeze. Sessions exported before this keep their old, unnumbered files; the
-  first export after it writes `_rev01_` alongside them.
+  rev02 are the same document. Sessions exported before this keep their old,
+  unnumbered files; the first export after it writes `_rev01_` alongside them.
+- **One name for a project: `projName(s)` = CLIENT_MACHINE_PROJECT** (sanitised,
+  empty fields left out, `sessio` if all three are). It is the Drive session
+  folder (`sessFolderName`), the report base and the start of both ZIP names
+  (`…_projecte_rev01_ca.zip`, `…_docx_multimedia_rev01_ca.zip`). It used to be
+  client + machine + technician for the folder and client + end date for the
+  reports, so two visits to the same machine shared a folder — mixed photos,
+  and one session's revision count started from the other's reports. Reports
+  issued before the change keep their frozen old base, so their numbering
+  carries on. Two sessions with the same client, machine AND project still
+  get the same name; the archive folder adds `_2` to the ZIP.
+- **A folder another session owns is never adopted.** `getSessionFolder`
+  finds-or-creates by name only when the session has no `folderId` yet, and
+  skips any folder whose id another session holds, trying `_2`, `_3`… A
+  session that got a suffix keeps it: the rename-on-edit leaves `NAME_2` alone
+  while NAME is still its name. Folders already shared before this stay
+  shared (the first session to sync renames it; the other keeps using it).
+  The local Outputs lookup uses `folderName`, so the suffix is found there too.
 - Stamped on the PDF, Word, HTML, spare-parts Excel and both ZIPs. The timesheet
   stays out of the numbering (it carries its own date and signatures) but its
   file name uses the same frozen base.

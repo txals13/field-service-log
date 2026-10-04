@@ -1212,7 +1212,16 @@ async function getRootId(token){
   if(id){rootFolderId=id;try{localStorage.setItem(LS_ROOT,id)}catch(e){}}
   return id;
 }
-function sessFolderName(sess){return sanitize(sess.client)+"_"+sanitize(sess.machine)+"_"+sanitize(sess.tech||"tech")}
+// What a project is called on disk: client, machine and project number. Two
+// visits to the same client's same machine are told apart by the project, which
+// is what the folder, the ZIP and the reports all used to leave out. Empty
+// fields are left out rather than written as "untitled".
+function projName(sess){
+  var parts=[sess&&sess.client,sess&&sess.machine,sess&&sess.project]
+    .filter(function(v){return String(v||"").trim()}).map(sanitize);
+  return parts.length?parts.join("_"):"sessio";
+}
+function sessFolderName(sess){return projName(sess)}
 async function driveFileInfo(token,id){
   try{
     var r=await fetch("https://www.googleapis.com/drive/v3/files/"+id+"?fields=id,name,trashed,parents",{headers:{Authorization:"Bearer "+token}});
@@ -1250,15 +1259,27 @@ async function getSessionFolder(token,sess){
       // still carries the name this session gave it: sessions that share a
       // client, machine and technician also share the folder, and one of them
       // must not rename it out from under the others.
-      if(info.name!==name&&(!sess.folderName||sess.folderName===info.name)){
+      var own=sess.folderName&&sess.folderName.indexOf(name)===0&&/^(_\d+)?$/.test(sess.folderName.slice(name.length));
+      if(info.name!==name&&!own&&(!sess.folderName||sess.folderName===info.name)){
         if(await drivePatch(token,sess.folderId,{name:name}))info.name=name;
       }
       if(info.name!==sess.folderName)rememberFolder(sess.id,sess.folderId,info.name);
       return sess.folderId;
     }
   }
-  var id=await driveFolder(token,name,outId);
-  if(id)rememberFolder(sess.id,id,name);
+  // Find-or-create by name, but NOT a folder another session already owns:
+  // two sessions writing into one folder mix their photos, and the revision
+  // count of one starts from the other's reports. A taken name gets _2, _3…
+  var owned={};
+  sessions.forEach(function(x){if(x.id!==sess.id&&x.folderId)owned[x.folderId]=1});
+  var nm=name,id=null;
+  for(var k=2;k<50;k++){
+    var found=await driveFind(token,nm,outId,FOLDER_MIME);
+    if(!found){id=await driveCreateFolder(token,nm,outId);break}
+    if(!owned[found]){id=found;break}
+    nm=name+"_"+k;
+  }
+  if(id)rememberFolder(sess.id,id,nm);
   return id;
 }
 async function getMediaFolder(token,sess,kind){
@@ -3024,7 +3045,7 @@ async function startDirFor(s){
   if(!s)return outDir;
   try{
     if(outDir.queryPermission&&(await outDir.queryPermission({mode:"read"}))!=="granted")return outDir;
-    return await outDir.getDirectoryHandle(sessFolderName(s));
+    return await outDir.getDirectoryHandle(s.folderName||sessFolderName(s));
   }catch(e){return outDir}     // not synced down yet, renamed by hand, no permission
 }
 var FSA_IMG=[".jpg",".jpeg",".png",".gif",".webp",".heic",".heif",".bmp"];
@@ -4007,7 +4028,7 @@ function sessionEndDate(s){
 // or the numbering can't tell that rev01 and rev02 are the same document. The
 // end date moves while the session is open, so it is nailed down on first issue.
 function reportBaseName(s){
-  return s.baseName||((s.client||"sessio").replace(/\s+/g,"_")+"_"+sessionEndDate(s));
+  return s.baseName||projName(s);
 }
 function freezeBaseName(id){
   var s=sessions.find(function(x){return x.id===id});
@@ -7050,7 +7071,7 @@ async function exportSessionZip(s,kind){
     }
     expBusy("Comprimint…");
     var zipBlob=await zip.generateAsync({type:"blob"});
-    var zipName=sanitize(s.client)+"_"+sanitize(s.machine)+(archive?"_projecte_":"_docx_multimedia_")+"rev"+("0"+rev.n).slice(-2)+"_"+R.lang+".zip";
+    var zipName=projName(s)+(archive?"_projecte_":"_docx_multimedia_")+"rev"+("0"+rev.n).slice(-2)+"_"+R.lang+".zip";
     // The archive goes to the archive folder when there is one; anything that
     // gets in the way (no permission, folder gone, disk full) falls back to the
     // download, so the ZIP is never lost on the way out.

@@ -363,6 +363,21 @@ Field Service Log/
   long — and a problem that ends in an ellipsis is one you have to go and look
   up somewhere else, which is the thing this screen exists to save you. The
   modal scrolls; the text doesn't get clipped.
+- **Each visit's card lists its problems and warnings** (`mhCardIssues`), in
+  time order, each with where it stands: **✓ Resolt** + the outcome when it
+  was solved on that visit, **✓ Tancat el dd/mm (project)** + the closing
+  entry's outcome when a later visit closed it, **⚠ Pendent** otherwise (with
+  the outcome text if one was written that still says it's a problem).
+- **🖨 Imprimeix** prints the history, or saves it as a PDF to send, through
+  the browser's own print dialog (desktop and Android alike). It sets
+  `body.print-mh`, and an `@media print` block hides everything but `#mhBack`
+  and forces light colours. The class comes off when the dialog CLOSES, not on
+  `afterprint`: on Chrome for Android `print()` returns at once and
+  `afterprint` can come before the page is laid out for the printer, which
+  would print the app instead of the history. A precaution, not a seen bug. The page title becomes
+  `Historial_MACHINE_CLIENT_date`, which is the PDF's file name; a print-only
+  line adds "Imprès el … · technician". `.no-print` hides the screen-only bits
+  (the grouping note, "aquesta"). In Catalan, like the rest of the screen.
 
 ## Session types
 | Type | Abbr | Color |

@@ -283,6 +283,26 @@ textarea{resize:none;line-height:1.4}
 .manual-row .mr-del{background:none;border:none;color:var(--tx3);cursor:pointer;font-size:13px;flex-shrink:0}
 .manual-row .mr-del:hover{color:var(--red)}
 .manuals-empty{font-size:12px;color:var(--tx3);font-family:monospace;padding:14px 0;text-align:center}
+/* Printing the machine history. The class is set by its print button and taken
+   off when the dialog closes — NOT on afterprint: on Chrome for Android print()
+   returns at once and afterprint can arrive before the page is laid out for
+   the printer, which would print the app. On screen the class does nothing. */
+.print-only{display:none}
+@media print{
+  body.print-mh{
+    --bg0:#fff;--bg1:#fff;--bg2:#f3f4f6;--br:#d1d5db;--br2:#d1d5db;
+    --tx1:#111827;--tx2:#374151;--tx3:#6b7280;
+    --gold:#b45309;--green:#047857;--red:#b91c1c;--orange:#c2410c;--blue:#1d4ed8;
+    background:#fff;color:#111827;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  html:has(body.print-mh),body.print-mh,body.print-mh #app{height:auto;overflow:visible;display:block}
+  body.print-mh #app>*:not(#mhBack){display:none!important}
+  body.print-mh #mhBack{display:block!important;position:static;background:none}
+  body.print-mh #mhBack .modal{max-width:none;max-height:none;overflow:visible;border:0;border-radius:0;padding:0;background:#fff}
+  body.print-mh #mhBody{max-height:none!important;overflow:visible!important}
+  body.print-mh .no-print{display:none!important}
+  body.print-mh .print-only{display:block}
+  body.print-mh .mh-card,body.print-mh .mh-row{break-inside:avoid}
+}
 </style>
 </head>
 <body>
@@ -472,7 +492,11 @@ textarea{resize:none;line-height:1.4}
       <div class="modal-title">&#128220; <span id="mhTitle">Historial de la m&agrave;quina</span></div>
       <div id="mhNote" class="ts-note" style="margin-bottom:10px">&mdash;</div>
       <div id="mhBody" style="max-height:62vh;overflow:auto"></div>
-      <div class="modal-actions"><button id="mhClose">Tanca</button></div>
+      <div id="mhPrinted" class="print-only ts-note" style="margin-top:14px">&mdash;</div>
+      <div class="modal-actions no-print">
+        <button id="mhPrint" title="Imprimeix-lo o desa'l com a PDF per enviar-lo">&#128424; Imprimeix</button>
+        <button id="mhClose">Tanca</button>
+      </div>
     </div>
   </div>
 
@@ -4239,8 +4263,24 @@ function mhChipHTML(sess){
 var mhWired=false;
 function wireMh(){
   if(mhWired)return;mhWired=true;
-  function close(){$$("mhBack").style.display="none"}
+  var oldTitle=null;
+  function close(){
+    $$("mhBack").style.display="none";
+    document.body.classList.remove("print-mh");
+    if(oldTitle!==null){document.title=oldTitle;oldTitle=null}
+  }
   $$("mhClose").addEventListener("click",close);
+  // The browser's own print: on paper, or "Desa com a PDF" to send it, on the
+  // computer and on Android alike. The page title becomes the PDF's file name.
+  $$("mhPrint").addEventListener("click",function(){
+    var cur=sessions.find(function(x){return x.id===aid});
+    var newest=(cur&&machineSessions(cur)[0])||cur||{};
+    if(oldTitle===null)oldTitle=document.title;
+    document.title="Historial_"+sanitize(newest.machine)+"_"+sanitize(newest.client)+"_"+todayISO();
+    $$("mhPrinted").textContent="Imprès el "+dmy(todayISO())+(cur&&cur.tech?" · "+cur.tech:"");
+    document.body.classList.add("print-mh");
+    setTimeout(function(){window.print()},50);
+  });
   $$("mhBack").addEventListener("click",function(e){if(e.target===$$("mhBack"))close()});
   $$("mhBody").addEventListener("click",function(e){
     var r=e.target.closest?e.target.closest("[data-sess]"):null;
@@ -4261,6 +4301,35 @@ function mhLine(e,sess){
     +(e.fix?"<div style=\"color:var(--tx3);font-size:11px\">↳ "+esc(String(e.fix.text||"").replace(/\s+/g," "))+"</div>":"")
     +"</span></div>";
 }
+// The visit's problems and warnings on its own card, each with where it stands:
+// resolved on the visit itself, closed by a later one (and how), or still open.
+// Whole text, as everywhere on this screen. This is what the client reads when
+// the history is printed, so it says what happened, not just a count.
+function mhCardIssues(x,closed){
+  var es=sortEntries((x.entries||[]).filter(function(e){return e&&(e.severity==="issue"||e.severity==="warning")}));
+  if(!es.length)return "";
+  function clean(t){return esc(String(t||"").replace(/\s+/g," ").trim())}
+  return "<div style=\"margin-top:6px\">"+es.map(function(e){
+    var sm=SM[e.severity]||SM.info,by=closed&&closed[x.id+"|"+e.id],st;
+    if(isResolved(e)){
+      st="<span style=\"color:var(--green);font-weight:600\">✓ Resolt</span>"
+        +(String(e.fix.text||"").trim()?" · "+clean(e.fix.text):"");
+    }else if(by){
+      var fx=by.fix,end=fx&&String(fx.text||"").trim()?clean(fx.text):clean(by.text);
+      var on=sessions.find(function(v){return (v.entries||[]).indexOf(by)>=0});
+      st="<span style=\"color:var(--green);font-weight:600\">✓ Tancat el "+fts(by.ts).split(" ")[0]+"</span>"
+        +(on&&on.id!==x.id&&on.project?" ("+esc(on.project)+")":"")
+        +(end?" · "+end:"");
+    }else{
+      st="<span style=\"color:var(--orange);font-weight:600\">⚠ Pendent</span>"
+        +(e.fix&&String(e.fix.text||"").trim()?" · "+clean(e.fix.text):"");
+    }
+    return "<div class=\"mh-row\" style=\"display:flex;gap:8px;padding:4px 0;border-top:1px solid var(--br);font-size:12px\">"
+      +"<span style=\"color:"+sm.tx+";flex-shrink:0;font-family:monospace;font-size:11px\">"+sm.dot+" "+fts(e.ts).split(" ")[0]+"</span>"
+      +"<span style=\"flex:1\">"+(e.tag?"<strong>"+esc(e.tag)+"</strong> — ":"")+clean(e.text)
+      +"<div style=\"margin-top:2px;padding-left:9px;border-left:2px solid var(--br2);color:var(--tx2)\">"+st+"</div></span></div>";
+  }).join("")+"</div>";
+}
 function openMachineHistory(){
   var cur=sessions.find(function(x){return x.id===aid});if(!cur)return;
   wireMh();
@@ -4275,7 +4344,7 @@ function openMachineHistory(){
   var newest=all[0]||cur;
   $$("mhTitle").textContent=(disp(newest.machine)||"—")+" · "+(disp(newest.client)||"—");
   $$("mhNote").innerHTML=all.length+" visites"+(serial?" · S/N "+esc(serial):"")
-    +". S'agrupen per client i màquina tal com els escrius.";
+    +".<span class=\"no-print\"> S'agrupen per client i màquina tal com els escrius.</span>";
 
   // What is still open, from the OTHER visits: this one you already have on screen.
   var closed=closedRefs(all),pend=[],done=[];
@@ -4326,18 +4395,19 @@ function openMachineHistory(){
   h+=all.map(function(x){
     var c=severityCounts(x.entries||[]),r=curRev(x),isCur=x.id===cur.id;
     var rng=tsRange(x);
-    return "<div data-sess=\""+esc(x.id)+"\" style=\"cursor:pointer;padding:7px 8px;margin-bottom:4px;border-radius:6px;"
+    return "<div class=\"mh-card\" data-sess=\""+esc(x.id)+"\" style=\"cursor:pointer;padding:7px 8px;margin-bottom:4px;border-radius:6px;"
       +"background:"+(isCur?"var(--bg2)":"transparent")+";border:1px solid var(--br)\">"
       +"<div style=\"display:flex;gap:8px;align-items:baseline;flex-wrap:wrap\">"
       +"<strong>"+dmy(rng.from)+(rng.to!==rng.from?" → "+dmy(rng.to):"")+"</strong>"
       +"<span style=\"font-size:11px;color:var(--tx3)\">"+esc((TM[x.type]||TM.commissioning).label||x.type)+"</span>"
       +(r?"<span style=\"font-size:11px;color:var(--tx3)\">"+revNo(r.n)+"</span>":"")
       +(x.status==="closed"?"<span style=\"font-size:11px;color:var(--red)\">Tancada</span>":"")
-      +(isCur?"<span style=\"font-size:11px;color:var(--gold)\">aquesta</span>":"")
+      +(isCur?"<span class=\"no-print\" style=\"font-size:11px;color:var(--gold)\">aquesta</span>":"")
       +"</div>"
       +"<div style=\"font-size:11px;color:var(--tx3);font-family:monospace;margin-top:2px\">"
       +(c.issue?"■ "+c.issue+"  ":"")+(c.warning?"▲ "+c.warning+"  ":"")+(c.resolved?"✓ "+c.resolved+"  ":"")
-      +"● "+c.ok+"  ·  "+(x.entries||[]).length+" entrades</div></div>";
+      +"● "+c.ok+"  ·  "+(x.entries||[]).length+" entrades</div>"
+      +mhCardIssues(x,closed)+"</div>";
   }).join("");
 
   // Every part ever fitted to this machine, newest first: "we changed that

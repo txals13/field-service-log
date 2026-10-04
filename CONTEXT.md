@@ -227,6 +227,11 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
 
 ## Architecture
 - **Single HTML file** — all CSS, JS, and assets inline. No build step, no npm.
+- **`manual.html` — the user manual**, in Catalan, opened from the sidebar
+  (📖 Manual d'ús, a new tab) and precached by `sw.js` so it reads offline.
+  Written 2026-10-04 to cover the app as it stood that day. **When a feature
+  changes what the user sees or does, update the manual in the same change**
+  — button names in it are quoted exactly as the app shows them.
 - **PWA** — installable on mobile and desktop, works offline via `sw.js`
   (network-first with a 3s timeout, cache fallback; Google auth/Drive requests
   are never intercepted). Until 2026-08-19 this line was **false**: the worker

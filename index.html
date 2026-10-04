@@ -358,6 +358,7 @@ textarea{resize:none;line-height:1.4}
         <input type="text" id="sessFiltIn" placeholder="Filtra les sessions…" style="font-size:12px;padding:5px 8px">
       </div>
       <div style="padding:6px 10px;border-bottom:1px solid var(--br);flex-shrink:0">
+        <button class="btn-g btn-sm" id="btnHelp" style="width:100%;font-size:12px;margin-bottom:6px" title="Com fer servir l'aplicació">&#128214; Manual d'&uacute;s</button>
         <button class="btn-g btn-sm" id="btnManuals" style="width:100%;font-size:12px" title="Manuals de recanvis guardats a Drive">&#128218; Manuals de recanvis</button>
         <button class="btn-g btn-sm" id="btnGemKey" style="width:100%;font-size:12px;margin-top:6px" title="La clau de Gemini que fa servir el corrector i la traducció dels informes; es desa només en aquest navegador">&#128273; Clau de Gemini</button>
         <button class="btn-g btn-sm" id="btnBulkArx" style="width:100%;font-size:12px;margin-top:6px" title="Tria les sessions acabades: cadascuna es desa com el seu ZIP del projecte i surt de l'aplicació">&#128452; Arxiva sessions&hellip;</button>
@@ -3588,6 +3589,8 @@ $$("delZipNow").addEventListener("click",async function(){
 });
 function closeDelModal(){$$("delBack").style.display="none";pendingDel=null}
 $$("delCancel").addEventListener("click",closeDelModal);
+// A page of its own beside the app, so it can be read alongside it.
+$$("btnHelp").addEventListener("click",function(){window.open("manual.html","_blank","noopener")});
 $$("btnBulkArx").addEventListener("click",function(){if(mob())closeSide();openBulkArchive()});
 $$("delBack").addEventListener("click",function(e){if(e.target===$$("delBack"))closeDelModal()});
 $$("delConfirm").addEventListener("click",async function(){

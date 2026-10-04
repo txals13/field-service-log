@@ -6,7 +6,7 @@
    Així sempre tens l'última versió quan hi ha cobertura, i l'app obre igual
    en un avió o en un client sense senyal. */
 const CACHE = "fsl-v2";
-const SHELL = ["./", "./index.html"];
+const SHELL = ["./", "./index.html", "./manual.html"];
 
 self.addEventListener("install", e => {
   e.waitUntil(

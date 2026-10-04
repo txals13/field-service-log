@@ -300,12 +300,30 @@ Field Service Log/
   service engineer goes back to the same machines, and what was left open last
   time is the first thing you want on arriving and the hardest thing to find
   once it is buried in a pile of PDFs.
-- **A machine is CLIENT + MACHINE**, normalised for case and stray spaces.
-  Deliberately **not** the serial number: a serial only exists once a manual has
-  been linked, so keying on it would split a machine's own history down the
-  middle on the day you link one. The serial is shown, never used to decide.
-  The cost is that two identical machines at one client share a history until
-  they are named apart in the Màquina field — which is also the fix.
+- **A machine is CLIENT + MACHINE**, normalised to **lowercase, no accents,
+  letters and digits only** (`keyNorm`) — so `VLP-320-R`, `VLP 320 R` and
+  `vlp320r` are one machine, and `AIGÜES` is `AIGUES`. One sentence on purpose:
+  an identity rule you cannot predict is worse than a strict one.
+  - It deliberately does **not** forgive the legal form. `X, S.L.` and `X, S.A.`
+    are different companies, and the list of suffixes to strip differs by
+    country and is never finished. Typing the client consistently is the fix,
+    and the heading now shows which spelling that is. Verified: those two stay
+    apart.
+  - `ł ø đ ð ß æ œ þ ı` are folded by hand. They carry their mark inside the
+    glyph, so NFD leaves them whole and the letters-and-digits filter would drop
+    them outright — a Polish name would lose letters rather than lose accents.
+    Verified: `Zakład Łódź` groups with `Zaklad Lodz`.
+  - The price: `A-1` and `A1` become one machine, as do `CASA NOVA` and
+    `CASANOVA`. Both are remote, and both are undone by naming them apart by
+    more than a hyphen.
+  - A machine written only in punctuation normalises to nothing, and
+    `machineSessions` bails: two such sessions are not the same machine just
+    because neither has a usable name.
+  - And deliberately **not** the serial number: a serial only exists once a
+    manual has been linked, so keying on it would split a machine's own history
+    down the middle on the day you link one. The serial is shown, never used to
+    decide. Two identical machines at one client therefore share a history until
+    they are named apart in the Màquina field — which is also the fix.
   - **The heading takes the newest visit's spelling**, not the open session's.
     They all group to the same machine whatever the capitals and spacing, so
     something has to pick one, and the way you typed it most recently is the one

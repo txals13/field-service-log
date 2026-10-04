@@ -4022,12 +4022,34 @@ function contactLine(s){
 // one. The serial is shown, not used to decide. The cost of this rule is that
 // two identical machines at one client share a history until you name them
 // apart in the Màquina field — which is also how you fix it.
+// Lowercase, no accents, letters and digits only — so VLP-320-R, VLP 320 R and
+// vlp320r are one machine, and AIGÜES is AIGUES. One sentence on purpose: an
+// identity rule you cannot predict is worse than a strict one.
+//
+// What it deliberately does NOT forgive is the legal form. "X, S.L." and
+// "X, S.A." are different companies, and the list of suffixes to strip is
+// different in every country and never finished. Typing the client the same way
+// is the fix, and the history heading now shows which spelling that is.
+//
+// The price: A-1 and A1 become one machine, as do CASA NOVA and CASANOVA. Both
+// are remote, and both are undone by naming them apart by more than a hyphen.
+var KEY_FOLD={"\u0142":"l","\u00f8":"o","\u0111":"d","\u00f0":"d","\u00df":"ss",
+              "\u00e6":"ae","\u0153":"oe","\u00fe":"th","\u0131":"i"};
 function machineKey(s){
-  function norm(t){return String(t||"").trim().replace(/\s+/g," ").toLowerCase()}
-  return norm(s&&s.client)+"|"+norm(s&&s.machine);
+  return keyNorm(s&&s.client)+"|"+keyNorm(s&&s.machine);
+}
+function keyNorm(t){
+  return String(t||"")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")   // à é ü ç ñ -> a e u c n
+    .toLowerCase()
+    // Letters that carry their mark inside the glyph and so survive NFD: without
+    // this they would be dropped outright and a Polish name would lose letters
+    // rather than lose its accents.
+    .replace(/[\u0142\u00f8\u0111\u00f0\u00df\u00e6\u0153\u00fe\u0131]/g,function(c){return KEY_FOLD[c]})
+    .replace(/[^a-z0-9]+/g,"");
 }
 function machineSessions(s){
-  if(!s||!s.machine)return [];
+  if(!s||!s.machine||!keyNorm(s.machine))return [];
   var k=machineKey(s);
   return sessions.filter(function(x){return machineKey(x)===k})
     .sort(function(a,b){return String(sessionEndDate(b)).localeCompare(String(sessionEndDate(a)))});

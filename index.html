@@ -3705,7 +3705,10 @@ async function archiveSessions(ids,del){
   var done=[],kept=[],trashFail=0;
   for(var i=0;i<ids.length;i++){
     var s=sessions.find(function(x){return x.id===ids[i]});if(!s)continue;
-    var name=(s.client||"—")+(s.machine?" · "+s.machine:"");
+    // Client and project: the machine is often the same for a whole list, and
+    // three identical lines in the summary tell you nothing. No project, then
+    // the machine, so the line still says something.
+    var name=(s.client||"—")+(s.project?" · "+s.project:(s.machine?" · "+s.machine:""));
     setSyncSt("loading","Arxivant "+(i+1)+"/"+ids.length+" · "+name+"…");
     var before=s.zipAt||"";
     try{await exportSessionZip(s,"project")}catch(e){}

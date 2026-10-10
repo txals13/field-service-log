@@ -19,8 +19,13 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
 - Project ID: `field-service-log-500615`
 - OAuth scope: `https://www.googleapis.com/auth/drive.file` (minimum required)
 - Auth method: Google Identity Services implicit token flow (no redirect URI needed)
-- Status: **Testing mode** — new users must be added manually to Google Cloud Console
-  → APIs & Services → OAuth consent screen → Test users
+- Status: **In production** since 2026-10-10 (Google Auth Platform → Audience).
+  Branding carries the home page, `privacy.html`, `terms.html` and the
+  authorised domain `txals13.github.io`. No verification needed: no logo, one
+  domain, and `drive.file` is a non-sensitive scope — adding a logo or a
+  sensitive scope would trigger it. Out of Testing, sign-ins no longer expire
+  after 7 days, and any Google account can sign in (each one only ever sees
+  its own Drive). Unverified apps keep a 100-user lifetime cap. No cost.
 - **Two API credentials, and they are not interchangeable:**
   - `PICKER_KEY` — the classic `AIza…` Cloud key, for the Drive Picker.
   - The Gemini key — an **AI Studio auth key** (`AQ.…`), which does both the

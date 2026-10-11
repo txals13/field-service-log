@@ -70,7 +70,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-seri
 .sitem-sub{font-size:11px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
 .sitem-del{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--tx3);font-size:11px;padding:2px 5px;border-radius:4px;cursor:pointer;opacity:0}
 .sitem:hover .sitem-del,.sitem.active .sitem-del{opacity:1}
-@media(max-width:640px){.sitem-del{opacity:1}}
+/* On a touch screen the ✕ is a real button: always there, finger-sized, and
+   in a lane of its own at the right edge. It used to be an 11 px glyph sitting
+   on top of the red problem count, and on a phone it could not be hit. */
+@media(max-width:700px){
+  .sitem{padding-right:50px}
+  .sitem-del{opacity:1;top:50%;right:6px;transform:translateY(-50%);width:40px;height:40px;padding:0;font-size:16px;
+             display:flex;align-items:center;justify-content:center;border-radius:8px;background:var(--bg2);border:1px solid var(--br2);color:var(--tx2)}
+}
 .sitem-hit{font-size:11px;color:var(--tx2);padding:4px 10px 4px 24px;margin-bottom:2px;cursor:pointer;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sitem-hit:hover{background:var(--bg2)}
 .sitem-hit-more{font-size:10px;color:var(--tx3);padding:2px 10px 8px 24px}
@@ -407,7 +414,7 @@ textarea{resize:none;line-height:1.4}
   /* every dialog: the whole screen, its buttons always in reach at the bottom */
   body.m2 .modal-back{align-items:stretch}
   body.m2 .modal{max-width:none!important;width:100%!important;height:100%;max-height:none!important;border-radius:0!important;border:0;padding:16px 14px 0;display:flex;flex-direction:column}
-  body.m2 .modal-actions{position:sticky;bottom:0;z-index:2;background:var(--bg1);padding:10px 0 14px;margin-top:auto;border-top:1px solid var(--br);flex-wrap:wrap}
+  body.m2 .modal-actions{position:sticky;bottom:0;z-index:2;background:var(--bg1);padding:10px 0 max(14px,env(safe-area-inset-bottom));margin-top:auto;border-top:1px solid var(--br);flex-wrap:wrap}
   body.m2 .modal-actions button{flex:1 1 auto}
   /* lists that scrolled inside a dialog: the dialog itself scrolls now, and a
      box scrolling inside a scrolling screen is two thumbs fighting */
@@ -417,7 +424,6 @@ textarea{resize:none;line-height:1.4}
      one scroll for the lot instead of a list squeezed under the buttons */
   body.m2 .sidebar{overflow-y:auto}
   body.m2 #sideNew{order:1}
-  body.m2 .sitem-del{display:none}
   body.m2 #sideFilt{order:2}
   body.m2 .sidebar .s-list{order:3;flex:none;overflow:visible}
   body.m2 #sideTools{order:4;border-top:1px solid var(--br);border-bottom:0;padding-bottom:20px}
@@ -3891,7 +3897,7 @@ function openM2More(){
       $$("btnSessSync")?it("&#9729;","Desa a Drive","fotos que hi faltin",click("btnSessSync")):null,
       $$("btnSync")?it("&#10227;","Sincronitza ara","",click("btnSync")):null,
       isOpen?it("&#9632;","Tanca la visita","",click("btnClose")):it("&#8634;","Reobre la visita","",click("btnReopen")),
-      // the ✕ on the list's row overlapped the problem count on a phone
+      // also on the ✕ in the list of visits; here it is next to the rest
       it("&#128465;","Elimina la visita","",function(){openDelModal(a)})
     ]]
   ];

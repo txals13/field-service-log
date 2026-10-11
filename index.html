@@ -2415,13 +2415,115 @@ async function findDataFile(token){
   if(r2.ok){var d2=await r2.json();if(d2.files&&d2.files.length)return d2.files[0].id}
   return null;
 }
+// ── OUTPUTS DECIDES WHICH VISITS EXIST ───────────────────────────────────────
+// The data file is merged by keeping BOTH sides' sessions, which is right for
+// edits but wrong for deletions: a visit deleted on the phone was still in the
+// computer's own copy, went back up with its next save and came back to life
+// everywhere. The session folders in Outputs are what every device can see,
+// and deleting a visit sends its folder to the Drive trash — so the folder is
+// the vote:
+//   · its folder is in the trash        → the visit is gone, on this device too
+//   · its folder is unreachable (an import from another account, or a trash
+//     already emptied)                  → keep the visit, forget the id; the
+//                                         next save finds or makes this
+//                                         account's folder
+//   · a folder in Outputs nobody knows  → read its session.json, once per page
+//     (e.g. restored from the trash)      load, and bring the visit back
+// Visits that never got a folder (made offline, signed out) are left alone.
+// A listing that fails or comes back partial decides NOTHING: deleting on the
+// strength of a half-read folder is the one mistake this must never make.
+//
+// A visit deleted here is also remembered (LS_GONE) until its folder is in
+// the trash: deleted offline, the folder is still in Outputs and the data file
+// may still carry it, and without the note it would come straight back.
+var LS_GONE="fsl_v6_gone",outputsProbed={};
+function goneGet(){try{return JSON.parse(localStorage.getItem(LS_GONE)||"{}")||{}}catch(e){return {}}}
+function goneSet(m){
+  try{
+    var k=Object.keys(m);
+    if(k.length>500)k.slice(0,k.length-500).forEach(function(x){delete m[x]});
+    localStorage.setItem(LS_GONE,JSON.stringify(m));
+  }catch(e){}
+}
+function goneAdd(id,folderId){var m=goneGet();m[id]=folderId||"";goneSet(m)}
+function goneFolderDone(id){var m=goneGet();if(id in m){m[id]="";goneSet(m)}}
+function goneForget(ids){var m=goneGet(),c=false;(ids||[]).forEach(function(id){if(id in m){delete m[id];c=true}});if(c)goneSet(m)}
+async function reconcileOutputs(token){
+  try{
+    var rootId=await getRootId(token);if(!rootId)return;
+    var outId=await driveFind(token,OUT_NAME,rootId,FOLDER_MIME);if(!outId)return;
+    var folders=[],pt="";
+    do{
+      var q=JSON.stringify(outId)+" in parents and trashed=false and mimeType="+JSON.stringify(FOLDER_MIME);
+      var r=await fetch("https://www.googleapis.com/drive/v3/files?q="+encodeURIComponent(q)
+        +"&fields=nextPageToken,files(id,name)&pageSize=1000"+(pt?"&pageToken="+encodeURIComponent(pt):""),
+        {headers:{Authorization:"Bearer "+token}});
+      if(!r.ok)return;
+      var d=await r.json();
+      folders=folders.concat(d.files||[]);pt=d.nextPageToken||"";
+    }while(pt);
+    var live={};folders.forEach(function(f){live[f.id]=f});
+    var gone=goneGet(),drop={},forget={},changed=false;
+
+    // 0 · deleted here while offline: bin the folder now
+    for(var gid in gone){
+      var gf=gone[gid];
+      if(gf&&live[gf]&&!sessions.some(function(x){return x.id!==gid&&x.folderId===gf})){
+        var tr=await fetch("https://www.googleapis.com/drive/v3/files/"+gf,
+          {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({trashed:true})});
+        if(tr.ok){delete live[gf];goneFolderDone(gid)}
+      }else if(gf&&!live[gf])goneFolderDone(gid);
+    }
+
+    // 1 · visits whose folder left Outputs, and visits deleted here
+    for(var i=0;i<sessions.length;i++){
+      var x=sessions[i];
+      if(x.id in gone){drop[x.id]=1;continue}
+      if(!x.folderId||live[x.folderId])continue;
+      var info=await driveFileInfo(token,x.folderId);
+      if(info&&info.trashed)drop[x.id]=1;
+      else if(!info)forget[x.id]=1;
+      // reachable and not trashed but somewhere else: moved by hand — leave it
+    }
+    if(Object.keys(drop).length||Object.keys(forget).length){
+      sessions=sessions.filter(function(x){return !drop[x.id]}).map(function(x){
+        return forget[x.id]?Object.assign({},x,{folderId:null,folderName:null}):x;
+      });
+      if(aid&&drop[aid]){aid=null;stopCurAudio()}
+      changed=true;
+    }
+
+    // 2 · folders in Outputs that no visit knows: bring their visit back
+    var known={};sessions.forEach(function(x){if(x.folderId)known[x.folderId]=1});
+    for(var j=0;j<folders.length;j++){
+      var f=folders[j];
+      if(known[f.id]||outputsProbed[f.id])continue;
+      outputsProbed[f.id]=1;
+      var sj=await driveFind(token,"session.json",f.id,"application/json");if(!sj)continue;
+      var rr=await fetch("https://www.googleapis.com/drive/v3/files/"+sj+"?alt=media",{headers:{Authorization:"Bearer "+token}});
+      if(!rr.ok)continue;
+      var list=null;try{list=await rr.json()}catch(e){}
+      if(!Array.isArray(list))continue;
+      list.forEach(function(v){
+        if(!v||!v.id||(v.id in gone)||sessions.some(function(y){return y.id===v.id}))return;
+        sessions.push(Object.assign({},v,{folderId:f.id,folderName:f.name}));
+        changed=true;
+      });
+    }
+    if(changed){
+      sessions=orderSessions(sessions);
+      saveLocal();isDirty=true;
+      setTimeout(function(){if(isLoggedIn)saveToDrive()},0);   // the data file follows
+    }
+  }catch(e){}   // offline or Drive hiccup: nothing changes, next pass tries again
+}
 async function loadFromDrive(){
   var token=await ensureToken();if(!token){setSyncSt("error","No autenticat");return}
   setSyncSt("loading","Carregant de Google Drive…");
   try{
     if(!driveFileId)driveFileId=await findDataFile(token);
     saveTok();
-    if(!driveFileId){setSyncSt("ok","Drive connectat");return}
+    if(!driveFileId){await reconcileOutputs(token);setSyncSt("ok","Drive connectat");return}
     var r=await fetch("https://www.googleapis.com/drive/v3/files/"+driveFileId+"?alt=media",{headers:{Authorization:"Bearer "+token}});
     if(r.ok){
       var data=await r.json();
@@ -2437,6 +2539,7 @@ async function loadFromDrive(){
         sessions=orderSessions(merged.concat(sessions.filter(function(s){return !remIds.has(s.id)})));
         saveLocal();
       }
+      await reconcileOutputs(token);
       setSyncSt("ok","Sincronitzat ✓");
     } else if(r.status===404){driveFileId=null;saveTok();setSyncSt("ok","Drive connectat")}
     else setSyncSt("error","Error de lectura de Drive");
@@ -3940,6 +4043,7 @@ async function deleteSession(s){
   // videos anyway — the Drive ZIP export does, and the modal points at it.
   sessions=sessions.filter(function(x){return x.id!==s.id});
   if(aid===s.id)aid=null;
+  goneAdd(s.id,s.folderId);
   scheduleSave();renderAll();
   // The session's Drive folder used to be left behind for good. Send it to the
   // Drive trash instead: the media goes with it and stays recoverable there.
@@ -3968,6 +4072,7 @@ async function deleteSession(s){
             {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({trashed:true})});
           if(!r.ok)throw new Error("Drive ha respost "+r.status);
         }
+        goneFolderDone(s.id);
         setSyncSt("ok","");
       }catch(e){setSyncSt("error","No s'ha pogut enviar la carpeta de Drive a la paperera");return false}
     }
@@ -4158,6 +4263,7 @@ $$("btnImport").addEventListener("click",function(){$$("importFile").click()});
 function mergeImportedSessions(list){
   var existIds={};sessions.forEach(function(s){existIds[s.id]=1});
   var added=orderSessions(list.filter(function(s){return s.id&&!existIds[s.id]}));
+  goneForget(added.map(function(s){return s.id}));   // brought back on purpose
   sessions=added.concat(sessions);
   if(added.length&&!aid)aid=added[0].id;
   return {added:added,skipped:list.length-added.length};

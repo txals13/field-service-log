@@ -273,6 +273,31 @@ Field Service Log/
             ├── photos/
             └── videos/
 ```
+- **The session folders in Outputs decide which visits exist**
+  (`reconcileOutputs`, run by every `loadFromDrive`, so on opening and every
+  30 s). The data-file merge keeps both sides' sessions, which suits edits but
+  brought deleted visits back: the computer still had one deleted on the
+  phone, saved it up again, and it reappeared everywhere. Now:
+  - folder in the Drive trash → the visit is dropped on this device too;
+  - folder unreachable (`driveFileInfo` null: another account's folder after
+    an import, or a trash already emptied) → the visit stays, its `folderId`
+    is forgotten and the next save finds or makes this account's folder;
+  - reachable but moved out of Outputs by hand → left alone;
+  - a folder in Outputs no visit points to → its `session.json` is read
+    (once per page load, `outputsProbed`) and the visit comes back — that is
+    how a folder restored from the trash returns. session.json is only as
+    fresh as the last ☁ Desa of that visit.
+  - visits with no `folderId` are not touched.
+  - **A listing that fails or is cut short decides nothing.**
+  - `deleteSession` leaves a note (`localStorage['fsl_v6_gone']`, id →
+    folder id) so a visit deleted offline can't come back from the data file;
+    the next pass bins its folder and the note keeps only the id. Importing a
+    visit on purpose clears its note (`mergeImportedSessions`).
+  - Verified against a stand-in Drive: trashed → gone (and the open visit
+    closed), unreachable → kept with the id forgotten, no-folder → kept,
+    deleted-offline → folder binned and gone, unknown folder → visit read
+    from its session.json, second pass → no requests repeated, failed listing
+    → nothing changed.
 - Root folder created automatically on first login
 - Session subfolders created automatically on first media upload
 - Backup JSON saved here when a session is deleted

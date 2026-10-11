@@ -405,6 +405,39 @@ Field Service Log/
   - If translating fails, or there is no Gemini key, it asks whether to print
     with the texts as written — same as the reports.
 
+## Phone layout (test, 2026-10-11)
+- **Behind a switch**: sidebar › 🧪 Disseny mòbil nou (or `?m2=1` / `?m2=0`),
+  kept per device in `localStorage['fsl_v6_m2']`; `body.m2` when on. All of
+  it lives under `@media(max-width:700px)`, so the desktop — and a phone with
+  the switch off — is exactly what it was. Tablet in portrait gets it, in
+  landscape doesn't.
+- **Nothing new is wired to the app's logic.** Every phone control either IS
+  an existing one laid out differently (the composer is `.input-bar` made a
+  full-screen sheet; the report menu is `#expMenu` made full screen) or clicks
+  one (`m2Side` proxies the top-bar buttons; "Més" clicks the hidden chips,
+  `btnClose`, `btnSync`…). The session header is still rendered, only hidden,
+  so those buttons exist to be clicked.
+- Pieces: `#m2Title` (client, project · machine) with 🔍 and ⋮ in the top bar;
+  counters on top (`.stat-bar` reordered) plus a line for earlier visits'
+  pending items (`m2Pending`); the log full height, tap an entry to edit it
+  (delete moved into the edit dialog, `#eDelete`, and session delete into
+  Més); three buttons at the bottom (`.m2-quick`): **Foto** opens the camera
+  and, if the composer is empty, adds the entry by itself through `addEntry`
+  (which already waits for EXIF); **Entrada** opens the composer, severity as
+  four buttons kept in step with `#sevSel`; **Veu** opens it and starts
+  recording. Notes generals are a sheet of their own, from Més.
+- **Back button**: each sheet (`m2Show`/`m2Hide`) pushes a history entry, so
+  Android's back closes the sheet rather than leaving the app; going from
+  Més to the report menu reuses the entry (`replaceState`). Dialogs opened
+  from Més give the entry back. Ordinary dialogs don't take part yet.
+- Every `.modal` is full screen with its `.modal-actions` stuck to the bottom;
+  the lists that scrolled inside dialogs (`#mhBody`, `#folList`…) let the
+  dialog scroll instead.
+- Sidebar on the phone: + Nova visita on top, then the visits, the tools at
+  the end in one scroll.
+- Not yet tried on a real phone. When it becomes the default, flip the
+  switch's default and add it to the manual.
+
 ## Session types
 | Type | Abbr | Color |
 |------|------|-------|

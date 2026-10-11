@@ -302,6 +302,102 @@ textarea{resize:none;line-height:1.4}
   body.print-mh .print-only{display:block}
   body.print-mh .mh-card,body.print-mh .mh-row{break-inside:avoid}
 }
+/* ── THE PHONE LAYOUT (test) ────────────────────────────────────────────────
+   Behind a switch (sidebar › Disseny mòbil nou), and only up to 700 px wide:
+   with the switch off, or on anything wider, none of this applies and the app
+   is exactly what it was. The rule throughout: nothing new is wired to the
+   app's logic. Every control here either IS an existing one, laid out
+   differently, or clicks one — so the phone and the desktop run the same code.
+   m2-blk / m2-flx / m2-inl / m2-grd are the phone-only pieces, by display. */
+.m2-blk,.m2-flx,.m2-inl,.m2-grd,.m2-sx,#m2Title{display:none}
+@media(max-width:700px){
+  body.m2 .m2-blk{display:block}
+  body.m2 .m2-flx{display:flex}
+  body.m2 .m2-inl{display:inline-flex}
+  body.m2 .m2-grd{display:grid}
+  body.m2 .modal-actions button,body.m2 .input-ctrl button,body.m2 .m2-side button,body.m2 #sideTools>button,body.m2 select{min-height:44px}
+  body.m2 textarea,body.m2 input[type=text],body.m2 select{font-size:16px}
+  /* top bar: the menu, the visit, find and more — the rest went to the sidebar */
+  body.m2 #btnFullSync,body.m2 #btnLogout,body.m2 #btnTheme,body.m2 #btnImport{display:none!important}
+  body.m2 .topbar{height:56px;gap:6px;padding:0 6px}
+  body.m2 .topbar .logo{display:block;font-size:13px}
+  body.m2 .topbar #topBadge{display:none!important}
+  body.m2.m2-sess .topbar .logo,body.m2.m2-sess #btnNew{display:none!important}
+  body.m2.m2-sess .m2-sx{display:inline-flex;align-items:center;justify-content:center}
+  body.m2.m2-sess #m2Title{display:block;flex:1;min-width:0}
+  #m2Title .t1{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #m2Title .t2{font-size:11px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.m2 .m2-sx{font-size:18px;padding:6px 9px}
+  /* the visit: header folded away, counters on top, the log takes the screen */
+  body.m2 .sv .s-hdr{padding:0;border:0;background:none}
+  body.m2 .sv .s-hdr-meta{display:none}
+  body.m2 .sv .s-hdr-top{margin:0}
+  body.m2 .sv .s-hdr-top>:not(.exp-wrap){display:none}
+  body.m2 .sv #btnExp{display:none}
+  body.m2 .sv .stat-bar{order:-1;border-top:0;border-bottom:1px solid var(--br);padding:8px 12px;font-size:12px;gap:10px}
+  body.m2 .sv .filter-row{display:none}
+  body.m2.m2-find .sv .filter-row{display:flex}
+  body.m2 .sv .filter-row input{max-width:none!important}
+  body.m2 .sv .log-area{padding:8px 10px}
+  body.m2 .sv .log-actions{display:none}
+  body.m2 .sv .log-entry{padding:10px;margin-bottom:6px;border-radius:10px;border-left-width:3px;cursor:pointer}
+  body.m2 .sv .log-text{font-size:14px}
+  body.m2 .sv .thumb{width:84px;height:84px}
+  .m2-quick{grid-template-columns:repeat(3,1fr);gap:8px;padding:8px 10px 10px;border-top:1px solid var(--br);background:var(--bg1);flex-shrink:0}
+  .m2-quick button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 0;font-size:12px;border-radius:12px}
+  .m2-quick button b{font-size:20px;line-height:1}
+  .m2-quick #m2Ent{background:var(--gold);border-color:var(--golddim);color:#000;font-weight:700}
+  /* the composer: hidden until asked for, then the whole screen */
+  body.m2 .sv .input-bar{display:none}
+  body.m2.m2-compose .sv .input-bar,body.m2.m2-notes .sv .input-bar{display:flex;position:fixed;inset:0;z-index:90;overflow-y:auto;border:0;padding:0 12px 18px;gap:10px}
+  .m2-sheet-hdr{position:sticky;top:0;z-index:1;align-items:center;gap:8px;background:var(--bg1);padding:10px 0;border-bottom:1px solid var(--br);order:-2}
+  .m2-sheet-hdr span{flex:1;font-weight:700;font-size:15px}
+  body.m2:not(.m2-compose) #m2CompHdr,body.m2:not(.m2-notes) #m2NotesHdr{display:none}
+  body.m2.m2-compose #notesIn,body.m2.m2-compose #notesCorr{display:none}
+  body.m2.m2-notes .input-row,body.m2.m2-notes #pThumbs{display:none}
+  body.m2.m2-notes #notesIn{min-height:50vh;font-size:16px}
+  body.m2 .sv #pThumbs{order:2}
+  body.m2 .sv .input-row{order:1;flex-wrap:wrap;gap:10px}
+  body.m2 .sv .input-row>.input-ctrl{flex-direction:row;flex-wrap:wrap;width:100%;gap:8px}
+  body.m2 .sv .input-row>.input-ctrl:first-child>*{flex:1 1 100%}
+  body.m2 .sv .input-row>textarea{order:1;flex:1 0 100%;width:100%;min-height:150px}
+  body.m2 .sv .input-row>.input-ctrl:last-child{order:2}
+  body.m2 .sv .input-row>.input-ctrl:last-child>*{flex:1;min-width:0;font-size:18px}
+  body.m2 .sv #sevSel,body.m2 .sv #btnAdd{display:none}
+  body.m2 .sv .inp-tag{width:100%}
+  .m2-sev{gap:6px}
+  .m2-sev button{flex:1;padding:10px 0;font-size:13px;font-weight:700}
+  .m2-sev button.on{background:var(--bg0);border-width:2px}
+  /* more, and the report menu: full screen with big rows */
+  .m2-more-it{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--br);border-radius:0;padding:14px 4px;font-size:15px;color:var(--tx1)}
+  .m2-more-it .ic{width:24px;text-align:center;font-size:18px}
+  .m2-more-it .nt{margin-left:auto;font-size:12px;color:var(--tx3)}
+  .m2-more-sec{font-size:11px;color:var(--tx3);letter-spacing:.8px;font-weight:700;padding:16px 4px 4px}
+  body.m2 #expMenu{position:fixed!important;inset:0!important;left:0!important;top:0!important;width:100%!important;max-width:none!important;max-height:none!important;border-radius:0;border:0;z-index:95;box-shadow:none}
+  body.m2 .exp-menu button{padding:14px 16px;font-size:15px}
+  body.m2 .exp-menu .exp-lang{padding:10px 16px;font-size:13px}
+  body.m2 .exp-menu .exp-lang button{min-height:36px;padding:4px 10px;font-size:13px}
+  /* every dialog: the whole screen, its buttons always in reach at the bottom */
+  body.m2 .modal-back{align-items:stretch}
+  body.m2 .modal{max-width:none!important;width:100%!important;height:100%;max-height:none!important;border-radius:0!important;border:0;padding:16px 14px 0;display:flex;flex-direction:column}
+  body.m2 .modal-actions{position:sticky;bottom:0;z-index:2;background:var(--bg1);padding:10px 0 14px;margin-top:auto;border-top:1px solid var(--br);flex-wrap:wrap}
+  body.m2 .modal-actions button{flex:1 1 auto}
+  /* lists that scrolled inside a dialog: the dialog itself scrolls now, and a
+     box scrolling inside a scrolling screen is two thumbs fighting */
+  body.m2 #manualsList,body.m2 #linkList,body.m2 #tsRows,body.m2 #mhBody,body.m2 #revLog,
+  body.m2 #lblList,body.m2 #arxList,body.m2 #bulkList,body.m2 #folList{max-height:none!important;overflow:visible!important}
+  /* the sidebar: new visit on top, then the visits, the tools at the end —
+     one scroll for the lot instead of a list squeezed under the buttons */
+  body.m2 .sidebar{overflow-y:auto}
+  body.m2 #sideNew{order:1}
+  body.m2 .sitem-del{display:none}
+  body.m2 #sideFilt{order:2}
+  body.m2 .sidebar .s-list{order:3;flex:none;overflow:visible}
+  body.m2 #sideTools{order:4;border-top:1px solid var(--br);border-bottom:0;padding-bottom:20px}
+  .m2-side-hd{font-size:11px;color:var(--tx3);letter-spacing:.8px;font-weight:700;padding:8px 0 6px}
+  .m2-side{grid-template-columns:1fr 1fr;gap:6px}
+  .m2-side button{width:100%;font-size:12.5px;text-align:left;white-space:normal}
+}
 </style>
 </head>
 <body>
@@ -326,6 +422,7 @@ textarea{resize:none;line-height:1.4}
   <div class="topbar">
     <button class="btn-g" id="btnSide" style="font-size:20px;padding:4px 8px">&#9776;</button>
     <span class="logo">&#9881; Field Service Log</span>
+    <div id="m2Title"></div>
     <span id="topBadge" style="display:none;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;flex-shrink:1"></span>
     <div style="display:flex;align-items:center;gap:4px;margin-left:auto;flex-shrink:0">
       <button class="btn-gold btn-sm" id="btnLoginTop" style="display:none" title="Inicia la sessió amb Google per sincronitzar amb Drive">Entra</button>
@@ -336,6 +433,8 @@ textarea{resize:none;line-height:1.4}
       <button class="btn-g btn-sm" id="btnImport" title="Importa una sessió: un JSON, o un ZIP exportat per recuperar-ne també les fotos i els vídeos">&#8679; Importa</button>
       <input type="file" id="importFile" accept=".json,.zip,application/json,application/zip,application/x-zip-compressed,application/x-zip" multiple style="display:none">
       <button class="btn-gold btn-sm" id="btnNew">+ Nova</button>
+      <button class="btn-g m2-sx" id="btnM2Find" title="Cerca dins la visita">&#128269;</button>
+      <button class="btn-g m2-sx" id="btnM2More" title="Més: informe, historial, carpeta, dades…" style="color:var(--gold);font-weight:700">&#8942;</button>
     </div>
   </div>
   <div class="body">
@@ -344,10 +443,22 @@ textarea{resize:none;line-height:1.4}
         <span class="side-label" id="sideCount">Sessions</span>
         <button class="btn-g btn-sm" id="btnSideX">&#10005;</button>
       </div>
-      <div style="padding:6px 10px;border-bottom:1px solid var(--br);flex-shrink:0">
+      <div class="m2-blk" id="sideNew" style="padding:8px 10px 0">
+        <button class="btn-gold" id="m2New" style="width:100%;min-height:44px;font-size:14px">+ Nova visita</button>
+      </div>
+      <div id="sideFilt" style="padding:6px 10px;border-bottom:1px solid var(--br);flex-shrink:0">
         <input type="text" id="sessFiltIn" placeholder="Filtra les sessions…" style="font-size:12px;padding:5px 8px">
       </div>
-      <div style="padding:6px 10px;border-bottom:1px solid var(--br);flex-shrink:0">
+      <div id="sideTools" style="padding:6px 10px;border-bottom:1px solid var(--br);flex-shrink:0">
+        <div class="m2-side-hd m2-blk">EINES</div>
+        <div class="m2-grd m2-side" style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--br)">
+          <button id="m2In">Entra amb Google</button>
+          <button id="m2Sync">&#9729; Sincronitza-ho tot</button>
+          <button id="m2Imp">&#8679; Importa JSON o ZIP</button>
+          <button id="m2Theme">&#9788; Canvia el tema</button>
+          <button id="m2Out">Surt de Google</button>
+        </div>
+        <button class="btn-g btn-sm" id="btnM2" style="width:100%;font-size:12px;margin-bottom:6px" title="Prova el disseny nou per al mòbil. Només canvia com es veu en pantalles estretes; a l'ordinador no fa res.">&#129514; Disseny mòbil nou: no</button>
         <button class="btn-g btn-sm" id="btnHelp" style="width:100%;font-size:12px;margin-bottom:6px" title="Com fer servir l'aplicació">&#128214; Manual d'&uacute;s</button>
         <button class="btn-g btn-sm" id="btnManuals" style="width:100%;font-size:12px" title="Manuals de recanvis guardats a Drive">&#128218; Manuals de recanvis</button>
         <button class="btn-g btn-sm" id="btnGemKey" style="width:100%;font-size:12px;margin-top:6px" title="La clau de Gemini que fa servir el corrector i la traducció dels informes; es desa només en aquest navegador">&#128273; Clau de Gemini</button>
@@ -569,6 +680,14 @@ textarea{resize:none;line-height:1.4}
     </div>
   </div>
 
+  <div class="modal-back" id="m2MoreBack" style="display:none">
+    <div class="modal">
+      <div class="modal-title" id="m2MoreTitle">Més</div>
+      <div id="m2MoreList"></div>
+      <div class="modal-actions"><button id="m2MoreClose">Tanca</button></div>
+    </div>
+  </div>
+
   <div class="modal-back" id="bulkBack" style="display:none">
     <div class="modal" style="max-width:min(96vw,720px)">
       <div class="modal-title">&#128452; Arxiva sessions</div>
@@ -762,6 +881,7 @@ textarea{resize:none;line-height:1.4}
         </div>
       </div>
       <div class="modal-actions">
+        <button class="btn-danger m2-inl" id="eDelete">&#128465; Elimina</button>
         <button id="eCancel">Cancel·la</button>
         <button class="btn-gold" id="eSave">&#10003; Desa els canvis</button>
       </div>
@@ -2402,7 +2522,7 @@ if("serviceWorker" in navigator){
 }
 
 // ── SIDEBAR ──────────────────────────────────────────────────────────────────
-function openSide(){$$("sidebar").classList.remove("collapsed");$$("sidebar").classList.add("open");$$("overlay").style.display="block"}
+function openSide(){m2Side();$$("sidebar").classList.remove("collapsed");$$("sidebar").classList.add("open");$$("overlay").style.display="block"}
 function closeSide(){$$("sidebar").classList.remove("open");$$("overlay").style.display="none"}
 $$("btnSide").addEventListener("click",function(){
   if(mob()){if($$("sidebar").classList.contains("open"))closeSide();else openSide()}
@@ -2431,6 +2551,7 @@ function buildSitem(s,applyFilter){
   return div;
 }
 function renderSidebar(){
+  m2Side();
   $$("btnSideX").style.display=mob()?"block":"none";
   var list=$$("sList");list.innerHTML="";
   if(!sessions.length){$$("sideCount").textContent="Sessions (0)";list.innerHTML="<div style=\"font-size:12px;color:var(--tx3);padding:20px 10px;text-align:center\">Encara no hi ha cap sessió.<br>Crea'n una de nova.</div>";return}
@@ -2575,6 +2696,11 @@ function renderLogArea(){
         audioAtt.forEach(function(im){ac.appendChild(audioChipEl(im,{editable:false}))});
         body.appendChild(ac);
       }
+      if(isOpen)div.addEventListener("click",function(ev){
+        if(!m2On())return;
+        if(ev.target.closest(".thumb,.audio-chip,button,a,video,audio,input,select"))return;
+        openEdit(e.id);
+      });
       if(isOpen){
         var ea=div.querySelector("[data-act=edit]"),da=div.querySelector("[data-act=del]");
         if(ea)ea.addEventListener("click",function(){openEdit(e.id)});
@@ -2591,6 +2717,10 @@ function renderContent(){
 
   // Top badge
   var tb=$$("topBadge");
+  document.body.classList.toggle("m2-sess",!!active);
+  var m2t=$$("m2Title");
+  if(m2t)m2t.innerHTML=active?"<div class=\"t1\">"+esc(active.client||"—")+"</div><div class=\"t2\">"
+    +esc([active.project,active.machine].filter(Boolean).join(" · "))+"</div>":"";
   if(active){var tm0=TM[active.type]||TM.commissioning;tb.style.cssText="display:inline-block;background:"+tm0.bg+";color:"+tm0.tx+";border:1px solid "+tm0.bd+";border-radius:20px;font-size:11px;font-weight:700;padding:2px 9px;font-family:monospace";tb.textContent=tm0.abbr+" · "+active.client}
   else tb.style.display="none";
 
@@ -2631,7 +2761,7 @@ function renderContent(){
   var cnt=severityCounts(entries),errs=cnt.issue,warns=cnt.warning,oks=cnt.ok;
   var isOpen=active.status==="open";
 
-  mc.innerHTML="<div style=\"display:flex;flex:1;flex-direction:column;overflow:hidden\">"
+  mc.innerHTML="<div class=\"sv\" style=\"display:flex;flex:1;flex-direction:column;overflow:hidden\">"
     // header
     +"<div class=\"s-hdr\">"
     +"<div class=\"s-hdr-top\">"
@@ -2643,6 +2773,7 @@ function renderContent(){
       :"<span style=\"margin-left:auto;font-size:11px;color:var(--tx3)\">🔴 Tancada</span><button class=\"btn-sm\" id=\"btnReopen\" style=\"font-size:11px\">↺ Reobre</button>")
     +"<div class=\"exp-wrap\"><button class=\"btn-sm\" id=\"btnExp\">&#8595; Informe &#9662;</button>"
     +"<div class=\"exp-menu\" id=\"expMenu\">"
+    +"<div class=\"m2-flx m2-sheet-hdr\" style=\"padding:12px 16px\"><span>&#8595; Informe</span><b style=\"font-size:20px;color:var(--tx3)\">&#10005;</b></div>"
     +"<div class=\"exp-rev\"><span>"+(curRev(active)
         ?"Revisió "+revNo(curRev(active).n).replace("Rev. ","")+" · "+dmy(curRev(active).date)
         :"Encara sense revisió")+"</span>"
@@ -2683,9 +2814,14 @@ function renderContent(){
     // input or closed bar
     +(isOpen
       ?"<div class=\"input-bar\">"
+        +"<div class=\"m2-flx m2-sheet-hdr\" id=\"m2CompHdr\"><button class=\"btn-g\" data-m2close=\"1\" style=\"font-size:18px\">&#10005;</button><span>Entrada nova</span><button class=\"btn-gold\" id=\"m2Add\">Afegeix</button></div>"
+        +"<div class=\"m2-flx m2-sheet-hdr\" id=\"m2NotesHdr\"><button class=\"btn-g\" data-m2close=\"1\" style=\"font-size:18px\">&#10005;</button><span>Notes generals</span></div>"
         +"<div id=\"pThumbs\" class=\"thumbs\"></div>"
         +"<div class=\"input-row\">"
         +"<div class=\"input-ctrl\">"
+        +"<div class=\"m2-flx m2-sev\" id=\"m2Sev\">"
+          +"<button data-sev=\"info\" style=\"color:var(--tx2)\">○ Info</button><button data-sev=\"ok\" style=\"color:var(--green)\">● OK</button>"
+          +"<button data-sev=\"warning\" style=\"color:var(--orange)\">▲ Avís</button><button data-sev=\"issue\" style=\"color:var(--red)\">■ Prob.</button></div>"
         +"<select id=\"sevSel\" class=\"sel-sev\"><option value=\"info\">○ Info</option><option value=\"ok\">● OK</option><option value=\"warning\">▲ Avís</option><option value=\"issue\">■ Problema</option></select>"
         +"<input type=\"text\" id=\"tagIn\" placeholder=\"Etiqueta…\" class=\"inp-tag\" list=\"tagOptions\">"
         +"</div>"
@@ -2716,7 +2852,10 @@ function renderContent(){
     +(cnt.resolved?"<span style=\"color:var(--green)\">✔ "+pl(cnt.resolved,"resolt","resolts")+"</span>":"")
     +"<span style=\"color:var(--green)\">● "+oks+" ok</span>"
     +"<span style=\"margin-left:auto\">"+entries.length+" en total</span>"
+    +(m2Pending(active)?"<span class=\"m2-inl\" id=\"m2Pend\" style=\"flex-basis:100%;cursor:pointer;color:var(--orange)\">⚠ "+pl(m2Pending(active),"pendent","pendents")+" de visites anteriors ›</span>":"")
     +"</div>"
+    +(isOpen?"<div class=\"m2-grd m2-quick\">"
+      +"<button id=\"m2Foto\"><b>📷</b>Foto</button><button id=\"m2Ent\"><b>＋</b>Entrada</button><button id=\"m2Veu\"><b>🎙</b>Veu</button></div>":"")
     +"</div>";
 
   renderLogArea();
@@ -2785,6 +2924,7 @@ function renderContent(){
     wireCorrect("entCorr","entIn",true);
     wireCorrect("notesCorr","notesIn");
   }
+  m2Wire(active,isOpen);
 }
 
 // ── THUMBNAILS ────────────────────────────────────────────────────────────────
@@ -3343,6 +3483,7 @@ function addEntry(){
     if(pts)entry.tsFromPhoto=true;
     sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{entries:sortEntries((s.entries||[]).concat([entry]))}):s});
     entIn.value="";var ti=$$("tagIn");if(ti)ti.value="";pImgs=[];
+    if(m2Sheet==="compose")m2Hide();
     scheduleSave();renderAll();
   }
   tryAdd();
@@ -3562,6 +3703,175 @@ $$("delZipNow").addEventListener("click",async function(){
 });
 function closeDelModal(){$$("delBack").style.display="none";pendingDel=null}
 $$("delCancel").addEventListener("click",closeDelModal);
+// ── THE PHONE LAYOUT (test) ──────────────────────────────────────────────────
+// See the CSS block of the same name. The switch is kept per device: it is a
+// way of looking at the app, not data, so it never reaches Drive.
+var LS_M2="fsl_v6_m2",M2=false;
+try{
+  var m2q=/[?&]m2=([01])/.exec(location.search);
+  if(m2q)localStorage.setItem(LS_M2,m2q[1]);
+  M2=localStorage.getItem(LS_M2)==="1";
+}catch(e){}
+function m2On(){try{return M2&&matchMedia("(max-width:700px)").matches}catch(e){return false}}
+function m2Apply(){
+  document.body.classList.toggle("m2",M2);
+  var b=$$("btnM2");if(b)b.innerHTML="&#129514; Disseny mòbil nou: "+(M2?"sí":"no");
+}
+m2Apply();
+$$("btnM2").addEventListener("click",function(){
+  M2=!M2;try{localStorage.setItem(LS_M2,M2?"1":"0")}catch(e){}
+  m2Hide();m2Apply();renderAll();
+});
+// What left the top bar, mirrored: each one clicks the original, so sign-in,
+// sync, theme and import behave exactly as they always have.
+function m2Side(){
+  function vis(id){var b=$$(id);return !!b&&b.style.display!=="none"}
+  [["m2In","btnLoginTop"],["m2Sync","btnFullSync"],["m2Out","btnLogout"]].forEach(function(p){
+    var m=$$(p[0]);if(m)m.style.display=vis(p[1])?"":"none";
+  });
+}
+[["m2New","btnNew"],["m2In","btnLoginTop"],["m2Sync","btnFullSync"],["m2Imp","btnImport"],["m2Theme","btnTheme"],["m2Out","btnLogout"]].forEach(function(p){
+  $$(p[0]).addEventListener("click",function(){closeSide();$$(p[1]).click();setTimeout(m2Side,300)});
+});
+// Earlier visits' open problems, for the line under the counters.
+function m2Pending(sess){
+  try{
+    var all=machineSessions(sess);if(all.length<2)return 0;
+    var closed=closedRefs(all),n=0;
+    all.forEach(function(x){if(x.id!==sess.id)n+=openEntries(x,closed).length});
+    return n;
+  }catch(e){return 0}
+}
+// One sheet at a time — the composer, the general notes, "more" or the report
+// menu — each with a history entry, so the phone's back button closes the
+// sheet instead of leaving the app.
+var m2Sheet=null;
+function m2Show(kind){
+  if(m2Sheet)m2HideNow();
+  m2Sheet=kind;
+  if(kind==="compose")document.body.classList.add("m2-compose");
+  if(kind==="notes")document.body.classList.add("m2-notes");
+  // From one sheet to the next (more → report menu) the entry is reused, so
+  // one back press is always one sheet.
+  try{
+    if(history.state&&history.state.m2)history.replaceState({m2:kind},"");
+    else history.pushState({m2:kind},"");
+  }catch(e){}
+}
+function m2HideNow(){
+  var k=m2Sheet;m2Sheet=null;
+  document.body.classList.remove("m2-compose","m2-notes");
+  if(k==="more")$$("m2MoreBack").style.display="none";
+  if(k==="exp"){var m=$$("expMenu");if(m)m.style.display="none"}
+}
+function m2Hide(){
+  if(!m2Sheet)return;
+  m2HideNow();
+  try{if(history.state&&history.state.m2)history.back()}catch(e){}
+}
+window.addEventListener("popstate",function(){if(m2Sheet)m2HideNow()});
+function m2Wire(active,isOpen){
+  if(!active)return;
+  var f=$$("btnM2Find");
+  if(f&&!f.dataset.w){
+    f.dataset.w="1";
+    f.addEventListener("click",function(){
+      var on=!document.body.classList.contains("m2-find");
+      document.body.classList.toggle("m2-find",on);
+      var fi=$$("filtIn");
+      if(on&&fi)fi.focus();
+      if(!on&&fi&&fi.value){fi.value="";filterTxt="";renderLogArea()}
+    });
+    $$("btnM2More").addEventListener("click",function(){openM2More()});
+    $$("m2MoreClose").addEventListener("click",m2Hide);
+    $$("m2MoreBack").addEventListener("click",function(e){if(e.target===$$("m2MoreBack"))m2Hide()});
+    $$("eDelete").addEventListener("click",function(){var id=editingId;if(!id)return;closeEdit();delEntry(id)});
+    document.addEventListener("click",function(e){
+      // the report menu closes on any tap outside it: keep the sheet state honest
+      if(m2Sheet==="exp"&&!(e.target.closest&&e.target.closest(".exp-lang")))setTimeout(function(){
+        var m=$$("expMenu");if(!m||m.style.display!=="block")m2Hide();
+      },0);
+    });
+  }
+  var pend=$$("m2Pend");if(pend)pend.addEventListener("click",openMachineHistory);
+  if(!isOpen)return;
+  Array.prototype.forEach.call(document.querySelectorAll("[data-m2close]"),function(b){b.addEventListener("click",m2Hide)});
+  var add=$$("m2Add");if(add)add.addEventListener("click",function(){addEntry()});
+  // severity as four buttons, kept in step with the real <select>
+  var sev=$$("m2Sev"),sel=$$("sevSel");
+  function paint(){Array.prototype.forEach.call(sev.querySelectorAll("button"),function(b){b.classList.toggle("on",b.dataset.sev===sel.value)})}
+  sev.addEventListener("click",function(e){var b=e.target.closest("[data-sev]");if(!b)return;sel.value=b.dataset.sev;paint()});
+  paint();
+  $$("m2Ent").addEventListener("click",function(){m2Show("compose");var t=$$("entIn");if(t)t.focus()});
+  // Photo: the camera, and the entry made with it — describe it later. Only
+  // when the composer is empty: anything already typed or attached there is
+  // somebody's half-written entry, so the photo joins it instead.
+  $$("m2Foto").addEventListener("click",function(){
+    var t=$$("entIn"),empty=!(t&&t.value.trim())&&!pImgs.length;
+    if(!handheld()){m2Show("compose");$$("btnPhoto").click();return}
+    var cam=$$("camIn");
+    if(empty){
+      // camIn is rebuilt on every render, so a listener left by a cancelled
+      // camera dies with it; and never auto-add while the composer is open.
+      var once=function(){cam.removeEventListener("change",once);setTimeout(function(){if(pImgs.length&&m2Sheet!=="compose")addEntry()},0)};
+      cam.addEventListener("change",once);
+    }else m2Show("compose");
+    cam.click();
+  });
+  $$("m2Veu").addEventListener("click",function(){
+    m2Show("compose");
+    if(!mediaRec)startRec("pend");
+  });
+}
+function openM2More(){
+  var a=sessions.find(function(x){return x.id===aid});if(!a)return;
+  var isOpen=a.status==="open",r=curRev(a),mh=machineSessions(a).length;
+  function it(ic,label,note,act){return {ic:ic,label:label,note:note||"",act:act}}
+  function click(id){return function(){var b=$$(id);if(b)b.click()}}
+  var secs=[
+    ["INFORME",[
+      it("&#8595;","Informe i exportació",(r?revNo(r.n):"sense revisió")+" · "+reportLang(a).toUpperCase(),function(){
+        var m=$$("expMenu");openExpMenu($$("btnExp"),m);m2Show("exp");
+      }),
+      it("&#9997;","Signa l'informe",revSign(a)?"signat":"",function(){openReportSign()}),
+      it("&#129534;","Full d'hores","",function(){openTimesheet()})
+    ]],
+    ["VISITA",[
+      mh>1?it("&#128220;","Historial de la màquina",mh+" visites"+(m2Pending(a)?" · "+pl(m2Pending(a),"pendent","pendents"):""),function(){openMachineHistory()}):null,
+      $$("folChip")?it("&#128451;","Carpeta de Drive","",click("folChip")):null,
+      $$("manualChip")?it("&#128218;","Manual de recanvis",/Vincula/.test($$("manualChip").textContent)?"sense vincular":"",click("manualChip")):null,
+      $$("drawingsChip")?it("&#128208;","Dibuixos","",click("drawingsChip")):null,
+      it("&#9998;","Dades de la visita",a.contact||"",function(){openNewModal(a)}),
+      isOpen?it("&#128221;","Notes generals",(a.notes||"").trim()?"":"buides",function(){m2Show("notes");var t=$$("notesIn");if(t)t.focus()}):null,
+      $$("btnSessSync")?it("&#9729;","Desa a Drive","fotos que hi faltin",click("btnSessSync")):null,
+      $$("btnSync")?it("&#10227;","Sincronitza ara","",click("btnSync")):null,
+      isOpen?it("&#9632;","Tanca la visita","",click("btnClose")):it("&#8634;","Reobre la visita","",click("btnReopen")),
+      // the ✕ on the list's row overlapped the problem count on a phone
+      it("&#128465;","Elimina la visita","",function(){openDelModal(a)})
+    ]]
+  ];
+  var list=$$("m2MoreList"),acts=[];
+  list.innerHTML=secs.map(function(sec){
+    return "<div class=\"m2-more-sec\">"+sec[0]+"</div>"+sec[1].filter(Boolean).map(function(x){
+      acts.push(x.act);
+      return "<button class=\"m2-more-it\" data-i=\""+(acts.length-1)+"\"><span class=\"ic\">"+x.ic+"</span><span>"+esc(x.label)+"</span>"
+        +(x.note?"<span class=\"nt\">"+esc(x.note)+"</span>":"")+"</button>";
+    }).join("");
+  }).join("");
+  $$("m2MoreTitle").textContent=a.client||"Més";
+  Array.prototype.forEach.call(list.querySelectorAll("[data-i]"),function(b){
+    b.addEventListener("click",function(e){
+      e.stopPropagation();   // or the document click closes what this opens
+      var fn=acts[+b.dataset.i];
+      m2HideNow();
+      fn();
+      // it opened a dialog, not another sheet: give the history entry back
+      if(!m2Sheet){try{if(history.state&&history.state.m2)history.back()}catch(e){}}
+    });
+  });
+  m2Show("more");
+  $$("m2MoreBack").style.display="flex";
+}
 // A page of its own beside the app, so it can be read alongside it.
 $$("btnHelp").addEventListener("click",function(){window.open("manual.html","_blank","noopener")});
 $$("btnBulkArx").addEventListener("click",function(){if(mob())closeSide();openBulkArchive()});

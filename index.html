@@ -762,7 +762,13 @@ textarea{resize:none;line-height:1.4}
     <div class="modal" style="max-width:min(96vw,520px)">
       <div class="modal-title">&#128273; Clau de Gemini</div>
       <div id="gemNote" class="ts-note" style="margin-bottom:10px">&mdash;</div>
-      <div class="field"><label>Clau de l'API</label><input type="password" id="gemIn" placeholder="AQ.&hellip;" autocomplete="off" spellcheck="false"></div>
+      <!-- A form of its own, and that is the whole point of it. Inputs outside
+           any form are one "form" to Chrome, so this password field turned
+           the Tag box — a text field above it in the page — into a "username",
+           and the phone offered saved passwords there, on top of the tag list. -->
+      <form id="gemForm" autocomplete="off" onsubmit="return false">
+        <div class="field"><label>Clau de l'API</label><input type="password" id="gemIn" placeholder="AQ.&hellip;" autocomplete="new-password" spellcheck="false"></div>
+      </form>
       <div class="ts-note">El corrector i la traducci&oacute; dels informes van amb Gemini. La clau no viatja amb l'aplicaci&oacute;: es desa nom&eacute;s en aquest navegador, i no va ni a Drive ni als ZIP ni a les c&ograve;pies de seguretat &mdash; per aix&ograve; cal escriure-la un cop a cada dispositiu.</div>
       <div class="modal-actions">
         <button id="gemCancel">Tanca</button>
@@ -836,7 +842,7 @@ textarea{resize:none;line-height:1.4}
       <div class="field"><label>Gravetat</label>
         <select id="eSev"><option value="info">&#9675; Info</option><option value="ok">&#9679; OK</option><option value="warning">&#9650; Avís</option><option value="issue">&#9632; Problema</option></select>
       </div>
-      <div class="field"><label>Etiqueta (opcional)</label><input type="text" id="eTag" placeholder="p. ex. ELEC, MEC, PLC" list="tagOptions">
+      <div class="field"><label>Etiqueta (opcional)</label><input type="text" id="eTag" placeholder="p. ex. ELEC, MEC, PLC" list="tagOptions" autocomplete="off">
         <select id="eTagSel" style="margin-top:6px;display:none"></select>
       </div>
       <datalist id="tagOptions"></datalist>
@@ -2075,6 +2081,12 @@ function fillTagTargets(){
   var opts=tagOpts.map(function(o){return "<option value=\""+esc(o.v)+"\">"+esc(o.l)+"</option>"}).join("");
   var dl=$$("tagOptions");
   if(dl)dl.innerHTML=opts;
+  // The composer's own select, rebuilt with the composer on every render.
+  var ts=$$("tagSel");
+  if(ts){
+    if(tagOpts.length){ts.style.display="";ts.innerHTML="<option value=\"\">&#9662; Conjunt del manual…</option>"+opts}
+    else{ts.style.display="none";ts.innerHTML=""}
+  }
   var sel=$$("eTagSel");
   if(sel){
     if(tagOpts.length){
@@ -2851,7 +2863,8 @@ function renderContent(){
           +"<button data-sev=\"info\" style=\"color:var(--tx2)\">○ Info</button><button data-sev=\"ok\" style=\"color:var(--green)\">● OK</button>"
           +"<button data-sev=\"warning\" style=\"color:var(--orange)\">▲ Avís</button><button data-sev=\"issue\" style=\"color:var(--red)\">■ Prob.</button></div>"
         +"<select id=\"sevSel\" class=\"sel-sev\"><option value=\"info\">○ Info</option><option value=\"ok\">● OK</option><option value=\"warning\">▲ Avís</option><option value=\"issue\">■ Problema</option></select>"
-        +"<input type=\"text\" id=\"tagIn\" placeholder=\"Etiqueta…\" class=\"inp-tag\" list=\"tagOptions\">"
+        +"<input type=\"text\" id=\"tagIn\" placeholder=\"Etiqueta…\" class=\"inp-tag\" list=\"tagOptions\" autocomplete=\"off\">"
+        +"<select id=\"tagSel\" class=\"inp-tag\" style=\"display:none\" title=\"Els conjunts del manual vinculat\"></select>"
         +"</div>"
         +"<textarea id=\"entIn\" rows=\"3\" placeholder=\"Descripció (opcional si hi ha foto)… Ctrl+Retorn per afegir\"></textarea>"
         +"<div class=\"input-ctrl\">"
@@ -2888,6 +2901,9 @@ function renderContent(){
 
   renderLogArea();
   populateTagOptions(); // fill the Tag dropdown with the linked manual's grups
+  fillTagTargets();     // the composer was just rebuilt: refill its select now
+  var tsel=$$("tagSel");
+  if(tsel)tsel.addEventListener("change",function(){if(this.value){var ti=$$("tagIn");if(ti)ti.value=this.value}this.selectedIndex=0});
 
   // Wire up controls
   var btnEd=$$("btnEditSess");if(btnEd)btnEd.addEventListener("click",function(){openNewModal(active)});

@@ -405,8 +405,8 @@ Field Service Log/
   - If translating fails, or there is no Gemini key, it asks whether to print
     with the texts as written — same as the reports.
 
-## Phone layout (test, 2026-10-11)
-- **Behind a switch**: sidebar › 🧪 Disseny mòbil nou (or `?m2=1` / `?m2=0`),
+## New layout (test, 2026-10-11) — phone, and since then the desktop too
+- **Behind a switch**: sidebar › 🧪 Disseny nou (or `?m2=1` / `?m2=0`),
   kept per device in `localStorage['fsl_v6_m2']`; `body.m2` when on. All of
   it lives under `@media(max-width:700px)`, so the desktop — and a phone with
   the switch off — is exactly what it was. Tablet in portrait gets it, in
@@ -435,8 +435,18 @@ Field Service Log/
   dialog scroll instead.
 - Sidebar on the phone: + Nova visita on top, then the visits, the tools at
   the end in one scroll.
-- Not yet tried on a real phone. When it becomes the default, flip the
-  switch's default and add it to the manual.
+- **On a wide screen (>700 px) the same switch** brings the order across but
+  folds nothing away — there is room: the sidebar, the filter and the composer
+  stay. Counters move under the header (`.s-hdr` order -2, `.stat-bar` -1)
+  with the earlier-visits line; a click on an entry opens it (delete in the
+  edit dialog); severity is a 2×2 of buttons; the header's ✎, Tanca, ⟳,
+  ☁ Desa and the five chips go into **⋮ Més** (`#btnM2More2`, same
+  `openM2More` list as the phone, shown as an ordinary dialog). ↓ Informe
+  stays as it is. General notes stay in the composer, so "Notes generals" is
+  only in the phone's Més.
+- The phone version was tried on the user's phone on 2026-10-11 and they
+  prefer it. When it becomes the default, flip the switch's default and add
+  it to the manual.
 
 ## Session types
 | Type | Abbr | Color |

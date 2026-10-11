@@ -329,6 +329,14 @@
       informe_…_rev01_ca.pdf …     ← els informes de cada revisió
   Arxiu/                           ← els ZIP del projecte (via Drive per a escriptori)</pre>
 <p>Cada visita té la seva pròpia carpeta. Si dues visites tenen el mateix client, màquina i projecte, la segona es diu <code>…_2</code>.</p>
+<h3>La carpeta Outputs mana</h3>
+<p>Cada cop que l'app sincronitza, mira quines carpetes hi ha a <code>Outputs</code>:</p>
+<ul>
+  <li><strong>Si esborres una visita en un aparell</strong>, la seva carpeta va a la paperera de Drive, i la visita desapareix també dels altres aparells en la propera sincronització (mig minut, o en obrir l'app).</li>
+  <li><strong>Si restaures una carpeta de la paperera de Drive</strong>, la visita torna a aparèixer, amb les dades de l'última vegada que es va prémer <span class="btn">☁ Desa</span> en aquella visita.</li>
+  <li>Una visita esborrada sense connexió no torna a sortir: quan hi torna a haver connexió, se n'envia la carpeta a la paperera.</li>
+  <li>Les visites que encara no tenen carpeta (fetes sense connexió o sense haver entrat amb Google) no es toquen.</li>
+</ul>
 
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="dispositius">16. Mòbil, tauleta i ordinador</h2>

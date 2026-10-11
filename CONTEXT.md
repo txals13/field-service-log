@@ -448,6 +448,20 @@ Field Service Log/
   prefer it. When it becomes the default, flip the switch's default and add
   it to the manual.
 
+## Chrome's password manager and the Tag box
+- **The Gemini key field lives in its own `<form id="gemForm">`.** Inputs that
+  sit in no form are all one "form" to Chrome, so the key's password field
+  made the Tag box above it in the page look like a username: on Android the
+  password manager popped up there and covered the tag list. Isolated, there
+  is no username to guess. `autocomplete="off"` on the tag inputs keeps the
+  browser's own typing history from competing with the list as well.
+- **The composer has a real select of the manual's conjunts** (`#tagSel`,
+  beside the datalist), like the edit dialog's `#eTagSel`: a datalist barely
+  shows on a phone and filters itself empty once anything is typed. It is
+  rebuilt with the composer, so `renderContent` refills it every time
+  (`fillTagTargets`) — `populateTagOptions` returns early when the manual
+  hasn't changed. Only shown when the visit has a linked manual.
+
 ## Session types
 | Type | Abbr | Color |
 |------|------|-------|

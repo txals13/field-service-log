@@ -309,7 +309,37 @@ textarea{resize:none;line-height:1.4}
    app's logic. Every control here either IS an existing one, laid out
    differently, or clicks one — so the phone and the desktop run the same code.
    m2-blk / m2-flx / m2-inl / m2-grd are the phone-only pieces, by display. */
-.m2-blk,.m2-flx,.m2-inl,.m2-grd,.m2-sx,#m2Title{display:none}
+.m2-blk,.m2-flx,.m2-inl,.m2-grd,.m2-sx,.m2-dk,#m2Title{display:none}
+.m2-sev button.on{background:var(--bg0);border-width:2px}
+.m2-more-it{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--br);border-radius:0;padding:12px 4px;font-size:14px;color:var(--tx1);white-space:normal}
+.m2-more-it:hover{background:var(--bg2)}
+.m2-more-it .ic{width:24px;text-align:center;font-size:17px;flex-shrink:0}
+.m2-more-it .nt{margin-left:auto;font-size:12px;color:var(--tx3);text-align:right}
+.m2-more-sec{font-size:11px;color:var(--tx3);letter-spacing:.8px;font-weight:700;padding:14px 4px 4px}
+/* The same switch on a wide screen. Here there is room, so nothing is folded
+   away behind a sheet: the sidebar, the filter and the composer stay where
+   they are. What comes across from the phone is the order and the calm — the
+   counters on top, an entry opens when you click it, and the header's
+   buttons and chips go into one "Més" list instead of two rows of them. */
+@media(min-width:701px){
+  body.m2 .m2-dk{display:inline-flex;align-items:center}
+  body.m2 .sv #btnEditSess,body.m2 .sv #btnClose,body.m2 .sv #btnReopen,body.m2 .sv #btnSync,body.m2 .sv #btnSessSync{display:none}
+  body.m2 .sv #manualChip,body.m2 .sv #drawingsChip,body.m2 .sv #mhChip,body.m2 .sv #folChip,body.m2 .sv #tsChip{display:none}
+  body.m2 .sv .s-hdr-top{gap:10px}
+  body.m2 .sv .s-hdr-top>span:nth-child(2){font-size:16px}
+  body.m2 .sv .exp-wrap{margin-left:auto}
+  body.m2 .sv .s-hdr{order:-2}
+  body.m2 .sv .stat-bar{order:-1;border-top:0;border-bottom:1px solid var(--br);padding:7px 12px;font-size:12px}
+  body.m2 #m2Pend{display:inline-flex;flex-basis:auto!important;margin-left:12px}
+  body.m2 .sv .log-actions{display:none}
+  body.m2 .sv .log-entry{cursor:pointer;padding:8px 10px;border-radius:8px}
+  body.m2 .sv .log-entry:hover{box-shadow:0 0 0 1px var(--br2)}
+  body.m2 #eDelete{display:inline-flex;margin-right:auto}
+  body.m2 .sv #sevSel{display:none}
+  body.m2 .sv #m2Sev{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:160px}
+  body.m2 .sv #m2Sev button{padding:5px 0;font-size:11.5px;font-weight:700}
+  body.m2 .sv .inp-tag{width:160px}
+}
 @media(max-width:700px){
   body.m2 .m2-blk{display:block}
   body.m2 .m2-flx{display:flex}
@@ -369,10 +399,7 @@ textarea{resize:none;line-height:1.4}
   .m2-sev button{flex:1;padding:10px 0;font-size:13px;font-weight:700}
   .m2-sev button.on{background:var(--bg0);border-width:2px}
   /* more, and the report menu: full screen with big rows */
-  .m2-more-it{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--br);border-radius:0;padding:14px 4px;font-size:15px;color:var(--tx1)}
-  .m2-more-it .ic{width:24px;text-align:center;font-size:18px}
-  .m2-more-it .nt{margin-left:auto;font-size:12px;color:var(--tx3)}
-  .m2-more-sec{font-size:11px;color:var(--tx3);letter-spacing:.8px;font-weight:700;padding:16px 4px 4px}
+  body.m2 .m2-more-it{padding:14px 4px;font-size:15px}
   body.m2 #expMenu{position:fixed!important;inset:0!important;left:0!important;top:0!important;width:100%!important;max-width:none!important;max-height:none!important;border-radius:0;border:0;z-index:95;box-shadow:none}
   body.m2 .exp-menu button{padding:14px 16px;font-size:15px}
   body.m2 .exp-menu .exp-lang{padding:10px 16px;font-size:13px}
@@ -458,7 +485,7 @@ textarea{resize:none;line-height:1.4}
           <button id="m2Theme">&#9788; Canvia el tema</button>
           <button id="m2Out">Surt de Google</button>
         </div>
-        <button class="btn-g btn-sm" id="btnM2" style="width:100%;font-size:12px;margin-bottom:6px" title="Prova el disseny nou per al mòbil. Només canvia com es veu en pantalles estretes; a l'ordinador no fa res.">&#129514; Disseny mòbil nou: no</button>
+        <button class="btn-g btn-sm" id="btnM2" style="width:100%;font-size:12px;margin-bottom:6px" title="Prova el disseny nou: al mòbil, pantalla neta amb tres botons a baix; a l'ordinador, comptadors a dalt i un sol menú «Més». Es pot tornar enrere quan vulguis.">&#129514; Disseny nou: no</button>
         <button class="btn-g btn-sm" id="btnHelp" style="width:100%;font-size:12px;margin-bottom:6px" title="Com fer servir l'aplicació">&#128214; Manual d'&uacute;s</button>
         <button class="btn-g btn-sm" id="btnManuals" style="width:100%;font-size:12px" title="Manuals de recanvis guardats a Drive">&#128218; Manuals de recanvis</button>
         <button class="btn-g btn-sm" id="btnGemKey" style="width:100%;font-size:12px;margin-top:6px" title="La clau de Gemini que fa servir el corrector i la traducció dels informes; es desa només en aquest navegador">&#128273; Clau de Gemini</button>
@@ -2697,7 +2724,7 @@ function renderLogArea(){
         body.appendChild(ac);
       }
       if(isOpen)div.addEventListener("click",function(ev){
-        if(!m2On())return;
+        if(!M2)return;
         if(ev.target.closest(".thumb,.audio-chip,button,a,video,audio,input,select"))return;
         openEdit(e.id);
       });
@@ -2787,6 +2814,7 @@ function renderContent(){
         +"<button data-lbl=\"1\" title=\"Les ha traduïdes Gemini i surten a cada fila de cada pàgina: val la pena mirar-les un cop\">Revisa-les…</button></div>"
       :"")
     +"<button data-fmt=\"pdf\">📄 PDF</button><button data-fmt=\"docx\">📄 Word (DOCX)</button><button data-fmt=\"html\">📄 HTML</button><button data-fmt=\"xlsx\">📊 Recanvis (Excel)</button><button data-fmt=\"timesheet\">🧾 Full d'hores…</button><button data-fmt=\"zip\" title=\"Tot: tots els informes, els fitxers multimèdia i session.json — la còpia que es pot tornar a importar\">🗄 ZIP del projecte (arxiu)</button><button data-fmt=\"zipdocx\" title=\"L'informe Word amb totes les fotos, vídeos i notes de veu — per lliurar. No es pot tornar a importar.\">📦 ZIP Word + multimèdia</button></div></div>"
+    +"<button class=\"btn-sm m2-dk\" id=\"btnM2More2\" title=\"Historial, carpeta, manual, full d'hores, dades de la visita…\">&#8942; Més</button>"
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSync\" title=\"Sincronitza ara\">⟳</button>":"")
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSessSync\" title=\"Recrea les carpetes de Drive i puja-hi les fotos que hi faltin, d'aquesta sessió\">&#9729; Desa</button>":"")
     +"</div>"
@@ -3715,7 +3743,7 @@ try{
 function m2On(){try{return M2&&matchMedia("(max-width:700px)").matches}catch(e){return false}}
 function m2Apply(){
   document.body.classList.toggle("m2",M2);
-  var b=$$("btnM2");if(b)b.innerHTML="&#129514; Disseny mòbil nou: "+(M2?"sí":"no");
+  var b=$$("btnM2");if(b)b.innerHTML="&#129514; Disseny nou: "+(M2?"sí":"no");
 }
 m2Apply();
 $$("btnM2").addEventListener("click",function(){
@@ -3794,6 +3822,7 @@ function m2Wire(active,isOpen){
     });
   }
   var pend=$$("m2Pend");if(pend)pend.addEventListener("click",openMachineHistory);
+  var more2=$$("btnM2More2");if(more2)more2.addEventListener("click",function(e){e.stopPropagation();openM2More()});
   if(!isOpen)return;
   Array.prototype.forEach.call(document.querySelectorAll("[data-m2close]"),function(b){b.addEventListener("click",m2Hide)});
   var add=$$("m2Add");if(add)add.addEventListener("click",function(){addEntry()});
@@ -3842,7 +3871,7 @@ function openM2More(){
       $$("manualChip")?it("&#128218;","Manual de recanvis",/Vincula/.test($$("manualChip").textContent)?"sense vincular":"",click("manualChip")):null,
       $$("drawingsChip")?it("&#128208;","Dibuixos","",click("drawingsChip")):null,
       it("&#9998;","Dades de la visita",a.contact||"",function(){openNewModal(a)}),
-      isOpen?it("&#128221;","Notes generals",(a.notes||"").trim()?"":"buides",function(){m2Show("notes");var t=$$("notesIn");if(t)t.focus()}):null,
+      isOpen&&m2On()?it("&#128221;","Notes generals",(a.notes||"").trim()?"":"buides",function(){m2Show("notes");var t=$$("notesIn");if(t)t.focus()}):null,
       $$("btnSessSync")?it("&#9729;","Desa a Drive","fotos que hi faltin",click("btnSessSync")):null,
       $$("btnSync")?it("&#10227;","Sincronitza ara","",click("btnSync")):null,
       isOpen?it("&#9632;","Tanca la visita","",click("btnClose")):it("&#8634;","Reobre la visita","",click("btnReopen")),

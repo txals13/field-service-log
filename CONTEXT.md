@@ -690,7 +690,17 @@ Field Service Log/
     failed stays, and the summary says which.
   - A session changed since its last revision still asks for the revision
     number, one dialog per session: that's a decision, not a formality.
-  - Works without the archive folder too (tablet): the ZIPs go to Downloads.
+  - Works without the archive folder too (tablet): the ZIPs go to Downloads —
+    **but then nothing is deleted.** `exportSessionZip` sets `lastZipTo`
+    ("arxiu" when the archive folder took the write, "download" otherwise),
+    and only "arxiu" lets `archiveSessions` delete. A download is handed to the
+    browser and the app never sees whether it arrived whole: on 2026-10-11 a
+    project ZIP made on the phone reached Drive with 0 bytes (see `dlBlob`).
+    The summary lists those as "Descarregades, però NO esborrades".
+- **`dlBlob` revokes its object URL after 60 s, not straight after the
+  click.** Desktop Chrome copies the blob on click; Android's download manager
+  fetches it later, and a URL already revoked gave a file with the right name
+  and zero bytes — every download on the phone, reports included.
   - **`deleteSession` never trashes a Drive folder another session still
     holds** (`folderId`). Two visits used to share a folder by name; binning it
     for one would have taken the other's photos with it.

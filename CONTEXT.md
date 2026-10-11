@@ -435,6 +435,11 @@ Field Service Log/
   dialog scroll instead.
 - Sidebar on the phone: + Nova visita on top, then the visits, the tools at
   the end in one scroll.
+- **The ✕ that deletes a visit from the list** is a 40 px button in its own
+  lane at the right of the row on any screen up to 700 px, switch on or off
+  (`.sitem{padding-right:50px}`). It was an 11 px glyph on top of the red
+  problem count, which on Android could be neither seen nor hit; the first
+  version of the new layout had hidden it outright in favour of Més.
 - **On a wide screen (>700 px) the same switch** brings the order across but
   folds nothing away — there is room: the sidebar, the filter and the composer
   stay. Counters move under the header (`.s-hdr` order -2, `.stat-bar` -1)

@@ -735,6 +735,37 @@ Field Service Log/
     holds** (`folderId`). Two visits used to share a folder by name; binning it
     for one would have taken the other's photos with it.
 
+- **The project ZIP goes to Google Drive by default** (2026-10-12;
+  `arxMode`, `driveArxFolder`, `saveToDriveArxiu`, `driveUploadZip`,
+  `listDriveArxiu`). Through the API, into the Drive of the signed-in
+  account — so it follows the account, works on the phone and tablet, and is
+  a write the app can verify: the upload reply's `size` must equal the blob's
+  or it counts as not arrived (a short new file is binned) and the ZIP is
+  downloaded instead. `lastZipTo` is "arxiu" for it, so bulk archive may delete.
+  - Resumable, in 8 MB pieces, with "Pujant a Drive N %" on the export
+    button; 308 + `Range` moves the offset on.
+  - Same session + same name → the file is REPLACED (resumable PATCH);
+    another session's file of that name → `_2`, `_3`… The owner is the
+    `appProperties.fslSession` the app writes on upload, so nothing is
+    downloaded to find out.
+  - **drive.file**: the hand-made `Arxiu` folder is invisible, so it is
+    pointed at once with the Picker (`pickDriveArxFolder`, FOLDERS view,
+    `setSelectFolderEnabled`), which hands the app that folder; or one is
+    made (`makeDriveArxFolder`). Stored in `localStorage['fsl_v6_arxdrive']`
+    ({id,name}); unreachable (other account) → forgotten and asked again on
+    the next export — asked while the export's click is fresh.
+  - The listing for "Tria què carregar" only shows ZIPs the app wrote (or was
+    handed); "＋ Altres ZIP de Drive…" opens the Picker for older ones. Listed
+    files are stand-ins (`_drive` id) that `importFiles` downloads only when
+    their turn comes (`driveStandInToFile`).
+  - **The computer's folder stays as a choice** (`localStorage
+    ['fsl_v6_arxmode']` = "local"), used only when chosen AND `fsaOK()` AND
+    `arxDir`; otherwise Drive. The dialog is now "📁 Carpetes", archive
+    choice first, the photo-dialog folder second.
+  - Verified against a stand-in Drive: 20 MB in three pieces with progress,
+    same session replaced, other session `_2`, a short upload refused, the
+    listing and a stand-in turned back into a File. The Picker itself needs a
+    real sign-in and was not exercised here.
 - **📁 Carpeta del projecte — the file dialog opens where the photos are**
   (`pickMedia`, `fsaPick`, `startDirFor`; sidebar button `btnOutDir`).
   - Drive for desktop mirrors `Outputs` onto a drive letter, so a session's

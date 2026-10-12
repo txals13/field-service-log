@@ -288,27 +288,27 @@
   <li><span class="btn">🗄 Arxiva i esborra N sessions</span>.</li>
 </ol>
 <p>Cada visita es desa com el seu ZIP del projecte, en l'idioma del seu informe. <strong>Només s'esborra una visita si el seu ZIP ha sortit bé.</strong> Si una visita ha canviat des de l'última revisió, pregunta per la revisió com quan l'exportes sola. Al final surt un resum amb el client i el projecte de cada una.</p>
-<p>Els ZIP van a la <a href="#ordinador">carpeta d'arxiu</a> si n'has triat una; si no, a Baixades.</p>
-<div class="warn"><p><strong>Al mòbil i a la tauleta, les visites no s'esborren soles.</strong> Allà el ZIP va a Baixades, i l'aplicació no pot comprovar que hi hagi arribat sencer. El resum diu quines s'han descarregat: obre el ZIP o mira'n la mida, i després esborra la visita des de <span class="btn">⋮ Més</span>. Només s'esborren soles a l'ordinador, quan el ZIP s'ha desat a la carpeta d'arxiu.</p></div>
-<div class="tip"><p>A la carpeta d'arxiu, tornar a arxivar la mateixa visita amb la mateixa revisió <strong>substitueix</strong> el seu ZIP, no en crea un <code>_2</code>. Només s'afegeix <code>_2</code> si el nom coincideix amb el ZIP d'una altra visita (mateix client, màquina i projecte).</p></div>
+<p>Els ZIP van on diu <a href="#ordinador">📁 Carpetes</a>: per defecte, a la carpeta d'arxiu del teu <strong>Google Drive</strong>; o, si ho tries, a una carpeta de l'ordinador.</p>
+<div class="warn"><p><strong>Una visita només s'esborra si l'app ha vist arribar el seu ZIP sencer</strong> a Drive o a la carpeta de l'ordinador. Si el ZIP va a Baixades (sense haver entrat amb Google, o si la pujada falla), el resum diu «Descarregades, però NO esborrades»: obre el ZIP o mira'n la mida, i després esborra la visita des de <span class="btn">⋮ Més</span>.</p></div>
+<div class="tip"><p>Tornar a arxivar la mateixa visita amb la mateixa revisió <strong>substitueix</strong> el seu ZIP, no en crea un <code>_2</code>. Només s'afegeix <code>_2</code> si el nom coincideix amb el ZIP d'una altra visita (mateix client, màquina i projecte).</p></div>
 
 <h3>Tornar a carregar</h3>
 <ul>
-  <li><span class="btn">⇧ Importa</span> (a dalt): tria un o diversos ZIP o JSON alhora. Al mòbil i a la tauleta, al selector, obre el menú ☰ i tria <strong>Drive</strong>. Ves a <code>Field Service Log › Arxiu</code> i mantén premut el primer fitxer per marcar-ne més.</li>
-  <li>A l'ordinador, amb carpeta d'arxiu: <span class="btn">📁 Carpeta del projecte</span> › <span class="btn">⬇ Tria què carregar…</span> llista els ZIP de la carpeta, amb mida i data. No n'hi ha cap marcat per defecte; marca els que vulguis i <span class="btn">⬇ Carrega'n N</span>.</li>
+  <li><span class="btn">📁 Carpetes</span> › <span class="btn">⬇ Tria què carregar…</span>, a qualsevol aparell: llista els ZIP de la carpeta d'arxiu, amb mida i data. No n'hi ha cap marcat per defecte; marca els que vulguis i <span class="btn">⬇ Carrega'n N</span>. A Drive només hi surten els ZIP que hi ha desat l'app; els d'abans, amb <span class="btn">＋ Altres ZIP de Drive…</span>, que obre el selector de Google.</li>
+  <li><span class="btn">⇧ Importa</span> (a dalt): tria un o diversos ZIP o JSON alhora des del selector de fitxers de l'aparell. Al mòbil i a la tauleta, al selector, obre el menú ☰ i tria <strong>Drive</strong>, i mantén premut el primer fitxer per marcar-ne més.</li>
 </ul>
 <p>Les visites que ja hi són se salten soles, o sigui que no passa res si en marques alguna de repetida. Les fotos i els vídeos del ZIP es tornen a pujar a Drive. Cal tenir la sessió de Google iniciada; si no, els vídeos no es recuperen.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
-<h2 id="ordinador">14. Carpetes de l'ordinador</h2>
-<p>Només a <strong>Chrome o Edge d'ordinador</strong>, i té sentit si tens Drive per a escriptori, que fa que les carpetes de Drive apareguin com una unitat de l'ordinador. Barra lateral › <span class="btn">📁 Carpeta del projecte</span>:</p>
-<div class="scroll"><table>
-  <tr><th>Secció</th><th>Quina carpeta triar</th><th>Què fa</th></tr>
-  <tr><td><strong>Carpeta del projecte</strong></td><td><code>G:\My Drive\Field Service Log\Outputs</code></td><td>El diàleg d'afegir fotos s'obre directament a la carpeta de la visita.</td></tr>
-  <tr><td><strong>Carpeta d'arxiu</strong></td><td><code>G:\My Drive\Field Service Log\Arxiu</code></td><td>El ZIP del projecte s'hi desa directament, sense passar per Baixades, i Drive el puja sol. També hi és <span class="btn">⬇ Tria què carregar…</span>.</td></tr>
-</table></div>
-<p>La lletra de la unitat pot ser una altra, i «My Drive» pot dir-se «La meva unitat». Tria <strong>Outputs</strong> i no la carpeta d'una visita, perquè l'app hi busca la subcarpeta de cada visita.</p>
-<p>Al mòbil i a la tauleta el navegador no deixa obrir carpetes; per això aquestes opcions no hi surten. Fes servir <span class="btn">⇧ Importa</span> per carregar i Baixades per desar.</p>
+<h2 id="ordinador">14. Carpetes</h2>
+<p>Barra lateral › <span class="btn">📁 Carpetes</span>. Hi ha dues coses:</p>
+<h3>On es desa el ZIP del projecte</h3>
+<ul>
+  <li><strong>Google Drive</strong> (per defecte): el ZIP es puja directament al Drive del compte amb què has entrat, a qualsevol aparell. Si entres amb un altre compte, va al Drive d'aquell compte. La primera vegada et demana que assenyalis la carpeta amb el selector de Google (per exemple <code>Field Service Log › Arxiu</code>), o en pots crear una de nova amb <span class="btn">＋ Crea'n una</span>. L'app comprova que el ZIP ha arribat sencer; si no, el descarrega perquè no es perdi.</li>
+  <li><strong>Una carpeta d'aquest ordinador</strong> (només Chrome i Edge d'ordinador): per si l'has de desar en un altre lloc. <span class="btn">🗄 Tria la carpeta…</span> la tria, i <span class="btn">✕ Oblida-la</span> torna a Drive.</li>
+</ul>
+<h3>Carpeta del projecte (fotos, a l'ordinador)</h3>
+<p>Només a Chrome i Edge d'ordinador, amb Drive per a escriptori. Tria <code>G:\My Drive\Field Service Log\Outputs</code> i el diàleg d'afegir fotos s'obrirà directament a la carpeta de la visita. La lletra de la unitat pot ser una altra, i «My Drive» pot dir-se «La meva unitat». Tria <strong>Outputs</strong> i no la carpeta d'una visita.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="drive">15. Drive i sincronització</h2>
@@ -345,8 +345,9 @@
   <tr><td>Fotos i vídeos</td><td>📷 càmera, 🎥 vídeo, 🖼 galeria</td><td>📷 obre una carpeta</td></tr>
   <tr><td>Notes de veu</td><td>🎙</td><td>🎙</td></tr>
   <tr><td>Signar</td><td>Amb el dit</td><td>Amb el ratolí o un llapis</td></tr>
-  <tr><td>Carpeta del projecte i d'arxiu</td><td>No</td><td>Chrome i Edge</td></tr>
-  <tr><td>Carregar ZIP</td><td>⇧ Importa (es pot triar Drive al selector)</td><td>⇧ Importa o ⬇ Tria què carregar…</td></tr>
+  <tr><td>ZIP del projecte</td><td>A Google Drive</td><td>A Google Drive, o a una carpeta de l'ordinador</td></tr>
+  <tr><td>Carpeta del projecte (fotos)</td><td>No</td><td>Chrome i Edge</td></tr>
+  <tr><td>Carregar ZIP</td><td>📁 Carpetes › Tria què carregar…, o ⇧ Importa</td><td>📁 Carpetes › Tria què carregar…, o ⇧ Importa</td></tr>
 </table></div>
 
 <!-- ───────────────────────────────────────────────────────────── -->

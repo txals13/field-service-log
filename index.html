@@ -496,6 +496,7 @@ textarea{resize:none;line-height:1.4}
         <button class="btn-g btn-sm" id="btnM2" style="width:100%;font-size:12px;margin-bottom:6px" title="Prova el disseny nou: al mòbil, pantalla neta amb tres botons a baix; a l'ordinador, comptadors a dalt i un sol menú «Més». Es pot tornar enrere quan vulguis.">&#129514; Disseny nou: no</button>
         <div id="appVer" style="font-size:10.5px;color:var(--tx3);text-align:center;margin-bottom:2px;font-family:monospace">&mdash;</div>
         <div id="driveInfo" style="font-size:10.5px;color:var(--tx3);text-align:center;margin-bottom:6px;line-height:1.4"></div>
+        <button class="btn-g btn-sm" id="btnCamCopy" style="display:none;width:100%;font-size:12px;margin-bottom:6px" title="Cada foto feta amb 📷 també es desa a Baixades del telèfon, amb el client i el projecte al nom">&#128247; Còpia de les fotos al telèfon: no</button>
         <button class="btn-g btn-sm" id="btnHelp" style="width:100%;font-size:12px;margin-bottom:6px" title="Com fer servir l'aplicació">&#128214; Manual d'&uacute;s</button>
         <button class="btn-g btn-sm" id="btnManuals" style="width:100%;font-size:12px" title="Manuals de recanvis guardats a Drive">&#128218; Manuals de recanvis</button>
         <button class="btn-g btn-sm" id="btnGemKey" style="width:100%;font-size:12px;margin-top:6px" title="La clau de Gemini que fa servir el corrector i la traducció dels informes; es desa només en aquest navegador">&#128273; Clau de Gemini</button>
@@ -3608,8 +3609,43 @@ function wireCapture(btnId,inputId,bk){
   var b=$$(btnId),i=$$(inputId);
   if(!b||!i)return;
   b.addEventListener("click",function(){i.click()});
-  i.addEventListener("change",function(e){handleFiles(e,bk)});
+  i.addEventListener("change",function(e){camCopy(e.target.files);handleFiles(e,bk)});
 }
+// ── A COPY OF EACH CAMERA PHOTO ON THE PHONE ─────────────────────────────────
+// A photo taken through the app goes to the app and to Drive, and the camera
+// app usually keeps none of it in the gallery. With this on, each one is also
+// downloaded. A web page cannot make folders in Downloads or write to
+// DCIM/Camera, so the grouping is in the NAME instead: client and project
+// first, then the time — CAVES_MAS_DEL_PLA_P-2026-163_20261012_101530.jpg —
+// and the phone's Downloads sort them together. Photos only: a video copy
+// would double the phone's storage for something already on Drive.
+var LS_CAMCOPY="fsl_v6_camcopy";
+function camCopyOn(){try{return localStorage.getItem(LS_CAMCOPY)==="1"}catch(e){return false}}
+function camCopyLabel(){
+  var b=$$("btnCamCopy");if(!b)return;
+  b.style.display=handheld()?"":"none";
+  b.innerHTML="&#128247; Còpia de les fotos al telèfon: "+(camCopyOn()?"sí":"no");
+}
+function camCopy(fileList){
+  if(!camCopyOn())return;
+  var files=Array.prototype.slice.call(fileList||[]).filter(function(f){return /^image\//.test(f.type||"")||/\.(jpe?g|png|heic|heif|webp)$/i.test(f.name||"")});
+  if(!files.length)return;
+  var a=sessions.find(function(x){return x.id===aid})||{};
+  var pre=[a.client,a.project||a.machine].filter(function(v){return String(v||"").trim()}).map(sanitize).join("_")||"foto";
+  files.forEach(function(f,k){
+    var d=new Date(f.lastModified||Date.now());
+    function p2(x){return ("0"+x).slice(-2)}
+    var stamp=d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+"_"+p2(d.getHours())+p2(d.getMinutes())+p2(d.getSeconds());
+    var ext=(/\.[a-z0-9]+$/i.exec(f.name||"")||[".jpg"])[0].toLowerCase();
+    dlBlob(f,pre+"_"+stamp+(files.length>1?"_"+(k+1):"")+ext);
+  });
+}
+$$("btnCamCopy").addEventListener("click",function(){
+  try{localStorage.setItem(LS_CAMCOPY,camCopyOn()?"0":"1")}catch(e){}
+  camCopyLabel();
+  if(camCopyOn())alert("A partir d'ara, cada foto feta amb 📷 també es desarà a Baixades del telèfon, amb el client i el projecte al principi del nom.\n\nEl primer cop, Chrome pot demanar permís per baixar diversos fitxers: digues que sí.");
+});
+camCopyLabel();
 // Shows the capture buttons only where capturing means something, and renames
 // the old one for what it now is: once the camera has its own button, "afegeix
 // una foto" is the gallery.
@@ -4463,7 +4499,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-12 · 7";
+var APP_VERSION="2026-10-12 · 8";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // A page of its own beside the app, so it can be read alongside it.
 $$("btnHelp").addEventListener("click",function(){window.open("manual.html","_blank","noopener")});

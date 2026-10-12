@@ -2419,18 +2419,6 @@ $$("drawWrap").addEventListener("wheel",function(e){
 })();
 
 // ── DRIVE SYNC ───────────────────────────────────────────────────────────────
-async function findDataFile(token){
-  var rootId=await getRootId(token);
-  var MIME="application/json";
-  var q="name="+JSON.stringify(DATA_FILE)+" and trashed=false and mimeType="+JSON.stringify(MIME)+(rootId?" and "+JSON.stringify(rootId)+" in parents":"");
-  var r=await fetch("https://www.googleapis.com/drive/v3/files?q="+encodeURIComponent(q)+"&fields=files(id)",{headers:{Authorization:"Bearer "+token}});
-  if(r.ok){var d=await r.json();if(d.files&&d.files.length)return d.files[0].id}
-  // fallback: global search
-  var q2="name="+JSON.stringify(DATA_FILE)+" and trashed=false and mimeType="+JSON.stringify(MIME);
-  var r2=await fetch("https://www.googleapis.com/drive/v3/files?q="+encodeURIComponent(q2)+"&fields=files(id)",{headers:{Authorization:"Bearer "+token}});
-  if(r2.ok){var d2=await r2.json();if(d2.files&&d2.files.length)return d2.files[0].id}
-  return null;
-}
 // ── OUTPUTS DECIDES WHICH VISITS EXIST ───────────────────────────────────────
 // The data file is merged by keeping BOTH sides' sessions, which is right for
 // edits but wrong for deletions: a visit deleted on the phone was still in the
@@ -2533,33 +2521,100 @@ async function reconcileOutputs(token){
     }
   }catch(e){}   // offline or Drive hiccup: nothing changes, next pass tries again
 }
+// ── ONE DATA FILE, NEVER A SECOND ────────────────────────────────────────────
+// 2026-10-12: a second field_service_log_data.json, holding just "[]", turned
+// up beside the real one, and the phone showed nothing. How: on sign-in the
+// app loads and then ALWAYS saves; if the load had not found the file — a
+// search that failed for a moment looked exactly like "there is none" — the
+// save created a new one from what that device had, and a fresh phone has
+// nothing. From then on every device read whichever of the two Drive listed
+// first.
+// So, two rules:
+//   · a new data file is only ever created after a listing that SUCCEEDED and
+//     found none (dataFileChecked). A failed search is an error, not a "no".
+//   · every load lists them all; if there is more than one, they are merged
+//     (newest updatedAt per visit, as with the local copy), the merge is
+//     written into one of them and the rest go to the Drive trash. A
+//     duplicate made by an older version heals itself on the next load.
+var dataFileChecked=false;
+// All the data files: in the app's root folder, or anywhere if none there.
+// Throws when Drive does not answer — the caller must not read that as "none".
+async function listDataFiles(token){
+  var rootId=await getRootId(token);
+  async function q(query){
+    var r=await fetch("https://www.googleapis.com/drive/v3/files?q="+encodeURIComponent(query)
+      +"&fields=files(id,modifiedTime,size)&pageSize=50",{headers:{Authorization:"Bearer "+token}});
+    if(!r.ok)throw new Error("Drive ha respost "+r.status);
+    return (await r.json()).files||[];
+  }
+  var base="name="+JSON.stringify(DATA_FILE)+" and trashed=false and mimeType="+JSON.stringify("application/json");
+  var list=rootId?await q(base+" and "+JSON.stringify(rootId)+" in parents"):[];
+  if(!list.length)list=await q(base);
+  return list;
+}
+async function findDataFile(token){var l=await listDataFiles(token);return l.length?l[0].id:null}
+// Newest updatedAt wins per visit; visits only one side has are kept.
+function mergeSessionLists(a,b){
+  var byId={};
+  (a||[]).concat(b||[]).forEach(function(x){
+    if(!x||!x.id)return;
+    var cur=byId[x.id];
+    if(!cur||(x.updatedAt||"")>(cur.updatedAt||""))byId[x.id]=x;
+  });
+  return Object.keys(byId).map(function(k){return byId[k]});
+}
+async function readDataFile(token,id){
+  var r=await fetch("https://www.googleapis.com/drive/v3/files/"+id+"?alt=media",{headers:{Authorization:"Bearer "+token}});
+  if(!r.ok)throw new Error("Drive ha respost "+r.status);
+  var d=await r.json();
+  return Array.isArray(d)?d:[];
+}
+// Resolves true when Drive was read (or there was nothing there to read).
 async function loadFromDrive(){
-  var token=await ensureToken();if(!token){setSyncSt("error","No autenticat");return}
+  var token=await ensureToken();if(!token){setSyncSt("error","No autenticat");return false}
   setSyncSt("loading","Carregant de Google Drive…");
   try{
-    if(!driveFileId)driveFileId=await findDataFile(token);
-    saveTok();
-    if(!driveFileId){await reconcileOutputs(token);setSyncSt("ok","Drive connectat");return}
-    var r=await fetch("https://www.googleapis.com/drive/v3/files/"+driveFileId+"?alt=media",{headers:{Authorization:"Bearer "+token}});
-    if(r.ok){
-      var data=await r.json();
-      if(Array.isArray(data)){
-        // Merge: for a session present both remotely and locally, keep whichever
-        // was modified more recently (session.updatedAt, ISO strings sort
-        // chronologically) instead of blindly letting remote win — otherwise a
-        // manual/​reconnect sync could discard a just-made local edit. Remote-only
-        // and local-only sessions are both preserved.
-        var localById={};sessions.forEach(function(s){localById[s.id]=s});
-        var merged=data.map(function(rs){var ls=localById[rs.id];return(ls&&(ls.updatedAt||"")>(rs.updatedAt||""))?ls:rs});
-        var remIds=new Set(data.map(function(s){return s.id}));
-        sessions=orderSessions(merged.concat(sessions.filter(function(s){return !remIds.has(s.id)})));
-        saveLocal();
-      }
+    var files=await listDataFiles(token);
+    dataFileChecked=true;
+    if(!files.length){
+      driveFileId=null;saveTok();
       await reconcileOutputs(token);
-      setSyncSt("ok","Sincronitzat ✓");
-    } else if(r.status===404){driveFileId=null;saveTok();setSyncSt("ok","Drive connectat")}
-    else setSyncSt("error","Error de lectura de Drive");
-  }catch(e){setSyncSt("error","Sense connexió (dades locals)")}
+      setSyncSt("ok","Drive connectat");
+      return true;
+    }
+    // Keep the biggest — the one with the work in it, and its version history
+    // on Drive — never an empty newcomer, even if this device was writing to
+    // that one. The merge goes into it either way.
+    files.sort(function(x,y){return (+y.size||0)-(+x.size||0)});
+    var keep=files[0];
+    var data=await readDataFile(token,keep.id);
+    var dupes=files.filter(function(f){return f.id!==keep.id});
+    for(var i=0;i<dupes.length;i++){
+      try{data=mergeSessionLists(data,await readDataFile(token,dupes[i].id))}catch(e){dupes[i].unread=true}
+    }
+    driveFileId=keep.id;saveTok();
+    // Merge with this device: for a session present on both sides keep the
+    // more recently modified one (a just-made local edit must not be thrown
+    // away by a sync); sessions only one side has are both kept.
+    var localById={};sessions.forEach(function(s){localById[s.id]=s});
+    var merged=data.map(function(rs){var ls=localById[rs.id];return(ls&&(ls.updatedAt||"")>(rs.updatedAt||""))?ls:rs});
+    var remIds=new Set(data.map(function(s){return s.id}));
+    sessions=orderSessions(merged.concat(sessions.filter(function(s){return !remIds.has(s.id)})));
+    saveLocal();
+    if(dupes.length){
+      // one file again: write the merge, then bin the copies that were read
+      var w=await fetch("https://www.googleapis.com/upload/drive/v3/files/"+keep.id+"?uploadType=media",
+        {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify(sessions)});
+      if(w.ok)for(var j=0;j<dupes.length;j++){
+        if(dupes[j].unread)continue;
+        try{await fetch("https://www.googleapis.com/drive/v3/files/"+dupes[j].id,
+          {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({trashed:true})})}catch(e){}
+      }
+    }
+    await reconcileOutputs(token);
+    setSyncSt("ok","Sincronitzat ✓");
+    return true;
+  }catch(e){setSyncSt("error","Sense connexió (dades locals)");return false}
 }
 async function saveToDrive(){
   // Serialize: two concurrent saves both seeing driveFileId===null would each
@@ -2569,12 +2624,25 @@ async function saveToDrive(){
   savingDrive=true;
   try{
     var token=await ensureToken();if(!token){saveLocal();return}
+    // Never write before Drive has been read on this page: the save would
+    // stand in for data it has not seen. Read first (it merges), then write.
+    if(!dataFileChecked&&!await loadFromDrive()){
+      saveLocal();setSyncSt("error","Encara no s'ha pogut llegir Drive: desat en aquest aparell");
+      return;
+    }
     setSyncSt("loading","Desant…");
     try{
       var body=JSON.stringify(sessions),r;
       if(driveFileId){
         r=await fetch("https://www.googleapis.com/upload/drive/v3/files/"+driveFileId+"?uploadType=media",{method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:body});
-        if(r.status===404){driveFileId=null;saveTok()} // deleted in Drive — recreate below from the sessions already loaded
+        // Gone from Drive: do NOT recreate it from here — what this device holds
+        // may be a fraction of the data. List again on the next load.
+        if(r.status===404){driveFileId=null;dataFileChecked=false;saveTok()}
+      }
+      // A new data file only after a listing that worked and found none.
+      if(!driveFileId&&!dataFileChecked){
+        saveLocal();setSyncSt("error","Encara no s'ha pogut llegir Drive: desat en aquest aparell");
+        return;
       }
       if(!driveFileId){
         var rootId=await getRootId(token);
@@ -2631,8 +2699,10 @@ function signOut(){
 $$("btnLogout").addEventListener("click",signOut);
 async function finishLogin(){
   isLoggedIn=true;hideAuthExpired();updateAuthUI();
-  await loadFromDrive();
-  await saveToDrive(); // push any sessions created locally before signing in
+  // push any sessions created locally before signing in — but only once Drive
+  // has been read: saving after a failed load is how a second, empty data file
+  // was born
+  if(await loadFromDrive())await saveToDrive();
   flushTrash();        // and bin the attachments deleted while signed out
   loadManualsIndex(); // fire-and-forget: populate the manuals list in the background
   renderAll();

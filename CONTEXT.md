@@ -273,6 +273,27 @@ Field Service Log/
             ├── photos/
             └── videos/
 ```
+- **There is one data file, and a second is never made blind** (2026-10-12;
+  `listDataFiles`, `dataFileChecked`, `mergeSessionLists`). A second
+  `field_service_log_data.json` holding `[]` appeared beside the real one and
+  the phone showed nothing: sign-in loaded, then ALWAYS saved, and a load that
+  had failed to find the file (an error looked like "none") let the save
+  create a new one from a phone that held nothing; after that each device
+  read whichever Drive listed first.
+  - Every load lists ALL the data files. More than one → they are merged
+    (newest `updatedAt` per visit), the merge is written into the BIGGEST
+    (the one with the work and its version history, never the empty
+    newcomer) and the others go to the Drive trash. A duplicate heals on the
+    next load anywhere.
+  - A listing that fails throws; it is never read as "there is none".
+    `dataFileChecked` is set only by a listing that worked, and only then may
+    `saveToDrive` create a file. A save before any successful load reads
+    first; a 404 on PATCH clears the flag instead of recreating the file.
+  - Sign-in saves only if the load worked (`if(await loadFromDrive())…`).
+  - Verified against a stand-in Drive: the real file + an empty duplicate +
+    a phone holding one visit → all five visits, written into the big file,
+    the empty one binned; Drive not answering → nothing created; an empty
+    Drive → the first file is created.
 - **The session folders in Outputs decide which visits exist**
   (`reconcileOutputs`, run by every `loadFromDrive`, so on opening and every
   30 s). The data-file merge keeps both sides' sessions, which suits edits but

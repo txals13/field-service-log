@@ -318,6 +318,8 @@ textarea{resize:none;line-height:1.4}
    m2-blk / m2-flx / m2-inl / m2-grd are the phone-only pieces, by display. */
 .m2-blk,.m2-flx,.m2-inl,.m2-grd,.m2-sx,.m2-dk,#m2Title{display:none}
 .m2-sev button.on{background:var(--bg0);border-width:2px}
+.arx-opt{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--br);border-radius:8px;cursor:pointer;font-size:13px}
+.arx-opt:has(input:checked){border-color:var(--gold);background:var(--goldbg)}
 .m2-more-it{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--br);border-radius:0;padding:12px 4px;font-size:14px;color:var(--tx1);white-space:normal}
 .m2-more-it:hover{background:var(--bg2)}
 .m2-more-it .ic{width:24px;text-align:center;font-size:17px;flex-shrink:0}
@@ -496,7 +498,7 @@ textarea{resize:none;line-height:1.4}
         <button class="btn-g btn-sm" id="btnManuals" style="width:100%;font-size:12px" title="Manuals de recanvis guardats a Drive">&#128218; Manuals de recanvis</button>
         <button class="btn-g btn-sm" id="btnGemKey" style="width:100%;font-size:12px;margin-top:6px" title="La clau de Gemini que fa servir el corrector i la traducció dels informes; es desa només en aquest navegador">&#128273; Clau de Gemini</button>
         <button class="btn-g btn-sm" id="btnBulkArx" style="width:100%;font-size:12px;margin-top:6px" title="Tria les sessions acabades: cadascuna es desa com el seu ZIP del projecte i surt de l'aplicació">&#128452; Arxiva sessions&hellip;</button>
-        <button class="btn-g btn-sm" id="btnOutDir" style="width:100%;font-size:12px;margin-top:6px" title="Obre el diàleg de fotos directament a la carpeta de la sessió, si tens Drive sincronitzat en aquest ordinador">&#128193; Carpeta del projecte</button>
+        <button class="btn-g btn-sm" id="btnOutDir" style="width:100%;font-size:12px;margin-top:6px" title="On es desa el ZIP del projecte (Drive o una carpeta de l'ordinador), i on s'obre el diàleg de fotos">&#128193; Carpetes</button>
       </div>
       <div class="s-list" id="sList"></div>
     </div>
@@ -704,6 +706,7 @@ textarea{resize:none;line-height:1.4}
       <div style="display:flex;gap:6px;margin-bottom:8px">
         <button class="btn-xs" id="arxAll">Tots</button>
         <button class="btn-xs" id="arxNone">Cap</button>
+        <button class="btn-xs" id="arxMore" style="display:none;margin-left:auto" title="Els ZIP que no hi ha desat l'aplicació, com els d'abans: tria'ls al selector de Google">&#65291; Altres ZIP de Drive&hellip;</button>
       </div>
       <div id="arxList" style="max-height:52vh;overflow:auto;border:1px solid var(--br);border-radius:8px"></div>
       <div class="modal-actions">
@@ -742,21 +745,30 @@ textarea{resize:none;line-height:1.4}
 
   <div class="modal-back" id="fsaBack" style="display:none">
     <div class="modal" style="max-width:min(96vw,520px)">
-      <div class="modal-title">&#128193; Carpetes d'aquest ordinador</div>
-      <div style="font-size:12px;font-weight:700;letter-spacing:.4px">CARPETA DEL PROJECTE</div>
+      <div class="modal-title">&#128193; Carpetes</div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:.4px">ON ES DESA EL ZIP DEL PROJECTE</div>
+      <div id="arxDestNote" class="ts-note" style="margin:4px 0 8px">&mdash;</div>
+      <label class="arx-opt"><input type="radio" name="arxMode" value="drive" style="width:auto">
+        <span><strong>Google Drive</strong> del compte amb què has entrat<br><span class="ts-note" id="arxDriveName">&mdash;</span></span></label>
+      <div style="display:flex;gap:6px;justify-content:flex-end;margin:6px 0 10px;flex-wrap:wrap">
+        <button class="btn-sm" id="arxDriveNew" title="Crea una carpeta Arxiu nova dins de Field Service Log">&#65291; Crea'n una</button>
+        <button class="btn-gold" id="arxDrivePick">&#128269; Assenyala-la a Drive&hellip;</button>
+      </div>
+      <label class="arx-opt"><input type="radio" name="arxMode" value="local" style="width:auto">
+        <span><strong>Una carpeta d'aquest ordinador</strong><br><span class="ts-note" id="fsaArxNote">&mdash;</span></span></label>
+      <div style="display:flex;gap:6px;justify-content:flex-end;margin:6px 0 10px;flex-wrap:wrap">
+        <button class="btn-sm" id="fsaArxClear">&#10005; Oblida-la</button>
+        <button class="btn-gold" id="fsaArxPick">&#128452; Tria la carpeta&hellip;</button>
+      </div>
+      <div style="display:flex;gap:6px;justify-content:flex-end;margin:0 0 18px;flex-wrap:wrap">
+        <button class="btn-sm" id="fsaArxLoad" style="display:none">&#8681; Tria qu&egrave; carregar&hellip;</button>
+      </div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:.4px">CARPETA DEL PROJECTE <span style="font-weight:400;color:var(--tx3)">(fotos, a l'ordinador)</span></div>
       <div id="fsaNote" class="ts-note" style="margin:4px 0 6px">&mdash;</div>
       <div class="ts-note">Si tens Drive per a escriptori sincronitzant <code>Field Service Log/Outputs</code> en una unitat d'aquest ordinador, tria-la un cop i cada &laquo;afegeix foto&raquo; s'obrir&agrave; ja dins la carpeta de la sessi&oacute;. Nom&eacute;s serveix per dir-li al di&agrave;leg on ha de comen&ccedil;ar: l'aplicaci&oacute; no llegeix res de la carpeta pel seu compte, i els fitxers hi entren perqu&egrave; els tries tu.</div>
       <div style="display:flex;gap:6px;justify-content:flex-end;margin:8px 0 16px;flex-wrap:wrap">
         <button class="btn-sm" id="fsaClear">&#10005; Oblida-la</button>
         <button class="btn-gold" id="fsaPickBtn">&#128193; Tria la carpeta&hellip;</button>
-      </div>
-      <div style="font-size:12px;font-weight:700;letter-spacing:.4px">CARPETA D'ARXIU</div>
-      <div id="fsaArxNote" class="ts-note" style="margin:4px 0 6px">&mdash;</div>
-      <div class="ts-note">On es desa el <strong>ZIP del projecte</strong>, directament i sense passar per Baixades. Tria <code>G:\My Drive\Field Service Log\Arxiu</code> un cop i cada exportaci&oacute; hi anir&agrave; sola; Drive per a escriptori ja se n'encarrega de pujar-la. El paquet Word + multim&egrave;dia, que &eacute;s per lliurar, se segueix baixant com sempre. Si un dia no s'hi pot escriure, el ZIP es baixa i no es perd.</div>
-      <div style="display:flex;gap:6px;justify-content:flex-end;margin:8px 0 0;flex-wrap:wrap">
-        <button class="btn-sm" id="fsaArxLoad" style="display:none">&#8681; Tria qu&egrave; carregar&hellip;</button>
-        <button class="btn-sm" id="fsaArxClear">&#10005; Oblida-la</button>
-        <button class="btn-gold" id="fsaArxPick">&#128452; Tria la carpeta&hellip;</button>
       </div>
       <div class="modal-actions">
         <button id="fsaCancel">Tanca</button>
@@ -3451,7 +3463,29 @@ function wireFsa(){
       await outDirSave(h);openFsa();
     }catch(e){if(e&&e.name!=="AbortError")alert("No s'ha pogut obrir la carpeta: "+((e&&e.message)||e))}
   });
-  $$("fsaArxClear").addEventListener("click",async function(){await arxDirSave(null);openFsa()});
+  $$("fsaArxClear").addEventListener("click",async function(){await arxDirSave(null);arxModeSet("drive");openFsa()});
+  Array.prototype.forEach.call(document.querySelectorAll("input[name=arxMode]"),function(r){
+    r.addEventListener("change",function(){
+      if(!r.checked)return;
+      arxModeSet(r.value);
+      if(r.value==="local"&&!arxDir)$$("fsaArxPick").click();
+      else openFsa();
+    });
+  });
+  $$("arxDrivePick").addEventListener("click",async function(){
+    if(!isLoggedIn){alert("Primer entra amb Google.");return}
+    var token=await ensureToken();if(!token)return;
+    var got=await pickDriveArxFolder(token);
+    if(got){arxDriveSet(got);arxModeSet("drive")}
+    openFsa();
+  });
+  $$("arxDriveNew").addEventListener("click",async function(){
+    if(!isLoggedIn){alert("Primer entra amb Google.");return}
+    var token=await ensureToken();if(!token)return;
+    var made=await makeDriveArxFolder(token);
+    if(!made)alert("No s'ha pogut crear la carpeta a Drive.");else arxModeSet("drive");
+    openFsa();
+  });
   // Everything in the archive folder, in one go. The permission is asked here,
   // with the click in hand — reading twenty ZIPs takes a while and by the end
   // of it the gesture would be long gone.
@@ -3463,6 +3497,19 @@ function wireFsa(){
   // date, not the contents: a folder of several gigabytes is listed for free
   // and only what you tick is ever read.
   $$("fsaArxLoad").addEventListener("click",async function(){
+    if(arxMode()==="drive"){
+      var bd=$$("fsaArxLoad");bd.disabled=true;
+      try{
+        var token=await ensureToken();if(!token)return;
+        var fid=await driveArxFolder(token,false);
+        if(!fid){alert("Primer assenyala la carpeta d'arxiu a Drive.");return}
+        var list=await listDriveArxiu(token,fid);
+        $$("fsaBack").style.display="none";
+        openArxPicker(list,(arxDriveGet()||{}).name||"Drive",fid);
+      }catch(e){alert("No s'ha pogut llegir la carpeta d'arxiu de Drive: "+((e&&e.message)||e))}
+      finally{bd.disabled=false}
+      return;
+    }
     if(!arxDir||!arxDir.values)return;
     var b=$$("fsaArxLoad");b.disabled=true;
     try{
@@ -3513,6 +3560,13 @@ function wireArx(){
   $$("arxAll").addEventListener("click",function(){setAll(true)});
   $$("arxNone").addEventListener("click",function(){setAll(false)});
   $$("arxList").addEventListener("change",arxCount);
+  $$("arxMore").addEventListener("click",async function(){
+    var token=await ensureToken();if(!token)return;
+    var picked=await pickDriveZips(token,arxDriveFolder);
+    if(!picked.length)return;
+    close();
+    await importFiles(picked);
+  });
   $$("arxGo").addEventListener("click",async function(){
     var pick=[];
     Array.prototype.forEach.call($$("arxList").querySelectorAll("input[type=checkbox]:checked"),function(c){
@@ -3523,11 +3577,14 @@ function wireArx(){
     await importFiles(pick);
   });
 }
-function openArxPicker(files){
+var arxDriveFolder=null;
+function openArxPicker(files,where,driveFolderId){
   wireArx();
-  arxFiles=files;
-  $$("arxNote").textContent=files.length+" fitxer(s) a "+(arxDir&&arxDir.name||"la carpeta d'arxiu")
-    +". Els que ja tinguis aquí se saltaran sols, o sigui que no passa res si en marques algun de repetit.";
+  arxFiles=files;arxDriveFolder=driveFolderId||null;
+  $$("arxMore").style.display=arxDriveFolder?"":"none";
+  $$("arxNote").textContent=files.length+" fitxer(s) a "+(where||(arxDir&&arxDir.name)||"la carpeta d'arxiu")
+    +". Els que ja tinguis aquí se saltaran sols, o sigui que no passa res si en marques algun de repetit."
+    +(arxDriveFolder?" Només surten els ZIP que hi ha desat l'aplicació; els d'abans, amb «Altres ZIP de Drive»." : "");
   $$("arxList").innerHTML=files.map(function(f,i){
     var d=f.lastModified?dmy(new Date(f.lastModified).toISOString().slice(0,10)):"";
     return "<label style=\"display:flex;align-items:center;gap:10px;padding:7px 10px;border-bottom:1px solid var(--br);cursor:pointer\">"
@@ -3540,6 +3597,191 @@ function openArxPicker(files){
   arxCount();
   $$("arxBack").style.display="flex";
 }
+// ── THE ARCHIVE ON GOOGLE DRIVE ──────────────────────────────────────────────
+// The project ZIP goes, by default, straight into the Drive of whichever
+// account is signed in — through the API, like the session folders in
+// Outputs. That follows the account by itself (sign in as somebody else and
+// it is their Drive), works on the phone and the tablet, which have no folders
+// to pick, and is a write the app can VERIFY: the reply carries the size, and
+// a ZIP that arrived short is treated as not arrived. The other choice stays:
+// a folder on this computer (arxDir), picked as before, for when it has to go
+// somewhere else.
+//
+// drive.file means the app only sees what it made or was handed. The Arxiu
+// folder people already have was made by hand in Explorer, so it is invisible;
+// it is pointed at once with Google's picker (which hands the app that one
+// folder) or a new one is made. Stored per browser; signing in with another
+// account finds the stored id unreachable and asks again.
+var LS_ARXMODE="fsl_v6_arxmode",LS_ARXDRIVE="fsl_v6_arxdrive";
+function arxModePref(){try{return localStorage.getItem(LS_ARXMODE)==="local"?"local":"drive"}catch(e){return "drive"}}
+function arxModeSet(m){try{localStorage.setItem(LS_ARXMODE,m)}catch(e){}}
+// What actually happens: the computer's folder only when chosen AND usable.
+function arxMode(){return (arxModePref()==="local"&&fsaOK()&&arxDir)?"local":"drive"}
+function arxDriveGet(){try{return JSON.parse(localStorage.getItem(LS_ARXDRIVE)||"null")}catch(e){return null}}
+function arxDriveSet(v){try{if(v)localStorage.setItem(LS_ARXDRIVE,JSON.stringify(v));else localStorage.removeItem(LS_ARXDRIVE)}catch(e){}}
+// The folder's id, checked to be there; with `interactive`, asks for it when
+// there is none (the export calls this while its click is still fresh).
+async function driveArxFolder(token,interactive){
+  var v=arxDriveGet();
+  if(v&&v.id){
+    var info=await driveFileInfo(token,v.id);
+    if(info&&!info.trashed)return v.id;
+    arxDriveSet(null);
+  }
+  if(!interactive)return null;
+  if(!confirm("On vols desar el ZIP del projecte a Drive?\n\nAccepta per assenyalar la carpeta (per exemple Field Service Log › Arxiu). Només cal fer-ho la primera vegada.\nCancel·la per descarregar-lo, com fins ara."))return null;
+  var got=await pickDriveArxFolder(token);
+  if(got){arxDriveSet(got);return got.id}
+  if(confirm("No n'has triat cap. Vols que en creï una de nova, «Arxiu», dins de Field Service Log?")){
+    var made=await makeDriveArxFolder(token);
+    if(made)return made.id;
+  }
+  return null;
+}
+async function makeDriveArxFolder(token){
+  var rootId=await getRootId(token);if(!rootId)return null;
+  var id=await driveFolder(token,"Arxiu",rootId);if(!id)return null;
+  var v={id:id,name:"Field Service Log › Arxiu"};arxDriveSet(v);return v;
+}
+// Google's picker over folders, starting at Field Service Log. Resolves with
+// {id,name} or null.
+async function pickDriveArxFolder(token){
+  var P=await loadPicker();
+  if(!P){alert("No s'ha pogut carregar el selector de Google. Comprova la connexió.");return null}
+  var rootId=null;try{rootId=await getRootId(token)}catch(e){}
+  return new Promise(function(res){
+    try{
+      var view=new P.DocsView(P.ViewId.FOLDERS);
+      view.setIncludeFolders(true);view.setSelectFolderEnabled(true);
+      view.setMimeTypes("application/vnd.google-apps.folder");
+      if(rootId)try{view.setParent(rootId)}catch(e){}
+      new P.PickerBuilder()
+        .setOAuthToken(token).setDeveloperKey(PICKER_KEY).setAppId(PICKER_APP)
+        .addView(view)
+        .setTitle("Assenyala la carpeta on es desen els ZIP del projecte")
+        .setCallback(function(d){
+          if(d.action===P.Action.PICKED){
+            var x=(d[P.Response.DOCUMENTS]||[])[0];
+            res(x?{id:x.id,name:x.name||"Arxiu"}:null);
+          }else if(d.action===P.Action.CANCEL)res(null);
+        }).build().setVisible(true);
+    }catch(e){alert("El selector de Google ha fallat: "+((e&&e.message)||e));res(null)}
+  });
+}
+// Resumable upload in 8 MB pieces, so a 300 MB project on a phone connection
+// survives and the progress can be shown. existingId: replace that file's
+// contents instead of creating one. Resolves with {id,name,size} or null.
+async function driveUploadZip(token,blob,meta,existingId,onProg){
+  try{
+    var init=await fetch("https://www.googleapis.com/upload/drive/v3/files"+(existingId?"/"+existingId:"")
+      +"?uploadType=resumable&fields=id,name,size",{
+      method:existingId?"PATCH":"POST",
+      headers:{Authorization:"Bearer "+token,"Content-Type":"application/json; charset=UTF-8",
+               "X-Upload-Content-Type":"application/zip","X-Upload-Content-Length":String(blob.size)},
+      body:JSON.stringify(meta||{})
+    });
+    if(!init.ok)return null;
+    var loc=init.headers.get("Location");if(!loc)return null;
+    var CH=8*1024*1024,off=0,total=blob.size;
+    while(off<total){
+      var end=Math.min(off+CH,total);
+      var r=await fetch(loc,{method:"PUT",headers:{"Content-Range":"bytes "+off+"-"+(end-1)+"/"+total},body:blob.slice(off,end)});
+      if(r.status===308){
+        var rg=r.headers.get("Range");
+        off=rg?parseInt(rg.split("-")[1],10)+1:end;
+        if(onProg)onProg(off/total);
+        continue;
+      }
+      if(r.ok)return await r.json();
+      return null;
+    }
+    return null;
+  }catch(e){return null}
+}
+// The same session's same revision replaces its own ZIP (as in the computer's
+// folder); any other name clash gets _2, _3… Which session a ZIP belongs to is
+// written on it as an appProperty when the app uploads it, so nothing has to
+// be downloaded to find out. Returns the name it ended up with, or false.
+async function saveToDriveArxiu(folderId,name,blob,sessId){
+  var token=await ensureToken();if(!token)return false;
+  async function same(nm){
+    var q="name="+JSON.stringify(nm)+" and "+JSON.stringify(folderId)+" in parents and trashed=false";
+    var r=await fetch("https://www.googleapis.com/drive/v3/files?q="+encodeURIComponent(q)+"&fields=files(id,appProperties)",
+      {headers:{Authorization:"Bearer "+token}});
+    if(!r.ok)throw new Error("Drive ha respost "+r.status);
+    return (await r.json()).files||[];
+  }
+  try{
+    var dot=name.lastIndexOf("."),base=dot>0?name.slice(0,dot):name,ext=dot>0?name.slice(dot):"";
+    var target=null,existing=null;
+    for(var i=1;i<100&&!target;i++){
+      var nm=i===1?name:base+"_"+i+ext,hits=await same(nm);
+      var mine=hits.filter(function(f){return f.appProperties&&f.appProperties.fslSession===sessId})[0];
+      if(mine){target=nm;existing=mine.id}
+      else if(!hits.length)target=nm;
+    }
+    if(!target)return false;
+    var meta=existing?{}:{name:target,parents:[folderId],mimeType:"application/zip",appProperties:{fslSession:sessId}};
+    var up=await driveUploadZip(token,blob,meta,existing,function(f){expBusy("Pujant a Drive "+Math.round(f*100)+" %…")});
+    // Verified, not assumed: a ZIP that arrived short has not arrived.
+    if(!up||String(up.size)!==String(blob.size)){
+      // a new file that arrived short is binned, not left looking like an archive
+      if(up&&up.id&&!existing)try{await fetch("https://www.googleapis.com/drive/v3/files/"+up.id,
+        {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({trashed:true})})}catch(e){}
+      return false;
+    }
+    return target;
+  }catch(e){return false}
+}
+// The ZIPs the app can see in the Drive archive folder, as light stand-ins for
+// File: name, size, date, and the id to fetch them with when their turn comes.
+async function listDriveArxiu(token,folderId){
+  var out=[],pt="";
+  do{
+    var q=JSON.stringify(folderId)+" in parents and trashed=false and (mimeType='application/zip' or mimeType='application/x-zip-compressed' or name contains '.zip' or name contains '.json')";
+    var r=await fetch("https://www.googleapis.com/drive/v3/files?q="+encodeURIComponent(q)
+      +"&fields=nextPageToken,files(id,name,size,modifiedTime)&pageSize=1000"+(pt?"&pageToken="+encodeURIComponent(pt):""),
+      {headers:{Authorization:"Bearer "+token}});
+    if(!r.ok)throw new Error("Drive ha respost "+r.status);
+    var d=await r.json();
+    (d.files||[]).forEach(function(f){
+      if(!/\.(zip|json)$/i.test(f.name||""))return;
+      out.push({name:f.name,size:+f.size||0,lastModified:Date.parse(f.modifiedTime)||0,_drive:f.id});
+    });
+    pt=d.nextPageToken||"";
+  }while(pt);
+  return out.sort(function(x,y){return x.name.localeCompare(y.name)});
+}
+// A stand-in becomes a real File only when importFiles reaches it.
+async function driveStandInToFile(f){
+  var token=await ensureToken();if(!token)throw new Error("sense sessió de Google");
+  var r=await fetch("https://www.googleapis.com/drive/v3/files/"+f._drive+"?alt=media",{headers:{Authorization:"Bearer "+token}});
+  if(!r.ok)throw new Error("Drive ha respost "+r.status);
+  var b=await r.blob();
+  return new File([b],f.name,{type:b.type||"application/zip"});
+}
+// ZIPs the app did not write — the ones from before, put there by Drive for
+// desktop — picked one by one, which is what hands the app access to them.
+async function pickDriveZips(token,folderId){
+  var P=await loadPicker();
+  if(!P){alert("No s'ha pogut carregar el selector de Google. Comprova la connexió.");return []}
+  return new Promise(function(res){
+    try{
+      var view=new P.DocsView(P.ViewId.DOCS);
+      view.setIncludeFolders(true);
+      if(folderId)try{view.setParent(folderId)}catch(e){}
+      new P.PickerBuilder()
+        .setOAuthToken(token).setDeveloperKey(PICKER_KEY).setAppId(PICKER_APP)
+        .enableFeature(P.Feature.MULTISELECT_ENABLED)
+        .addView(view).setTitle("Tria els ZIP que vols carregar")
+        .setCallback(function(d){
+          if(d.action===P.Action.PICKED)res((d[P.Response.DOCUMENTS]||[]).filter(function(x){return /\.(zip|json)$/i.test(x.name||"")})
+            .map(function(x){return {name:x.name,size:+x.sizeBytes||0,lastModified:+x.lastEditedUtc||0,_drive:x.id}}));
+          else if(d.action===P.Action.CANCEL)res([]);
+        }).build().setVisible(true);
+    }catch(e){alert("El selector de Google ha fallat: "+((e&&e.message)||e));res([])}
+  });
+}
 function openFsa(){
   wireFsa();
   var ok=fsaOK();
@@ -3549,11 +3791,22 @@ function openFsa(){
     :(outDir?"Ara mateix comença a <code>"+esc(outDir.name)+"</code>."
             :"Encara no n'hi ha cap, o sigui que el diàleg s'obre on el vas deixar l'últim cop.");
   $$("fsaArxPick").disabled=!ok;
-  $$("fsaArxLoad").style.display=(ok&&arxDir)?"":"none";
+  $$("fsaArxClear").disabled=!ok||!arxDir;
   $$("fsaArxNote").innerHTML=!ok
-    ?"Aquest navegador no ho permet: va a Chrome i a Edge d'escriptori. A la resta, el ZIP es baixa com sempre."
-    :(arxDir?"El ZIP del projecte es desa a <code>"+esc(arxDir.name)+"</code>."
-            :"Encara no n'hi ha cap: el ZIP del projecte es baixa a Baixades.");
+    ?"Només a Chrome i Edge d'ordinador."
+    :(arxDir?"<code>"+esc(arxDir.name)+"</code>":"Encara no n'has triat cap.");
+  var dv=arxDriveGet();
+  $$("arxDriveName").innerHTML=dv?esc(dv.name||"Arxiu"):"Encara no n'has assenyalat cap: te la demanarà el primer cop que exportis.";
+  var pref=arxModePref(),mode=arxMode();
+  Array.prototype.forEach.call(document.querySelectorAll("input[name=arxMode]"),function(r){
+    r.checked=r.value===pref;r.disabled=r.value==="local"&&!ok;
+  });
+  $$("arxDestNote").innerHTML=!isLoggedIn&&mode==="drive"
+    ?"Sense haver entrat amb Google, el ZIP es descarrega."
+    :(mode==="drive"?"Ara: a <strong>Google Drive</strong>. Funciona igual al mòbil, a la tauleta i a l'ordinador."
+      :"Ara: a <strong>"+esc(arxDir.name)+"</strong>, en aquest ordinador.")
+     +(pref==="local"&&mode!=="local"?" <span style=\"color:var(--orange)\">La carpeta de l'ordinador no està disponible, o sigui que va a Drive.</span>":"");
+  $$("fsaArxLoad").style.display=((mode==="drive"&&isLoggedIn&&dv)||(mode==="local"))?"":"none";
   $$("fsaBack").style.display="flex";
 }
 function handleFiles(e,bk){
@@ -4370,6 +4623,10 @@ async function importFiles(files){
     var f=files[i];
     if(files.length>1)setSyncSt("loading","Important "+(i+1)+"/"+files.length+" · "+f.name+"…");
     try{
+      if(f&&f._drive){
+        if(files.length<=1)setSyncSt("loading","Baixant "+f.name+" de Drive…");
+        f=await driveStandInToFile(f);
+      }
       var t=/\.zip$/i.test(f.name)?await importSessionZip(f):await importJsonFile(f);
       ["added","skipped","restored","failed","noLogin"].forEach(function(k){sum[k]+=(t&&t[k])||0});
     }catch(err){bad.push(f.name+": "+((err&&err.message)||err))}
@@ -7642,7 +7899,10 @@ async function exportSessionZip(s,kind){
   if(!await ensureLabels(reportLang(s)))return;   // same gate as a single report
   // While the click is still counted as a gesture: after this comes a minute
   // of translating and zipping, and by then the permission prompt is refused.
-  var arxOn=archive&&arxDir?await arxPermission(true):false;
+  var arxWhere=archive?arxMode():null;
+  var arxOn=arxWhere==="local"?await arxPermission(true):false;
+  // Drive: the folder is asked for now, the first time, with the click fresh.
+  var drvArx=arxWhere==="drive"?await driveArxFolder(token,true):null;
   var arxOk=false;
   var rev=await ensureRevision(s);
   if(!rev)return;
@@ -7764,6 +8024,11 @@ async function exportSessionZip(s,kind){
     // gets in the way (no permission, folder gone, disk full) falls back to the
     // download, so the ZIP is never lost on the way out.
     if(arxOn)arxOk=await saveToArxiu(zipName,zipBlob,s.id);
+    else if(drvArx){
+      expBusy("Pujant a Drive…");
+      arxOk=await saveToDriveArxiu(drvArx,zipName,zipBlob,s.id);
+      if(!arxOk)alert("No s'ha pogut pujar el ZIP a Drive (o no hi ha arribat sencer). Es descarrega, perquè no es perdi.");
+    }
     if(!arxOk)dlBlob(zipBlob,zipName);
     lastZipTo=arxOk?"arxiu":"download";
     // Only the archive stamps zipAt: the delete dialog reads it as "a complete
@@ -7778,7 +8043,7 @@ async function exportSessionZip(s,kind){
   finally{expBusy("")}
   // Says WHICH file, because a suffix means the folder now holds more than one
   // go at this revision and that is worth noticing when it happens.
-  if(arxOk){expBusy("\ud83d\uddc4 "+(arxOk===zipName?"Desat a la carpeta d'arxiu":"Desat com a "+arxOk));setTimeout(function(){expBusy("")},4000)}
+  if(arxOk){expBusy("\ud83d\uddc4 "+(arxOk===zipName?(drvArx?"Desat a Drive":"Desat a la carpeta d'arxiu"):"Desat com a "+arxOk));setTimeout(function(){expBusy("")},4000)}
 }
 
 // ── CLOSE DROPDOWNS ───────────────────────────────────────────────────────────

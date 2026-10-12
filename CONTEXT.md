@@ -290,6 +290,21 @@ Field Service Log/
     `saveToDrive` create a file. A save before any successful load reads
     first; a 404 on PATCH clears the flag instead of recreating the file.
   - Sign-in saves only if the load worked (`if(await loadFromDrive())…`).
+  - **Saves are read-modify-write.** The same day the phone, having read the
+    file while it was empty, saved "[]" fifteen seconds after the computer had
+    saved an imported visit — and the computer, with nothing changed on its
+    side, never wrote it back. Now `saveToDrive` re-reads the file and merges
+    (`mergeSessionLists`, newest `updatedAt` per visit) before writing, minus
+    the visits this device deleted (`LS_GONE`), so it adds to what is there
+    instead of replacing it. And `loadFromDrive` pushes back what only this
+    device holds (or holds newer) once the reconcile has had its say, so
+    anything deleted elsewhere is not resurrected. Still not a lock: two
+    writes in the same second can race, but neither can blank the other.
+  - A folder in Outputs with no session.json yet is looked at again after
+    two minutes (`outputsProbed` keeps a time until one is found).
+- **`APP_VERSION`, shown in the sidebar** ("Versió …"), so a phone running an
+  old copy out of its cache can be told from one with the fix. **Bump it with
+  every change that goes out.**
   - Verified against a stand-in Drive: the real file + an empty duplicate +
     a phone holding one visit → all five visits, written into the big file,
     the empty one binned; Drive not answering → nothing created; an empty

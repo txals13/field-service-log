@@ -494,6 +494,7 @@ textarea{resize:none;line-height:1.4}
           <button id="m2Out">Surt de Google</button>
         </div>
         <button class="btn-g btn-sm" id="btnM2" style="width:100%;font-size:12px;margin-bottom:6px" title="Prova el disseny nou: al mòbil, pantalla neta amb tres botons a baix; a l'ordinador, comptadors a dalt i un sol menú «Més». Es pot tornar enrere quan vulguis.">&#129514; Disseny nou: no</button>
+        <div id="appVer" style="font-size:10.5px;color:var(--tx3);text-align:center;margin-bottom:6px;font-family:monospace">&mdash;</div>
         <button class="btn-g btn-sm" id="btnHelp" style="width:100%;font-size:12px;margin-bottom:6px" title="Com fer servir l'aplicació">&#128214; Manual d'&uacute;s</button>
         <button class="btn-g btn-sm" id="btnManuals" style="width:100%;font-size:12px" title="Manuals de recanvis guardats a Drive">&#128218; Manuals de recanvis</button>
         <button class="btn-g btn-sm" id="btnGemKey" style="width:100%;font-size:12px;margin-top:6px" title="La clau de Gemini que fa servir el corrector i la traducció dels informes; es desa només en aquest navegador">&#128273; Clau de Gemini</button>
@@ -2501,9 +2502,13 @@ async function reconcileOutputs(token){
     var known={};sessions.forEach(function(x){if(x.folderId)known[x.folderId]=1});
     for(var j=0;j<folders.length;j++){
       var f=folders[j];
-      if(known[f.id]||outputsProbed[f.id])continue;
-      outputsProbed[f.id]=1;
+      // Once found and read, never again this page load; not found, look again
+      // in two minutes — the session.json is often written a moment AFTER
+      // the folder, and the first look came too early (2026-10-12).
+      if(known[f.id]||(outputsProbed[f.id]&&(outputsProbed[f.id]===true||Date.now()-outputsProbed[f.id]<120000)))continue;
+      outputsProbed[f.id]=Date.now();
       var sj=await driveFind(token,"session.json",f.id,"application/json");if(!sj)continue;
+      outputsProbed[f.id]=true;
       var rr=await fetch("https://www.googleapis.com/drive/v3/files/"+sj+"?alt=media",{headers:{Authorization:"Bearer "+token}});
       if(!rr.ok)continue;
       var list=null;try{list=await rr.json()}catch(e){}
@@ -2597,9 +2602,12 @@ async function loadFromDrive(){
     // more recently modified one (a just-made local edit must not be thrown
     // away by a sync); sessions only one side has are both kept.
     var localById={};sessions.forEach(function(s){localById[s.id]=s});
-    var merged=data.map(function(rs){var ls=localById[rs.id];return(ls&&(ls.updatedAt||"")>(rs.updatedAt||""))?ls:rs});
+    var ahead=false;
+    var merged=data.map(function(rs){var ls=localById[rs.id];
+      if(ls&&(ls.updatedAt||"")>(rs.updatedAt||"")){ahead=true;return ls}return rs});
     var remIds=new Set(data.map(function(s){return s.id}));
-    sessions=orderSessions(merged.concat(sessions.filter(function(s){return !remIds.has(s.id)})));
+    var onlyHere=sessions.filter(function(s){return !remIds.has(s.id)});
+    sessions=orderSessions(merged.concat(onlyHere));
     saveLocal();
     if(dupes.length){
       // one file again: write the merge, then bin the copies that were read
@@ -2612,6 +2620,14 @@ async function loadFromDrive(){
       }
     }
     await reconcileOutputs(token);
+    // This device holds visits — or newer versions — that the file does not:
+    // put them back up. Without this a visit another device's save had wiped
+    // from the file sat on this screen and nowhere else, because nothing here
+    // had changed to trigger a save (2026-10-12: the 077 visit on the computer,
+    // an empty file for the phone). What the reconcile just dropped is already
+    // gone from `sessions`, so nothing deleted is pushed back.
+    var stillHere=onlyHere.some(function(x){return sessions.some(function(y){return y.id===x.id})});
+    if((stillHere||ahead)&&!dupes.length){isDirty=true;setTimeout(function(){if(isLoggedIn)saveToDrive()},0)}
     setSyncSt("ok","Sincronitzat ✓");
     return true;
   }catch(e){setSyncSt("error","Sense connexió (dades locals)");return false}
@@ -2632,6 +2648,19 @@ async function saveToDrive(){
     }
     setSyncSt("loading","Desant…");
     try{
+      // Read-modify-write. Another device may have saved since this one last
+      // read: writing our list over theirs threw their visits away (the phone
+      // wrote "[]" fifteen seconds after the computer had saved a visit). So
+      // read the file again, add what is in it, and only then write — minus
+      // what this device deleted, which must not ride back in on the merge.
+      if(driveFileId){
+        try{
+          var latest=await readDataFile(token,driveFileId),gone=goneGet();
+          var mergedNow=mergeSessionLists(latest,sessions).filter(function(x){return !(x.id in gone)});
+          if(mergedNow.length!==sessions.length){sessions=orderSessions(mergedNow);saveLocal();setTimeout(renderAll,0)}
+          else sessions=orderSessions(mergedNow);
+        }catch(e){}   // could not read it: write what we have, as before
+      }
       var body=JSON.stringify(sessions),r;
       if(driveFileId){
         r=await fetch("https://www.googleapis.com/upload/drive/v3/files/"+driveFileId+"?uploadType=media",{method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:body});
@@ -4353,6 +4382,11 @@ function openM2More(){
   m2Show("more");
   $$("m2MoreBack").style.display="flex";
 }
+// Which version this device is running — shown in the sidebar, so a phone
+// still on an old copy from its cache can be told apart from one that has the
+// fix. Bump it with every change that goes out.
+var APP_VERSION="2026-10-12 · 4";
+(function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // A page of its own beside the app, so it can be read alongside it.
 $$("btnHelp").addEventListener("click",function(){window.open("manual.html","_blank","noopener")});
 $$("btnBulkArx").addEventListener("click",function(){if(mob())closeSide();openBulkArchive()});

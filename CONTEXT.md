@@ -302,6 +302,19 @@ Field Service Log/
     writes in the same second can race, but neither can blank the other.
   - A folder in Outputs with no session.json yet is looked at again after
     two minutes (`outputsProbed` keeps a time until one is found).
+  - **A deleted-visit note gives way to the same visit with a NEW folder.**
+    Notes now keep which folder was deleted (`{f, done}`; old plain strings
+    are read as `{f: s, done: s===""}`). A copy with no folder or with that
+    very folder is held back (`goneBlocks`, used by the save's merge); a copy
+    whose folder is a different one, live in Outputs, is the visit brought
+    back on purpose — re-imported on another device — and the note is
+    dropped. Before, the note was forever: a visit deleted on the phone and
+    imported again on the computer never showed on the phone.
+- **The sidebar says which Google account and what Drive holds**
+  (`refreshDriveInfo`, `#driveInfo`): "Compte: x@… · A Drive: N visites · M
+  carpetes a Outputs · hh:mm", from Drive's `about` and the last load. Right
+  version + nothing on screen has two causes — another account, or the app
+  hiding what it found — and this line tells them apart.
 - **`APP_VERSION`, shown in the sidebar** ("Versió …"), so a phone running an
   old copy out of its cache can be told from one with the fix. **Bump it with
   every change that goes out.**

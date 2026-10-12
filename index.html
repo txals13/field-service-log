@@ -2735,7 +2735,37 @@ async function saveToDrive(){
   }
 }
 function scheduleSave(){if(aid)sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{updatedAt:now()}):s});isDirty=true;saveLocal();if(saveTimer)clearTimeout(saveTimer);saveTimer=setTimeout(function(){if(isDirty&&isLoggedIn)saveToDrive()},2000)}
-function scheduleSync(){if(syncStarted)return;syncStarted=true;setInterval(function(){if(isLoggedIn&&!isDirty&&!hasUnsaved()){loadFromDrive().then(renderAll);flushTrash()}},30000)}
+// The background sync. It used to skip itself whenever the cursor sat in a
+// text field — so as not to wipe what was being typed — and on the computer
+// the cursor nearly always sits in the description box, so it simply never
+// ran; a visit imported on the phone never reached the computer's screen
+// (2026-10-12). Now it always reads Drive; it only holds back the REDRAW of
+// the visit while something is being typed, and redraws as soon as the field
+// is left. A pending save is no longer a reason to skip either: the save now
+// reads and merges first, so it does the sync's job too.
+// Also on coming back to the app (phone woken, tab shown): an interval does
+// not run while a phone app sleeps, so it waited up to half a minute.
+var syncBusy=false,lastSyncAt=0,redrawPending=false;
+function syncTick(force){
+  if(!isLoggedIn||syncBusy)return;
+  if(!force&&Date.now()-lastSyncAt<5000)return;
+  syncBusy=true;lastSyncAt=Date.now();
+  var p=isDirty?saveToDrive():loadFromDrive();
+  Promise.resolve(p).then(function(){
+    if(hasUnsaved()){renderSidebar();redrawPending=true}
+    else{redrawPending=false;renderAll()}
+  }).catch(function(){}).then(function(){syncBusy=false});
+  flushTrash();
+}
+function scheduleSync(){
+  if(syncStarted)return;syncStarted=true;
+  setInterval(function(){syncTick(true)},30000);
+  document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")syncTick()});
+  window.addEventListener("focus",function(){syncTick()});
+  document.addEventListener("focusout",function(){
+    setTimeout(function(){if(redrawPending&&!hasUnsaved()){redrawPending=false;renderAll()}},0);
+  });
+}
 function hasUnsaved(){if(mediaRec)return true;var a=document.activeElement;if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return true;var e=$$("entIn");if(e&&e.value.trim())return true;if(pImgs.length)return true;if(editingId)return true;return false}
 function setSyncSt(state,msg){
   var bar=$$("syncBar"),st=$$("syncSt");
@@ -4432,7 +4462,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-12 · 5";
+var APP_VERSION="2026-10-12 · 6";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // A page of its own beside the app, so it can be read alongside it.
 $$("btnHelp").addEventListener("click",function(){window.open("manual.html","_blank","noopener")});

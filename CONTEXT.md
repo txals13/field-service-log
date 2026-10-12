@@ -1204,21 +1204,25 @@ var sw = "self.addEventListener('fetch', function(e){" +
 Google OAuth does NOT work from `file://` URLs.
 App must ALWAYS be opened from `https://txals13.github.io/field-service-log/`
 
-### Auto-sync wipes unsaved input
-Background sync calls `renderAll()` which rebuilds the DOM.
-Always check for unsaved input before syncing:
-```js
-function hasUnsaved() {
-  var e = document.getElementById("entIn");
-  if (e && e.value.trim()) return true;
-  if (pImgs.length) return true;      // pending photos
-  if (editingId) return true;         // edit modal open
-  return false;
-}
-setInterval(function() {
-  if (isLoggedIn && !isDirty && !hasUnsaved()) loadFromDrive().then(renderAll);
-}, 30000);
-```
+### Auto-sync wipes unsaved input — so hold the REDRAW, not the sync
+Background sync calls `renderAll()`, which rebuilds the visit's DOM and would
+throw away whatever is being typed. The first answer was to skip the whole
+sync while `hasUnsaved()` (focus in an INPUT/TEXTAREA/SELECT, text in the
+composer, pending photos, the edit dialog open, a recording) — and on the
+computer the cursor nearly always sits in the description box, so the sync
+never ran at all: a visit imported on the phone never reached the computer's
+screen (2026-10-12). It also skipped while `isDirty`, so one failed save
+stopped syncing for good.
+
+Now (`syncTick`, `scheduleSync`):
+- every 30 s it ALWAYS syncs: `saveToDrive()` if there is something to save
+  (it reads and merges first, so it syncs too), `loadFromDrive()` otherwise;
+- while something is being typed it redraws only the sidebar and sets
+  `redrawPending`; the first `focusout` that leaves nothing unsaved redraws
+  the rest;
+- it also runs on `visibilitychange` → visible and on window `focus`
+  (throttled to one every 5 s): a phone app's interval does not run while it
+  sleeps, so coming back to it waited up to half a minute.
 
 ### addEntry timeout for EXIF + upload
 Photo EXIF reading and video uploads are async. Use a safe timeout:

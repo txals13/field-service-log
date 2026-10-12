@@ -494,7 +494,8 @@ textarea{resize:none;line-height:1.4}
           <button id="m2Out">Surt de Google</button>
         </div>
         <button class="btn-g btn-sm" id="btnM2" style="width:100%;font-size:12px;margin-bottom:6px" title="Prova el disseny nou: al mòbil, pantalla neta amb tres botons a baix; a l'ordinador, comptadors a dalt i un sol menú «Més». Es pot tornar enrere quan vulguis.">&#129514; Disseny nou: no</button>
-        <div id="appVer" style="font-size:10.5px;color:var(--tx3);text-align:center;margin-bottom:6px;font-family:monospace">&mdash;</div>
+        <div id="appVer" style="font-size:10.5px;color:var(--tx3);text-align:center;margin-bottom:2px;font-family:monospace">&mdash;</div>
+        <div id="driveInfo" style="font-size:10.5px;color:var(--tx3);text-align:center;margin-bottom:6px;line-height:1.4"></div>
         <button class="btn-g btn-sm" id="btnHelp" style="width:100%;font-size:12px;margin-bottom:6px" title="Com fer servir l'aplicació">&#128214; Manual d'&uacute;s</button>
         <button class="btn-g btn-sm" id="btnManuals" style="width:100%;font-size:12px" title="Manuals de recanvis guardats a Drive">&#128218; Manuals de recanvis</button>
         <button class="btn-g btn-sm" id="btnGemKey" style="width:100%;font-size:12px;margin-top:6px" title="La clau de Gemini que fa servir el corrector i la traducció dels informes; es desa només en aquest navegador">&#128273; Clau de Gemini</button>
@@ -2441,7 +2442,7 @@ $$("drawWrap").addEventListener("wheel",function(e){
 // A visit deleted here is also remembered (LS_GONE) until its folder is in
 // the trash: deleted offline, the folder is still in Outputs and the data file
 // may still carry it, and without the note it would come straight back.
-var LS_GONE="fsl_v6_gone",outputsProbed={};
+var LS_GONE="fsl_v6_gone",outputsProbed={},lastOutputs=null;
 function goneGet(){try{return JSON.parse(localStorage.getItem(LS_GONE)||"{}")||{}}catch(e){return {}}}
 function goneSet(m){
   try{
@@ -2450,8 +2451,23 @@ function goneSet(m){
     localStorage.setItem(LS_GONE,JSON.stringify(m));
   }catch(e){}
 }
-function goneAdd(id,folderId){var m=goneGet();m[id]=folderId||"";goneSet(m)}
-function goneFolderDone(id){var m=goneGet();if(id in m){m[id]="";goneSet(m)}}
+// Each note says which folder was deleted ({f}) and whether it is in the
+// trash yet ({done}). The folder is what tells a stale copy of the deleted
+// visit from the same visit brought back on purpose: re-imported on another
+// device, it comes with a NEW folder in Outputs, and then the note must give
+// way — it used to be forever, so a visit deleted on the phone and imported
+// again on the computer stayed invisible on the phone (2026-10-12).
+// Old notes were a plain string: the folder id while pending, "" once binned.
+function goneEntry(m,id){var v=m[id];return typeof v==="string"?{f:v,done:v===""}:(v||{f:"",done:true})}
+function goneAdd(id,folderId){var m=goneGet();m[id]={f:folderId||"",done:false};goneSet(m)}
+function goneFolderDone(id){var m=goneGet();if(id in m){m[id]={f:goneEntry(m,id).f,done:true};goneSet(m)}}
+// Does the note still hold this copy back? Only when the copy has no folder,
+// or has the very folder that was deleted.
+function goneBlocks(m,x){
+  if(!x||!(x.id in m))return false;
+  var g=goneEntry(m,x.id);
+  return !x.folderId||x.folderId===g.f;
+}
 function goneForget(ids){var m=goneGet(),c=false;(ids||[]).forEach(function(id){if(id in m){delete m[id];c=true}});if(c)goneSet(m)}
 async function reconcileOutputs(token){
   try{
@@ -2468,11 +2484,12 @@ async function reconcileOutputs(token){
       folders=folders.concat(d.files||[]);pt=d.nextPageToken||"";
     }while(pt);
     var live={};folders.forEach(function(f){live[f.id]=f});
+    lastOutputs=folders.length;
     var gone=goneGet(),drop={},forget={},changed=false;
 
     // 0 · deleted here while offline: bin the folder now
     for(var gid in gone){
-      var gf=gone[gid];
+      var ge=goneEntry(gone,gid),gf=ge.done?"":ge.f;
       if(gf&&live[gf]&&!sessions.some(function(x){return x.id!==gid&&x.folderId===gf})){
         var tr=await fetch("https://www.googleapis.com/drive/v3/files/"+gf,
           {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({trashed:true})});
@@ -2483,7 +2500,11 @@ async function reconcileOutputs(token){
     // 1 · visits whose folder left Outputs, and visits deleted here
     for(var i=0;i<sessions.length;i++){
       var x=sessions[i];
-      if(x.id in gone){drop[x.id]=1;continue}
+      if(x.id in gone){
+        var gx=goneEntry(gone,x.id);
+        if(x.folderId&&live[x.folderId]&&x.folderId!==gx.f){goneForget([x.id]);delete gone[x.id]}
+        else{drop[x.id]=1;continue}
+      }
       if(!x.folderId||live[x.folderId])continue;
       var info=await driveFileInfo(token,x.folderId);
       if(info&&info.trashed)drop[x.id]=1;
@@ -2514,7 +2535,8 @@ async function reconcileOutputs(token){
       var list=null;try{list=await rr.json()}catch(e){}
       if(!Array.isArray(list))continue;
       list.forEach(function(v){
-        if(!v||!v.id||(v.id in gone)||sessions.some(function(y){return y.id===v.id}))return;
+        if(!v||!v.id||sessions.some(function(y){return y.id===v.id}))return;
+        if(v.id in gone){if(goneEntry(gone,v.id).f===f.id)return;goneForget([v.id])}
         sessions.push(Object.assign({},v,{folderId:f.id,folderName:f.name}));
         changed=true;
       });
@@ -2574,6 +2596,25 @@ async function readDataFile(token,id){
   var d=await r.json();
   return Array.isArray(d)?d:[];
 }
+// For the sidebar: which account this device is signed in with, and what it
+// found on Drive at the last load. "Signed in, right version, nothing shows"
+// has two very different causes — another Google account, or an app that
+// hides what it finds — and this line tells them apart at a glance.
+var driveEmail=null,lastDriveCount=null,lastDriveAt=null;
+async function refreshDriveInfo(token){
+  if(!driveEmail&&token){
+    try{
+      var r=await fetch("https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)",{headers:{Authorization:"Bearer "+token}});
+      if(r.ok){var u=(await r.json()).user;driveEmail=u&&u.emailAddress||null}
+    }catch(e){}
+  }
+  var el=$$("driveInfo");if(!el)return;
+  if(!isLoggedIn){el.textContent="Sense entrar a Google: només aquest aparell";return}
+  el.innerHTML="Compte: <strong>"+esc(driveEmail||"?")+"</strong>"
+    +(lastDriveCount!=null?"<br>A Drive: "+pl(lastDriveCount,"visita","visites")
+      +(lastOutputs!=null?" · "+pl(lastOutputs,"carpeta","carpetes")+" a Outputs":"")
+      +" · "+(lastDriveAt||""):"");
+}
 // Resolves true when Drive was read (or there was nothing there to read).
 async function loadFromDrive(){
   var token=await ensureToken();if(!token){setSyncSt("error","No autenticat");return false}
@@ -2583,7 +2624,9 @@ async function loadFromDrive(){
     dataFileChecked=true;
     if(!files.length){
       driveFileId=null;saveTok();
+      lastDriveCount=0;lastDriveAt=fts(now()).slice(-8,-3);
       await reconcileOutputs(token);
+      refreshDriveInfo(token);
       setSyncSt("ok","Drive connectat");
       return true;
     }
@@ -2593,6 +2636,7 @@ async function loadFromDrive(){
     files.sort(function(x,y){return (+y.size||0)-(+x.size||0)});
     var keep=files[0];
     var data=await readDataFile(token,keep.id);
+    lastDriveCount=data.length;lastDriveAt=fts(now()).slice(-8,-3);
     var dupes=files.filter(function(f){return f.id!==keep.id});
     for(var i=0;i<dupes.length;i++){
       try{data=mergeSessionLists(data,await readDataFile(token,dupes[i].id))}catch(e){dupes[i].unread=true}
@@ -2628,6 +2672,7 @@ async function loadFromDrive(){
     // gone from `sessions`, so nothing deleted is pushed back.
     var stillHere=onlyHere.some(function(x){return sessions.some(function(y){return y.id===x.id})});
     if((stillHere||ahead)&&!dupes.length){isDirty=true;setTimeout(function(){if(isLoggedIn)saveToDrive()},0)}
+    refreshDriveInfo(token);
     setSyncSt("ok","Sincronitzat ✓");
     return true;
   }catch(e){setSyncSt("error","Sense connexió (dades locals)");return false}
@@ -2656,7 +2701,7 @@ async function saveToDrive(){
       if(driveFileId){
         try{
           var latest=await readDataFile(token,driveFileId),gone=goneGet();
-          var mergedNow=mergeSessionLists(latest,sessions).filter(function(x){return !(x.id in gone)});
+          var mergedNow=mergeSessionLists(latest,sessions).filter(function(x){return !goneBlocks(gone,x)});
           if(mergedNow.length!==sessions.length){sessions=orderSessions(mergedNow);saveLocal();setTimeout(renderAll,0)}
           else sessions=orderSessions(mergedNow);
         }catch(e){}   // could not read it: write what we have, as before
@@ -2712,6 +2757,8 @@ function hideAuthExpired(){
 // we're not logged in — otherwise a device with existing local data (e.g.
 // imported, or used before ever signing in) has no way to connect Drive.
 function updateAuthUI(){
+  if(!isLoggedIn){driveEmail=null;lastDriveCount=null}
+  refreshDriveInfo(null);
   var b=$$("btnLoginTop");if(b)b.style.display=isLoggedIn?"none":"";
   var fs=$$("btnFullSync");if(fs)fs.style.display=isLoggedIn?"":"none";
   var lo=$$("btnLogout");if(lo)lo.style.display=isLoggedIn?"":"none";
@@ -4385,7 +4432,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-12 · 4";
+var APP_VERSION="2026-10-12 · 5";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // A page of its own beside the app, so it can be read alongside it.
 $$("btnHelp").addEventListener("click",function(){window.open("manual.html","_blank","noopener")});

@@ -2726,7 +2726,8 @@ async function saveToDrive(){
         r=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"multipart/related; boundary="+bnd},body:mp});
         if(r&&r.ok){driveFileId=(await r.json()).id;saveTok()}
       }
-      if(r&&r.ok){isDirty=false;saveLocal();setSyncSt("ok","Desat ✓ "+fts(now()).slice(12))}
+      if(r&&r.ok){isDirty=false;saveLocal();setSyncSt("ok","Desat ✓ "+fts(now()).slice(12));
+        lastDriveCount=sessions.length;lastDriveAt=fts(now()).slice(-8,-3);refreshDriveInfo(null)}
       else{saveLocal();setSyncSt("error","Error en desar")}
     }catch(e){saveLocal();setSyncSt("error","Sense connexió (desat localment)")}
   }finally{
@@ -4462,7 +4463,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-12 · 6";
+var APP_VERSION="2026-10-12 · 7";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // A page of its own beside the app, so it can be read alongside it.
 $$("btnHelp").addEventListener("click",function(){window.open("manual.html","_blank","noopener")});
@@ -4511,6 +4512,8 @@ async function deleteSession(s){
           if(!r.ok)throw new Error("Drive ha respost "+r.status);
         }
         goneFolderDone(s.id);
+        if(folderId&&lastOutputs)lastOutputs--;
+        refreshDriveInfo(null);
         setSyncSt("ok","");
       }catch(e){setSyncSt("error","No s'ha pogut enviar la carpeta de Drive a la paperera");return false}
     }

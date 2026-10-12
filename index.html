@@ -1422,8 +1422,12 @@ async function getRootId(token){
 // visits to the same client's same machine are told apart by the project, which
 // is what the folder, the ZIP and the reports all used to leave out. Empty
 // fields are left out rather than written as "untitled".
+// Client, PROJECT, machine — the project number before the machine, as
+// everywhere the two appear together (2026-10-12). A session folder already
+// on Drive is renamed to match on its next save; a report base already frozen
+// at Rev. 01 keeps its old order, so its revisions still share one name.
 function projName(sess){
-  var parts=[sess&&sess.client,sess&&sess.machine,sess&&sess.project]
+  var parts=[sess&&sess.client,sess&&sess.project,sess&&sess.machine]
     .filter(function(v){return String(v||"").trim()}).map(sanitize);
   return parts.length?parts.join("_"):"sessio";
 }
@@ -4385,8 +4389,8 @@ function openBulkArchive(){
     return "<label style=\"display:flex;align-items:center;gap:10px;padding:7px 10px;border-bottom:1px solid var(--br);cursor:pointer\">"
       +"<input type=\"checkbox\" data-id=\""+esc(x.id)+"\" style=\"width:auto;flex-shrink:0\">"
       +"<span style=\"flex:1;min-width:0\">"
-      +"<span style=\"display:block;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\">"+esc(x.client||"—")+(x.machine?" · "+esc(x.machine):"")+"</span>"
-      +"<span style=\"display:block;font-size:11px;color:var(--tx3)\">"+(x.project?esc(x.project)+" · ":"")
+      +"<span style=\"display:block;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\">"+esc(x.client||"—")+"</span>"
+      +"<span style=\"display:block;font-size:11px;color:var(--tx3)\">"+(x.project?esc(x.project)+" · ":"")+(x.machine?esc(x.machine)+" · ":"")
       +dmy(rng.from)+(rng.to!==rng.from?" → "+dmy(rng.to):"")+(r?" · "+revNo(r.n):"")
       +(x.status==="closed"?" · Tancada":" · Oberta")+"</span></span>"
       +"<span style=\"flex-shrink:0;font-size:11px;color:"+(ok?"var(--green)":"var(--tx3)")+"\" title=\""+(ok?"Ja té un ZIP del projecte posterior a l'últim canvi":"Encara no té cap ZIP del projecte al dia")+"\">"
@@ -4407,7 +4411,7 @@ async function archiveSessions(ids,del){
     // Client and project: the machine is often the same for a whole list, and
     // three identical lines in the summary tell you nothing. No project, then
     // the machine, so the line still says something.
-    var name=(s.client||"—")+(s.project?" · "+s.project:(s.machine?" · "+s.machine:""));
+    var name=(s.client||"—")+(s.project?" · "+s.project:"")+(s.machine?" · "+s.machine:"");
     setSyncSt("loading","Arxivant "+(i+1)+"/"+ids.length+" · "+name+"…");
     var before=s.zipAt||"";
     lastZipTo=null;

@@ -993,8 +993,12 @@ Field Service Log/
   of one report has to share a base, or the numbering can't tell that rev01 and
   rev02 are the same document. Sessions exported before this keep their old,
   unnumbered files; the first export after it writes `_rev01_` alongside them.
-- **One name for a project: `projName(s)` = CLIENT_MACHINE_PROJECT** (sanitised,
-  empty fields left out, `sessio` if all three are). It is the Drive session
+- **One name for a project: `projName(s)` = CLIENT_PROJECT_MACHINE** (sanitised,
+  empty fields left out, `sessio` if all three are). Project before machine
+  since 2026-10-12 — it was client_machine_project: folders on Drive are
+  renamed to the new order on their next save; report bases frozen at Rev. 01
+  keep the old one; old ZIPs keep their names, so a re-archive under the new
+  name sits beside them instead of replacing them. It is the Drive session
   folder (`sessFolderName`), the report base and the start of both ZIP names
   (`…_projecte_rev01_ca.zip`, `…_docx_multimedia_rev01_ca.zip`). It used to be
   client + machine + technician for the folder and client + end date for the

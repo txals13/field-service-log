@@ -541,12 +541,55 @@ Field Service Log/
   (`fillTagTargets`) — `populateTagOptions` returns early when the manual
   hasn't changed. Only shown when the visit has a linked manual.
 
+## Production tests (2026-10-12)
+- **`session.prodTests[]`** — a run of the line over a period, recorded to
+  validate it. A test on its own is a session of type **`production`** (TM
+  "PRD", purple; RPT.types.production in ca/es/en), which opens straight onto
+  its first test. Each test: `{id, name, product, nominal (u/h), start, end,
+  running, counterStart, counterEnd, total, rejects, stops:[{id, start, end,
+  kind: machine|external|planned, cause}], crit:{oee, avail, perf, rej} (%,
+  blank = not checked), notes}`. Numbers are kept as typed strings; `ptNum`
+  reads them (comma or dot).
+- **`ptCalc`** (the only place the maths lives): planned time = end − start −
+  planned stops; run = planned − machine/external stops; A = run/planned;
+  P = units/(run h × nominal); Q = good/units; OEE = A×P×Q; reject = rej/units;
+  average and running speed. Stops are clipped to the test's period. Units come
+  from the counters when both are set. The verdict needs the test finished
+  (start, end, units) and every criterion that was set met. A running test
+  computes against "now". Verified against hand-worked numbers (A 90.5 %,
+  P 96.5 %, Q 99.2 %, OEE 86.6 %).
+- **Live**: ▶ Inicia (start = now, running), ⏸ Aturada (an open stop),
+  ▶ Represa (closes it, focus on its cause), ■ Finalitza (closes any open
+  stop, end = now, focus on the units). The clocks tick in place every second
+  (`ptTick`) — the buttons are not re-rendered under the finger. Everything is
+  also editable by hand; a time field only rewrites the stored time when it
+  was CHANGED (the field has minutes, the clock wrote seconds).
+- UI: `#pdBack` (the list: OEE/A/R/Q per test and a verdict badge) and
+  `#ptBack` (the editor; full screen on the phone). Header chip `#pdChip`
+  (hidden on the new layout, where it is in Més). Remembered criteria:
+  `localStorage['fsl_v6_ptcrit']`. A performance over 105 % shows a warning —
+  usually a wrong nominal speed.
+- **Reports** share `ptReportData(t,R,lang,pdf)`: an HTML section
+  (`ptReportHTML`), a PDF section (`pdfProdSection`, autoTable; ">= / <="
+  because ≥ ≤ are not in the PDF font), a Word section and two Excel sheets
+  (tests, stops; numbers as numbers, percentages as fractions) — the Excel now
+  builds for a session with tests but no spare parts. The **validation
+  report** is `buildPdfBlob(…,{validation:true})`: same header, meta and
+  signatures, the tests instead of counters/log/photos; "📈 Informe de
+  validació" in the export menu and the list, `RPT.pt.file` prefix
+  (validacio_/validacion_/validation_, rebuilt by `fileSafe` for translated
+  tables), and packed into the project ZIP.
+- Labels: `RPT.<lang>.pt` (hand-written ca/es/en). Adding them changed the
+  table's shape, so translated tables for other languages are fetched again
+  once. Test names, causes and notes are not translated.
+
 ## Session types
 | Type | Abbr | Color |
 |------|------|-------|
 | Commissioning | COM | Blue |
 | Maintenance | MNT | Green |
 | Upgrade/Retrofit | RET | Amber |
+| Production test | PRD | Purple |
 
 ## Entry severity levels
 | Level | Symbol | Color |

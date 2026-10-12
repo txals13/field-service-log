@@ -205,9 +205,9 @@
 <p>Cada informe es desa també a la carpeta de Drive de la visita, un sol fitxer per format, que se substitueix cada vegada.</p>
 
 <h3>Els noms dels fitxers</h3>
-<p>Porten el client, la màquina i el número de projecte, la revisió i l'idioma. Per exemple:</p>
-<p><code>informe_CELLER_DE_L'ALBERA_VLP-320-R_P-2026-141_rev01_ca.pdf</code><br>
-<code>CELLER_DE_L'ALBERA_VLP-320-R_P-2026-141_projecte_rev01_ca.zip</code></p>
+<p>Porten el client, el número de projecte i la màquina, la revisió i l'idioma. Per exemple:</p>
+<p><code>informe_CELLER_DE_L'ALBERA_P-2026-141_VLP-320-R_rev01_ca.pdf</code><br>
+<code>CELLER_DE_L'ALBERA_P-2026-141_VLP-320-R_projecte_rev01_ca.zip</code></p>
 <p>Si un informe ja tenia la Rev. 01 abans d'aquest format, conserva el seu nom antic perquè totes les revisions es diguin igual.</p>
 
 <h3>On va el fitxer</h3>
@@ -290,7 +290,7 @@
 <p>Cada visita es desa com el seu ZIP del projecte, en l'idioma del seu informe. <strong>Només s'esborra una visita si el seu ZIP ha sortit bé.</strong> Si una visita ha canviat des de l'última revisió, pregunta per la revisió com quan l'exportes sola. Al final surt un resum amb el client i el projecte de cada una.</p>
 <p>Els ZIP van on diu <a href="#ordinador">📁 Carpetes</a>: per defecte, a la carpeta d'arxiu del teu <strong>Google Drive</strong>; o, si ho tries, a una carpeta de l'ordinador.</p>
 <div class="warn"><p><strong>Una visita només s'esborra si l'app ha vist arribar el seu ZIP sencer</strong> a Drive o a la carpeta de l'ordinador. Si el ZIP va a Baixades (sense haver entrat amb Google, o si la pujada falla), el resum diu «Descarregades, però NO esborrades»: obre el ZIP o mira'n la mida, i després esborra la visita des de <span class="btn">⋮ Més</span>.</p></div>
-<div class="tip"><p>Tornar a arxivar la mateixa visita amb la mateixa revisió <strong>substitueix</strong> el seu ZIP, no en crea un <code>_2</code>. Només s'afegeix <code>_2</code> si el nom coincideix amb el ZIP d'una altra visita (mateix client, màquina i projecte).</p></div>
+<div class="tip"><p>Tornar a arxivar la mateixa visita amb la mateixa revisió <strong>substitueix</strong> el seu ZIP, no en crea un <code>_2</code>. Només s'afegeix <code>_2</code> si el nom coincideix amb el ZIP d'una altra visita (mateix client, projecte i màquina).</p></div>
 
 <h3>Tornar a carregar</h3>
 <ul>
@@ -324,11 +324,11 @@
   field_service_log_data.json      ← les dades de totes les visites
   Manuals/                         ← els manuals de recanvis
   Outputs/
-    CLIENT_MÀQUINA_PROJECTE/       ← una carpeta per visita
+    CLIENT_PROJECTE_MÀQUINA/       ← una carpeta per visita
       photos/  videos/  audio/
       informe_…_rev01_ca.pdf …     ← els informes de cada revisió
   Arxiu/                           ← els ZIP del projecte (via Drive per a escriptori)</pre>
-<p>Cada visita té la seva pròpia carpeta. Si dues visites tenen el mateix client, màquina i projecte, la segona es diu <code>…_2</code>.</p>
+<p>Cada visita té la seva pròpia carpeta. Si dues visites tenen el mateix client, projecte i màquina, la segona es diu <code>…_2</code>.</p>
 <h3>La carpeta Outputs mana</h3>
 <p>Cada cop que l'app sincronitza, mira quines carpetes hi ha a <code>Outputs</code>:</p>
 <ul>

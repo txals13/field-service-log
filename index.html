@@ -4581,7 +4581,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-12 · 9";
+var APP_VERSION="2026-10-12 · 10";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -5125,6 +5125,14 @@ $$("btnImport").addEventListener("click",function(){$$("importFile").click()});
 function mergeImportedSessions(list){
   var existIds={};sessions.forEach(function(s){existIds[s.id]=1});
   var added=orderSessions(list.filter(function(s){return s.id&&!existIds[s.id]}));
+  // The folder an imported visit names is where it CAME FROM — another account,
+  // or a folder deleted here and sitting in the trash. Kept, the Outputs
+  // reconcile saw a visit whose folder was binned and dropped it a few seconds
+  // after the import, while its video was still uploading (2026-10-12). Let it
+  // go: the media restore finds this visit's folder by name in Outputs (the
+  // live one if there is one, a new one if not), and a visit with no folder is
+  // never touched by the reconcile.
+  added=added.map(function(s){return Object.assign({},s,{folderId:null,folderName:null})});
   goneForget(added.map(function(s){return s.id}));   // brought back on purpose
   sessions=added.concat(sessions);
   if(added.length&&!aid)aid=added[0].id;
@@ -5166,7 +5174,8 @@ async function importSessionZip(file){
   var pending=[];
   res.added.forEach(function(sess){
     (sess.entries||[]).forEach(function(en){
-      (en.images||[]).forEach(function(img){
+      // the outcome's attachments too, not only the entry's own
+      (en.images||[]).concat((en.fix&&en.fix.images)||[]).forEach(function(img){
         var hit=img.name&&media[img.name];
         if(hit)pending.push({sess:sess,img:img,hit:hit});
         else if(img.type==="video")img.driveId=null; // no file to restore: keep the poster only
@@ -5176,7 +5185,7 @@ async function importSessionZip(file){
 
   if(!pending.length)return tally;
   if(!isLoggedIn){
-    res.added.forEach(function(sess){(sess.entries||[]).forEach(function(en){(en.images||[]).forEach(function(img){img.driveId=null})})});
+    res.added.forEach(function(sess){(sess.entries||[]).forEach(function(en){(en.images||[]).concat((en.fix&&en.fix.images)||[]).forEach(function(img){img.driveId=null})})});
     saveLocal();renderAll();
     tally.noLogin=pending.length;
     return tally;

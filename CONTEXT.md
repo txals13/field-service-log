@@ -310,6 +310,15 @@ Field Service Log/
     back on purpose — re-imported on another device — and the note is
     dropped. Before, the note was forever: a visit deleted on the phone and
     imported again on the computer never showed on the phone.
+  - **An imported visit forgets the folder it names** (`mergeImportedSessions`
+    clears `folderId`/`folderName`). That folder is where it came from —
+    another account, or the folder deleted here before re-importing, now in
+    the trash. Kept, the reconcile dropped the visit a few seconds after the
+    import while its 44 MB video was still uploading (2026-10-12: "it loads
+    and then the whole session disappears"). The media restore then finds the
+    folder by name in Outputs (`getSessionFolder`), and a visit with no folder
+    is never touched by the reconcile. The restore also covers the outcome's
+    attachments (`en.fix.images`), which it used to skip.
 - **The sidebar says which Google account and what Drive holds**
   (`refreshDriveInfo`, `#driveInfo`): "Compte: x@… · A Drive: N visites · M
   carpetes a Outputs · hh:mm", from Drive's `about` and the last load. Right

@@ -729,6 +729,14 @@ Field Service Log/
     camera would be a bad trade: half the photos of a visit were taken before
     the app was open. The old "afegeix una foto" is renamed "De la galeria"
     where the camera has its own button, because that is what it now is.
+  - **"📷 Còpia de les fotos al telèfon"** (sidebar, handheld only,
+    `localStorage['fsl_v6_camcopy']`, off by default; `camCopy` in
+    `wireCapture`): each photo taken through a capture input is also
+    downloaded via `dlBlob`. A web page cannot make folders in Downloads nor
+    write to DCIM/Camera, so the grouping the user asked for (a folder per
+    client and project) is in the NAME: `<client>_<project or
+    machine>_<yyyymmdd_hhmmss>[_n].<ext>`. Photos only — a video copy would
+    double the phone's storage for something already on Drive.
   - **Voice notes are unchanged**: 🎙 records through `getUserMedia` on every
     device, phone or laptop — the user asked to keep dictating from the laptop.
   - The composer's button column **becomes a row under the description** below

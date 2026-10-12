@@ -318,6 +318,35 @@ textarea{resize:none;line-height:1.4}
    m2-blk / m2-flx / m2-inl / m2-grd are the phone-only pieces, by display. */
 .m2-blk,.m2-flx,.m2-inl,.m2-grd,.m2-sx,.m2-dk,#m2Title{display:none}
 .m2-sev button.on{background:var(--bg0);border-width:2px}
+/* production tests */
+.pd-card{display:block;width:100%;text-align:left;white-space:normal;margin-bottom:8px;padding:10px 12px;border-radius:10px;background:var(--bg2)}
+.pd-card .t{font-weight:700;font-size:14px}.pd-card .s{font-size:12px;color:var(--tx3);margin-top:2px}
+.pd-card .k{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:12px;font-family:monospace}
+.pt-badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:8px;vertical-align:1px}
+.pt-badge.pass{background:var(--greenbg);color:var(--green)}.pt-badge.fail{background:var(--redbg);color:var(--red)}.pt-badge.run{background:var(--goldbg);color:var(--goldtx)}
+.pt-live{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:10px;border:1px solid var(--br);border-radius:10px;background:var(--bg0)}
+.pt-clock{font-family:monospace;font-size:15px;font-weight:700;color:var(--green)}
+.pt-clock.stop{color:var(--orange)}
+.pt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
+.pt-wide{grid-column:1/-1}
+.pt-sec{font-size:12px;font-weight:700;letter-spacing:.4px;margin:14px 0 6px}
+.pt-stop{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.6fr) auto auto;gap:6px;align-items:center;margin-bottom:6px}
+.pt-stop .pt-dur{font-size:11px;font-family:monospace;color:var(--tx3);white-space:nowrap}
+.pt-crit{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px;font-size:13px}
+.pt-crit input{width:70px;display:inline-block;margin:0 4px}
+.pt-res{width:100%;border-collapse:collapse;font-size:13px}
+.pt-res td{padding:4px 6px;border-bottom:1px solid var(--br)}
+.pt-res td.v{font-family:monospace;text-align:right}
+.pt-res .ok{color:var(--green);font-weight:700}.pt-res .ko{color:var(--red);font-weight:700}
+.pt-verdict{margin-top:10px;padding:10px;border-radius:8px;text-align:center;font-weight:800;letter-spacing:1px}
+.pt-verdict.pass{background:var(--greenbg);color:var(--green)}.pt-verdict.fail{background:var(--redbg);color:var(--red)}
+@media(max-width:700px){
+  .pt-grid,.pt-crit{grid-template-columns:1fr}
+  /* one stop per card: start, end, then type · duration · ✕, then the cause */
+  .pt-stop{grid-template-columns:minmax(0,1fr) auto auto;padding:8px;border:1px solid var(--br);border-radius:8px}
+  .pt-stop input[type=datetime-local],.pt-stop [data-k=cause]{grid-column:1/-1;min-width:0}
+  .pt-stop [data-k=kind]{order:1}.pt-stop .pt-dur{order:2}.pt-stop [data-del]{order:3}.pt-stop [data-k=cause]{order:4}
+}
 .arx-opt{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--br);border-radius:8px;cursor:pointer;font-size:13px}
 .arx-opt:has(input:checked){border-color:var(--gold);background:var(--goldbg)}
 .m2-more-it{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--br);border-radius:0;padding:12px 4px;font-size:14px;color:var(--tx1);white-space:normal}
@@ -333,7 +362,7 @@ textarea{resize:none;line-height:1.4}
 @media(min-width:701px){
   body.m2 .m2-dk{display:inline-flex;align-items:center}
   body.m2 .sv #btnEditSess,body.m2 .sv #btnClose,body.m2 .sv #btnReopen,body.m2 .sv #btnSync,body.m2 .sv #btnSessSync{display:none}
-  body.m2 .sv #manualChip,body.m2 .sv #drawingsChip,body.m2 .sv #mhChip,body.m2 .sv #folChip,body.m2 .sv #tsChip{display:none}
+  body.m2 .sv #manualChip,body.m2 .sv #drawingsChip,body.m2 .sv #mhChip,body.m2 .sv #folChip,body.m2 .sv #tsChip,body.m2 .sv #pdChip{display:none}
   body.m2 .sv .s-hdr-top{gap:10px}
   body.m2 .sv .s-hdr-top>span:nth-child(2){font-size:16px}
   body.m2 .sv .exp-wrap{margin-left:auto}
@@ -529,6 +558,7 @@ textarea{resize:none;line-height:1.4}
           <option value="commissioning">Posada en marxa (COM)</option>
           <option value="maintenance">Manteniment (MNT)</option>
           <option value="retrofit">Millora / Retrofit (RET)</option>
+          <option value="production">Prova de producció (PRD)</option>
         </select>
       </div>
       <div class="modal-actions">
@@ -715,6 +745,54 @@ textarea{resize:none;line-height:1.4}
       <div class="modal-actions">
         <button id="arxCancel">Cancel&middot;la</button>
         <button class="btn-gold" id="arxGo" disabled>&#8681; Carrega'n 0</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-back" id="pdBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,640px)">
+      <div class="modal-title">&#128200; <span id="pdTitle">Proves de producci&oacute;</span></div>
+      <div id="pdNote" class="ts-note" style="margin-bottom:8px">&mdash;</div>
+      <div id="pdList"></div>
+      <div class="modal-actions">
+        <button id="pdVal" title="Un PDF amb les dades de la visita, totes les proves, els indicadors, el veredicte i les signatures">&#128196; Informe de validaci&oacute;</button>
+        <button id="pdClose">Tanca</button>
+        <button class="btn-gold" id="pdNew">&#65291; Nova prova</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-back" id="ptBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,760px)">
+      <div class="modal-title">&#128200; <span id="ptTitle">Prova de producci&oacute;</span></div>
+      <div id="ptLive" class="pt-live"></div>
+      <div class="pt-grid">
+        <div class="field pt-wide"><label>Nom de la prova</label><input type="text" id="ptName" autocomplete="off"></div>
+        <div class="field"><label>Producte / format</label><input type="text" id="ptProduct" placeholder="Cava 75 cl" autocomplete="off"></div>
+        <div class="field"><label>Velocitat nominal (u/h)</label><input type="text" id="ptNominal" inputmode="decimal" placeholder="1800" autocomplete="off"></div>
+        <div class="field"><label>Inici</label><input type="datetime-local" id="ptStart" step="60"></div>
+        <div class="field"><label>Final</label><input type="datetime-local" id="ptEnd" step="60"></div>
+        <div class="field"><label>Comptador inicial</label><input type="text" id="ptCs" inputmode="numeric" placeholder="opcional" autocomplete="off"></div>
+        <div class="field"><label>Comptador final</label><input type="text" id="ptCe" inputmode="numeric" placeholder="opcional" autocomplete="off"></div>
+        <div class="field"><label>Unitats totals</label><input type="text" id="ptTotal" inputmode="numeric" autocomplete="off"></div>
+        <div class="field"><label>Unitats rebutjades</label><input type="text" id="ptRej" inputmode="numeric" autocomplete="off"></div>
+      </div>
+      <div class="pt-sec">ATURADES</div>
+      <div id="ptStops"></div>
+      <button class="btn-sm" id="ptStopAdd" style="margin-top:6px">&#65291; Afegeix una aturada</button>
+      <div class="pt-sec">CRITERIS D'ACCEPTACI&Oacute; <span style="font-weight:400;color:var(--tx3)">(en blanc, no es comproven)</span></div>
+      <div class="pt-crit">
+        <label>OEE &ge; <input type="text" id="ptCOee" inputmode="decimal"> %</label>
+        <label>Disponibilitat &ge; <input type="text" id="ptCAv" inputmode="decimal"> %</label>
+        <label>Rendiment &ge; <input type="text" id="ptCPf" inputmode="decimal"> %</label>
+        <label>Rebuig &le; <input type="text" id="ptCRj" inputmode="decimal"> %</label>
+      </div>
+      <div class="pt-sec">RESULTATS</div>
+      <div id="ptRes"></div>
+      <div class="field" style="margin-top:10px"><label>Observacions</label><textarea id="ptNotes" rows="3"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn-danger" id="ptDel" style="margin-right:auto">&#128465; Elimina</button>
+        <button class="btn-gold" id="ptDone">&#10003; Fet</button>
       </div>
     </div>
   </div>
@@ -1004,7 +1082,8 @@ var STORE_SOFT_LIMIT = 2200000; // characters of the serialized sessions JSON
 var TM = {
   commissioning:{label:"Posada en marxa",abbr:"COM",bg:"rgba(59,130,246,.15)",tx:"#3b82f6",bd:"rgba(59,130,246,.5)"},
   maintenance:  {label:"Manteniment",  abbr:"MNT",bg:"rgba(16,185,129,.12)",tx:"#10b981",bd:"rgba(16,185,129,.5)"},
-  retrofit:     {label:"Millora / Retrofit",abbr:"RET",bg:"rgba(245,158,11,.12)",tx:"#f59e0b",bd:"rgba(245,158,11,.5)"}
+  retrofit:     {label:"Millora / Retrofit",abbr:"RET",bg:"rgba(245,158,11,.12)",tx:"#f59e0b",bd:"rgba(245,158,11,.5)"},
+  production:   {label:"Prova de producció",abbr:"PRD",bg:"rgba(139,92,246,.15)",tx:"#8b5cf6",bd:"rgba(139,92,246,.5)"}
 };
 var SM = {
   info:   {label:"INFO",   dot:"○",dc:"#6b7280",bg:"transparent",tx:"#9ca3af"},
@@ -3128,7 +3207,7 @@ function renderContent(){
       ?"<div class=\"exp-rev\"><span>Etiquetes en "+esc(langNative(reportLang(active)))+"</span>"
         +"<button data-lbl=\"1\" title=\"Les ha traduïdes Gemini i surten a cada fila de cada pàgina: val la pena mirar-les un cop\">Revisa-les…</button></div>"
       :"")
-    +"<button data-fmt=\"pdf\">📄 PDF</button><button data-fmt=\"docx\">📄 Word (DOCX)</button><button data-fmt=\"html\">📄 HTML</button><button data-fmt=\"xlsx\">📊 Recanvis (Excel)</button><button data-fmt=\"timesheet\">🧾 Full d'hores…</button><button data-fmt=\"zip\" title=\"Tot: tots els informes, els fitxers multimèdia i session.json — la còpia que es pot tornar a importar\">🗄 ZIP del projecte (arxiu)</button><button data-fmt=\"zipdocx\" title=\"L'informe Word amb totes les fotos, vídeos i notes de veu — per lliurar. No es pot tornar a importar.\">📦 ZIP Word + multimèdia</button></div></div>"
+    +"<button data-fmt=\"pdf\">📄 PDF</button><button data-fmt=\"docx\">📄 Word (DOCX)</button><button data-fmt=\"html\">📄 HTML</button><button data-fmt=\"xlsx\">📊 Recanvis (Excel)</button><button data-fmt=\"timesheet\">🧾 Full d'hores…</button>"+((active.prodTests||[]).length?"<button data-fmt=\"valpdf\">📈 Informe de validació (PDF)</button>":"")+"<button data-fmt=\"zip\" title=\"Tot: tots els informes, els fitxers multimèdia i session.json — la còpia que es pot tornar a importar\">🗄 ZIP del projecte (arxiu)</button><button data-fmt=\"zipdocx\" title=\"L'informe Word amb totes les fotos, vídeos i notes de veu — per lliurar. No es pot tornar a importar.\">📦 ZIP Word + multimèdia</button></div></div>"
     +"<button class=\"btn-sm m2-dk\" id=\"btnM2More2\" title=\"Historial, carpeta, manual, full d'hores, dades de la visita…\">&#8942; Més</button>"
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSync\" title=\"Sincronitza ara\">⟳</button>":"")
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSessSync\" title=\"Recrea les carpetes de Drive i puja-hi les fotos que hi faltin, d'aquesta sessió\">&#9729; Desa</button>":"")
@@ -3145,6 +3224,7 @@ function renderContent(){
     +mhChipHTML(active)
     +folderChipHTML(active)
     +tsChipHTML(active)
+    +prodChipHTML(active)
     +"</div></div>"
     // filter
     +"<div class=\"filter-row\">"
@@ -3215,6 +3295,7 @@ function renderContent(){
   var tChip=$$("tsChip");if(tChip)tChip.addEventListener("click",openTimesheet);
   var fChip=$$("folChip");if(fChip)fChip.addEventListener("click",openFolder);
   var hChip=$$("mhChip");if(hChip)hChip.addEventListener("click",openMachineHistory);
+  var pdC=$$("pdChip");if(pdC)pdC.addEventListener("click",function(){openProdList()});
   var btnC=$$("btnClose");if(btnC)btnC.addEventListener("click",function(){if(confirm("Vols tancar aquesta sessió? La pots reobrir més endavant.")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"closed",closedAt:now()}):s});scheduleSave();renderAll()}});
   var btnR=$$("btnReopen");if(btnR)btnR.addEventListener("click",function(){if(confirm("Vols reobrir aquesta sessió?")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"open",closedAt:null}):s});scheduleSave();renderAll()}});
   var btnEx=$$("btnExp");if(btnEx){
@@ -4461,6 +4542,7 @@ function openM2More(){
       it("&#129534;","Full d'hores","",function(){openTimesheet()})
     ]],
     ["VISITA",[
+      it("&#128200;","Proves de producció",prodChipNote(a),function(){openProdList()}),
       mh>1?it("&#128220;","Historial de la màquina",mh+" visites"+(m2Pending(a)?" · "+pl(m2Pending(a),"pendent","pendents"):""),function(){openMachineHistory()}):null,
       $$("folChip")?it("&#128451;","Carpeta de Drive","",click("folChip")):null,
       $$("manualChip")?it("&#128218;","Manual de recanvis",/Vincula/.test($$("manualChip").textContent)?"sense vincular":"",click("manualChip")):null,
@@ -4499,8 +4581,310 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-12 · 8";
+var APP_VERSION="2026-10-12 · 9";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
+// ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
+// A run of the line over a period, recorded to validate it: what was made,
+// what was thrown out, every stop and why — and from that the standard OEE.
+// It lives on the session (session.prodTests), so it syncs, archives and
+// reports like everything else; a test on its own is a session of type
+// "production". Recorded live (start, stop, resume, finish — the times come
+// from the clock) or typed in afterwards; both edit the same fields.
+//
+//   planned time  = finish − start − planned stops
+//   run time      = planned time − unplanned stops (machine + external)
+//   availability  = run / planned          performance = units / (run × nominal)
+//   quality       = good / units           OEE = A × P × Q
+// Units come from the counters when both are given, else from the total.
+// Each criterion left blank is simply not checked; the verdict needs the test
+// finished and every criterion that was set to be met.
+var PT_KINDS=["machine","external","planned"];
+function ptNum(v){if(v===""||v==null)return null;var x=parseFloat(String(v).replace(/\s/g,"").replace(",","."));return isFinite(x)?x:null}
+function ptMs(iso){var t=Date.parse(iso||"");return isNaN(t)?null:t}
+function ptCalc(t,nowMs){
+  nowMs=nowMs||Date.now();
+  var st=ptMs(t.start),en=ptMs(t.end)||(t.running?nowMs:null),r={complete:false,checks:[],verdict:null};
+  var cs=ptNum(t.counterStart),ce=ptNum(t.counterEnd);
+  var total=(cs!=null&&ce!=null&&ce>=cs)?ce-cs:ptNum(t.total);
+  var rej=ptNum(t.rejects)||0,nom=ptNum(t.nominal);
+  r.total=total;r.rejects=total!=null?rej:null;r.good=total!=null?Math.max(0,total-rej):null;
+  r.qual=total?(total-rej)/total:null;r.rejPct=total?rej/total:null;
+  if(st!=null&&en!=null&&en>st){
+    var T=(en-st)/60000,pl=0,un=0;
+    (t.stops||[]).forEach(function(x){
+      var a=ptMs(x.start),b=ptMs(x.end)||(t.running?nowMs:null);
+      if(a==null||b==null)return;
+      a=Math.max(a,st);b=Math.min(b,en);if(b<=a)return;
+      var m=(b-a)/60000;if(x.kind==="planned")pl+=m;else un+=m;
+    });
+    var PPT=Math.max(0,T-pl),run=Math.max(0,PPT-un);
+    r.durMin=T;r.plannedStopMin=pl;r.downMin=un;r.pptMin=PPT;r.runMin=run;
+    r.avail=PPT>0?run/PPT:null;
+    r.perf=(total!=null&&nom&&run>0)?total/(run/60*nom):null;
+    r.speedAvg=(total!=null&&PPT>0)?total/(PPT/60):null;
+    r.speedRun=(total!=null&&run>0)?total/(run/60):null;
+  }
+  r.oee=(r.avail!=null&&r.perf!=null&&r.qual!=null)?r.avail*r.perf*r.qual:null;
+  r.complete=!t.running&&st!=null&&ptMs(t.end)!=null&&total!=null;
+  var c=t.crit||{};
+  function chk(key,val,lim,min){
+    var L=ptNum(lim);if(L==null)return;
+    r.checks.push({key:key,val:val,lim:L,min:min,ok:val==null?null:(min?val*100>=L-1e-9:val*100<=L+1e-9)});
+  }
+  chk("oee",r.oee,c.oee,true);chk("avail",r.avail,c.avail,true);chk("perf",r.perf,c.perf,true);chk("rejPct",r.rejPct,c.rej,false);
+  if(r.complete&&r.checks.length)r.verdict=r.checks.every(function(k){return k.ok===true})?"pass":"fail";
+  return r;
+}
+function ptLocale(lang){return lang==="ca"?"ca-ES":(lang||"ca")}
+function ptPct(v,lang){if(v==null)return "—";try{return new Intl.NumberFormat(ptLocale(lang),{minimumFractionDigits:1,maximumFractionDigits:1}).format(v*100)+" %"}catch(e){return (v*100).toFixed(1)+" %"}}
+function ptN(v,lang,d){if(v==null)return "—";try{return new Intl.NumberFormat(ptLocale(lang),{maximumFractionDigits:d||0}).format(v)}catch(e){return String(Math.round(v))}}
+function ptDur(min){if(min==null)return "—";var m=Math.round(min),h=Math.floor(m/60);return (h?h+" h ":"")+(m%60)+" min"}
+function ptClock(ms){var x=Math.max(0,Math.floor(ms/1000)),h=Math.floor(x/3600),m=Math.floor(x/60)%60,sc=x%60;function p(k){return ("0"+k).slice(-2)}return (h?h+":":"")+p(m)+":"+p(sc)}
+function ptWhen(iso){return iso?fts(iso).slice(0,14):"—"}
+function ptStopMin(x,t){var a=ptMs(x.start),b=ptMs(x.end)||(t&&t.running?Date.now():null);return(a!=null&&b!=null&&b>a)?(b-a)/60000:null}
+// What the reports show, in the report's language. `pdf`: no ≥/≤, which the
+// PDF's standard font cannot draw.
+function ptReportData(t,R,lang,pdf){
+  var r=ptCalc(t),L=R.pt;
+  function ck(key){return r.checks.filter(function(k){return k.key===key})[0]}
+  function tg(key){var c=ck(key);return c?(c.min?(pdf?">= ":"≥ "):(pdf?"<= ":"≤ "))+ptN(c.lim,lang,1)+" %":""}
+  function rs(key){var c=ck(key);return c&&c.ok!=null?(c.ok?L.yes:L.no):""}
+  var uph=" "+L.uph;
+  return {r:r,
+    data:[[L.product,t.product||"—"],[L.nominal,ptNum(t.nominal)!=null?ptN(ptNum(t.nominal),lang)+uph:"—"],
+          [L.start,ptWhen(t.start)],[L.end,ptWhen(t.end)],[L.duration,ptDur(r.durMin)],
+          [L.plannedStops,ptDur(r.plannedStopMin)],[L.downtime,ptDur(r.downMin)],[L.run,ptDur(r.runMin)],
+          [L.total,ptN(r.total,lang)],[L.rejects,ptN(r.rejects,lang)],[L.good,ptN(r.good,lang)],
+          [L.speedAvg,r.speedAvg==null?"—":ptN(r.speedAvg,lang)+uph],[L.speedRun,r.speedRun==null?"—":ptN(r.speedRun,lang)+uph]],
+    kpi:[[L.avail,ptPct(r.avail,lang),tg("avail"),rs("avail")],[L.perf,ptPct(r.perf,lang),tg("perf"),rs("perf")],
+         [L.qual,ptPct(r.qual,lang),"",""],[L.oee,ptPct(r.oee,lang),tg("oee"),rs("oee")],
+         [L.rejPct,ptPct(r.rejPct,lang),tg("rejPct"),rs("rejPct")]],
+    stops:(t.stops||[]).map(function(x){return [ptWhen(x.start),ptWhen(x.end),ptDur(ptStopMin(x,t)),(L.kinds&&L.kinds[x.kind])||x.kind||"",x.cause||""]}),
+    verdict:r.verdict?(r.verdict==="pass"?L.pass:L.fail):""};
+}
+function prodChipNote(s){
+  var l=(s&&s.prodTests)||[];
+  if(l.some(function(t){return t.running}))return "en curs";
+  return l.length?pl(l.length,"prova","proves"):"";
+}
+function prodChipHTML(s){
+  var l=(s&&s.prodTests)||[];
+  if(!l.length&&s.type!=="production")return "<span id=\"pdChip\" style=\"cursor:pointer;color:var(--tx3)\" title=\"Registra una prova de producció i en calcula l'OEE\">&#128200; Prova de producció</span>";
+  var run=l.some(function(t){return t.running});
+  return "<span id=\"pdChip\" style=\"cursor:pointer"+(run?";color:var(--gold);font-weight:700":"")+"\" title=\"Les proves de producció d'aquesta visita\">&#128200; "
+    +(run?"Prova en curs":(l.length?pl(l.length,"prova","proves")+" de producció":"Afegeix la prova de producció"))+"</span>";
+}
+
+// ── the list and the editor ──
+var ptSessId=null,ptId=null,ptTimer=null,pdWired=false,ptWired=false;
+function ptSess(){return sessions.find(function(x){return x.id===ptSessId})}
+function ptTest(){var s=ptSess();return s&&(s.prodTests||[]).filter(function(t){return t.id===ptId})[0]}
+function ptSetTests(fn){
+  sessions=sessions.map(function(x){return x.id!==ptSessId?x:Object.assign({},x,{prodTests:fn((x.prodTests||[]).slice())})});
+  scheduleSave();
+}
+function ptPatch(patch){ptSetTests(function(l){return l.map(function(t){return t.id===ptId?Object.assign({},t,patch):t})})}
+function ptCritDefaults(){var d={oee:"85",avail:"",perf:"",rej:"1"};try{return JSON.parse(localStorage.getItem("fsl_v6_ptcrit")||"null")||d}catch(e){return d}}
+function openProdList(createNew){
+  var a=sessions.find(function(x){return x.id===aid});if(!a)return;
+  ptSessId=a.id;wirePd();
+  if(createNew){ptNew();return}
+  pdRender();$$("pdBack").style.display="flex";
+}
+function pdRender(){
+  var s=ptSess();if(!s)return;
+  var list=s.prodTests||[];
+  $$("pdTitle").textContent="Proves de producció · "+(s.client||"");
+  $$("pdNote").textContent=list.length?"Toca una prova per obrir-la."
+    :"Encara no n'hi ha cap. Una prova registra la producció durant un període —unitats, rebuig i aturades— i en calcula l'OEE.";
+  $$("pdList").innerHTML=list.map(function(t){
+    var r=ptCalc(t);
+    var badge=t.running?"<span class=\"pt-badge run\">EN CURS</span>":(r.verdict?"<span class=\"pt-badge "+r.verdict+"\">"+(r.verdict==="pass"?"SUPERADA":"NO SUPERADA")+"</span>":"");
+    return "<button class=\"pd-card\" data-pt=\""+esc(t.id)+"\"><div class=\"t\">"+esc(t.name||"Prova")+badge+"</div>"
+      +"<div class=\"s\">"+esc([t.product,ptWhen(t.start)+(t.end?" → "+ptWhen(t.end).slice(-5):"")].filter(Boolean).join(" · "))+"</div>"
+      +"<div class=\"k\"><span>OEE "+ptPct(r.oee)+"</span><span>A "+ptPct(r.avail)+"</span><span>R "+ptPct(r.perf)+"</span><span>Q "+ptPct(r.qual)+"</span></div></button>";
+  }).join("");
+  $$("pdVal").style.display=list.length?"":"none";
+}
+function wirePd(){
+  if(pdWired)return;pdWired=true;
+  function close(){$$("pdBack").style.display="none";renderAll()}
+  $$("pdClose").addEventListener("click",close);
+  $$("pdBack").addEventListener("click",function(e){if(e.target===$$("pdBack"))close()});
+  $$("pdNew").addEventListener("click",ptNew);
+  $$("pdList").addEventListener("click",function(e){var b=e.target.closest("[data-pt]");if(b)openProdTest(b.dataset.pt)});
+  $$("pdVal").addEventListener("click",function(){
+    var s=ptSess();if(!s)return;
+    $$("pdBack").style.display="none";
+    exportRep(s,"valpdf");
+  });
+}
+function ptNew(){
+  var s=ptSess();if(!s)return;
+  var k=(s.prodTests||[]).length+1,id=uid();
+  ptSetTests(function(l){return l.concat([{id:id,name:"Prova "+k,product:"",nominal:"",start:"",end:"",running:false,
+    counterStart:"",counterEnd:"",total:"",rejects:"",stops:[],crit:ptCritDefaults(),notes:""}])});
+  openProdTest(id);
+}
+function openProdTest(id){
+  ptId=id;wirePt();
+  $$("pdBack").style.display="none";
+  ptFill();
+  $$("ptBack").style.display="flex";
+  if(ptTimer)clearInterval(ptTimer);
+  ptTimer=setInterval(ptTick,1000);
+}
+function ptClose(){
+  if(ptTimer){clearInterval(ptTimer);ptTimer=null}
+  $$("ptBack").style.display="none";ptId=null;
+  pdRender();$$("pdBack").style.display="flex";
+}
+function ptFillTimes(){var t=ptTest();if(!t)return;$$("ptStart").value=tsToInput(t.start||"");$$("ptEnd").value=tsToInput(t.end||"")}
+function ptFill(){
+  var t=ptTest();if(!t)return;var c=t.crit||{};
+  $$("ptTitle").textContent=t.name||"Prova de producció";
+  [["ptName","name"],["ptProduct","product"],["ptNominal","nominal"],["ptCs","counterStart"],["ptCe","counterEnd"],
+   ["ptTotal","total"],["ptRej","rejects"],["ptNotes","notes"]].forEach(function(f){$$(f[0]).value=t[f[1]]||""});
+  $$("ptCOee").value=c.oee||"";$$("ptCAv").value=c.avail||"";$$("ptCPf").value=c.perf||"";$$("ptCRj").value=c.rej||"";
+  ptFillTimes();ptRenderStops();ptRenderLive();ptRenderRes();
+}
+function ptCollect(){
+  var t=ptTest();if(!t)return;
+  var p={name:$$("ptName").value,product:$$("ptProduct").value,nominal:$$("ptNominal").value,
+    counterStart:$$("ptCs").value,counterEnd:$$("ptCe").value,total:$$("ptTotal").value,rejects:$$("ptRej").value,notes:$$("ptNotes").value,
+    crit:{oee:$$("ptCOee").value,avail:$$("ptCAv").value,perf:$$("ptCPf").value,rej:$$("ptCRj").value}};
+  // A time is only rewritten when it was CHANGED: the field holds minutes, the
+  // clock wrote seconds, and an untouched field must not round them away.
+  var sv=$$("ptStart").value,ev=$$("ptEnd").value;
+  if(sv!==tsToInput(t.start||""))p.start=sv?inputToTs(sv):"";
+  if(ev!==tsToInput(t.end||"")){p.end=ev?inputToTs(ev):"";if(p.end)p.running=false}
+  ptPatch(p);
+  try{localStorage.setItem("fsl_v6_ptcrit",JSON.stringify(p.crit))}catch(e){}
+  $$("ptTitle").textContent=p.name||"Prova de producció";
+  ptRenderLive();ptRenderRes();
+}
+function ptRenderStops(){
+  var t=ptTest();if(!t)return;var L=RPT.ca.pt;
+  $$("ptStops").innerHTML=(t.stops||[]).map(function(x,i){
+    var open=!x.end;
+    return "<div class=\"pt-stop\" data-i=\""+i+"\">"
+      +"<input type=\"datetime-local\" step=\"60\" data-k=\"start\" value=\""+tsToInput(x.start||"")+"\" title=\"Inici de l'aturada\">"
+      +"<input type=\"datetime-local\" step=\"60\" data-k=\"end\" value=\""+tsToInput(x.end||"")+"\" title=\"Final de l'aturada\">"
+      +"<select data-k=\"kind\">"+PT_KINDS.map(function(k){return "<option value=\""+k+"\""+(x.kind===k?" selected":"")+">"+esc(L.kinds[k])+"</option>"}).join("")+"</select>"
+      +"<input type=\"text\" data-k=\"cause\" placeholder=\"Causa…\" value=\""+esc(x.cause||"")+"\" autocomplete=\"off\">"
+      +"<span class=\"pt-dur\" data-dur=\""+i+"\">"+(open?"en curs":ptDur(ptStopMin(x,t)))+"</span>"
+      +"<button class=\"btn-xs\" data-del=\"1\" title=\"Treu aquesta aturada\">&#10005;</button></div>";
+  }).join("")||"<div class=\"ts-note\">Cap aturada.</div>";
+}
+function ptRenderLive(){
+  var t=ptTest();if(!t)return;var el=$$("ptLive");
+  var open=(t.stops||[]).filter(function(x){return x.start&&!x.end})[0];
+  var state=t.running?(open?"stop":"run"):(t.start?(t.end?"done":"half"):"new");
+  if(el.dataset.state===state)return;   // the clocks are ticked in place
+  el.dataset.state=state;
+  if(state==="new"){el.innerHTML="<button class=\"btn-gold\" data-live=\"start\">&#9654; Inicia la prova ara</button><span class=\"ts-note\">o omple les hores a mà, a sota</span>";return}
+  if(state==="run"||state==="stop"){
+    el.innerHTML="<span class=\"pt-clock\" id=\"ptClk\">● —</span>"
+      +(state==="stop"?"<span class=\"pt-clock stop\" id=\"ptClkStop\">—</span><button class=\"btn-gold\" data-live=\"resume\">&#9654; Represa</button>"
+                      :"<button data-live=\"stop\">&#9208; Aturada</button>")
+      +"<button class=\"btn-danger\" data-live=\"end\">&#9632; Finalitza</button>";
+    ptTick();return;
+  }
+  el.innerHTML="<span class=\"ts-note\">"+(state==="done"?"Prova acabada. Les hores i les aturades es poden corregir a sota."
+    :"Falta l'hora final.")+"</span>"+(state==="half"?"<button data-live=\"resumeTest\">&#9654; Continua en directe</button>":"");
+}
+function ptTick(){
+  var t=ptTest();if(!t||!t.running)return;
+  var c=$$("ptClk");if(c)c.textContent="● En curs · "+ptClock(Date.now()-ptMs(t.start));
+  var open=(t.stops||[]).filter(function(x){return x.start&&!x.end})[0];
+  var cs=$$("ptClkStop");if(cs&&open)cs.textContent="Aturada · "+ptClock(Date.now()-ptMs(open.start));
+  ptRenderRes();
+}
+function ptRenderRes(){
+  var t=ptTest();if(!t)return;var r=ptCalc(t),L=RPT.ca.pt;
+  function ck(key){return r.checks.filter(function(k){return k.key===key})[0]}
+  function row(lbl,val,key){
+    var c=key&&ck(key);
+    return "<tr><td>"+esc(lbl)+"</td><td class=\"v\">"+val+"</td><td class=\"v\" style=\"color:var(--tx3)\">"
+      +(c?(c.min?"≥ ":"≤ ")+ptN(c.lim,"ca",1)+" %":"")+"</td><td>"+(c&&c.ok!=null?(c.ok?"<span class=\"ok\">✓</span>":"<span class=\"ko\">✗</span>"):"")+"</td></tr>";
+  }
+  var uph=" u/h";
+  $$("ptRes").innerHTML="<table class=\"pt-res\">"
+    +row(L.duration,ptDur(r.durMin))+row(L.plannedStops,ptDur(r.plannedStopMin))+row(L.downtime,ptDur(r.downMin))+row(L.run,ptDur(r.runMin))
+    +row(L.total,ptN(r.total))+row(L.good,ptN(r.good))
+    +row(L.speedAvg,r.speedAvg==null?"—":ptN(r.speedAvg)+uph)+row(L.speedRun,r.speedRun==null?"—":ptN(r.speedRun)+uph)
+    +row(L.avail,ptPct(r.avail),"avail")+row(L.perf,ptPct(r.perf),"perf")+row(L.qual,ptPct(r.qual))
+    +row(L.oee,"<strong>"+ptPct(r.oee)+"</strong>","oee")+row(L.rejPct,ptPct(r.rejPct),"rejPct")
+    +"</table>"
+    +(r.verdict?"<div class=\"pt-verdict "+r.verdict+"\">"+(r.verdict==="pass"?"PROVA SUPERADA":"PROVA NO SUPERADA")+"</div>"
+      :(r.checks.length?"<div class=\"ts-note\" style=\"margin-top:8px\">El veredicte surt quan la prova té inici, final i unitats.</div>":""));
+  if(r.perf!=null&&r.perf>1.05&&!t.running)$$("ptRes").insertAdjacentHTML("beforeend","<div class=\"ts-note\" style=\"margin-top:6px;color:var(--orange)\">El rendiment passa del 100 %: s'ha fet més del que permet la velocitat nominal. Revisa-la, o revisa les unitats.</div>");
+  var cs=ptNum(t.counterStart),ce=ptNum(t.counterEnd);
+  $$("ptTotal").placeholder=(cs!=null&&ce!=null)?"= "+ptN(ce-cs)+" (dels comptadors)":"";
+}
+function wirePt(){
+  if(ptWired)return;ptWired=true;
+  ["ptName","ptProduct","ptNominal","ptCs","ptCe","ptTotal","ptRej","ptNotes","ptCOee","ptCAv","ptCPf","ptCRj"].forEach(function(id){
+    $$(id).addEventListener("input",ptCollect);
+  });
+  ["ptStart","ptEnd"].forEach(function(id){$$(id).addEventListener("change",ptCollect)});
+  $$("ptDone").addEventListener("click",ptClose);
+  $$("ptBack").addEventListener("click",function(e){if(e.target===$$("ptBack"))ptClose()});
+  $$("ptDel").addEventListener("click",function(){
+    if(!confirm("Vols eliminar aquesta prova de producció? No es pot desfer."))return;
+    var id=ptId;ptSetTests(function(l){return l.filter(function(t){return t.id!==id})});
+    ptClose();
+  });
+  $$("ptStopAdd").addEventListener("click",function(){
+    var t=ptTest();if(!t)return;
+    var now_=new Date().toISOString();
+    ptPatch({stops:(t.stops||[]).concat([{id:uid(),start:t.end||now_,end:t.end||now_,kind:"machine",cause:""}])});
+    ptRenderStops();ptRenderRes();
+  });
+  function stopEdit(e){
+    var row=e.target.closest(".pt-stop");if(!row)return;
+    var t=ptTest();if(!t)return;
+    var i=+row.dataset.i,k=e.target.dataset.k;if(!k)return;
+    var stops=(t.stops||[]).slice(),x=Object.assign({},stops[i]);
+    if(k==="start"||k==="end"){
+      var v=e.target.value;
+      if(v===tsToInput(x[k]||""))return;
+      x[k]=v?inputToTs(v):"";
+    }else x[k]=e.target.value;
+    stops[i]=x;ptPatch({stops:stops});
+    var d=document.querySelector("#ptStops [data-dur=\""+i+"\"]");if(d)d.textContent=x.end?ptDur(ptStopMin(x,t)):"en curs";
+    ptRenderLive();ptRenderRes();
+  }
+  $$("ptStops").addEventListener("change",stopEdit);
+  $$("ptStops").addEventListener("input",function(e){if(e.target.dataset.k==="cause")stopEdit(e)});
+  $$("ptStops").addEventListener("click",function(e){
+    if(!e.target.closest("[data-del]"))return;
+    var row=e.target.closest(".pt-stop"),t=ptTest();if(!row||!t)return;
+    var i=+row.dataset.i;ptPatch({stops:(t.stops||[]).filter(function(_,k){return k!==i})});
+    ptRenderStops();ptRenderLive();ptRenderRes();
+  });
+  // Live: the times come from the clock.
+  $$("ptLive").addEventListener("click",function(e){
+    var b=e.target.closest("[data-live]");if(!b)return;
+    var t=ptTest();if(!t)return;
+    var now_=new Date().toISOString(),stops=(t.stops||[]).slice(),focusI=null;
+    var oi=stops.findIndex(function(x){return x.start&&!x.end});
+    switch(b.dataset.live){
+      case "start":ptPatch({start:now_,end:"",running:true});break;
+      case "resumeTest":ptPatch({end:"",running:true});break;
+      case "stop":stops.push({id:uid(),start:now_,end:"",kind:"machine",cause:""});ptPatch({stops:stops});break;
+      case "resume":
+        if(oi>=0){stops[oi]=Object.assign({},stops[oi],{end:now_});focusI=oi}
+        ptPatch({stops:stops});break;
+      case "end":
+        if(oi>=0)stops[oi]=Object.assign({},stops[oi],{end:now_});
+        ptPatch({stops:stops,end:now_,running:false});break;
+    }
+    ptFillTimes();ptRenderStops();ptRenderLive();ptRenderRes();
+    if(focusI!=null){var ci=document.querySelector("#ptStops [data-i=\""+focusI+"\"] [data-k=cause]");if(ci)ci.focus()}
+    if(b.dataset.live==="end"){var f=$$(ptNum($$("ptCs").value)!=null?"ptCe":"ptTotal");if(f)f.focus()}
+  });
+}
 // A page of its own beside the app, so it can be read alongside it.
 $$("btnHelp").addEventListener("click",function(){window.open("manual.html","_blank","noopener")});
 $$("btnBulkArx").addEventListener("click",function(){if(mob())closeSide();openBulkArchive()});
@@ -4712,6 +5096,7 @@ $$("nSave").addEventListener("click",function(){
   } else {
     var s={id:uid(),client:c,project:proj,machine:m,location:loc,tech:tech,type:type,contact:cont,contactRole:crole,status:"open",createdAt:now(),entries:[],notes:""};
     sessions=[s].concat(sessions);aid=s.id;
+    if(type==="production")setTimeout(function(){openProdList(true)},0);
     closeNewModal();["nClient","nProject","nMachine","nLoc","nTech","nContact","nContactRole"].forEach(function(id){$$(id).value=""});
     scheduleSave();renderAll();
     if(isLoggedIn)ensureSessionFolders(s.id); // create Drive folders up front, not on first upload
@@ -4889,7 +5274,7 @@ function dlBlob(blob,filename){
 // manual's data — part names, references — always stays as the manual has it.
 var RPT={
   ca:{title:"Informe de servei tècnic",gen:"Generat el",
-      types:{commissioning:"Posada en marxa",maintenance:"Manteniment",retrofit:"Millora / Retrofit"},
+      types:{commissioning:"Posada en marxa",maintenance:"Manteniment",retrofit:"Millora / Retrofit",production:"Prova de producció"},
       sev:{info:"INFO",ok:"OK",warning:"AVÍS",issue:"PROBLEMA"},
       client:"Client",contact:"Persona de contacte",project:"Número de projecte",machine:"Màquina",location:"Ubicació",tech:"Tècnic",
       start:"Inici",status:"Estat",manual:"Manual",open:"Oberta",closed:"Tancada",
@@ -4900,12 +5285,13 @@ var RPT={
       qty:"QT.",ref:"REF.",part:"RECANVI",photoTag:"[foto]",openDrive:"Obre a Drive",
       voice:"nota de veu",video:"vídeo",photo:"foto",file:"fitxer",
       pre:{report:"informe",parts:"recanvis"},
+      pt:{title:"Proves de producció",test:"Prova",product:"Producte / format",nominal:"Velocitat nominal",start:"Inici",end:"Final",duration:"Durada",plannedStops:"Aturades planificades",downtime:"Aturades no planificades",run:"Temps en marxa",total:"Unitats totals",rejects:"Unitats rebutjades",good:"Unitats bones",speedAvg:"Velocitat mitjana",speedRun:"Velocitat en marxa",avail:"Disponibilitat",perf:"Rendiment",qual:"Qualitat",oee:"OEE",rejPct:"Rebuig",indicator:"Indicador",value:"Valor",target:"Objectiu",result:"Resultat",yes:"Compleix",no:"No compleix",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Aturades",kind:"Tipus",cause:"Causa",kinds:{machine:"Màquina",external:"Externa",planned:"Planificada"},notes:"Observacions",uph:"u/h",validation:"Informe de validació",file:"validacio"},
       h:{title:"Historial de la màquina",visits:"visites",visitsH:"Visites",sn:"N/S",pending:"Pendents",pendOther:"Pendent d'altres visites",closedLater:"Tancats en una visita posterior",closedOn:"Tancat el",resolvedSt:"Resolt",pendingSt:"Pendent",entries:"entrades",parts:"Recanvis muntats",printed:"Imprès el"},
       x:{sSession:"Sessió",sDetail:"Detall",sSummary:"Resum",qty:"Quantitat",ref:"Ref.",den:"Denominació",
          date:"Data",sev:"Gravetat",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunt",grup:"Grup / Dibuix",
          page:"Pàgina",project:"Projecte",type:"Tipus",gen:"Generat",lines:"Recanvis (línies)",refs:"Referències diferents"}},
   es:{title:"Informe de servicio técnico",gen:"Generado el",
-      types:{commissioning:"Puesta en marcha",maintenance:"Mantenimiento",retrofit:"Mejora / Retrofit"},
+      types:{commissioning:"Puesta en marcha",maintenance:"Mantenimiento",retrofit:"Mejora / Retrofit",production:"Prueba de producción"},
       sev:{info:"INFO",ok:"OK",warning:"AVISO",issue:"PROBLEMA"},
       client:"Cliente",contact:"Persona de contacto",project:"Número de proyecto",machine:"Máquina",location:"Ubicación",tech:"Técnico",
       start:"Inicio",status:"Estado",manual:"Manual",open:"Abierta",closed:"Cerrada",
@@ -4916,12 +5302,13 @@ var RPT={
       qty:"CANT.",ref:"REF.",part:"RECAMBIO",photoTag:"[foto]",openDrive:"Abrir en Drive",
       voice:"nota de voz",video:"vídeo",photo:"foto",file:"archivo",
       pre:{report:"informe",parts:"recambios"},
+      pt:{title:"Pruebas de producción",test:"Prueba",product:"Producto / formato",nominal:"Velocidad nominal",start:"Inicio",end:"Final",duration:"Duración",plannedStops:"Paradas planificadas",downtime:"Paradas no planificadas",run:"Tiempo en marcha",total:"Unidades totales",rejects:"Unidades rechazadas",good:"Unidades buenas",speedAvg:"Velocidad media",speedRun:"Velocidad en marcha",avail:"Disponibilidad",perf:"Rendimiento",qual:"Calidad",oee:"OEE",rejPct:"Rechazo",indicator:"Indicador",value:"Valor",target:"Objetivo",result:"Resultado",yes:"Cumple",no:"No cumple",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Paradas",kind:"Tipo",cause:"Causa",kinds:{machine:"Máquina",external:"Externa",planned:"Planificada"},notes:"Observaciones",uph:"u/h",validation:"Informe de validación",file:"validacion"},
       h:{title:"Historial de la máquina",visits:"visitas",visitsH:"Visitas",sn:"N/S",pending:"Pendientes",pendOther:"Pendiente de otras visitas",closedLater:"Cerrados en una visita posterior",closedOn:"Cerrado el",resolvedSt:"Resuelto",pendingSt:"Pendiente",entries:"entradas",parts:"Recambios montados",printed:"Impreso el"},
       x:{sSession:"Sesión",sDetail:"Detalle",sSummary:"Resumen",qty:"Cantidad",ref:"Ref.",den:"Denominación",
          date:"Fecha",sev:"Gravedad",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunto",grup:"Grupo / Plano",
          page:"Página",project:"Proyecto",type:"Tipo",gen:"Generado",lines:"Recambios (líneas)",refs:"Referencias distintas"}},
   en:{title:"Field Service Report",gen:"Generated on",
-      types:{commissioning:"Commissioning",maintenance:"Maintenance",retrofit:"Upgrade / Retrofit"},
+      types:{commissioning:"Commissioning",maintenance:"Maintenance",retrofit:"Upgrade / Retrofit",production:"Production test"},
       sev:{info:"INFO",ok:"OK",warning:"WARNING",issue:"ISSUE"},
       client:"Client",contact:"Contact",project:"Project Number",machine:"Machine",location:"Location",tech:"Technician",
       start:"Start",status:"Status",manual:"Manual",open:"Open",closed:"Closed",
@@ -4932,6 +5319,7 @@ var RPT={
       qty:"QTY",ref:"REF.",part:"SPARE PART",photoTag:"[photo]",openDrive:"Open in Drive",
       voice:"voice note",video:"video",photo:"photo",file:"file",
       pre:{report:"report",parts:"spare_parts"},
+      pt:{title:"Production tests",test:"Test",product:"Product / format",nominal:"Nominal speed",start:"Start",end:"End",duration:"Duration",plannedStops:"Planned stops",downtime:"Unplanned stops",run:"Run time",total:"Total units",rejects:"Rejected units",good:"Good units",speedAvg:"Average speed",speedRun:"Running speed",avail:"Availability",perf:"Performance",qual:"Quality",oee:"OEE",rejPct:"Reject rate",indicator:"Indicator",value:"Value",target:"Target",result:"Result",yes:"Met",no:"Not met",pass:"PASSED",fail:"NOT PASSED",stops:"Stops",kind:"Type",cause:"Cause",kinds:{machine:"Machine",external:"External",planned:"Planned"},notes:"Remarks",uph:"u/h",validation:"Validation report",file:"validation"},
       h:{title:"Machine history",visits:"visits",visitsH:"Visits",sn:"S/N",pending:"Open items",pendOther:"Open from other visits",closedLater:"Closed on a later visit",closedOn:"Closed on",resolvedSt:"Resolved",pendingSt:"Open",entries:"entries",parts:"Spare parts fitted",printed:"Printed on"},
       x:{sSession:"Session",sDetail:"Detail",sSummary:"Summary",qty:"Quantity",ref:"Ref.",den:"Designation",
          date:"Date",sev:"Severity",tag:"Tag",entry:"Entry",pos:"Pos.",conj:"Assembly",grup:"Group / Drawing",
@@ -5896,6 +6284,70 @@ function revLine(R,rev,tl){
   return tl+"  ·  "+(rev?R.revLbl+" "+("0"+rev.n).slice(-2)+"  ·  "+d
                           :R.gen+" "+fts(new Date().toISOString()));
 }
+// The production tests as a report section — HTML, PDF and Word share the
+// numbers through ptReportData; only the drawing differs.
+function ptReportHTML(s,R,lang){
+  var tests=(s&&s.prodTests)||[];if(!tests.length)return "";
+  var L=R.pt,td="padding:5px 8px;border:1px solid #e5e7eb;font-size:12px";
+  return "<h2 style=\"font-size:17px;margin:30px 0 6px;border-bottom:2px solid #8b5cf6;padding-bottom:6px\">"+esc(L.title)+"</h2>"
+    +tests.map(function(t){
+      var d=ptReportData(t,R,lang,false);
+      var badge=d.verdict?"<span style=\"margin-left:10px;font-size:11px;padding:3px 10px;border-radius:20px;background:"
+        +(d.r.verdict==="pass"?"#dcfce7;color:#166534":"#fee2e2;color:#991b1b")+"\">"+esc(d.verdict)+"</span>":"";
+      return "<div style=\"margin:14px 0 24px\"><h3 style=\"font-size:15px;margin:0 0 8px\">"+esc(t.name||L.test)+badge+"</h3>"
+        +"<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start\">"
+        +"<table><tbody>"+d.data.map(function(r){return "<tr><td style=\""+td+";color:#6b7280;font-weight:700\">"+esc(r[0])+"</td><td style=\""+td+"\">"+esc(r[1])+"</td></tr>"}).join("")+"</tbody></table>"
+        +"<table><thead><tr><th>"+esc(L.indicator)+"</th><th>"+esc(L.value)+"</th><th>"+esc(L.target)+"</th><th>"+esc(L.result)+"</th></tr></thead><tbody>"
+        +d.kpi.map(function(r){
+          var col=r[3]===L.yes?"#16a34a":(r[3]===L.no?"#dc2626":"#111827");
+          return "<tr><td style=\""+td+"\">"+esc(r[0])+"</td><td style=\""+td+";font-weight:700\">"+esc(r[1])+"</td><td style=\""+td+"\">"+esc(r[2])+"</td><td style=\""+td+";font-weight:700;color:"+col+"\">"+esc(r[3])+"</td></tr>";
+        }).join("")+"</tbody></table></div>"
+        +(d.stops.length?"<div style=\"margin-top:10px;font-weight:700;font-size:13px\">"+esc(L.stops)+"</div><table><thead><tr><th>"+esc(L.start)+"</th><th>"+esc(L.end)+"</th><th>"+esc(L.duration)+"</th><th>"+esc(L.kind)+"</th><th>"+esc(L.cause)+"</th></tr></thead><tbody>"
+          +d.stops.map(function(r){return "<tr>"+r.map(function(c){return "<td style=\""+td+"\">"+esc(c)+"</td>"}).join("")+"</tr>"}).join("")+"</tbody></table>":"")
+        +(t.notes?"<div style=\"margin-top:10px;padding:10px;background:#f9fafb;border-left:3px solid #8b5cf6\"><strong>"+esc(L.notes)+":</strong><br>"+esc(t.notes)+"</div>":"")
+        +"</div>";
+    }).join("");
+}
+function pdfProdSection(doc,s,R,lang,y,M,CW,H){
+  var tests=(s&&s.prodTests)||[];if(!tests.length)return y;
+  var L=R.pt;
+  if(y>H-50){doc.addPage();y=M}
+  doc.setFont("helvetica","bold");doc.setFontSize(12);doc.setTextColor(17,24,39);
+  doc.text(L.title,M,y+4);doc.setDrawColor(139,92,246);doc.setLineWidth(0.6);doc.line(M,y+6.5,M+CW,y+6.5);y+=11;
+  tests.forEach(function(t){
+    var d=ptReportData(t,R,lang,true);
+    if(y>H-70){doc.addPage();y=M}
+    doc.setFont("helvetica","bold");doc.setFontSize(10);doc.setTextColor(17,24,39);
+    doc.text(String(t.name||L.test),M,y+4);
+    if(d.verdict){var ok=d.r.verdict==="pass";doc.setTextColor(ok?22:220,ok?163:38,ok?74:38);doc.text(d.verdict,M+CW,y+4,{align:"right"})}
+    y+=7;
+    doc.autoTable({startY:y,margin:{left:M,right:M},theme:"grid",styles:{fontSize:8,cellPadding:1.4},
+      body:d.data,columnStyles:{0:{fontStyle:"bold",cellWidth:CW*0.4,textColor:[107,114,128]}}});
+    y=doc.lastAutoTable.finalY+3;
+    doc.autoTable({startY:y,margin:{left:M,right:M},theme:"grid",styles:{fontSize:8,cellPadding:1.4},
+      head:[[L.indicator,L.value,L.target,L.result]],headStyles:{fillColor:[17,24,39],textColor:255},body:d.kpi,
+      didParseCell:function(h){
+        if(h.section!=="body")return;
+        if(h.column.index===1)h.cell.styles.fontStyle="bold";
+        if(h.column.index===3){h.cell.styles.fontStyle="bold";
+          if(h.cell.raw===L.yes)h.cell.styles.textColor=[22,163,74];else if(h.cell.raw===L.no)h.cell.styles.textColor=[220,38,38];}
+      }});
+    y=doc.lastAutoTable.finalY+3;
+    if(d.stops.length){
+      doc.autoTable({startY:y,margin:{left:M,right:M},theme:"grid",styles:{fontSize:7.5,cellPadding:1.2},
+        head:[[L.start,L.end,L.duration,L.kind,L.cause]],headStyles:{fillColor:[71,85,105],textColor:255},body:d.stops});
+      y=doc.lastAutoTable.finalY+3;
+    }
+    if(t.notes){
+      if(y>H-25){doc.addPage();y=M}
+      doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setTextColor(17,24,39);doc.text(L.notes,M,y+3);y+=6;
+      doc.setFont("helvetica","normal");doc.setTextColor(55,65,81);
+      var nl=doc.splitTextToSize(String(t.notes),CW);nl.forEach(function(l,k){doc.text(l,M,y+k*4)});y+=nl.length*4;
+    }
+    y+=6;
+  });
+  return y;
+}
 function buildReportHTML(s,forPrint,lang,rev){
   lang=RPT[lang]?lang:"ca";
   var R=RPT[lang],tm=TM[s.type]||TM.commissioning,tl=R.types[s.type]||R.types.commissioning;
@@ -5957,6 +6409,7 @@ function buildReportHTML(s,forPrint,lang,rev){
     +"</div>"
     +"<table><thead><tr><th>"+esc(R.ts)+"</th><th>"+esc(R.severity)+"</th><th>"+esc(R.tag)+"</th><th>"+esc(R.desc)+"</th><th>"+esc(R.att)+"</th></tr></thead><tbody>"+rows+"</tbody></table>"
     +(s.notes?"<div style=\"margin-top:18px;padding:12px;background:#f9fafb;border-radius:6px;border-left:3px solid #f59e0b\"><strong>"+esc(R.notes)+":</strong><br>"+esc(s.notes)+"</div>":"")
+    +ptReportHTML(s,R,lang)
     +(function(){
       // Signed on the glass, or the same blank line as always to sign on paper.
       // The image sits ON the rule, so the margin above it shrinks by its height.
@@ -5988,7 +6441,7 @@ async function exportRep(s,fmt){
   if(fmt==="timesheet"){openTimesheet();return}
   if(fmt==="zip"){exportSessionZip(s,"project");return}
   if(fmt==="zipdocx"){exportSessionZip(s,"docx");return}
-  if(fmt==="xlsx"&&!collectSessionParts(s).length){alert("Aquesta sessió encara no té recanvis.\n\nTria'ls d'un dibuix o afegeix-los a mà en una entrada.");return}
+  if(fmt==="xlsx"&&!collectSessionParts(s).length&&!(s.prodTests||[]).length){alert("Aquesta sessió encara no té recanvis ni proves de producció.\n\nTria els recanvis d'un dibuix o afegeix-los a mà en una entrada.");return}
   // A language the app has no labels for yet has to get them before anything
   // is built, or the report comes out with Catalan headings on foreign text.
   if(!await ensureLabels(reportLang(s)))return;
@@ -6011,6 +6464,15 @@ async function exportRep(s,fmt){
     uploadReportCopy(s,htmlBlob,hn,"text/html");
   }
   else if(fmt==="pdf"){exportPDF(s,R,base)}
+  else if(fmt==="valpdf"){
+    expBusy("Informe de validació…");
+    try{
+      var vb=await buildPdfBlob(R.s,R.lang,R.rev,{validation:true});
+      if(!vb){alert("No s'ha pogut carregar la llibreria PDF. Comprova la connexió.");return}
+      var vn=RPT[R.lang].pt.file+"_"+base+".pdf";
+      dlBlob(vb,vn);uploadReportCopy(s,vb,vn,"application/pdf");
+    }finally{expBusy("")}
+  }
   else if(fmt==="docx"){exportDOCX(s,R,base)}
   else if(fmt==="xlsx"){exportXLSX(s,R,base)}
 }
@@ -7106,7 +7568,7 @@ async function labelsFetch(lang){
   var tsl=txParseObj(await gemAsk(LBL_SYS+into,JSON.stringify(TSL.en),true));
   if(!sameShape(RPT.en,rpt)||!sameShape(TSL.en,tsl))
     throw new Error("les etiquetes han tornat amb una forma que no encaixa amb la taula original");
-  rpt.pre={report:fileSafe(rpt.pre.report,"report"),parts:fileSafe(rpt.pre.parts,"spare_parts")};
+  rpt.pre={report:fileSafe(rpt.pre.report,"report"),parts:fileSafe(rpt.pre.parts,"spare_parts")};if(rpt.pt)rpt.pt.file=fileSafe(rpt.pt.file,"validation");
   tsl.file=fileSafe(tsl.file,"timesheet");
   return {rpt:rpt,tsl:tsl};
 }
@@ -7181,7 +7643,7 @@ function wireLbl(){
       lblSet(p[0]==="rpt"?rpt:tsl,p[1],v);
     });
     if(bad){alert("Hi ha "+bad+" etiqueta(es) buida(es). Omple-les: una etiqueta en blanc deixa un forat a l'informe.");return}
-    rpt.pre={report:fileSafe(rpt.pre.report,"report"),parts:fileSafe(rpt.pre.parts,"spare_parts")};
+    rpt.pre={report:fileSafe(rpt.pre.report,"report"),parts:fileSafe(rpt.pre.parts,"spare_parts")};if(rpt.pt)rpt.pt.file=fileSafe(rpt.pt.file,"validation");
     tsl.file=fileSafe(tsl.file,"timesheet");
     RPT[lang]=rpt;TSL[lang]=tsl;
     await labelsSave();close();
@@ -7367,7 +7829,10 @@ async function exportPDF(s,R,base){
   uploadReportCopy(s,blob,fn,"application/pdf");
 }
 // Returns the report as PDF bytes so both the download and the ZIP can use it.
-async function buildPdfBlob(s,lang,rev){
+// opts.validation: the production-test report — same header, data and
+// signatures, but the tests instead of the log, the counters and the photos.
+async function buildPdfBlob(s,lang,rev,opts){
+  var V=!!(opts&&opts.validation);
   var L=await loadPdfLibs();
   if(!L)return null;
   var R=RPT[lang]||RPT.ca;
@@ -7378,6 +7843,7 @@ async function buildPdfBlob(s,lang,rev){
   var y=M;
   // Everything the technician can have typed in a script helvetica can't draw.
   var typed=[s.client,s.project,s.machine,s.location,s.tech,s.notes];
+  (s.prodTests||[]).forEach(function(t){typed.push(t.name,t.product,t.notes);(t.stops||[]).forEach(function(x){typed.push(x.cause)})});
   entries.forEach(function(e){
     typed.push(e.text,e.tag);
     if(e.fix){typed.push(e.fix.text);(e.fix.images||[]).forEach(function(im){typed.push(im.name)})}
@@ -7393,7 +7859,7 @@ async function buildPdfBlob(s,lang,rev){
 
   // header
   doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(17,24,39);
-  doc.text(R.title,M,y+6);
+  doc.text(V&&R.pt?R.pt.validation:R.title,M,y+6);
   doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(107,114,128);
   doc.text(revLine(R,rev,tl),M,y+12);
   doc.setDrawColor(245,158,11);doc.setLineWidth(0.8);doc.line(M,y+15,W-M,y+15);
@@ -7408,6 +7874,7 @@ async function buildPdfBlob(s,lang,rev){
   // and wraps them.
   y=pdfMetaBlock(doc,meta,M,CW,y,ar);
 
+  if(!V){
   // counters
   doc.setFontSize(9);
   var stats=[[R.issues+": "+cnt.issue,[220,38,38]],[R.warnings+": "+cnt.warning,[234,88,12]]];
@@ -7580,8 +8047,10 @@ async function buildPdfBlob(s,lang,rev){
     if(shots.length%cols)y+=ih+11;
   }
 
+  }
+  y=pdfProdSection(doc,s,R,lang,y,M,CW,H);
   // notes + signatures
-  if(s.notes){
+  if(s.notes&&!V){
     if(y>H-30){doc.addPage();y=M}
     doc.setFont("helvetica","bold");doc.setFontSize(9);doc.setTextColor(17,24,39);doc.text(R.notes,M,y);y+=4;
     pdfFont(doc,ar,s.notes,"normal");doc.setFontSize(8.5);doc.setTextColor(55,65,81);
@@ -7695,8 +8164,8 @@ async function exportXLSX(s,R,base){
 // Returns the spare-parts workbook, or null when the library fails or there are
 // no parts (the ZIP just leaves it out then, without nagging).
 async function buildXlsxBlob(s,lang,rev){
-  var items=collectSessionParts(s);
-  if(!items.length)return null;
+  var items=collectSessionParts(s),ptTests=s.prodTests||[];
+  if(!items.length&&!ptTests.length)return null;
   var X=await loadXlsxLib();
   if(!X)return null;
   var R=RPT[lang]||RPT.ca,C=R.x;
@@ -7736,8 +8205,34 @@ async function buildXlsxBlob(s,lang,rev){
 
   var wb=X.utils.book_new();
   X.utils.book_append_sheet(wb,wsI,C.sSession);
-  X.utils.book_append_sheet(wb,wsD,C.sDetail);
-  X.utils.book_append_sheet(wb,wsR,C.sSummary);
+  if(items.length){
+    X.utils.book_append_sheet(wb,wsD,C.sDetail);
+    X.utils.book_append_sheet(wb,wsR,C.sSummary);
+  }
+  if(ptTests.length){
+    // One row per test, numbers as numbers (percentages as fractions, minutes
+    // as minutes), so the sheet can be summed and charted.
+    var PL=R.pt;
+    var head=[PL.test,PL.product,PL.nominal+" ("+PL.uph+")",PL.start,PL.end,PL.duration+" (min)",PL.plannedStops+" (min)",PL.downtime+" (min)",PL.run+" (min)",
+              PL.total,PL.rejects,PL.good,PL.speedAvg+" ("+PL.uph+")",PL.speedRun+" ("+PL.uph+")",PL.avail,PL.perf,PL.qual,PL.oee,PL.rejPct,PL.result];
+    var rowsT=[head];
+    function r2(v,k){return v==null?"":Math.round(v*Math.pow(10,k))/Math.pow(10,k)}
+    ptTests.forEach(function(t){
+      var r=ptCalc(t);
+      rowsT.push([t.name||"",t.product||"",ptNum(t.nominal)==null?"":ptNum(t.nominal),t.start?fts(t.start).slice(0,14):"",t.end?fts(t.end).slice(0,14):"",
+        r2(r.durMin,1),r2(r.plannedStopMin,1),r2(r.downMin,1),r2(r.runMin,1),r.total==null?"":r.total,r.rejects==null?"":r.rejects,r.good==null?"":r.good,
+        r2(r.speedAvg,0),r2(r.speedRun,0),r2(r.avail,4),r2(r.perf,4),r2(r.qual,4),r2(r.oee,4),r2(r.rejPct,4),
+        r.verdict?(r.verdict==="pass"?PL.pass:PL.fail):""]);
+    });
+    var wsT=X.utils.aoa_to_sheet(rowsT);wsT["!cols"]=autoCols(rowsT);
+    X.utils.book_append_sheet(wb,wsT,String(PL.title).slice(0,31));
+    var rowsS=[[PL.test,PL.start,PL.end,PL.duration+" (min)",PL.kind,PL.cause]];
+    ptTests.forEach(function(t){(t.stops||[]).forEach(function(x){
+      var m=ptStopMin(x,t);
+      rowsS.push([t.name||"",x.start?fts(x.start).slice(0,14):"",x.end?fts(x.end).slice(0,14):"",m==null?"":Math.round(m*10)/10,(PL.kinds&&PL.kinds[x.kind])||x.kind||"",x.cause||""]);
+    })});
+    if(rowsS.length>1){var wsS=X.utils.aoa_to_sheet(rowsS);wsS["!cols"]=autoCols(rowsS);X.utils.book_append_sheet(wb,wsS,String(PL.stops).slice(0,31))}
+  }
   var out=X.write(wb,{bookType:"xlsx",type:"array"});
   return new Blob([out],{type:XLSX_MIME});
 }
@@ -7970,6 +8465,39 @@ async function buildDocxDocument(D,s,lang,rev){
     children.push(P({spacing:{before:120,after:40},children:[T({text:R.notes,bold:true,size:hp(9),font:"Arial",color:"111827"})]}));
     children.push(P({spacing:{after:200},children:[T({text:s.notes,size:hp(8.5),font:"Arial",color:"374151"})]}));
   }
+  // The production tests, as the PDF draws them.
+  var ptTests=s.prodTests||[];
+  if(ptTests.length){
+    var PL=R.pt;
+    var ptCell=function(text,w,o){o=o||{};return new D.TableCell({borders:borders,margins:mg,width:{size:w,type:D.WidthType.DXA},
+      shading:o.fill?{fill:o.fill,type:D.ShadingType.CLEAR}:undefined,
+      children:[P({children:[T({text:String(text==null?"":text),bold:!!o.bold,size:hp(8),font:"Arial",color:o.color||"111827"})]})]})};
+    var ptTbl=function(rows,mm,head,style){
+      var W=mm.map(function(x){return tw(x)}),trs=[];
+      if(head)trs.push(new D.TableRow({children:head.map(function(h,i){return hdrCell(h,W[i])})}));
+      rows.forEach(function(r){trs.push(new D.TableRow({children:r.map(function(c,i){return ptCell(c,W[i],style?style(r,i):{})})}))});
+      return new D.Table({width:{size:W.reduce(function(a,b){return a+b},0),type:D.WidthType.DXA},columnWidths:W,layout:D.TableLayoutType.FIXED,rows:trs});
+    };
+    children.push(P({spacing:{before:240,after:80},children:[T({text:PL.title,bold:true,size:hp(12),font:"Arial",color:"111827"})]}));
+    ptTests.forEach(function(t){
+      var d=ptReportData(t,R,R===RPT.ca?"ca":lang,false);
+      var ok=d.r.verdict==="pass";
+      children.push(P({spacing:{before:160,after:60},children:[T({text:String(t.name||PL.test),bold:true,size:hp(10),font:"Arial",color:"111827"})]
+        .concat(d.verdict?[T({text:"   "+d.verdict,bold:true,size:hp(9),font:"Arial",color:ok?"16A34A":"DC2626"})]:[])}));
+      children.push(ptTbl(d.data,[CW*0.4,CW*0.6],null,function(r,i){return i===0?{bold:true,color:"6B7280"}:{}}));
+      children.push(P({spacing:{after:60},children:[T({text:""})]}));
+      children.push(ptTbl(d.kpi,[CW*0.34,CW*0.22,CW*0.22,CW*0.22],[PL.indicator,PL.value,PL.target,PL.result],function(r,i){
+        if(i===1)return {bold:true};
+        if(i===3)return {bold:true,color:r[3]===PL.yes?"16A34A":(r[3]===PL.no?"DC2626":"111827")};
+        return {};
+      }));
+      if(d.stops.length){
+        children.push(P({spacing:{before:80,after:40},children:[T({text:PL.stops,bold:true,size:hp(8.5),font:"Arial",color:"111827"})]}));
+        children.push(ptTbl(d.stops,[CW*0.18,CW*0.18,CW*0.14,CW*0.16,CW*0.34],[PL.start,PL.end,PL.duration,PL.kind,PL.cause]));
+      }
+      if(t.notes)children.push(P({spacing:{before:80,after:120},children:[T({text:PL.notes+": ",bold:true,size:hp(8.5),font:"Arial"}),T({text:String(t.notes),size:hp(8.5),font:"Arial",color:"374151"})]}));
+    });
+  }
   // The signature block, as the PDF draws it: room to sign, the rule under it,
   // the label under that. It used to be one row with the rule on top, which put
   // the ink BELOW its own line and left nothing to sign on when there was no
@@ -8163,6 +8691,7 @@ async function exportSessionZip(s,kind){
       zip.file(P.report+"_"+base+".html",new Blob([buildReportHTML(R.s,false,R.lang,R.rev)],{type:"text/html;charset=utf-8"}));
       var pdfBlob=await buildPdfBlob(R.s,R.lang,R.rev); if(pdfBlob)zip.file(P.report+"_"+base+".pdf",pdfBlob);
       var xlsxBlob=await buildXlsxBlob(R.s,R.lang,R.rev); if(xlsxBlob)zip.file(P.parts+"_"+base+".xlsx",xlsxBlob);
+      if((R.s.prodTests||[]).length){var valBlob=await buildPdfBlob(R.s,R.lang,R.rev,{validation:true});if(valBlob)zip.file(RPT[R.lang].pt.file+"_"+base+".pdf",valBlob)}
       // The sheet has its own language and its own words: same treatment here
       // as when it is exported on its own, or the ZIP's copy comes out in the
       // language it was typed in while the loose one is translated.

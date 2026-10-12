@@ -70,6 +70,7 @@
     <li><a href="#revisions">Revisions i signatura</a></li>
     <li><a href="#idiomes">Idiomes i traducció</a></li>
     <li><a href="#hores">Full d'hores</a></li>
+    <li><a href="#proves">Proves de producció</a></li>
     <li><a href="#historial">Historial de la màquina</a></li>
     <li><a href="#tancar">Tancar, reobrir i esborrar</a></li>
     <li><a href="#arxiu">Arxivar i tornar a carregar</a></li>
@@ -253,7 +254,49 @@
 <p>Un cop desat, el full queda fixat: encara que després canviïs un dia al calendari, el full signat no canvia.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
-<h2 id="historial">11. Historial de la màquina</h2>
+<h2 id="proves">11. Proves de producció</h2>
+<p>Una prova de producció registra com treballa la línia durant un període, per validar-la: què s'ha fet, què s'ha rebutjat i cada aturada amb la seva causa. A partir d'això l'app calcula l'OEE i diu si la prova supera els criteris acordats.</p>
+<ul>
+  <li><strong>Dins d'una visita:</strong> a la capçalera, <span class="btn">📈 Prova de producció</span> (o <span class="btn">⋮ Més › Proves de producció</span> amb el disseny nou). Una visita en pot tenir tantes com calgui.</li>
+  <li><strong>Tota sola:</strong> crea una visita de tipus <strong>Prova de producció (PRD)</strong>. S'obre directament amb la primera prova.</li>
+</ul>
+<h3>Registrar-la en directe</h3>
+<ol>
+  <li>Omple el nom, el producte o format i la <strong>velocitat nominal</strong> (unitats per hora).</li>
+  <li><span class="btn">▶ Inicia la prova ara</span>: comença el rellotge.</li>
+  <li>Cada parada: <span class="btn">⏸ Aturada</span> quan s'atura i <span class="btn">▶ Represa</span> quan torna a anar. L'aturada queda apuntada amb les hores; tria'n el tipus i escriu-ne la causa.</li>
+  <li><span class="btn">■ Finalitza</span>: s'atura el rellotge i el cursor va a les unitats.</li>
+  <li>Escriu els comptadors (inicial i final) o les unitats totals, i les rebutjades.</li>
+</ol>
+<p>També es pot omplir tot després, a mà: les hores d'inici i final, les aturades amb <span class="btn">＋ Afegeix una aturada</span> i els comptadors. Les hores fetes en directe també es poden corregir.</p>
+<h3>Tipus d'aturada</h3>
+<ul>
+  <li><strong>Màquina</strong> i <strong>Externa</strong> (falta de material, de personal, de servei…): compten com a temps perdut i baixen la disponibilitat.</li>
+  <li><strong>Planificada</strong> (esmorzar, canvi de format previst, neteja programada): no compta, perquè no estava previst produir.</li>
+</ul>
+<h3>Què calcula</h3>
+<div class="scroll"><table>
+  <tr><th>Indicador</th><th>Com es calcula</th></tr>
+  <tr><td>Temps planificat</td><td>Del principi al final, menys les aturades planificades</td></tr>
+  <tr><td>Temps en marxa</td><td>Temps planificat menys les aturades de màquina i externes</td></tr>
+  <tr><td>Disponibilitat</td><td>Temps en marxa ÷ temps planificat</td></tr>
+  <tr><td>Rendiment</td><td>Unitats fetes ÷ unitats que permetia la velocitat nominal en el temps en marxa</td></tr>
+  <tr><td>Qualitat</td><td>Unitats bones ÷ unitats totals</td></tr>
+  <tr><td><strong>OEE</strong></td><td>Disponibilitat × rendiment × qualitat</td></tr>
+  <tr><td>Rebuig</td><td>Unitats rebutjades ÷ unitats totals</td></tr>
+</table></div>
+<p>Si hi ha comptador inicial i final, les unitats surten de la diferència. Si el rendiment passa del 100 %, l'app t'avisa: normalment vol dir que la velocitat nominal no és la bona.</p>
+<h3>Criteris i veredicte</h3>
+<p>Posa els objectius acordats: OEE mínim, disponibilitat mínima, rendiment mínim i rebuig màxim. Els que deixis en blanc no es comproven. L'app recorda els últims que has fet servir. Quan la prova té inici, final i unitats, cada indicador surt marcat <span class="sev-ok">✓</span> o <span class="sev-p">✗</span>, i la prova surt com a <strong>SUPERADA</strong> o <strong>NO SUPERADA</strong>.</p>
+<h3>Als documents</h3>
+<ul>
+  <li><strong>Dins de l'informe</strong> de la visita (PDF, Word i HTML), un apartat «Proves de producció» amb les dades, els indicadors, els objectius, les aturades i les observacions. A l'Excel hi ha un full amb una fila per prova i un altre amb les aturades.</li>
+  <li><strong>Informe de validació</strong> (PDF): <span class="btn">↓ Informe › 📈 Informe de validació</span>, o el botó de la llista de proves. Porta les dades de la visita, totes les proves i les signatures; no hi surt el registre d'incidències. També va dins del ZIP del projecte.</li>
+</ul>
+<p>El nom de les proves, les causes i les observacions surten tal com les escrius: no es tradueixen.</p>
+
+<!-- ───────────────────────────────────────────────────────────── -->
+<h2 id="historial">12. Historial de la màquina</h2>
 <p>Quan una màquina té més d'una visita, a la capçalera surt <span class="btn">📜 N visites</span>. Si n'hi ha de pendents d'altres visites, també ho diu en taronja. Obre l'historial:</p>
 <ul>
   <li><strong>⚠ Pendent d'altres visites</strong>: problemes i avisos de visites anteriors que encara estan oberts.</li>
@@ -268,7 +311,7 @@
 <p>S'imprimeix en <strong>l'idioma de l'informe de la visita oberta</strong>, i el botó diu quin és quan no és català («🖨 Imprimeix · English»). Les incidències de totes les visites es tradueixen amb la mateixa memòria de traduccions que els informes. En paper, la llista de pendents inclou també la visita oberta.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
-<h2 id="tancar">12. Tancar, reobrir i esborrar</h2>
+<h2 id="tancar">13. Tancar, reobrir i esborrar</h2>
 <ul>
   <li><span class="btn">■ Tanca</span>: la visita queda tancada i ja no s'hi poden afegir ni editar entrades. Es pot exportar igual.</li>
   <li><span class="btn">↺ Reobre</span>: la torna a obrir.</li>
@@ -277,7 +320,7 @@
 <p>En esborrar una visita, la seva carpeta de Drive va a la paperera de Drive, d'on es pot recuperar durant 30 dies. Si una altra visita fa servir la mateixa carpeta, no s'hi envia.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
-<h2 id="arxiu">13. Arxivar i tornar a carregar</h2>
+<h2 id="arxiu">14. Arxivar i tornar a carregar</h2>
 <p>El <strong>ZIP del projecte</strong> és la còpia completa d'una visita. Amb ell, una visita esborrada es pot tornar a carregar sencera, amb fotos i vídeos, en aquest compte o en un altre.</p>
 
 <h3>Arxivar diverses visites de cop</h3>
@@ -301,7 +344,7 @@
 <p>Les visites que ja hi són se salten soles, o sigui que no passa res si en marques alguna de repetida. Les fotos i els vídeos del ZIP es tornen a pujar a Drive. Cal tenir la sessió de Google iniciada; si no, els vídeos no es recuperen.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
-<h2 id="ordinador">14. Carpetes</h2>
+<h2 id="ordinador">15. Carpetes</h2>
 <p>Barra lateral › <span class="btn">📁 Carpetes</span>. Hi ha dues coses:</p>
 <h3>On es desa el ZIP del projecte</h3>
 <ul>
@@ -312,7 +355,7 @@
 <p>Només a Chrome i Edge d'ordinador, amb Drive per a escriptori. Tria <code>G:\My Drive\Field Service Log\Outputs</code> i el diàleg d'afegir fotos s'obrirà directament a la carpeta de la visita. La lletra de la unitat pot ser una altra, i «My Drive» pot dir-se «La meva unitat». Tria <strong>Outputs</strong> i no la carpeta d'una visita.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
-<h2 id="drive">15. Drive i sincronització</h2>
+<h2 id="drive">16. Drive i sincronització</h2>
 <p>A dalt, l'indicador diu si estàs sincronitzat amb Drive o treballes en local. L'app sincronitza sola cada 30 segons, i no ho fa mentre estàs escrivint.</p>
 <ul>
   <li><span class="btn">⟳</span>: sincronitza ara.</li>
@@ -340,7 +383,7 @@
 </ul>
 
 <!-- ───────────────────────────────────────────────────────────── -->
-<h2 id="dispositius">16. Mòbil, tauleta i ordinador</h2>
+<h2 id="dispositius">17. Mòbil, tauleta i ordinador</h2>
 <div class="scroll"><table>
   <tr><th></th><th>Mòbil / tauleta</th><th>Ordinador</th></tr>
   <tr><td>Fotos i vídeos</td><td>📷 càmera, 🎥 vídeo, 🖼 galeria</td><td>📷 obre una carpeta</td></tr>
@@ -352,13 +395,13 @@
 </table></div>
 
 <!-- ───────────────────────────────────────────────────────────── -->
-<h2 id="problemes">17. Problemes freqüents</h2>
+<h2 id="problemes">18. Problemes freqüents</h2>
 <h3>No veig els canvis d'una versió nova</h3>
 <p>A l'ordinador, <code>Ctrl+Shift+R</code>. Al mòbil, tanca l'app del tot i torna-la a obrir. Si l'app instal·lada tarda a agafar la versió nova, desinstal·la-la i torna-la a instal·lar.</p>
 <h3>«Reconnecta» en vermell</h3>
 <p>El permís de Google ha caducat. Prem <span class="btn">Reconnecta</span>; no es perd res, perquè tot està desat al dispositiu.</p>
 <h3>L'emmagatzematge és gairebé ple</h3>
-<p>Surt una barra amb <span class="btn">⇩ Descarrega una còpia</span>. Arxiva i esborra les visites acabades (<a href="#arxiu">apartat 13</a>) per alliberar espai.</p>
+<p>Surt una barra amb <span class="btn">⇩ Descarrega una còpia</span>. Arxiva i esborra les visites acabades (<a href="#arxiu">apartat 14</a>) per alliberar espai.</p>
 <h3>No es pot traduir o corregir</h3>
 <p>Comprova que hi hagi la <a href="#comencar">clau de Gemini</a> en aquest dispositiu i que hi hagi connexió. Un informe es pot generar igualment amb els textos tal com els vas escriure.</p>
 <h3>Al selector de la tauleta els ZIP surten grisos</h3>

@@ -1301,7 +1301,31 @@ function saveLocalLS(){
 // Returns a Promise<bool>. Callers fire-and-forget; the in-memory sessions
 // stay authoritative, so not awaiting is fine. On failure it surfaces a
 // warning instead of silently losing data.
+// ── WHICH COPY IS NEWER ──────────────────────────────────────────────────────
+// `updatedAt` means "the CONTENT changed" — it is what says a report needs a
+// new revision — so several writes deliberately leave it alone: the report
+// and written-in languages, signatures, revisions, cached translations, the
+// folder a visit is filed under… Merging two copies by `updatedAt` alone
+// therefore kept Drive's copy whenever the stamps tied, and a language picked
+// on this device flipped back at the next sync (2026-10-13).
+// `modAt` is the other stamp: ANY change to a visit, content or not. Visits
+// are replaced, never edited in place, so a changed one is simply a different
+// object: on every local save, each visit that is not the object last seen
+// gets `modAt` = now. What arrives from Drive is marked as seen, so a sync
+// does not stamp it as a change of ours. The merges compare `sStamp`, the
+// later of the two.
+var seenObj=new Map();
+function markSeen(){sessions.forEach(function(x){if(x&&x.id)seenObj.set(x.id,x)})}
+function stampChanged(){
+  var t=null;
+  sessions.forEach(function(x){
+    if(!x||!x.id||seenObj.get(x.id)===x)return;
+    x.modAt=t||(t=now());seenObj.set(x.id,x);
+  });
+}
+function sStamp(x){var a=(x&&x.modAt)||"",b=(x&&x.updatedAt)||"";return a>b?a:b}
 async function saveLocal(){
+  stampChanged();
   if(idb){
     try{await idbSet(idb,"sessions",sessions);storeDismissed=false;hideStoreWarning();return true}
     catch(e){showStoreWarning(true);return false}
@@ -2623,6 +2647,7 @@ async function reconcileOutputs(token){
     }
     if(changed){
       sessions=orderSessions(sessions);
+      markSeen();
       saveLocal();isDirty=true;
       setTimeout(function(){if(isLoggedIn)saveToDrive()},0);   // the data file follows
     }
@@ -2666,7 +2691,8 @@ function mergeSessionLists(a,b){
   (a||[]).concat(b||[]).forEach(function(x){
     if(!x||!x.id)return;
     var cur=byId[x.id];
-    if(!cur||(x.updatedAt||"")>(cur.updatedAt||""))byId[x.id]=x;
+    // later stamp wins; on a tie the later list (this device's) wins
+    if(!cur||sStamp(x)>=sStamp(cur))byId[x.id]=x;
   });
   return Object.keys(byId).map(function(k){return byId[k]});
 }
@@ -2725,13 +2751,15 @@ async function loadFromDrive(){
     // Merge with this device: for a session present on both sides keep the
     // more recently modified one (a just-made local edit must not be thrown
     // away by a sync); sessions only one side has are both kept.
+    stampChanged();      // anything changed here but not yet saved counts as ours
     var localById={};sessions.forEach(function(s){localById[s.id]=s});
     var ahead=false;
     var merged=data.map(function(rs){var ls=localById[rs.id];
-      if(ls&&(ls.updatedAt||"")>(rs.updatedAt||"")){ahead=true;return ls}return rs});
+      if(ls&&sStamp(ls)>sStamp(rs)){ahead=true;return ls}return rs});
     var remIds=new Set(data.map(function(s){return s.id}));
     var onlyHere=sessions.filter(function(s){return !remIds.has(s.id)});
     sessions=orderSessions(merged.concat(onlyHere));
+    markSeen();          // a merge is not a change of ours
     saveLocal();
     if(dupes.length){
       // one file again: write the merge, then bin the copies that were read
@@ -2780,10 +2808,11 @@ async function saveToDrive(){
       // what this device deleted, which must not ride back in on the merge.
       if(driveFileId){
         try{
+          stampChanged();
           var latest=await readDataFile(token,driveFileId),gone=goneGet();
           var mergedNow=mergeSessionLists(latest,sessions).filter(function(x){return !goneBlocks(gone,x)});
-          if(mergedNow.length!==sessions.length){sessions=orderSessions(mergedNow);saveLocal();setTimeout(renderAll,0)}
-          else sessions=orderSessions(mergedNow);
+          if(mergedNow.length!==sessions.length){sessions=orderSessions(mergedNow);markSeen();saveLocal();setTimeout(renderAll,0)}
+          else{sessions=orderSessions(mergedNow);markSeen()}
         }catch(e){}   // could not read it: write what we have, as before
       }
       var body=JSON.stringify(sessions),r;
@@ -4581,7 +4610,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-12 · 10";
+var APP_VERSION="2026-10-13 · 1";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -8824,6 +8853,7 @@ function renderAll(){renderSidebar();renderContent()}
 $$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><div style=\"font-size:13px;color:var(--tx3)\">Carregant les sessions…</div></div>";
 (async function(){
   sessions=orderSessions(await loadSessions());
+  markSeen();
   outDirLoad();arxDirLoad();        // idb is open by now; nothing waits on this
   labelsLoad();                     // so a language translated earlier is ready offline
   if(loadTok()&&accessToken&&Date.now()<tokenExp){

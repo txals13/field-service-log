@@ -4610,7 +4610,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-13 · 2";
+var APP_VERSION="2026-10-13 · 3";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -6505,7 +6505,7 @@ function buildReportHTML(s,forPrint,lang,rev){
       // The image sits ON the rule, so the margin above it shrinks by its height.
       var g=revSign(s,rev)||{};
       function half(lbl,name,img){
-        var ink=img?"<img src=\""+img+"\" style=\"display:block;max-width:100%;max-height:70px;margin:0 0 -2px\">":"";
+        var ink=img?"<img src=\""+img+"\" style=\"display:block;max-width:170px;max-height:44px;margin:0 0 -2px\">":"";
         return "<div>"+ink+"<div class=\"sl\""+(img?" style=\"margin-top:0\"":"")+">"+esc(lbl)
           +(name?"<br><strong>"+esc(name)+"</strong>":"")+"</div></div>";
       }
@@ -7405,7 +7405,7 @@ async function buildTimesheetBlob(s){
   // is where it sits when there is room, `need` is what it takes to fit at
   // all. Tying them together would make raising the block start a new page
   // earlier and waste a sheet.
-  var boxH=26,sigNeed=boxH+12,sigRest=H-(boxH+36);
+  var boxH=16,sigNeed=boxH+12,sigRest=H-(boxH+36);   // smaller since 2026-10-13
   if(y+sigNeed>H-10){doc.addPage();y=M}
   y=Math.max(y+8,sigRest);
   var bw=CW/2-6;
@@ -7416,7 +7416,7 @@ async function buildTimesheetBlob(s){
       // Sit the signature ON the line at its own proportions — stretched to
       // the box it would read as a different hand than the one that signed.
       var pr=doc.getImageProperties(b[2]);
-      var iw=bw,ih=iw*pr.height/pr.width;
+      var iw=Math.min(bw,45),ih=iw*pr.height/pr.width;
       if(ih>boxH){ih=boxH;iw=ih*pr.width/pr.height}
       doc.addImage(b[2],"PNG",x,y+boxH-ih,iw,ih);
     }catch(err){}
@@ -8153,7 +8153,9 @@ async function buildPdfBlob(s,lang,rev,opts){
   // there is ink to sit on the line, so it needs more room before deciding
   // whether the page still fits it.
   var gs=revSign(s,rev)||{};
-  var inked=!!(gs.techSig||gs.cliSig),sigH=inked?26:0;
+  // Kept small (2026-10-13: "they take up too much of the page"): 14 mm high,
+  // at most 45 mm wide — a signature, not an illustration.
+  var inked=!!(gs.techSig||gs.cliSig),sigH=inked?14:0,SIGW=45;
   if(y>H-32-sigH){doc.addPage();y=M}
   y=Math.max(y+14,H-32-sigH)+sigH;
   var hw=CW/2-10;
@@ -8163,7 +8165,7 @@ async function buildPdfBlob(s,lang,rev,opts){
       // On the line and at its own proportions: stretched to the box it reads
       // as a different hand than the one that signed.
       var pr=doc.getImageProperties(b[2]);
-      var iw=hw,ih=iw*pr.height/pr.width;
+      var iw=Math.min(hw,SIGW),ih=iw*pr.height/pr.width;
       if(ih>sigH){ih=sigH;iw=ih*pr.width/pr.height}
       doc.addImage(b[2],"PNG",b[3],y-ih,iw,ih);
     }catch(err){}
@@ -8583,7 +8585,7 @@ async function buildDocxDocument(D,s,lang,rev){
   // Two rows: the first is the signing space (the drawing, or empty) and
   // carries the rule on its BOTTOM edge; the second holds the label. The space
   // is a minimum, not a fixed height, so a tall signature still fits.
-  var sigW=tw(CW/2-10),gsD=revSign(s,rev)||{},SIG_MM=20;
+  var sigW=tw(CW/2-10),gsD=revSign(s,rev)||{},SIG_MM=14;   // smaller since 2026-10-13
   function sigInk(img){
     if(!img)return [P({children:[T({text:"",size:hp(8)})]})];
     var id=toImg(img);
@@ -8593,10 +8595,12 @@ async function buildDocxDocument(D,s,lang,rev){
       // different hand. The pad always writes PNG, whose IHDR carries width and
       // height at a fixed offset — no decoding, and no waiting for an Image to
       // load in the middle of building a document.
-      var ar=pngRatio(id.bytes),wMm=Math.min(CW/2-10,60),hMm=wMm*ar;
+      var ar=pngRatio(id.bytes),wMm=Math.min(CW/2-10,42),hMm=wMm*ar;
       if(hMm>SIG_MM-2){hMm=SIG_MM-2;wMm=hMm/ar}
       return [P({spacing:{before:0,after:0},children:[new D.ImageRun({data:id.bytes,type:id.type,
-        transformation:{width:Math.round(wMm*72/25.4),height:Math.round(hMm*72/25.4)}})]})];
+        // docx sizes images in PIXELS at 96 dpi, not points: at 72 the
+        // signature came out a quarter smaller than the millimetres asked for
+        transformation:{width:Math.round(wMm*96/25.4),height:Math.round(hMm*96/25.4)}})]})];
     }catch(err){return [P({children:[T({text:"",size:hp(8)})]})]}
   }
   function spaceCell(img){

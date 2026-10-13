@@ -4610,7 +4610,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-13 · 1";
+var APP_VERSION="2026-10-13 · 2";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -5323,7 +5323,7 @@ var RPT={
       qty:"QT.",ref:"REF.",part:"RECANVI",photoTag:"[foto]",openDrive:"Obre a Drive",
       voice:"nota de veu",video:"vídeo",photo:"foto",file:"fitxer",
       pre:{report:"informe",parts:"recanvis"},
-      pt:{title:"Proves de producció",test:"Prova",product:"Producte / format",nominal:"Velocitat nominal",start:"Inici",end:"Final",duration:"Durada",plannedStops:"Aturades planificades",downtime:"Aturades no planificades",run:"Temps en marxa",total:"Unitats totals",rejects:"Unitats rebutjades",good:"Unitats bones",speedAvg:"Velocitat mitjana",speedRun:"Velocitat en marxa",avail:"Disponibilitat",perf:"Rendiment",qual:"Qualitat",oee:"OEE",rejPct:"Rebuig",indicator:"Indicador",value:"Valor",target:"Objectiu",result:"Resultat",yes:"Compleix",no:"No compleix",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Aturades",kind:"Tipus",cause:"Causa",kinds:{machine:"Màquina",external:"Externa",planned:"Planificada"},notes:"Observacions",uph:"u/h",validation:"Informe de validació",file:"validacio"},
+      pt:{title:"Proves de producció",period:"Període",units:"Unitats",availS:"Disp.",perfS:"Rend.",qualS:"Qual.",rejS:"Rebuig",resultS:"Resultat",summaryNote:"El detall de cada prova —aturades, objectius i observacions— és a l'informe de validació.",test:"Prova",product:"Producte / format",nominal:"Velocitat nominal",start:"Inici",end:"Final",duration:"Durada",plannedStops:"Aturades planificades",downtime:"Aturades no planificades",run:"Temps en marxa",total:"Unitats totals",rejects:"Unitats rebutjades",good:"Unitats bones",speedAvg:"Velocitat mitjana",speedRun:"Velocitat en marxa",avail:"Disponibilitat",perf:"Rendiment",qual:"Qualitat",oee:"OEE",rejPct:"Rebuig",indicator:"Indicador",value:"Valor",target:"Objectiu",result:"Resultat",yes:"Compleix",no:"No compleix",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Aturades",kind:"Tipus",cause:"Causa",kinds:{machine:"Màquina",external:"Externa",planned:"Planificada"},notes:"Observacions",uph:"u/h",validation:"Informe de validació",file:"validacio"},
       h:{title:"Historial de la màquina",visits:"visites",visitsH:"Visites",sn:"N/S",pending:"Pendents",pendOther:"Pendent d'altres visites",closedLater:"Tancats en una visita posterior",closedOn:"Tancat el",resolvedSt:"Resolt",pendingSt:"Pendent",entries:"entrades",parts:"Recanvis muntats",printed:"Imprès el"},
       x:{sSession:"Sessió",sDetail:"Detall",sSummary:"Resum",qty:"Quantitat",ref:"Ref.",den:"Denominació",
          date:"Data",sev:"Gravetat",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunt",grup:"Grup / Dibuix",
@@ -5340,7 +5340,7 @@ var RPT={
       qty:"CANT.",ref:"REF.",part:"RECAMBIO",photoTag:"[foto]",openDrive:"Abrir en Drive",
       voice:"nota de voz",video:"vídeo",photo:"foto",file:"archivo",
       pre:{report:"informe",parts:"recambios"},
-      pt:{title:"Pruebas de producción",test:"Prueba",product:"Producto / formato",nominal:"Velocidad nominal",start:"Inicio",end:"Final",duration:"Duración",plannedStops:"Paradas planificadas",downtime:"Paradas no planificadas",run:"Tiempo en marcha",total:"Unidades totales",rejects:"Unidades rechazadas",good:"Unidades buenas",speedAvg:"Velocidad media",speedRun:"Velocidad en marcha",avail:"Disponibilidad",perf:"Rendimiento",qual:"Calidad",oee:"OEE",rejPct:"Rechazo",indicator:"Indicador",value:"Valor",target:"Objetivo",result:"Resultado",yes:"Cumple",no:"No cumple",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Paradas",kind:"Tipo",cause:"Causa",kinds:{machine:"Máquina",external:"Externa",planned:"Planificada"},notes:"Observaciones",uph:"u/h",validation:"Informe de validación",file:"validacion"},
+      pt:{title:"Pruebas de producción",period:"Período",units:"Unidades",availS:"Disp.",perfS:"Rend.",qualS:"Cal.",rejS:"Rechazo",resultS:"Resultado",summaryNote:"El detalle de cada prueba —paradas, objetivos y observaciones— está en el informe de validación.",test:"Prueba",product:"Producto / formato",nominal:"Velocidad nominal",start:"Inicio",end:"Final",duration:"Duración",plannedStops:"Paradas planificadas",downtime:"Paradas no planificadas",run:"Tiempo en marcha",total:"Unidades totales",rejects:"Unidades rechazadas",good:"Unidades buenas",speedAvg:"Velocidad media",speedRun:"Velocidad en marcha",avail:"Disponibilidad",perf:"Rendimiento",qual:"Calidad",oee:"OEE",rejPct:"Rechazo",indicator:"Indicador",value:"Valor",target:"Objetivo",result:"Resultado",yes:"Cumple",no:"No cumple",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Paradas",kind:"Tipo",cause:"Causa",kinds:{machine:"Máquina",external:"Externa",planned:"Planificada"},notes:"Observaciones",uph:"u/h",validation:"Informe de validación",file:"validacion"},
       h:{title:"Historial de la máquina",visits:"visitas",visitsH:"Visitas",sn:"N/S",pending:"Pendientes",pendOther:"Pendiente de otras visitas",closedLater:"Cerrados en una visita posterior",closedOn:"Cerrado el",resolvedSt:"Resuelto",pendingSt:"Pendiente",entries:"entradas",parts:"Recambios montados",printed:"Impreso el"},
       x:{sSession:"Sesión",sDetail:"Detalle",sSummary:"Resumen",qty:"Cantidad",ref:"Ref.",den:"Denominación",
          date:"Fecha",sev:"Gravedad",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunto",grup:"Grupo / Plano",
@@ -5357,7 +5357,7 @@ var RPT={
       qty:"QTY",ref:"REF.",part:"SPARE PART",photoTag:"[photo]",openDrive:"Open in Drive",
       voice:"voice note",video:"video",photo:"photo",file:"file",
       pre:{report:"report",parts:"spare_parts"},
-      pt:{title:"Production tests",test:"Test",product:"Product / format",nominal:"Nominal speed",start:"Start",end:"End",duration:"Duration",plannedStops:"Planned stops",downtime:"Unplanned stops",run:"Run time",total:"Total units",rejects:"Rejected units",good:"Good units",speedAvg:"Average speed",speedRun:"Running speed",avail:"Availability",perf:"Performance",qual:"Quality",oee:"OEE",rejPct:"Reject rate",indicator:"Indicator",value:"Value",target:"Target",result:"Result",yes:"Met",no:"Not met",pass:"PASSED",fail:"NOT PASSED",stops:"Stops",kind:"Type",cause:"Cause",kinds:{machine:"Machine",external:"External",planned:"Planned"},notes:"Remarks",uph:"u/h",validation:"Validation report",file:"validation"},
+      pt:{title:"Production tests",period:"Period",units:"Units",availS:"Avail.",perfS:"Perf.",qualS:"Qual.",rejS:"Reject",resultS:"Result",summaryNote:"Each test in full — stops, targets and remarks — is in the validation report.",test:"Test",product:"Product / format",nominal:"Nominal speed",start:"Start",end:"End",duration:"Duration",plannedStops:"Planned stops",downtime:"Unplanned stops",run:"Run time",total:"Total units",rejects:"Rejected units",good:"Good units",speedAvg:"Average speed",speedRun:"Running speed",avail:"Availability",perf:"Performance",qual:"Quality",oee:"OEE",rejPct:"Reject rate",indicator:"Indicator",value:"Value",target:"Target",result:"Result",yes:"Met",no:"Not met",pass:"PASSED",fail:"NOT PASSED",stops:"Stops",kind:"Type",cause:"Cause",kinds:{machine:"Machine",external:"External",planned:"Planned"},notes:"Remarks",uph:"u/h",validation:"Validation report",file:"validation"},
       h:{title:"Machine history",visits:"visits",visitsH:"Visits",sn:"S/N",pending:"Open items",pendOther:"Open from other visits",closedLater:"Closed on a later visit",closedOn:"Closed on",resolvedSt:"Resolved",pendingSt:"Open",entries:"entries",parts:"Spare parts fitted",printed:"Printed on"},
       x:{sSession:"Session",sDetail:"Detail",sSummary:"Summary",qty:"Quantity",ref:"Ref.",den:"Designation",
          date:"Date",sev:"Severity",tag:"Tag",entry:"Entry",pos:"Pos.",conj:"Assembly",grup:"Group / Drawing",
@@ -6324,10 +6324,47 @@ function revLine(R,rev,tl){
 }
 // The production tests as a report section — HTML, PDF and Word share the
 // numbers through ptReportData; only the drawing differs.
-function ptReportHTML(s,R,lang){
+// The report's own section: one compact row per test — what it was, when,
+// how much, the four ratios and the verdict. A visit can carry many tests, and
+// the full sheet of each (stops, targets, remarks) belongs in the validation
+// report, not in the service report.
+function ptPeriod(t,pdf){
+  if(!t.start)return "—";
+  var a=ptWhen(t.start);if(!t.end)return a+(pdf?" -":" →");
+  var b=ptWhen(t.end);
+  return a+" – "+(a.slice(0,8)===b.slice(0,8)?b.slice(9):b);
+}
+function ptSummaryRows(tests,R,lang,pdf){
+  var L=R.pt;
+  return tests.map(function(t){
+    var r=ptCalc(t);
+    return [t.name||L.test,t.product||"—",ptPeriod(t,pdf),
+      r.total==null?"—":ptN(r.total,lang),ptPct(r.rejPct,lang),
+      ptPct(r.avail,lang),ptPct(r.perf,lang),ptPct(r.qual,lang),ptPct(r.oee,lang),
+      r.verdict?(r.verdict==="pass"?L.pass:L.fail):(t.running?"…":"—")];
+  });
+}
+function ptSummaryHead(R){var L=R.pt;return [L.test,L.product,L.period,L.units,L.rejS,L.availS,L.perfS,L.qualS,L.oee,L.resultS]}
+function ptReportHTML(s,R,lang,full){
   var tests=(s&&s.prodTests)||[];if(!tests.length)return "";
   var L=R.pt,td="padding:5px 8px;border:1px solid #e5e7eb;font-size:12px";
-  return "<h2 style=\"font-size:17px;margin:30px 0 6px;border-bottom:2px solid #8b5cf6;padding-bottom:6px\">"+esc(L.title)+"</h2>"
+  var h2="<h2 style=\"font-size:17px;margin:30px 0 6px;border-bottom:2px solid #8b5cf6;padding-bottom:6px\">"+esc(L.title)+"</h2>";
+  if(!full){
+    var td2="padding:5px 6px;border:1px solid #e5e7eb;font-size:11.5px;white-space:nowrap";
+    return h2+"<table><thead><tr>"+ptSummaryHead(R).map(function(h){return "<th style=\"font-size:10px;padding:6px\">"+esc(h)+"</th>"}).join("")+"</tr></thead><tbody>"
+      +ptSummaryRows(tests,R,lang,false).map(function(r){
+        var v=r[9],col=v===L.pass?"#16a34a":(v===L.fail?"#dc2626":"#6b7280");
+        return "<tr>"+r.map(function(c,i){
+          var st=i<2?"padding:5px 6px;border:1px solid #e5e7eb;font-size:11.5px":td2;
+          if(i>=3&&i<=8)st+=";text-align:right;font-family:monospace";
+          if(i===8)st+=";font-weight:700";
+          if(i===9)st+=";font-weight:700;color:"+col;
+          return "<td style=\""+st+"\">"+esc(c)+"</td>";
+        }).join("")+"</tr>";
+      }).join("")+"</tbody></table>"
+      +"<div style=\"font-size:11px;color:#6b7280;margin-top:6px\">"+esc(L.summaryNote)+"</div>";
+  }
+  return h2
     +tests.map(function(t){
       var d=ptReportData(t,R,lang,false);
       var badge=d.verdict?"<span style=\"margin-left:10px;font-size:11px;padding:3px 10px;border-radius:20px;background:"
@@ -6346,12 +6383,27 @@ function ptReportHTML(s,R,lang){
         +"</div>";
     }).join("");
 }
-function pdfProdSection(doc,s,R,lang,y,M,CW,H){
+function pdfProdSection(doc,s,R,lang,y,M,CW,H,full){
   var tests=(s&&s.prodTests)||[];if(!tests.length)return y;
   var L=R.pt;
   if(y>H-50){doc.addPage();y=M}
   doc.setFont("helvetica","bold");doc.setFontSize(12);doc.setTextColor(17,24,39);
   doc.text(L.title,M,y+4);doc.setDrawColor(139,92,246);doc.setLineWidth(0.6);doc.line(M,y+6.5,M+CW,y+6.5);y+=11;
+  if(!full){
+    doc.autoTable({startY:y,margin:{left:M,right:M},theme:"grid",
+      styles:{fontSize:7.5,cellPadding:1.3,overflow:"linebreak"},
+      head:[ptSummaryHead(R)],headStyles:{fillColor:[17,24,39],textColor:255,fontSize:7},
+      body:ptSummaryRows(tests,R,lang,true),
+      columnStyles:{2:{cellWidth:30},3:{halign:"right"},4:{halign:"right"},5:{halign:"right"},6:{halign:"right"},7:{halign:"right"},8:{halign:"right",fontStyle:"bold"},9:{fontStyle:"bold"}},
+      didParseCell:function(h){
+        if(h.section!=="body"||h.column.index!==9)return;
+        if(h.cell.raw===L.pass)h.cell.styles.textColor=[22,163,74];else if(h.cell.raw===L.fail)h.cell.styles.textColor=[220,38,38];
+      }});
+    y=doc.lastAutoTable.finalY+4;
+    doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor(107,114,128);
+    doc.splitTextToSize(L.summaryNote,CW).forEach(function(l){doc.text(l,M,y+2);y+=3.5});
+    return y+5;
+  }
   tests.forEach(function(t){
     var d=ptReportData(t,R,lang,true);
     if(y>H-70){doc.addPage();y=M}
@@ -8086,7 +8138,7 @@ async function buildPdfBlob(s,lang,rev,opts){
   }
 
   }
-  y=pdfProdSection(doc,s,R,lang,y,M,CW,H);
+  y=pdfProdSection(doc,s,R,lang,y,M,CW,H,V);
   // notes + signatures
   if(s.notes&&!V){
     if(y>H-30){doc.addPage();y=M}
@@ -8503,38 +8555,25 @@ async function buildDocxDocument(D,s,lang,rev){
     children.push(P({spacing:{before:120,after:40},children:[T({text:R.notes,bold:true,size:hp(9),font:"Arial",color:"111827"})]}));
     children.push(P({spacing:{after:200},children:[T({text:s.notes,size:hp(8.5),font:"Arial",color:"374151"})]}));
   }
-  // The production tests, as the PDF draws them.
+  // The production tests: one compact row each, as in the PDF; the full sheet
+  // of every test is the validation report's job.
   var ptTests=s.prodTests||[];
   if(ptTests.length){
     var PL=R.pt;
     var ptCell=function(text,w,o){o=o||{};return new D.TableCell({borders:borders,margins:mg,width:{size:w,type:D.WidthType.DXA},
-      shading:o.fill?{fill:o.fill,type:D.ShadingType.CLEAR}:undefined,
-      children:[P({children:[T({text:String(text==null?"":text),bold:!!o.bold,size:hp(8),font:"Arial",color:o.color||"111827"})]})]})};
-    var ptTbl=function(rows,mm,head,style){
-      var W=mm.map(function(x){return tw(x)}),trs=[];
-      if(head)trs.push(new D.TableRow({children:head.map(function(h,i){return hdrCell(h,W[i])})}));
-      rows.forEach(function(r){trs.push(new D.TableRow({children:r.map(function(c,i){return ptCell(c,W[i],style?style(r,i):{})})}))});
-      return new D.Table({width:{size:W.reduce(function(a,b){return a+b},0),type:D.WidthType.DXA},columnWidths:W,layout:D.TableLayoutType.FIXED,rows:trs});
-    };
-    children.push(P({spacing:{before:240,after:80},children:[T({text:PL.title,bold:true,size:hp(12),font:"Arial",color:"111827"})]}));
-    ptTests.forEach(function(t){
-      var d=ptReportData(t,R,R===RPT.ca?"ca":lang,false);
-      var ok=d.r.verdict==="pass";
-      children.push(P({spacing:{before:160,after:60},children:[T({text:String(t.name||PL.test),bold:true,size:hp(10),font:"Arial",color:"111827"})]
-        .concat(d.verdict?[T({text:"   "+d.verdict,bold:true,size:hp(9),font:"Arial",color:ok?"16A34A":"DC2626"})]:[])}));
-      children.push(ptTbl(d.data,[CW*0.4,CW*0.6],null,function(r,i){return i===0?{bold:true,color:"6B7280"}:{}}));
-      children.push(P({spacing:{after:60},children:[T({text:""})]}));
-      children.push(ptTbl(d.kpi,[CW*0.34,CW*0.22,CW*0.22,CW*0.22],[PL.indicator,PL.value,PL.target,PL.result],function(r,i){
-        if(i===1)return {bold:true};
-        if(i===3)return {bold:true,color:r[3]===PL.yes?"16A34A":(r[3]===PL.no?"DC2626":"111827")};
-        return {};
-      }));
-      if(d.stops.length){
-        children.push(P({spacing:{before:80,after:40},children:[T({text:PL.stops,bold:true,size:hp(8.5),font:"Arial",color:"111827"})]}));
-        children.push(ptTbl(d.stops,[CW*0.18,CW*0.18,CW*0.14,CW*0.16,CW*0.34],[PL.start,PL.end,PL.duration,PL.kind,PL.cause]));
-      }
-      if(t.notes)children.push(P({spacing:{before:80,after:120},children:[T({text:PL.notes+": ",bold:true,size:hp(8.5),font:"Arial"}),T({text:String(t.notes),size:hp(8.5),font:"Arial",color:"374151"})]}));
+      children:[P({alignment:o.right?D.AlignmentType.RIGHT:undefined,children:[T({text:String(text==null?"":text),bold:!!o.bold,size:hp(7.5),font:"Arial",color:o.color||"111827"})]})]})};
+    var mmW=[CW*0.16,CW*0.13,CW*0.17,CW*0.08,CW*0.07,CW*0.07,CW*0.07,CW*0.07,CW*0.07,CW*0.11],W=mmW.map(function(x){return tw(x)});
+    var trs=[new D.TableRow({children:ptSummaryHead(R).map(function(h,i){return hdrCell(h,W[i])})})];
+    ptSummaryRows(ptTests,R,lang,false).forEach(function(r){
+      trs.push(new D.TableRow({children:r.map(function(c,i){
+        var o={right:i>=3&&i<=8,bold:i>=8};
+        if(i===9)o.color=c===PL.pass?"16A34A":(c===PL.fail?"DC2626":"6B7280");
+        return ptCell(c,W[i],o);
+      })}));
     });
+    children.push(P({spacing:{before:240,after:80},children:[T({text:PL.title,bold:true,size:hp(12),font:"Arial",color:"111827"})]}));
+    children.push(new D.Table({width:{size:W.reduce(function(x,y){return x+y},0),type:D.WidthType.DXA},columnWidths:W,layout:D.TableLayoutType.FIXED,rows:trs}));
+    children.push(P({spacing:{before:60,after:160},children:[T({text:PL.summaryNote,size:hp(7.5),font:"Arial",color:"6B7280"})]}));
   }
   // The signature block, as the PDF draws it: room to sign, the rule under it,
   // the label under that. It used to be one row with the rule on top, which put

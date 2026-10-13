@@ -591,6 +591,15 @@ Field Service Log/
   (hidden on the new layout, where it is in Més). Remembered criteria:
   `localStorage['fsl_v6_ptcrit']`. A performance over 105 % shows a warning —
   usually a wrong nominal speed.
+- **The service report carries a compact SUMMARY, the validation report the
+  full sheets** (2026-10-13; `ptSummaryRows`, `ptSummaryHead`, `ptPeriod`):
+  one row per test — test, product, period, units, reject, A, P, Q, OEE,
+  result — with a note pointing to the validation report. A visit can carry
+  many tests, and a full sheet each swamped the service report. PDF
+  (`pdfProdSection(…, full)`), Word and HTML (`ptReportHTML(…, full)`); the
+  validation PDF passes `full`. New short labels in `RPT.pt` (period, units,
+  availS/perfS/qualS/rejS, resultS, summaryNote), so translated tables are
+  fetched again once.
 - **Reports** share `ptReportData(t,R,lang,pdf)`: an HTML section
   (`ptReportHTML`), a PDF section (`pdfProdSection`, autoTable; ">= / <="
   because ≥ ≤ are not in the PDF font), a Word section and two Excel sheets

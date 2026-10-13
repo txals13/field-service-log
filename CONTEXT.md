@@ -543,7 +543,9 @@ Field Service Log/
   edit dialog); severity is a 2×2 of buttons; the header's ✎, Tanca, ⟳,
   ☁ Desa and the five chips go into **⋮ Més** (`#btnM2More2`, same
   `openM2More` list as the phone, shown as an ordinary dialog). ↓ Informe
-  stays as it is. General notes stay in the composer, so "Notes generals" is
+  went into Més too (2026-10-13), as on the phone: Més › "Informe i
+  exportació" opens the same `#expMenu` dropdown, anchored under the Més
+  button. General notes stay in the composer, so "Notes generals" is
   only in the phone's Més.
 - The phone version was tried on the user's phone on 2026-10-11 and they
   prefer it. When it becomes the default, flip the switch's default and add

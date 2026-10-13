@@ -302,6 +302,19 @@ Field Service Log/
     writes in the same second can race, but neither can blank the other.
   - A folder in Outputs with no session.json yet is looked at again after
     two minutes (`outputsProbed` keeps a time until one is found).
+  - **Merges compare `modAt`, not just `updatedAt`** (2026-10-13; `seenObj`,
+    `markSeen`, `stampChanged`, `sStamp`). `updatedAt` means "the content
+    changed" — it drives `changedSinceRev` — so the language pickers,
+    signatures, revisions, cached translations, the folder a visit is filed
+    under and more deliberately leave it alone. Merging on it alone kept
+    Drive's copy on a tie, and a report language picked here flipped back to
+    English at the next sync. `modAt` is stamped on ANY change: visits are
+    replaced, never edited in place, so `saveLocal` stamps every visit that
+    is not the object last seen. What comes in from Drive (load, the save's
+    re-read, the reconcile) and the boot load are marked seen, so a sync is
+    not mistaken for a change of ours; pending local changes are stamped
+    before each merge. The merges take the later of the two stamps; on a tie
+    the save keeps this device's copy.
   - **A deleted-visit note gives way to the same visit with a NEW folder.**
     Notes now keep which folder was deleted (`{f, done}`; old plain strings
     are read as `{f: s, done: s===""}`). A copy with no folder or with that

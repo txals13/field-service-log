@@ -371,6 +371,7 @@ textarea{resize:none;line-height:1.4}
   body.m2 .sv .s-hdr-top{gap:10px}
   body.m2 .sv .s-hdr-top>span:nth-child(2){font-size:16px}
   body.m2 .sv .exp-wrap{margin-left:auto}
+  body.m2 .sv #btnExp{display:none}   /* the report is in Més, as on the phone */
   body.m2 .sv .s-hdr{order:-2}
   body.m2 .sv .stat-bar{order:-1;border-top:0;border-bottom:1px solid var(--br);padding:7px 12px;font-size:12px}
   body.m2 #m2Pend{display:inline-flex;flex-basis:auto!important;margin-left:12px}
@@ -4597,7 +4598,11 @@ function openM2More(){
   var secs=[
     ["INFORME",[
       it("&#8595;","Informe i exportació",(r?revNo(r.n):"sense revisió")+" · "+reportLang(a).toUpperCase(),function(){
-        var m=$$("expMenu");openExpMenu($$("btnExp"),m);m2Show("exp");
+        // under whichever button is on screen: Més on the computer, the hidden
+        // ↓ Informe only on the phone, where the menu fills the screen anyway
+        var m=$$("expMenu"),anc=$$("btnM2More2");
+        if(!anc||!anc.offsetParent)anc=$$("btnExp");
+        openExpMenu(anc,m);m2Show("exp");
       }),
       it("&#9997;","Signa l'informe",revSign(a)?"signat":"",function(){openReportSign()}),
       it("&#129534;","Full d'hores","",function(){openTimesheet()})
@@ -4642,7 +4647,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-13 · 5";
+var APP_VERSION="2026-10-13 · 6";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,

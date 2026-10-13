@@ -4642,7 +4642,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-13 · 4";
+var APP_VERSION="2026-10-13 · 5";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -5349,7 +5349,7 @@ var RPT={
       client:"Client",contact:"Persona de contacte",project:"Número de projecte",machine:"Màquina",location:"Ubicació",tech:"Tècnic",
       start:"Inici",status:"Estat",manual:"Manual",open:"Oberta",closed:"Tancada",
       issues:"Problemes",warnings:"Avisos",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resolt",resN:"resolts",resolved:"Resolts",
-      ts:"Data i hora",severity:"Gravetat",tag:"Etiqueta",desc:"Descripció",att:"Adjunts",
+      time:"Hora",entry1:"entrada",entryN:"entrades",noDate:"Sense data",ts:"Data i hora",severity:"Gravetat",tag:"Etiqueta",desc:"Descripció",att:"Adjunts",
       fix:"Com ha quedat",edited:"editat",noEntries:"Sense entrades",photos:"Fotos",notes:"Notes generals",
       sigTech:"Signatura del tècnic",sigCli:"Signatura del client / receptor",
       qty:"QT.",ref:"REF.",part:"RECANVI",photoTag:"[foto]",openDrive:"Obre a Drive",
@@ -5366,7 +5366,7 @@ var RPT={
       client:"Cliente",contact:"Persona de contacto",project:"Número de proyecto",machine:"Máquina",location:"Ubicación",tech:"Técnico",
       start:"Inicio",status:"Estado",manual:"Manual",open:"Abierta",closed:"Cerrada",
       issues:"Problemas",warnings:"Avisos",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resuelto",resN:"resueltos",resolved:"Resueltos",
-      ts:"Fecha y hora",severity:"Gravedad",tag:"Etiqueta",desc:"Descripción",att:"Adjuntos",
+      time:"Hora",entry1:"entrada",entryN:"entradas",noDate:"Sin fecha",ts:"Fecha y hora",severity:"Gravedad",tag:"Etiqueta",desc:"Descripción",att:"Adjuntos",
       fix:"Cómo ha quedado",edited:"editado",noEntries:"Sin entradas",photos:"Fotos",notes:"Notas generales",
       sigTech:"Firma del técnico",sigCli:"Firma del cliente / receptor",
       qty:"CANT.",ref:"REF.",part:"RECAMBIO",photoTag:"[foto]",openDrive:"Abrir en Drive",
@@ -5383,7 +5383,7 @@ var RPT={
       client:"Client",contact:"Contact",project:"Project Number",machine:"Machine",location:"Location",tech:"Technician",
       start:"Start",status:"Status",manual:"Manual",open:"Open",closed:"Closed",
       issues:"Issues",warnings:"Warnings",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resolved",resN:"resolved",resolved:"Resolved",
-      ts:"Timestamp",severity:"Severity",tag:"Tag",desc:"Description",att:"Attachments",
+      time:"Time",entry1:"entry",entryN:"entries",noDate:"No date",ts:"Timestamp",severity:"Severity",tag:"Tag",desc:"Description",att:"Attachments",
       fix:"Outcome",edited:"edited",noEntries:"No entries",photos:"Photos",notes:"General notes",
       sigTech:"Technician signature",sigCli:"Client / Recipient signature",
       qty:"QTY",ref:"REF.",part:"SPARE PART",photoTag:"[photo]",openDrive:"Open in Drive",
@@ -6338,11 +6338,50 @@ async function reportSession(s){
 function expBusy(t){var b=$$("btnExp");if(b){b.disabled=!!t;b.innerHTML=t?esc(t):"&#8595; Informe &#9662;"}}
 
 // The outcome, inside the same row as the problem it closes.
+// ── THE REPORTS, GROUPED BY DAY ──────────────────────────────────────────────
+// As in the app (2026-10-13, option C): a heading per day — weekday and date,
+// how many entries, that day's counters — then that day's entries showing only
+// their time. The same information as before, laid out as a work diary.
+function dayKeyOf(ts){
+  var d=new Date(ts);if(isNaN(d.getTime()))return "";
+  function p2(x){return ("0"+x).slice(-2)}
+  return d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate());
+}
+// Entries are already in time order, so each day is one run of indices.
+function dayGroups(entries){
+  var out=[],at={};
+  (entries||[]).forEach(function(e,i){
+    var k=dayKeyOf(e.ts);
+    if(!(k in at)){at[k]=out.length;out.push({key:k,idx:[]})}
+    out[at[k]].idx.push(i);
+  });
+  return out;
+}
+function reportDayTitle(dk,R,lang){
+  if(!dk)return R.noDate||"—";
+  var wd="";
+  try{wd=new Date(dk+"T12:00:00").toLocaleDateString(lang==="ca"?"ca-ES":(lang||"ca"),{weekday:"long"})}catch(e){}
+  return (wd?wd.charAt(0).toUpperCase()+wd.slice(1)+" ":"")+dmy(dk);
+}
+function reportDaySummary(list,R){
+  var c=severityCounts(list),out=[list.length+" "+(list.length===1?R.entry1:R.entryN)];
+  if(c.issue)out.push(R.issues+" "+c.issue);
+  if(c.warning)out.push(R.warnings+" "+c.warning);
+  if(c.resolved)out.push(R.resolved+" "+c.resolved);
+  if(c.ok)out.push(R.ok+" "+c.ok);
+  return out.join(" · ");
+}
+function timeOf(ts){var f=fts(ts);return f.split(" ")[1]||f}
+// An outcome dated the same day as its entry needs only its time.
+function fixWhen(e){
+  var fx=e&&e.fix;if(!fx||!fx.ts)return "";
+  return dayKeyOf(fx.ts)===dayKeyOf(e.ts)?timeOf(fx.ts):fts(fx.ts);
+}
 function fixReportHTML(e,R){
   var fx=e.fix;if(!fx)return "";
   var ftx=fixTx(fx.severity);
   return "<div style=\"margin-top:6px;padding:6px 8px;border-left:3px solid "+ftx+";background:#f9fafb;border-radius:0 4px 4px 0\">"
-    +"<div style=\"font-size:10px;font-weight:700;letter-spacing:.5px;color:"+ftx+"\">✔ "+esc(R.fix.toUpperCase())+" &middot; "+esc(R.sev[fx.severity]||R.sev.ok)+(fx.ts?" &middot; "+fts(fx.ts):"")+"</div>"
+    +"<div style=\"font-size:10px;font-weight:700;letter-spacing:.5px;color:"+ftx+"\">✔ "+esc(R.fix.toUpperCase())+" &middot; "+esc(R.sev[fx.severity]||R.sev.ok)+(fx.ts?" &middot; "+fixWhen(e):"")+"</div>"
     +(fx.text?"<div style=\"font-size:12px;margin-top:2px\">"+esc(fx.text)+"</div>":"")
     +"</div>";
 }
@@ -6490,13 +6529,13 @@ function buildReportHTML(s,forPrint,lang,rev){
       return "<div style=\"margin:2px;display:inline-block;vertical-align:top\"><img src=\""+img.data+"\" style=\"max-width:140px;max-height:100px;object-fit:cover;border-radius:4px;display:block\"><div style=\"font-size:9px;color:#6b7280;font-family:monospace;white-space:nowrap\">"+esc(img.name||R.photo)+"</div></div>";
     }).join("");
     return "<tr>"
-      +"<td style=\"font-family:monospace;font-size:11px;white-space:nowrap;padding:5px 8px;border:1px solid #e5e7eb;color:#6b7280;width:1%\">"+fts(e.ts).split(" ")[0]+"<br>"+fts(e.ts).split(" ")[1]+(e.tsFromPhoto?"<br>📷":"")+"</td>"
+      +"<td style=\"font-family:monospace;font-size:11px;white-space:nowrap;padding:5px 8px;border:1px solid #e5e7eb;color:#6b7280;width:1%\">"+timeOf(e.ts)+(e.tsFromPhoto?"<br>📷":"")+"</td>"
       +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:11px;font-weight:700;white-space:nowrap;width:1%;color:"+sm.tx+"\">"+esc(sl)+"</td>"
       +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:11px;font-family:monospace;white-space:nowrap;width:1%;color:#1d4ed8\">"+esc(e.tag||"")+"</td>"
       +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:13px\">"+esc(e.text||"")+(e.editedAt?"<em style=\"color:#9ca3af;font-size:11px\"> ("+esc(R.edited)+")</em>":"")+partsReportHTML(e.parts,R)+fixReportHTML(e,R)+"</td>"
       +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb\">"+imgCell+"</td>"
       +"</tr>";
-  }).join("");
+  });
   return "<!DOCTYPE html><html lang=\""+lang+"\"><head><meta charset=\"UTF-8\"><title>"+esc(R.title)+" - "+esc(s.client||"")+"</title>"
     +"<style>body{font-family:Arial,sans-serif;max-width:1000px;margin:40px auto;padding:0 24px;color:#111827}"
     +"h1{font-size:22px;font-weight:800;margin:8px 0 4px}"
@@ -6529,7 +6568,16 @@ function buildReportHTML(s,forPrint,lang,rev){
     +"<div class=\"stat\" style=\"background:#f0fdf4;color:#16a34a\"><strong style=\"font-size:26px;display:block\">"+oks+"</strong><span style=\"font-size:11px\">"+esc(R.ok)+"</span></div>"
     +"<div class=\"stat\" style=\"background:#f1f5f9;color:#475569\"><strong style=\"font-size:26px;display:block\">"+entries.length+"</strong><span style=\"font-size:11px\">"+esc(R.total)+"</span></div>"
     +"</div>"
-    +"<table><thead><tr><th>"+esc(R.ts)+"</th><th>"+esc(R.severity)+"</th><th>"+esc(R.tag)+"</th><th>"+esc(R.desc)+"</th><th>"+esc(R.att)+"</th></tr></thead><tbody>"+rows+"</tbody></table>"
+    +(function(){
+      var head="<table><thead><tr><th>"+esc(R.time)+"</th><th>"+esc(R.severity)+"</th><th>"+esc(R.tag)+"</th><th>"+esc(R.desc)+"</th><th>"+esc(R.att)+"</th></tr></thead><tbody>";
+      if(!entries.length)return head+"</tbody></table>";
+      return dayGroups(entries).map(function(g){
+        return "<div style=\"display:flex;align-items:baseline;gap:12px;margin:18px 0 6px;padding-bottom:4px;border-bottom:2px solid #f59e0b\">"
+          +"<strong style=\"font-size:14px\">"+esc(reportDayTitle(g.key,R,lang))+"</strong>"
+          +"<span style=\"font-size:12px;color:#6b7280\">"+esc(reportDaySummary(g.idx.map(function(i){return entries[i]}),R))+"</span></div>"
+          +head+g.idx.map(function(i){return rows[i]}).join("")+"</tbody></table>";
+      }).join("");
+    })()
     +(s.notes?"<div style=\"margin-top:18px;padding:12px;background:#f9fafb;border-radius:6px;border-left:3px solid #f59e0b\"><strong>"+esc(R.notes)+":</strong><br>"+esc(s.notes)+"</div>":"")
     +ptReportHTML(s,R,lang)
     +(function(){
@@ -7895,7 +7943,7 @@ function entryColWidths(doc,R,entries,attTexts,ar,CW){
   var PAD=5; // 2mm cell padding each side, plus slack
   doc.setFont("helvetica","bold");doc.setFontSize(7.5);
   function headW(t){var w=0;String(t).split(/\s+/).forEach(function(k){w=Math.max(w,doc.getTextWidth(k))});return w+PAD}
-  var hTs=headW(R.ts),hSev=headW(R.severity),hTag=headW(R.tag),hAtt=headW(R.att);
+  var hTs=headW(R.time||R.ts),hSev=headW(R.severity),hTag=headW(R.tag),hAtt=headW(R.att);
   // The severity column is sized to its longest label in this language: a
   // fixed 17mm split "PROBLEMA" into "PROBLE"/"MA" (and "WARNING" never quite
   // fitted either). Bold 8pt text plus the padding.
@@ -7903,7 +7951,7 @@ function entryColWidths(doc,R,entries,attTexts,ar,CW){
   var sev=hSev;
   ["info","ok","warning","issue"].forEach(function(k){sev=Math.max(sev,doc.getTextWidth(R.sev[k])+PAD)});
   doc.setFont("helvetica","normal");
-  var ts=Math.max(hTs,doc.getTextWidth("00/00/0000")+PAD,doc.getTextWidth(R.photoTag)+PAD);
+  var ts=Math.max(hTs,doc.getTextWidth("00:00:00")+PAD,doc.getTextWidth(R.photoTag)+PAD);
   // Tag and attachments never break: they take the width they need, and only if
   // that hits the cap is the text shrunk (never wrapped) to fit.
   var tagC=pdfFitCol(doc,entries.map(function(e){return e.tag||""}).concat([""]),hTag,32,PAD,ar);
@@ -8025,7 +8073,7 @@ async function buildPdfBlob(s,lang,rev,opts){
     var att=(e.images||[]).concat((e.fix&&e.fix.images)||[]).map(function(im){return (im.type==="video"?"» ":im.type==="audio"?"• ":"")+(im.name||R.file)}).join("\n");
     // Date and time on their own lines: the column then only has to be as wide
     // as the longer of the two, not both plus a space.
-    return [{content:fts(e.ts).replace(" ","\n")+(e.tsFromPhoto?"\n"+R.photoTag:"")},
+    return [{content:timeOf(e.ts)+(e.tsFromPhoto?"\n"+R.photoTag:"")},
             {content:R.sev[e.severity]||R.sev.info,styles:{textColor:hexRgb(sm.tx),fontStyle:"bold"}},
             e.tag||"",desc,att];
   });
@@ -8055,7 +8103,7 @@ async function buildPdfBlob(s,lang,rev,opts){
     if(hasF){
       doc.setFontSize(FX_FS);pdfFont(doc,ar,e.fix.text,"normal");
       X.fixLines=e.fix.text?doc.splitTextToSize(e.fix.text,DW-5):[];
-      X.fixLabel=R.fix.toUpperCase()+" ("+(R.sev[e.fix.severity]||R.sev.ok)+")"+(e.fix.ts?" · "+fts(e.fix.ts):"");
+      X.fixLabel=R.fix.toUpperCase()+" ("+(R.sev[e.fix.severity]||R.sev.ok)+")"+(e.fix.ts?" · "+fixWhen(e):"");
       X.fixH=2+FX_LH+X.fixLines.length*FX_LH+2;
     }
     X.blanks=Math.ceil((X.partsH+X.fixH)/LH);
@@ -8065,72 +8113,89 @@ async function buildPdfBlob(s,lang,rev,opts){
   doc.setFont("helvetica","normal");doc.setFontSize(8);
   // A row must not be cut in two: the blocks are painted at absolute positions
   // inside the cell, and half a cell on the next page would strand them.
-  doc.autoTable({
-    rowPageBreak:"avoid",
-    startY:y,margin:{left:M,right:M},
-    head:[[R.ts,R.severity,R.tag,R.desc,R.att]],
-    body:body.length?body:[[{content:R.noEntries,colSpan:5,styles:{halign:"center",textColor:[156,163,175]}}]],
-    styles:{fontSize:8,cellPadding:2,overflow:"linebreak",valign:"top"},
-    headStyles:{fillColor:[17,24,39],textColor:255,fontSize:7.5},
-    alternateRowStyles:{fillColor:[249,250,251]},
-    columnStyles:{0:{cellWidth:tsW},1:{cellWidth:sevW},
-                  2:{cellWidth:tagC.cellWidth,fontSize:tagC.fontSize},
-                  4:{cellWidth:attC.cellWidth,fontSize:attC.fontSize}},
-    // Per cell, so a table with one Arabic entry keeps helvetica everywhere
-    // else. autoTable measures with the cell's own styles, so the wrap follows.
-    didParseCell:function(d){
-      if(!ar||d.section!=="body")return;
-      var t=[].concat(d.cell.text||[]).join("\n");
-      if(!hasArabic(t))return;
-      // Left-anchored on purpose: autoTable would hand the alignment to
-      // jsPDF, whose {align:"right"} anchors an Arabic run at the wrong end.
-      d.cell.styles.font=ar;d.cell.styles.fontStyle="normal";
-    },
-    // The parts table and the outcome block, painted into the blank lines the
-    // cell's text reserved for them.
-    didDrawCell:function(d){
-      if(d.section!=="body"||d.column.index!==3)return;
-      var X=extras[d.row.index];if(!X)return;
-      var lines=[].concat(d.cell.text||[]);
-      var x=d.cell.x+2,w=d.cell.width-4;
-      var yy=d.cell.y+2+(lines.length-X.blanks)*LH;
-      if(X.rows.length){
-        var tblTop=yy+1.2,rowY=tblTop+PT_LH+1.2;
-        // header strip, then a rule under it, like the HTML table's <thead>
-        doc.setFillColor(243,244,246);doc.rect(x,tblTop,w,PT_LH+1.2,"F");
-        doc.setFont("helvetica","bold");doc.setFontSize(PT_FS-0.4);doc.setTextColor(107,114,128);
-        doc.text(R.qty,x+X.qtyW,tblTop+PT_LH,{align:"right"});
-        doc.text(R.ref,x+X.qtyW+2,tblTop+PT_LH);
-        doc.text(R.part,x+X.qtyW+X.refW+4,tblTop+PT_LH);
-        doc.setFont("helvetica","normal");doc.setFontSize(PT_FS);
-        X.rows.forEach(function(r){
-          var base=rowY+PT_LH;
-          doc.setTextColor(180,83,9);
-          if(r.p.cant)doc.text(String(r.p.cant)+"×",x+X.qtyW,base,{align:"right"});
-          doc.setTextColor(29,78,216);
-          if(r.p.ref)doc.text(String(r.p.ref),x+X.qtyW+2,base);
-          doc.setTextColor(17,24,39);
-          pdfFont(doc,ar,r.p.denominacio,"normal");
-          r.lines.forEach(function(l,k){doc.text(l,x+X.qtyW+X.refW+4,base+k*PT_LH)});
-          doc.setFont("helvetica","normal");
-          rowY+=r.h;
-        });
-        doc.setDrawColor(229,231,235);doc.setLineWidth(0.15);
-        doc.rect(x,tblTop,w,rowY-tblTop+0.8);
-        doc.line(x,tblTop+PT_LH+1.2,x+w,tblTop+PT_LH+1.2);
+  // One table per day, under its own heading. G: the indices of that day's
+  // entries, so the blocks drawn into the description cells still find them.
+  function drawEntries(G){
+    doc.autoTable({
+      rowPageBreak:"avoid",
+      startY:y,margin:{left:M,right:M},
+      head:[[R.time,R.severity,R.tag,R.desc,R.att]],
+      body:G.length?G.map(function(i){return body[i]}):[[{content:R.noEntries,colSpan:5,styles:{halign:"center",textColor:[156,163,175]}}]],
+      styles:{fontSize:8,cellPadding:2,overflow:"linebreak",valign:"top"},
+      headStyles:{fillColor:[17,24,39],textColor:255,fontSize:7.5},
+      alternateRowStyles:{fillColor:[249,250,251]},
+      columnStyles:{0:{cellWidth:tsW},1:{cellWidth:sevW},
+                    2:{cellWidth:tagC.cellWidth,fontSize:tagC.fontSize},
+                    4:{cellWidth:attC.cellWidth,fontSize:attC.fontSize}},
+      // Per cell, so a table with one Arabic entry keeps helvetica everywhere
+      // else. autoTable measures with the cell's own styles, so the wrap follows.
+      didParseCell:function(d){
+        if(!ar||d.section!=="body")return;
+        var t=[].concat(d.cell.text||[]).join("\n");
+        if(!hasArabic(t))return;
+        // Left-anchored on purpose: autoTable would hand the alignment to
+        // jsPDF, whose {align:"right"} anchors an Arabic run at the wrong end.
+        d.cell.styles.font=ar;d.cell.styles.fontStyle="normal";
+      },
+      // The parts table and the outcome block, painted into the blank lines the
+      // cell's text reserved for them.
+      didDrawCell:function(d){
+        if(d.section!=="body"||d.column.index!==3)return;
+        var X=extras[G[d.row.index]];if(!X)return;
+        var lines=[].concat(d.cell.text||[]);
+        var x=d.cell.x+2,w=d.cell.width-4;
+        var yy=d.cell.y+2+(lines.length-X.blanks)*LH;
+        if(X.rows.length){
+          var tblTop=yy+1.2,rowY=tblTop+PT_LH+1.2;
+          // header strip, then a rule under it, like the HTML table's <thead>
+          doc.setFillColor(243,244,246);doc.rect(x,tblTop,w,PT_LH+1.2,"F");
+          doc.setFont("helvetica","bold");doc.setFontSize(PT_FS-0.4);doc.setTextColor(107,114,128);
+          doc.text(R.qty,x+X.qtyW,tblTop+PT_LH,{align:"right"});
+          doc.text(R.ref,x+X.qtyW+2,tblTop+PT_LH);
+          doc.text(R.part,x+X.qtyW+X.refW+4,tblTop+PT_LH);
+          doc.setFont("helvetica","normal");doc.setFontSize(PT_FS);
+          X.rows.forEach(function(r){
+            var base=rowY+PT_LH;
+            doc.setTextColor(180,83,9);
+            if(r.p.cant)doc.text(String(r.p.cant)+"×",x+X.qtyW,base,{align:"right"});
+            doc.setTextColor(29,78,216);
+            if(r.p.ref)doc.text(String(r.p.ref),x+X.qtyW+2,base);
+            doc.setTextColor(17,24,39);
+            pdfFont(doc,ar,r.p.denominacio,"normal");
+            r.lines.forEach(function(l,k){doc.text(l,x+X.qtyW+X.refW+4,base+k*PT_LH)});
+            doc.setFont("helvetica","normal");
+            rowY+=r.h;
+          });
+          doc.setDrawColor(229,231,235);doc.setLineWidth(0.15);
+          doc.rect(x,tblTop,w,rowY-tblTop+0.8);
+          doc.line(x,tblTop+PT_LH+1.2,x+w,tblTop+PT_LH+1.2);
+        }
+        if(X.fixH){
+          var fy=yy+X.partsH+1.2,fh=X.fixH-2,fc=hexRgb(fixTx(entries[G[d.row.index]].fix.severity));
+          doc.setFillColor(249,250,251);doc.rect(x,fy,w,fh,"F");
+          doc.setFillColor(fc[0],fc[1],fc[2]);doc.rect(x,fy,0.8,fh,"F");
+          doc.setFont("helvetica","bold");doc.setFontSize(FX_FS-0.4);doc.setTextColor(fc[0],fc[1],fc[2]);
+          doc.text(X.fixLabel,x+2.5,fy+FX_LH);
+          doc.setFont("helvetica","normal");doc.setFontSize(FX_FS);doc.setTextColor(55,65,81);
+          pdfFont(doc,ar,entries[G[d.row.index]].fix.text,"normal");
+          X.fixLines.forEach(function(l,k){doc.text(l,x+2.5,fy+FX_LH+(k+1)*FX_LH)});
+        }
+        doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(0,0,0);
       }
-      if(X.fixH){
-        var fy=yy+X.partsH+1.2,fh=X.fixH-2,fc=hexRgb(fixTx(entries[d.row.index].fix.severity));
-        doc.setFillColor(249,250,251);doc.rect(x,fy,w,fh,"F");
-        doc.setFillColor(fc[0],fc[1],fc[2]);doc.rect(x,fy,0.8,fh,"F");
-        doc.setFont("helvetica","bold");doc.setFontSize(FX_FS-0.4);doc.setTextColor(fc[0],fc[1],fc[2]);
-        doc.text(X.fixLabel,x+2.5,fy+FX_LH);
-        doc.setFont("helvetica","normal");doc.setFontSize(FX_FS);doc.setTextColor(55,65,81);
-        pdfFont(doc,ar,entries[d.row.index].fix.text,"normal");
-        X.fixLines.forEach(function(l,k){doc.text(l,x+2.5,fy+FX_LH+(k+1)*FX_LH)});
-      }
-      doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(0,0,0);
-    }
+    });
+  }
+  if(!entries.length)drawEntries([]);
+  else dayGroups(entries).forEach(function(g){
+    if(y>H-40){doc.addPage();y=M}
+    doc.setFont("helvetica","bold");doc.setFontSize(10);doc.setTextColor(17,24,39);
+    var dt=reportDayTitle(g.key,R,lang);doc.text(dt,M,y+4);
+    var dw=doc.getTextWidth(dt);
+    doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(107,114,128);
+    doc.text(reportDaySummary(g.idx.map(function(i){return entries[i]}),R),M+dw+5,y+4);
+    doc.setDrawColor(245,158,11);doc.setLineWidth(0.5);doc.line(M,y+6,M+CW,y+6);
+    y+=8;
+    drawEntries(g.idx);
+    y=doc.lastAutoTable.finalY+5;
   });
   y=doc.lastAutoTable.finalY+8;
 
@@ -8143,7 +8208,10 @@ async function buildPdfBlob(s,lang,rev,opts){
     });
   });
   if(shots.length){
-    if(y>H-40){doc.addPage();y=M}
+    // the heading only goes where its first row of photos fits under it —
+    // it used to be left alone at the foot of a page
+    var firstRowH=(CW-8)/3*0.72+11;
+    if(y+5+firstRowH>H-M){doc.addPage();y=M}
     doc.setFont("helvetica","bold");doc.setFontSize(11);doc.setTextColor(17,24,39);
     doc.text(R.photos,M,y);y+=5;
     doc.setFont("helvetica","normal");doc.setFontSize(6.5);
@@ -8463,9 +8531,9 @@ async function buildDocxDocument(D,s,lang,rev){
       rows:[head].concat(rows)});
   }
   // How it ended: shaded block with a bar in its severity's colour, as in the PDF.
-  function fixBlock(fx,descMm){
+  function fixBlock(fx,descMm,entry){
     var fc=fixTx(fx.severity).replace("#","");
-    var label=R.fix.toUpperCase()+" ("+(R.sev[fx.severity]||R.sev.ok)+")"+(fx.ts?" · "+fts(fx.ts):"");
+    var label=R.fix.toUpperCase()+" ("+(R.sev[fx.severity]||R.sev.ok)+")"+(fx.ts?" · "+(entry?fixWhen(entry):fts(fx.ts)):"");
     var cellCh=[P({spacing:{after:20},children:[T({text:label,bold:true,size:hp(6.8),font:"Arial",color:fc})]})];
     if(fx.text)cellCh.push(P({children:[T({text:fx.text,size:hp(7.2),font:"Arial",color:"374151"})]}));
     return new D.Table({width:{size:tw(descMm-4),type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED,
@@ -8495,15 +8563,14 @@ async function buildDocxDocument(D,s,lang,rev){
     }
     if(e.fix){
       descCh.push(P({spacing:{before:60},children:[T({text:""})]}));
-      descCh.push(fixBlock(e.fix,colMm[3]));
+      descCh.push(fixBlock(e.fix,colMm[3],e));
       descCh.push(P({spacing:{after:0},children:[T({text:""})]}));
     }
     function cell(idx,ch){return new D.TableCell({borders:borders,margins:mg,width:{size:COLW[idx],type:D.WidthType.DXA},
       shading:{fill:fill,type:D.ShadingType.CLEAR},children:ch})}
     return new D.TableRow({children:[
       cell(0,[P({children:[
-        T({text:fts(e.ts).split(" ")[0],size:hp(8),font:"Arial",color:"6B7280"}),
-        T({text:fts(e.ts).split(" ")[1],size:hp(8),font:"Arial",color:"6B7280",break:1})
+        T({text:timeOf(e.ts),size:hp(8),font:"Arial",color:"6B7280"})
       ].concat(e.tsFromPhoto?[T({text:R.photoTag,size:hp(8),font:"Arial",color:"9CA3AF",break:1})]:[])})]),
       cell(1,[P({children:[T({text:R.sev[e.severity]||R.sev.info,bold:true,size:hp(8),color:sc,font:"Arial"})]})]),
       cell(2,[P({children:[T({text:e.tag||"",size:hp(tagPt),font:"Arial",color:"111827"})]})]),
@@ -8544,11 +8611,22 @@ async function buildDocxDocument(D,s,lang,rev){
     P({spacing:{after:120},border:{bottom:{style:D.BorderStyle.SINGLE,size:6,color:"F59E0B",space:4}},
        children:[T({text:revLine(R,rev,tl),size:hp(9),font:"Arial",color:"6B7280"})]}),
     metaTable,
-    P({spacing:{before:120,after:120},children:counters}),
-    new D.Table({width:{size:TBLW,type:D.WidthType.DXA},columnWidths:COLW,layout:D.TableLayoutType.FIXED,
-      rows:[new D.TableRow({tableHeader:true,children:[hdrCell(R.ts,COLW[0]),hdrCell(R.severity,COLW[1]),hdrCell(R.tag,COLW[2]),hdrCell(R.desc,COLW[3]),hdrCell(R.att,COLW[4])]})].concat(rows)}),
-    P({spacing:{after:120},children:[T({text:""})]})
-  ];
+    P({spacing:{before:120,after:120},children:counters})
+  ].concat((function(){
+    // one table per day, under its own heading, as in the PDF
+    function hdrRow(){return new D.TableRow({tableHeader:true,children:[hdrCell(R.time,COLW[0]),hdrCell(R.severity,COLW[1]),hdrCell(R.tag,COLW[2]),hdrCell(R.desc,COLW[3]),hdrCell(R.att,COLW[4])]})}
+    function tbl(r){return new D.Table({width:{size:TBLW,type:D.WidthType.DXA},columnWidths:COLW,layout:D.TableLayoutType.FIXED,rows:[hdrRow()].concat(r)})}
+    if(!entries.length)return [tbl([])];
+    var out=[];
+    dayGroups(entries).forEach(function(g){
+      out.push(P({spacing:{before:200,after:60},keepNext:true,
+        border:{bottom:{style:D.BorderStyle.SINGLE,size:8,color:"F59E0B",space:2}},
+        children:[T({text:reportDayTitle(g.key,R,lang),bold:true,size:hp(10),font:"Arial",color:"111827"}),
+                  T({text:"    "+reportDaySummary(g.idx.map(function(i){return entries[i]}),R),size:hp(8),font:"Arial",color:"6B7280"})]}));
+      out.push(tbl(g.idx.map(function(i){return rows[i]})));
+    });
+    return out;
+  })()).concat([P({spacing:{after:120},children:[T({text:""})]})]);
 
   // Photo appendix, 3 across, like the PDF's — and for the same reason: images
   // inside the rows would blow the table up.

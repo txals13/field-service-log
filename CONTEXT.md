@@ -1063,15 +1063,29 @@ Field Service Log/
 
 ---
 
-## The log, grouped by day (2026-10-13, in the app only for now)
+## The log, grouped by day (2026-10-13 — the app, then the reports)
 The same information as before, laid out as a work diary (option C of three
 the user was shown): `renderLogArea` puts a `.log-day` heading before each
 day's entries — weekday and date, the number of entries and that day's own
 counters (■ ▲ ✔ ●, only those not zero) — and each entry shows only its time.
 The heading is `position:sticky`, so the day stays in view while its entries
 scroll past. An outcome's time drops the date when it is the same day as its
-entry. The reports are unchanged until the user decides whether they want
-it there too.
+entry.
+
+The reports followed the same day (PDF, Word, HTML): a heading per day —
+weekday in the report's language (`reportDayTitle`, `toLocaleDateString`),
+then "N entries · Problems n · Warnings n · Resolved n · OK n" in words, not
+symbols (`reportDaySummary`; ■ ▲ are not in the PDF font) — and one table per
+day with an "Hora / Time" column (`R.time`) holding only the time
+(`timeOf`) and the photo tag. `dayGroups(entries)` gives each day's run of
+indices: the PDF draws one autoTable per day through `drawEntries(G)`, whose
+callbacks map the row back with `G[d.row.index]` so the parts table and the
+outcome block still land in the right cell; Word builds one table per day
+under a `keepNext` heading. An outcome's time drops the date on the same day
+(`fixWhen`). The time column is measured on "00:00:00", so the description
+gets a little more room. New labels `time`, `entry1`, `entryN`, `noDate` in
+RPT (translated tables re-fetched once). The PDF's "Fotos" heading now only
+goes where its first row of photos fits — it used to sit alone at a page foot.
 
 ## Signature size (2026-10-13)
 Signatures were taking up too much of the page. Now, everywhere they are

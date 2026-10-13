@@ -1063,6 +1063,16 @@ Field Service Log/
 
 ---
 
+## The log, grouped by day (2026-10-13, in the app only for now)
+The same information as before, laid out as a work diary (option C of three
+the user was shown): `renderLogArea` puts a `.log-day` heading before each
+day's entries — weekday and date, the number of entries and that day's own
+counters (■ ▲ ✔ ●, only those not zero) — and each entry shows only its time.
+The heading is `position:sticky`, so the day stays in view while its entries
+scroll past. An outcome's time drops the date when it is the same day as its
+entry. The reports are unchanged until the user decides whether they want
+it there too.
+
 ## Signature size (2026-10-13)
 Signatures were taking up too much of the page. Now, everywhere they are
 drawn: report and validation PDF — box 14 mm high, image at most 45 mm wide

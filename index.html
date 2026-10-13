@@ -94,6 +94,11 @@ mark{background:var(--goldbg);color:var(--goldtx);padding:0 1px;border-radius:2p
 /* log */
 .log-area{flex:1;overflow-y:auto;padding:8px 12px;-webkit-overflow-scrolling:touch}
 .log-entry{display:flex;gap:8px;padding:6px 8px;border-radius:6px;margin-bottom:3px;border-left:2px solid var(--br2);align-items:flex-start}
+.log-day{position:sticky;top:-8px;z-index:2;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:10px -2px 6px;padding:8px 4px 5px;background:var(--bg0);border-bottom:2px solid var(--gold)}
+.log-day:first-child{margin-top:0}
+.log-day b{font-size:13px}
+.log-day>span{font-size:11.5px;color:var(--tx3)}
+.log-day .k{margin-left:auto;display:flex;gap:10px;font-family:monospace;font-size:11.5px}
 .log-entry.sev-ok{border-left-color:var(--green);background:var(--greenbg)}
 .log-entry.sev-warning{border-left-color:var(--orange);background:var(--orangebg)}
 .log-entry.sev-issue{border-left-color:var(--red);background:var(--redbg)}
@@ -3082,7 +3087,8 @@ function logFixHTML(e){
     +"<div class=\"log-meta\">"
     +"<span class=\"log-fix-lbl\" style=\"color:"+ftx+"\">✔ COM HA QUEDAT</span>"
     +"<span class=\"log-sev\" style=\"background:"+fixBg(fx.severity)+";color:"+ftx+"\">"+highlightText(fsm.label,filterTxt)+"</span>"
-    +(fx.ts?"<span class=\"log-ts\">"+fts(fx.ts)+"</span>":"")
+    // same day as its entry: the time is enough, the day heading says the rest
+    +(fx.ts?"<span class=\"log-ts\">"+(fts(fx.ts).split(" ")[0]===fts(e.ts).split(" ")[0]?fts(fx.ts).split(" ")[1]:fts(fx.ts))+"</span>":"")
     +"</div>"
     +(fx.text?"<div class=\"log-text\">"+highlightText(fx.text,filterTxt)+"</div>":"")
     +logThumbsHTML(fx.images,true)
@@ -3098,14 +3104,40 @@ function renderLogArea(){
   logArea.innerHTML="";
   if(!filtered.length){logArea.innerHTML="<div class=\"no-ent\">"+(filterTxt?"Cap resultat.":"— Encara no hi ha entrades. Registra la primera acció o incidència. —")+"</div>"}
   else{
+    // Grouped by day (2026-10-13, option C): a heading per day with that day's
+    // own counters, and each entry shows only its time — the same information
+    // as before, laid out as a work diary. The heading sticks to the top while
+    // its day scrolls past.
+    var dayOf=function(e){var d=new Date(e.ts);if(isNaN(d.getTime()))return "";function p2(x){return ("0"+x).slice(-2)}return d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate())};
+    var byDay={};filtered.forEach(function(e){var k=dayOf(e);(byDay[k]=byDay[k]||[]).push(e)});
+    var lastDay=null;
     filtered.forEach(function(e){
+      var dk=dayOf(e);
+      if(dk!==lastDay){
+        lastDay=dk;
+        var list=byDay[dk]||[],c=severityCounts(list),hd=document.createElement("div");
+        hd.className="log-day";
+        var title="Sense data";
+        if(dk){
+          var dd=new Date(dk+"T12:00:00"),wd=dd.toLocaleDateString("ca-ES",{weekday:"long"});
+          title=wd.charAt(0).toUpperCase()+wd.slice(1)+" "+dmy(dk);
+        }
+        hd.innerHTML="<b>"+esc(title)+"</b><span>"+pl(list.length,"entrada","entrades")+"</span>"
+          +"<span class=\"k\">"
+          +(c.issue?"<span style=\"color:var(--red)\">■ "+c.issue+"</span>":"")
+          +(c.warning?"<span style=\"color:var(--orange)\">▲ "+c.warning+"</span>":"")
+          +(c.resolved?"<span style=\"color:var(--green)\">✔ "+c.resolved+"</span>":"")
+          +(c.ok?"<span style=\"color:var(--green)\">● "+c.ok+"</span>":"")
+          +"</span>";
+        logArea.appendChild(hd);
+      }
       var sm=SM[e.severity]||SM.info;
       var div=document.createElement("div");div.className="log-entry sev-"+e.severity;
       var imgs=logThumbsHTML(e.images,false);
       div.innerHTML="<span class=\"log-dot\" style=\"color:"+sm.dc+"\">"+sm.dot+"</span>"
         +"<div class=\"log-body\" style=\"flex:1;min-width:0\">"
         +"<div class=\"log-meta\">"
-        +"<span class=\"log-ts\">"+(e.tsFromPhoto?"📷 ":"")+highlightText(fts(e.ts),filterTxt)+"</span>"
+        +"<span class=\"log-ts\">"+(e.tsFromPhoto?"📷 ":"")+highlightText(fts(e.ts).split(" ")[1]||fts(e.ts),filterTxt)+"</span>"
         +"<span class=\"log-sev\" style=\"background:"+sm.bg+";color:"+sm.tx+"\">"+highlightText(sm.label,filterTxt)+"</span>"
         +(e.tag?"<span class=\"log-tag\">"+highlightText(e.tag,filterTxt)+"</span>":"")
         +(e.editedAt?"<span class=\"log-edited\">editat</span>":"")
@@ -4610,7 +4642,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-13 · 3";
+var APP_VERSION="2026-10-13 · 4";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,

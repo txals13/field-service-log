@@ -1063,6 +1063,15 @@ Field Service Log/
 
 ---
 
+## Signature size (2026-10-13)
+Signatures were taking up too much of the page. Now, everywhere they are
+drawn: report and validation PDF — box 14 mm high, image at most 45 mm wide
+(`sigH`, `SIGW`); timesheet PDF — box 16 mm (`boxH`), image at most 45 mm;
+Word — row 14 mm (`SIG_MM`), image at most 42 mm; HTML — at most 170 × 44 px.
+Always at the signature's own proportions. The Word image had also been sized
+in points where docx wants 96-dpi pixels, which made it a quarter smaller
+than asked; fixed.
+
 ## Report revisions
 - **✍ Signa… — the report is signed on the glass, like the timesheet**
   (`openReportSign`, `revSign`, `setRevSign`; reuses `tsInitPad`, pointer

@@ -427,7 +427,7 @@ textarea{resize:none;line-height:1.4}
   .m2-sheet-hdr{position:sticky;top:0;z-index:1;align-items:center;gap:8px;background:var(--bg1);padding:10px 0;border-bottom:1px solid var(--br);order:-2}
   .m2-sheet-hdr span{flex:1;font-weight:700;font-size:15px}
   body.m2:not(.m2-compose) #m2CompHdr,body.m2:not(.m2-notes) #m2NotesHdr{display:none}
-  body.m2.m2-compose #notesIn,body.m2.m2-compose #notesCorr{display:none}
+  body.m2.m2-compose #notesIn,body.m2.m2-compose #notesBtns{display:none}
   body.m2.m2-notes .input-row,body.m2.m2-notes #pThumbs{display:none}
   body.m2.m2-notes #notesIn{min-height:50vh;font-size:16px}
   body.m2 .sv #pThumbs{order:2}
@@ -3328,7 +3328,10 @@ function renderContent(){
         +"<input type=\"file\" id=\"vidIn\" accept=\"video/*\" capture=\"environment\" style=\"display:none\">"
         +"</div></div>"
         +"<textarea id=\"notesIn\" class=\"inp-notes\" placeholder=\"Notes generals d'aquesta sessió…\"></textarea>"
-        +"<button class=\"btn-sm\" id=\"notesCorr\" style=\"margin-top:4px\" title=\"Corregeix ortografia i gramàtica de les notes\">✓ Corregeix</button>"
+        +"<div id=\"notesBtns\" style=\"display:flex;gap:6px;flex-wrap:wrap;margin-top:4px\">"
+        +"<button class=\"btn-sm\" id=\"notesCorr\" title=\"Corregeix ortografia i gramàtica de les notes\">✓ Corregeix</button>"
+        +"<button class=\"btn-sm\" id=\"notesDays\" title=\"Proposa una línia de resum per a cada dia, a partir de les entrades\">✨ Resum per dies</button>"
+        +"</div>"
         +"</div>"
       :"<div class=\"closed-bar\"><span>🔴 Sessió tancada el "+(active.closedAt?fts(active.closedAt):"—")+"</span></div>")
     // status bar
@@ -3413,6 +3416,7 @@ function renderContent(){
     $$("btnRec").addEventListener("click",function(){if(mediaRec&&recBk==="pend")stopRec();else if(!mediaRec)startRec("pend")});
     wireCorrect("entCorr","entIn",true);
     wireCorrect("notesCorr","notesIn");
+    wireDaySummary("notesDays","notesIn");
   }
   m2Wire(active,isOpen);
 }
@@ -4647,7 +4651,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-13 · 6";
+var APP_VERSION="2026-10-16 · 1";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -5538,6 +5542,87 @@ function wireCorrect(btnId,fieldId,compact){
       // Missing key isn't a breakdown to explain, it's a field to fill in.
       if(m===GEM_NOKEY){rest();openGemKey("Per corregir el text cal la clau de Gemini. Escriu-la aquí i torna-ho a provar.");return}
       alert("No s'ha pogut corregir el text: "+m
+        +"\n\nComprova la connexió, i que l'API de Gemini estigui activada al projecte de Google Cloud i permesa per a la clau.");
+    }
+    rest();
+  });
+  rest();
+}
+// ── "✨ RESUM PER DIES" ──────────────────────────────────────────────────────
+// Proposes the general notes as a diary: one line per working day, written by
+// Gemini from that day's entries (and the production tests started that day).
+// Each line starts with the date, dd/mm/yyyy: — that prefix is what lets a
+// second press replace the days it summarises again and leave everything else
+// the technician wrote untouched. It is a suggestion: the text lands in the
+// field, editable, and one more tap undoes it, as with "Corregeix".
+var GEM_DAYS="Ets un tècnic de servei de camp que redacta les notes generals d'un informe de visita. "
+  +"Rebràs les entrades del registre agrupades per dia. Per a CADA dia escriu UNA sola frase breu (com a molt unes 30 paraules) "
+  +"que resumeixi la feina feta, els problemes trobats i com han quedat. "
+  +"Escriu en la mateixa llengua en què estan escrites les entrades, en un registre tècnic i neutre. "
+  +"No inventis res que no surti a les entrades; no posis la data, l'hora ni el dia de la setmana dins la frase. "
+  +"No toquis el que vagi entre cometes, ni codis, referències ni noms de peces (per exemple 3025.1478 o 6208-2RS). "
+  +"Respon NOMÉS amb JSON: {\"days\":[{\"date\":\"AAAA-MM-DD\",\"line\":\"...\"}]}, un element per cada dia rebut i en el mateix ordre.";
+var SEV_WORD={issue:"PROBLEMA",warning:"AVÍS",ok:"OK",info:"INFO"};
+function daySummaryInput(s){
+  var en=s.entries||[],out=[];
+  dayGroups(en).forEach(function(g){
+    if(!g.key)return;
+    var lines=["## "+g.key];
+    g.idx.forEach(function(i){
+      var e=en[i],t=String(e.text||"").trim();
+      var l="- "+timeOf(e.ts)+" ["+(SEV_WORD[e.severity]||"INFO")+"]"+(e.tag?" ["+e.tag+"]":"")+" "+(t||"(sense text)");
+      if(e.fix)l+=" → resolució ("+(SEV_WORD[e.fix.severity]||"OK")+")"+(e.fix.text?": "+String(e.fix.text).trim():"");
+      lines.push(l);
+    });
+    (s.prodTests||[]).forEach(function(pt){
+      if(!pt.start||dayKeyOf(pt.start)!==g.key)return;
+      var r=ptCalc(pt);
+      lines.push("- Prova de producció «"+(pt.name||"prova")+"»"+(pt.product?" ("+pt.product+")":"")
+        +(r.oee!=null?": OEE "+ptPct(r.oee,"ca"):"")+(r.verdict?(r.verdict==="pass"?", superada":", no superada"):""));
+    });
+    out.push({key:g.key,text:lines.join("\n")});
+  });
+  return out;
+}
+async function gemDaySummary(s){
+  var days=daySummaryInput(s);
+  if(!days.length)return null;
+  var raw=await gemAsk(GEM_DAYS,days.map(function(d){return d.text}).join("\n\n"),true);
+  var j=null;try{j=JSON.parse(raw)}catch(e){var m=raw.match(/\{[\s\S]*\}/);if(m)try{j=JSON.parse(m[0])}catch(e2){}}
+  var got={};((j&&j.days)||[]).forEach(function(d){if(d&&d.date&&d.line)got[String(d.date).slice(0,10)]=String(d.line).replace(/\s+/g," ").trim()});
+  var lines=days.filter(function(d){return got[d.key]}).map(function(d){return dmy(d.key)+": "+got[d.key]});
+  if(!lines.length)throw new Error("el model no ha tornat cap resum");
+  return {lines:lines,dates:days.map(function(d){return dmy(d.key)})};
+}
+// The new day lines go on top; any earlier line for one of those same days is
+// dropped, everything else is kept below, in its order.
+function mergeDayLines(notes,sum){
+  var keep=String(notes||"").split("\n").filter(function(l){
+    var m=l.match(/^\s*(\d{2}\/\d{2}\/\d{4})\s*[:—–-]/);
+    return !(m&&sum.dates.indexOf(m[1])>=0);
+  }).join("\n").replace(/^\s+|\s+$/g,"");
+  return sum.lines.join("\n")+(keep?"\n\n"+keep:"");
+}
+function wireDaySummary(btnId,fieldId){
+  var b=$$(btnId),f=$$(fieldId),prev=null,made=null;
+  if(!b||!f)return;
+  function rest(){b.disabled=false;b.innerHTML=prev!=null?"&#8630; Desfés el resum":"✨ Resum per dies"}
+  f.addEventListener("input",function(){if(prev!=null&&f.value!==made){prev=null;made=null;rest()}});
+  b.addEventListener("click",async function(){
+    if(prev!=null){f.value=prev;prev=null;made=null;f.dispatchEvent(new Event("input",{bubbles:true}));autoH(f);rest();return}
+    var s=sessions.find(function(x){return x.id===aid});
+    if(!s||!(s.entries||[]).length){alert("Encara no hi ha entrades per resumir.");return}
+    b.disabled=true;b.innerHTML="Resumint…";
+    try{
+      var sum=await gemDaySummary(s);
+      if(!sum){rest();return}
+      var src=f.value,out=mergeDayLines(src,sum);
+      prev=src;made=out;
+      f.value=out;f.dispatchEvent(new Event("input",{bubbles:true}));autoH(f);
+    }catch(e){
+      var m=(e&&e.message)||String(e);
+      if(m===GEM_NOKEY){rest();openGemKey("Per resumir els dies cal la clau de Gemini. Escriu-la aquí i torna-ho a provar.");return}
+      alert("No s'ha pogut fer el resum: "+m
         +"\n\nComprova la connexió, i que l'API de Gemini estigui activada al projecte de Google Cloud i permesa per a la clau.");
     }
     rest();

@@ -191,6 +191,23 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
   - **Paid tier on purpose.** Google's terms: on the free tier prompts are used
     to improve their products and a human may read them; on the paid tier they
     are not. Client names and faults don't belong in the free tier.
+- **✨ Resum per dies — the general notes as a diary, on demand** (2026-10-16;
+  `wireDaySummary`, `gemDaySummary`, `daySummaryInput`, `mergeDayLines`).
+  A button beside the notes' ✓ Corregeix. The same Gemini key and `gemAsk`,
+  asked for JSON (`{"days":[{date,line}]}`): one short sentence per day, built
+  from that day's entries (time, severity, tag, text, resolution) plus the
+  production tests started that day, in the entries' own language, nothing
+  invented. Each line goes into the notes as `dd/mm/yyyy: …`, on top.
+  - **Running it again later re-does those days only.** A notes line starting with
+    one of the summarised dates is dropped before the new lines go in; any
+    other text the technician wrote stays, below, in its order.
+  - **A suggestion, not an automatic field.** The text lands in the textarea,
+    editable; the next press undoes it (back to the notes as they were), and
+    typing after it drops the undo — the same contract as ✓ Corregeix. No key
+    → the key dialog. The notes then travel like any notes (translated with
+    the report, printed under "Notes generals").
+  - Phone (m2): the two buttons sit in `#notesBtns`, hidden in the composer
+    sheet with the notes field, shown in the Notes generals sheet.
 - **Text already in the report's language is kept exactly as written** — a rule
   in the instructions now, and it holds: a Catalan report of Catalan entries came
   back character for character identical. Under Cloud Translation this needed a

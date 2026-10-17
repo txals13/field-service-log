@@ -734,6 +734,16 @@ Field Service Log/
     `#fsl-ph-N`, and a "Fotos" section after the parts lists shows them three
     across, 4:3, `object-fit:contain`, with time, file name and, for a video,
     its Drive link. Word has no appendix change (its own was already there).
+- **One order for the three report formats** (2026-10-17): header and visit
+  data (+ entry counters), machine counters, GENERAL NOTES (moved up from the
+  end: with ✨ Resum per dies they are the visit's summary), incidents summary,
+  the log by day, parts replaced / recommended, production tests, signatures,
+  and the photo appendix LAST, on a page of its own (PDF `addPage`, Word
+  `pageBreakBefore`, HTML `break-before:page`). The notes keep their line
+  breaks everywhere now — HTML `white-space:pre-line`, Word one paragraph per
+  line; both used to run the day lines together. In the PDF the appendix
+  moved out of the `if(!V)` block where `alias` was a block-scoped function
+  declaration; it is a `var` now so the appendix still finds it.
 - **Incidents in the report, and a new machine history** (2026-10-17, the
   user picked my recommendation from mock-ups: report A + C, history 1 + 2).
   - **Report — incidents summary** under the counters (`incidentRows` →
@@ -1539,6 +1549,18 @@ Now (`syncTick`, `scheduleSync`):
 - it also runs on `visibilitychange` → visible and on window `focus`
   (throttled to one every 5 s): a phone app's interval does not run while it
   sleeps, so coming back to it waited up to half a minute.
+- **…without moving the screen** (2026-10-17: "it moves, I tap the wrong
+  thing"). Three causes, three fixes: the "Sincronitzant…" bar sat in the
+  flow above everything and pushed the screen down and back up — it is now a
+  fixed, click-through pill, and the background tick shows nothing at all
+  (`syncQuiet` makes `setSyncSt("loading")` a no-op); every tick redrew the
+  whole screen even with nothing new — it now redraws only when `sessSig()`
+  (aid + each visit's id/stamp/status) changed; and every redraw jumped the
+  log to its end — `logCapture`/`logPos` keep the scroll position across a
+  redraw (it stays at the end only if it was there, the visit changed, or an
+  entry was just added: `logToBottom`). The position is restored at once and
+  again in rAF: saving an edit redraws twice in a row, and rAF alone left the
+  second redraw reading a fresh 0 (and never runs in a background tab).
 
 ### addEntry timeout for EXIF + upload
 Photo EXIF reading and video uploads are async. Use a safe timeout:

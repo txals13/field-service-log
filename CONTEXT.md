@@ -254,6 +254,15 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
   Written 2026-10-04 to cover the app as it stood that day. **When a feature
   changes what the user sees or does, update the manual in the same change**
   — button names in it are quoted exactly as the app shows them.
+- **Two Claude Docs kept current with the app** (created 2026-10-17, private to
+  the user, pinned in their claude.ai sidebar):
+  [Presentació del projecte](https://claude.ai/code/artifact/356924d4-6ca4-4b48-88cf-e982777f4a5a)
+  — for the user's superiors — and
+  [Llista de proves abans del viatge](https://claude.ai/code/artifact/cd8aa1d9-02f2-4ea2-8b95-007dbb151711).
+  **The user wants both always up to date:** a change that alters a feature,
+  the version, a button's place or name, the costs, or what is still untested
+  goes into them in the same piece of work, through the Claude Docs connector
+  (read first — the user ticks and edits them by hand). Keep what they wrote.
 - **PWA** — installable on mobile and desktop, works offline via `sw.js`
   (network-first with a 3s timeout, cache fallback; Google auth/Drive requests
   are never intercepted). Until 2026-08-19 this line was **false**: the worker

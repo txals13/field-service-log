@@ -762,6 +762,17 @@ Field Service Log/
     that visit), or "✓ all OK".
   - New labels in RPT ca/es/en (`incTitle`…`resIn`, `h.kOpen`…`h.ago`); the
     tables cached for the other languages are re-translated once.
+- **Machine counters** (2026-10-17): `session.counters = {arr:{h,u,at},
+  dep:{h,u,at}}` — hour meter and total-output counter on arrival and on
+  leaving, numbers as typed (`ptNum` reads them). Edited in `#ctrBack`
+  (`openCounters`, live sums in `ctrSum`; a number typed with no time takes
+  now). `ctrPrev` finds the newest earlier visit of the machine with a reading
+  (archived ones too: history records carry `counters`), `ctrDelta` gives
+  hours/units/days, h/day and units per machine hour, and flags a counter that
+  went down (replaced or reset). Shown in the header chip, the history cards
+  (`mhCtrLine`: the reading and "↑ since the previous visit"), the reports
+  (`ctrReport` → `ctrHTML` / `pdfCtrSection` / Word `ctrCh`, above the
+  incidents summary) and the Excel session sheet. Labels `RPT.*.ctr`.
 - **The machine-history file keeps archived visits** (2026-10-17: "I don't want
   to load every report again"). `field_service_log_history.json` (Drive root,
   next to the data file) + IndexedDB `history`: `{visits:{id:record},seen}`.

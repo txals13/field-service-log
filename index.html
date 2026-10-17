@@ -766,6 +766,19 @@ textarea{resize:none;line-height:1.4}
     </div>
   </div>
 
+  <div class="modal-back" id="ctrBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,520px)">
+      <div class="modal-title">&#9201; Comptadors de la m&agrave;quina</div>
+      <div class="ts-note" style="margin-bottom:10px">Les hores de m&agrave;quina i el comptador de producte total, a l'arribada i a la sortida. Amb la lectura de la visita anterior, l'app calcula quant ha treballat la m&agrave;quina entremig.</div>
+      <div id="ctrGrid"></div>
+      <div id="ctrSum" style="margin-top:10px;font-size:13px;line-height:1.5"></div>
+      <div class="modal-actions">
+        <button id="ctrCancel">Cancel&middot;la</button>
+        <button class="btn-gold" id="ctrSave">&#10003; Desa</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-back" id="pdBack" style="display:none">
     <div class="modal" style="max-width:min(96vw,640px)">
       <div class="modal-title">&#128200; <span id="pdTitle">Proves de producci&oacute;</span></div>
@@ -3449,6 +3462,7 @@ function renderContent(){
     +mhChipHTML(active)
     +folderChipHTML(active)
     +tsChipHTML(active)
+    +ctrChipHTML(active)
     +prodChipHTML(active)
     +"</div></div>"
     // filter
@@ -3524,6 +3538,7 @@ function renderContent(){
   var fChip=$$("folChip");if(fChip)fChip.addEventListener("click",openFolder);
   var hChip=$$("mhChip");if(hChip)hChip.addEventListener("click",openMachineHistory);
   var pdC=$$("pdChip");if(pdC)pdC.addEventListener("click",function(){openProdList()});
+  var ctC=$$("ctrChip");if(ctC)ctC.addEventListener("click",openCounters);
   var btnC=$$("btnClose");if(btnC)btnC.addEventListener("click",function(){if(confirm("Vols tancar aquesta sessió? La pots reobrir més endavant.")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"closed",closedAt:now()}):s});scheduleSave();renderAll()}});
   var btnR=$$("btnReopen");if(btnR)btnR.addEventListener("click",function(){if(confirm("Vols reobrir aquesta sessió?")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"open",closedAt:null}):s});scheduleSave();renderAll()}});
   var btnEx=$$("btnExp");if(btnEx){
@@ -4784,6 +4799,7 @@ function openM2More(){
       it("&#129534;","Full d'hores","",function(){openTimesheet()})
     ]],
     ["VISITA",[
+      it("&#9201;","Comptadors de la màquina",ctrLast(a)?"":"sense lectures",function(){openCounters()}),
       it("&#128200;","Proves de producció",prodChipNote(a),function(){openProdList()}),
       mh>1?it("&#128220;","Historial de la màquina",mh+" visites"+(m2Pending(a)?" · "+pl(m2Pending(a),"pendent","pendents"):""),function(){openMachineHistory()}):null,
       $$("folChip")?it("&#128451;","Carpeta de Drive","",click("folChip")):null,
@@ -4823,7 +4839,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-17 · 11";
+var APP_VERSION="2026-10-17 · 12";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -4908,6 +4924,77 @@ function prodChipNote(s){
   var l=(s&&s.prodTests)||[];
   if(l.some(function(t){return t.running}))return "en curs";
   return l.length?pl(l.length,"prova","proves"):"";
+}
+function ctrChipHTML(s){
+  var r=ctrLast(s);
+  if(!r)return "<span id=\"ctrChip\" style=\"cursor:pointer;color:var(--tx3)\" title=\"Hores de màquina i producte total, a l'arribada i a la sortida\">&#9201; Comptadors</span>";
+  return "<span id=\"ctrChip\" style=\"cursor:pointer\" title=\"Comptadors de la màquina\">&#9201; "
+    +(r.h!=null?ctrFmt(r.h,"ca",1)+" h":"")+(r.h!=null&&r.u!=null?" · ":"")+(r.u!=null?ctrFmt(r.u,"ca",0)+" u":"")+"</span>";
+}
+var ctrSessId=null,ctrWired=false;
+function openCounters(){
+  var a=sessions.find(function(x){return x.id===aid});if(!a)return;
+  ctrSessId=a.id;
+  var c=a.counters||{};
+  function blk(k,lab){
+    var r=c[k]||{};
+    return "<div style=\"border:1px solid var(--br);border-radius:8px;padding:8px 10px;margin-bottom:8px\">"
+      +"<div style=\"font-weight:700;font-size:12px;margin-bottom:6px\">"+lab+"</div>"
+      +"<div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px 10px;align-items:end\">"
+      +"<label style=\"font-size:11px;color:var(--tx3)\">Hores de màquina<input type=\"text\" inputmode=\"decimal\" data-ctr=\""+k+"h\" value=\""+esc(r.h||"")+"\" style=\"width:100%;margin-top:2px\"></label>"
+      +"<label style=\"font-size:11px;color:var(--tx3)\">Producte total<input type=\"text\" inputmode=\"numeric\" data-ctr=\""+k+"u\" value=\""+esc(r.u||"")+"\" style=\"width:100%;margin-top:2px\"></label>"
+      +"<label style=\"font-size:11px;color:var(--tx3);grid-column:1/-1\">Data i hora<span style=\"display:flex;gap:4px;margin-top:2px\"><input type=\"datetime-local\" data-ctr=\""+k+"at\" value=\""+esc(r.at?tsToInput(r.at):"")+"\" style=\"flex:1;min-width:0\">"
+      +"<button type=\"button\" class=\"btn-xs\" data-ctrnow=\""+k+"\" title=\"Ara\">Ara</button></span></label>"
+      +"</div></div>";
+  }
+  $$("ctrGrid").innerHTML=blk("arr","Arribada")+blk("dep","Sortida");
+  $$("ctrBack").style.display="flex";
+  if(!ctrWired){
+    ctrWired=true;
+    $$("ctrCancel").addEventListener("click",function(){$$("ctrBack").style.display="none"});
+    $$("ctrBack").addEventListener("click",function(e){if(e.target===$$("ctrBack"))$$("ctrBack").style.display="none"});
+    // a number typed with no time yet takes "now": the reading is taken as it is typed
+    $$("ctrGrid").addEventListener("input",function(e){
+      var k=e.target.dataset.ctr;if(!k||/at$/.test(k))return ctrSum();
+      var at=$$("ctrGrid").querySelector("[data-ctr=\""+k.slice(0,3)+"at\"]");
+      if(at&&!at.value&&e.target.value.trim())at.value=tsToInput(now());
+      ctrSum();
+    });
+    $$("ctrGrid").addEventListener("click",function(e){
+      var k=e.target.dataset&&e.target.dataset.ctrnow;if(!k)return;
+      $$("ctrGrid").querySelector("[data-ctr=\""+k+"at\"]").value=tsToInput(now());ctrSum();
+    });
+    $$("ctrSave").addEventListener("click",function(){
+      var v=ctrCollect(),id=ctrSessId;
+      sessions=sessions.map(function(x){return x.id===id?Object.assign({},x,{counters:v}):x});
+      $$("ctrBack").style.display="none";scheduleSave();renderAll();
+    });
+  }
+  ctrSum();
+}
+function ctrCollect(){
+  var g=$$("ctrGrid"),o={};
+  ["arr","dep"].forEach(function(k){
+    var h=g.querySelector("[data-ctr=\""+k+"h\"]").value.trim(),u=g.querySelector("[data-ctr=\""+k+"u\"]").value.trim(),
+        at=g.querySelector("[data-ctr=\""+k+"at\"]").value;
+    if(h||u)o[k]={h:h,u:u,at:at?(inputToTs(at)||""):""};
+  });
+  return o;
+}
+// The sums, live, as the numbers are typed.
+function ctrSum(){
+  var a=sessions.find(function(x){return x.id===ctrSessId});if(!a)return;
+  var s=Object.assign({},a,{counters:ctrCollect()}),C=RPT.ca.ctr,out=[];
+  var pv=ctrPrev(s),first=ctrFirst(s);
+  if(pv){
+    out.push("<div style=\"color:var(--tx3);font-size:12px\">Visita anterior amb lectura: "+esc(pv.s.project||"")+(pv.r.at?" · "+mhDate(pv.r.at):"")
+      +" · "+(pv.r.h!=null?esc(ctrFmt(pv.r.h,"ca",1))+" h":"")+(pv.r.h!=null&&pv.r.u!=null?" · ":"")+(pv.r.u!=null?esc(ctrFmt(pv.r.u,"ca",0))+" u":"")+"</div>");
+    var t=first?ctrDeltaText(ctrDelta(pv.r,first),C,"ca"):"";
+    if(t)out.push("<div><strong>"+esc(C.since)+":</strong> "+esc(t)+"</div>");
+  }else out.push("<div style=\"color:var(--tx3);font-size:12px\">Cap visita anterior d'aquesta màquina amb lectures: aquesta serà la primera.</div>");
+  var c=s.counters,da=ctrRead(c.arr),db=ctrRead(c.dep);
+  if(da&&db){var d=ctrDeltaText(ctrDelta(da,db),C,"ca");if(d)out.push("<div><strong>"+esc(C.during)+":</strong> "+esc(d)+"</div>")}
+  $$("ctrSum").innerHTML=out.join("");
 }
 function prodChipHTML(s){
   var l=(s&&s.prodTests)||[];
@@ -5535,7 +5622,7 @@ var RPT={
       time:"Hora",entry1:"entrada",entryN:"entrades",noDate:"Sense data",ts:"Data i hora",severity:"Gravetat",tag:"Etiqueta",desc:"Descripció",att:"Adjunts",
       fix:"Com ha quedat",edited:"editat",noEntries:"Sense entrades",photos:"Fotos",notes:"Notes generals",
       sigTech:"Signatura del tècnic",sigCli:"Signatura del client / receptor",
-      qty:"QT.",ref:"REF.",part:"RECANVI",incTitle:"Incidències d'aquesta visita",incWhen:"Quan",incWhat:"Incidència",incState:"Estat",stRes:"Resolt",stPend:"Pendent",stClosed:"Tancat",stRec:"recanvi recomanat",prevVisit:"visita anterior",closesPrev:"Tanca un problema de la visita del",resIn:"resolt en",st:"ESTAT",prio:"PRIORITAT",pstL:{fit:"Canviat",urg:"Recomanat · urgent",prev:"Recomanat · preventiu"},pst:{fit:"Canviat",urg:"Urgent",prev:"Preventiu"},partsFit:"Recanvis canviats",partsRec:"Recanvis recomanats",recNote:"Urgent: convé canviar-lo aviat. Preventiu: per tenir-ne en estoc o canviar-lo en una parada programada.",photoTag:"[foto]",openDrive:"Obre a Drive",
+      qty:"QT.",ref:"REF.",part:"RECANVI",ctr:{title:"Comptadors de la màquina",read:"Lectura",arr:"Arribada",dep:"Sortida",hours:"Hores de màquina",units:"Producte total",date:"Data",since:"Des de la visita anterior",during:"Durant la visita",inW:"en",day1:"dia",days:"dies",perDay:"h/dia",perHour:"unitats/h",h:"h",u:"unitats",reset:"el comptador ha baixat: s'ha canviat o reiniciat?"},incTitle:"Incidències d'aquesta visita",incWhen:"Quan",incWhat:"Incidència",incState:"Estat",stRes:"Resolt",stPend:"Pendent",stClosed:"Tancat",stRec:"recanvi recomanat",prevVisit:"visita anterior",closesPrev:"Tanca un problema de la visita del",resIn:"resolt en",st:"ESTAT",prio:"PRIORITAT",pstL:{fit:"Canviat",urg:"Recomanat · urgent",prev:"Recomanat · preventiu"},pst:{fit:"Canviat",urg:"Urgent",prev:"Preventiu"},partsFit:"Recanvis canviats",partsRec:"Recanvis recomanats",recNote:"Urgent: convé canviar-lo aviat. Preventiu: per tenir-ne en estoc o canviar-lo en una parada programada.",photoTag:"[foto]",openDrive:"Obre a Drive",
       voice:"nota de veu",video:"vídeo",photo:"foto",file:"fitxer",
       pre:{report:"informe",parts:"recanvis"},
       pt:{title:"Proves de producció",period:"Període",units:"Unitats",availS:"Disp.",perfS:"Rend.",qualS:"Qual.",rejS:"Rebuig",resultS:"Resultat",summaryNote:"El detall de cada prova —aturades, objectius i observacions— és a l'informe de validació.",test:"Prova",product:"Producte / format",nominal:"Velocitat nominal",start:"Inici",end:"Final",duration:"Durada",plannedStops:"Aturades planificades",downtime:"Aturades no planificades",run:"Temps en marxa",total:"Unitats totals",rejects:"Unitats rebutjades",good:"Unitats bones",speedAvg:"Velocitat mitjana",speedRun:"Velocitat en marxa",avail:"Disponibilitat",perf:"Rendiment",qual:"Qualitat",oee:"OEE",rejPct:"Rebuig",indicator:"Indicador",value:"Valor",target:"Objectiu",result:"Resultat",yes:"Compleix",no:"No compleix",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Aturades",kind:"Tipus",cause:"Causa",kinds:{machine:"Màquina",external:"Externa",planned:"Planificada"},notes:"Observacions",uph:"u/h",validation:"Informe de validació",file:"validacio"},
@@ -5552,7 +5639,7 @@ var RPT={
       time:"Hora",entry1:"entrada",entryN:"entradas",noDate:"Sin fecha",ts:"Fecha y hora",severity:"Gravedad",tag:"Etiqueta",desc:"Descripción",att:"Adjuntos",
       fix:"Cómo ha quedado",edited:"editado",noEntries:"Sin entradas",photos:"Fotos",notes:"Notas generales",
       sigTech:"Firma del técnico",sigCli:"Firma del cliente / receptor",
-      qty:"CANT.",ref:"REF.",part:"RECAMBIO",incTitle:"Incidencias de esta visita",incWhen:"Cuándo",incWhat:"Incidencia",incState:"Estado",stRes:"Resuelto",stPend:"Pendiente",stClosed:"Cerrado",stRec:"recambio recomendado",prevVisit:"visita anterior",closesPrev:"Cierra un problema de la visita del",resIn:"resuelto en",st:"ESTADO",prio:"PRIORIDAD",pstL:{fit:"Cambiado",urg:"Recomendado · urgente",prev:"Recomendado · preventivo"},pst:{fit:"Cambiado",urg:"Urgente",prev:"Preventivo"},partsFit:"Recambios cambiados",partsRec:"Recambios recomendados",recNote:"Urgente: conviene cambiarlo pronto. Preventivo: para tenerlo en stock o cambiarlo en una parada programada.",photoTag:"[foto]",openDrive:"Abrir en Drive",
+      qty:"CANT.",ref:"REF.",part:"RECAMBIO",ctr:{title:"Contadores de la máquina",read:"Lectura",arr:"Llegada",dep:"Salida",hours:"Horas de máquina",units:"Producto total",date:"Fecha",since:"Desde la visita anterior",during:"Durante la visita",inW:"en",day1:"día",days:"días",perDay:"h/día",perHour:"unidades/h",h:"h",u:"unidades",reset:"el contador ha bajado: ¿se ha cambiado o reiniciado?"},incTitle:"Incidencias de esta visita",incWhen:"Cuándo",incWhat:"Incidencia",incState:"Estado",stRes:"Resuelto",stPend:"Pendiente",stClosed:"Cerrado",stRec:"recambio recomendado",prevVisit:"visita anterior",closesPrev:"Cierra un problema de la visita del",resIn:"resuelto en",st:"ESTADO",prio:"PRIORIDAD",pstL:{fit:"Cambiado",urg:"Recomendado · urgente",prev:"Recomendado · preventivo"},pst:{fit:"Cambiado",urg:"Urgente",prev:"Preventivo"},partsFit:"Recambios cambiados",partsRec:"Recambios recomendados",recNote:"Urgente: conviene cambiarlo pronto. Preventivo: para tenerlo en stock o cambiarlo en una parada programada.",photoTag:"[foto]",openDrive:"Abrir en Drive",
       voice:"nota de voz",video:"vídeo",photo:"foto",file:"archivo",
       pre:{report:"informe",parts:"recambios"},
       pt:{title:"Pruebas de producción",period:"Período",units:"Unidades",availS:"Disp.",perfS:"Rend.",qualS:"Cal.",rejS:"Rechazo",resultS:"Resultado",summaryNote:"El detalle de cada prueba —paradas, objetivos y observaciones— está en el informe de validación.",test:"Prueba",product:"Producto / formato",nominal:"Velocidad nominal",start:"Inicio",end:"Final",duration:"Duración",plannedStops:"Paradas planificadas",downtime:"Paradas no planificadas",run:"Tiempo en marcha",total:"Unidades totales",rejects:"Unidades rechazadas",good:"Unidades buenas",speedAvg:"Velocidad media",speedRun:"Velocidad en marcha",avail:"Disponibilidad",perf:"Rendimiento",qual:"Calidad",oee:"OEE",rejPct:"Rechazo",indicator:"Indicador",value:"Valor",target:"Objetivo",result:"Resultado",yes:"Cumple",no:"No cumple",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Paradas",kind:"Tipo",cause:"Causa",kinds:{machine:"Máquina",external:"Externa",planned:"Planificada"},notes:"Observaciones",uph:"u/h",validation:"Informe de validación",file:"validacion"},
@@ -5569,7 +5656,7 @@ var RPT={
       time:"Time",entry1:"entry",entryN:"entries",noDate:"No date",ts:"Timestamp",severity:"Severity",tag:"Tag",desc:"Description",att:"Attachments",
       fix:"Outcome",edited:"edited",noEntries:"No entries",photos:"Photos",notes:"General notes",
       sigTech:"Technician signature",sigCli:"Client / Recipient signature",
-      qty:"QTY",ref:"REF.",part:"SPARE PART",incTitle:"Issues on this visit",incWhen:"When",incWhat:"Issue",incState:"Status",stRes:"Resolved",stPend:"Open",stClosed:"Closed",stRec:"spare part recommended",prevVisit:"earlier visit",closesPrev:"Closes an issue from the visit of",resIn:"resolved in",st:"STATUS",prio:"PRIORITY",pstL:{fit:"Replaced",urg:"Recommended · urgent",prev:"Recommended · preventive"},pst:{fit:"Replaced",urg:"Urgent",prev:"Preventive"},partsFit:"Spare parts replaced",partsRec:"Recommended spare parts",recNote:"Urgent: should be replaced soon. Preventive: to keep in stock or replace at a planned stop.",photoTag:"[photo]",openDrive:"Open in Drive",
+      qty:"QTY",ref:"REF.",part:"SPARE PART",ctr:{title:"Machine counters",read:"Reading",arr:"Arrival",dep:"Departure",hours:"Machine hours",units:"Total output",date:"Date",since:"Since the previous visit",during:"During the visit",inW:"in",day1:"day",days:"days",perDay:"h/day",perHour:"units/h",h:"h",u:"units",reset:"the counter went down: replaced or reset?"},incTitle:"Issues on this visit",incWhen:"When",incWhat:"Issue",incState:"Status",stRes:"Resolved",stPend:"Open",stClosed:"Closed",stRec:"spare part recommended",prevVisit:"earlier visit",closesPrev:"Closes an issue from the visit of",resIn:"resolved in",st:"STATUS",prio:"PRIORITY",pstL:{fit:"Replaced",urg:"Recommended · urgent",prev:"Recommended · preventive"},pst:{fit:"Replaced",urg:"Urgent",prev:"Preventive"},partsFit:"Spare parts replaced",partsRec:"Recommended spare parts",recNote:"Urgent: should be replaced soon. Preventive: to keep in stock or replace at a planned stop.",photoTag:"[photo]",openDrive:"Open in Drive",
       voice:"voice note",video:"video",photo:"photo",file:"file",
       pre:{report:"report",parts:"spare_parts"},
       pt:{title:"Production tests",period:"Period",units:"Units",availS:"Avail.",perfS:"Perf.",qualS:"Qual.",rejS:"Reject",resultS:"Result",summaryNote:"Each test in full — stops, targets and remarks — is in the validation report.",test:"Test",product:"Product / format",nominal:"Nominal speed",start:"Start",end:"End",duration:"Duration",plannedStops:"Planned stops",downtime:"Unplanned stops",run:"Run time",total:"Total units",rejects:"Rejected units",good:"Good units",speedAvg:"Average speed",speedRun:"Running speed",avail:"Availability",perf:"Performance",qual:"Quality",oee:"OEE",rejPct:"Reject rate",indicator:"Indicator",value:"Value",target:"Target",result:"Result",yes:"Met",no:"Not met",pass:"PASSED",fail:"NOT PASSED",stops:"Stops",kind:"Type",cause:"Cause",kinds:{machine:"Machine",external:"External",planned:"Planned"},notes:"Remarks",uph:"u/h",validation:"Validation report",file:"validation"},
@@ -6082,6 +6169,15 @@ function mhLine(e){
 // resolved on the visit itself, closed by a later one (and how), or still open.
 // This is what the client reads when the history is printed, so it says what
 // happened, not just a count.
+// The visit's counter readings and what the machine did since the one before.
+function mhCtrLine(x,all,L){
+  var C=L.ctr,r=ctrLast(x);if(!C||!r)return "";
+  var lang=L===RPT.ca?"ca":(Object.keys(RPT).filter(function(k){return RPT[k]===L})[0]||"ca");
+  var pv=ctrPrev(x,all),d=pv?ctrDeltaText(ctrDelta(pv.r,ctrFirst(x)),C,lang):"";
+  return "<div style=\"font-size:11.5px;margin-top:3px;color:var(--tx2)\">&#9201; "
+    +(r.h!=null?esc(ctrFmt(r.h,lang,1))+" "+esc(C.h):"")+(r.h!=null&&r.u!=null?" · ":"")+(r.u!=null?esc(ctrFmt(r.u,lang,0))+" "+esc(C.u):"")
+    +(d?"<div style=\"color:var(--blue)\">↑ "+esc(d)+"</div>":"")+"</div>";
+}
 // The earlier problems a visit closed, as lines under that visit.
 function mhClosedHere(x,all,H){
   var out=[];
@@ -6233,6 +6329,7 @@ function mhRender(cur,all,L,forPrint){
       +"<div style=\"font-size:11px;color:var(--tx3);font-family:monospace;margin-top:2px\">"
       +(c.issue?"■ "+c.issue+"  ":"")+(c.warning?"▲ "+c.warning+"  ":"")+(c.resolved?"✓ "+c.resolved+"  ":"")
       +"● "+c.ok+"  ·  "+(x._n!=null?x._n:(x.entries||[]).length)+" "+esc(H.entries)+"</div>"
+      +mhCtrLine(x,all,L)
       +issues+here+"</div></div>";
   }).join("");
 
@@ -6787,7 +6884,7 @@ function histRecord(s,arch){
   return {id:s.id,at:sStamp(s)||s.createdAt||"",client:s.client||"",machine:s.machine||"",project:s.project||"",location:s.location||"",
     type:s.type||"",status:s.status||"",createdAt:s.createdAt||"",closedAt:s.closedAt||"",writeLang:s.writeLang||"",
     serial:(s.manualRef&&s.manualRef.serial)||"",rev:r?{n:r.n,date:r.date}:null,range:tsRange(s),
-    counts:severityCounts(es),n:es.length,entries:keep,
+    counts:severityCounts(es),n:es.length,entries:keep,counters:s.counters||null,
     arch:arch||(s.zipAt?{at:s.zipAt,name:s.zipName||"",to:s.zipTo||""}:null)};
 }
 // A record dressed as a visit, for the code that reads visits.
@@ -6795,7 +6892,7 @@ function histSession(rec){
   if(!rec||rec.del)return null;
   return {id:rec.id,client:rec.client,machine:rec.machine,project:rec.project,location:rec.location,type:rec.type,status:rec.status,
     createdAt:rec.createdAt,closedAt:rec.closedAt,writeLang:rec.writeLang,manualRef:rec.serial?{serial:rec.serial}:null,
-    revisions:rec.rev?[rec.rev]:[],entries:rec.entries||[],_hist:true,_counts:rec.counts,_n:rec.n,_range:rec.range,_arch:rec.arch};
+    revisions:rec.rev?[rec.rev]:[],entries:rec.entries||[],counters:rec.counters||null,_hist:true,_counts:rec.counts,_n:rec.n,_range:rec.range,_arch:rec.arch};
 }
 function findAnySession(id){
   return sessions.find(function(x){return x.id===id})||histSession(hist.visits[id]);
@@ -6981,6 +7078,98 @@ async function histOpenArchive(id){
     }
   }catch(e){}
   alert("Aquesta visita és a l'arxiu"+(a&&a.name?" ("+a.name+")":"")+", no a l'app.\n\nPer obrir-la sencera, importa'n el ZIP: Importa › tria el ZIP de la carpeta d'arxiu.");
+}
+// ── MACHINE COUNTERS (2026-10-17) ─────────────────────────────────────────────
+// Two readings per visit — on arrival and on leaving — of the machine's hour
+// meter and its total-output counter: session.counters = {arr:{h,u,at},
+// dep:{h,u,at}}, the numbers as typed. From them: how much the machine worked
+// since the previous visit's last reading (any visit of the same machine,
+// archived ones included — the history records carry the counters too), per
+// day, and per machine hour; and how much during this visit.
+function ctrRead(r){
+  if(!r)return null;
+  var h=ptNum(r.h),u=ptNum(r.u);
+  return (h==null&&u==null)?null:{h:h,u:u,at:r.at||""};
+}
+// A visit's last reading: on leaving if there is one, else on arrival.
+function ctrLast(s){var c=s&&s.counters;return c?(ctrRead(c.dep)||ctrRead(c.arr)):null}
+function ctrFirst(s){var c=s&&s.counters;return c?(ctrRead(c.arr)||ctrRead(c.dep)):null}
+// The previous visit (same machine, older) that has a reading, and that reading.
+function ctrPrev(s,all){
+  var me=ctrFirst(s),ref=String((me&&me.at)||s.createdAt||"");
+  var list=(all||machineSessions(s)).filter(function(x){return x.id!==s.id});
+  var best=null;
+  list.forEach(function(x){
+    var r=ctrLast(x);if(!r)return;
+    var t=String(r.at||(x.closedAt||x.createdAt||""));
+    if(t&&ref&&t>=ref)return;
+    if(!best||t>best.t)best={s:x,r:r,t:t};
+  });
+  return best;
+}
+function ctrDelta(a,b){
+  if(!a||!b)return null;
+  var dh=(a.h!=null&&b.h!=null)?b.h-a.h:null,du=(a.u!=null&&b.u!=null)?b.u-a.u:null;
+  var ms=(a.at&&b.at)?(new Date(b.at)-new Date(a.at)):NaN,days=isNaN(ms)?null:ms/86400000;
+  return {dh:dh,du:du,days:days,reset:(dh!=null&&dh<0)||(du!=null&&du<0),
+    hpd:(dh!=null&&dh>=0&&days&&days>=1)?dh/days:null,uph:(du!=null&&du>=0&&dh&&dh>0)?du/dh:null};
+}
+function ctrFmt(n,lang,dec){
+  if(n==null||isNaN(n))return "—";
+  var loc=lang==="ca"?"ca-ES":(lang||"ca");
+  try{return Number(n).toLocaleString(loc,{maximumFractionDigits:dec==null?1:dec})}catch(e){return String(Math.round(n*10)/10)}
+}
+// "+412 h · +620.000 units in 96 days (4,3 h/day · 1.505 units/h)"
+function ctrDeltaText(d,C,lang){
+  if(!d)return "";
+  if(d.reset)return C.reset;
+  var parts=[];
+  if(d.dh!=null)parts.push("+"+ctrFmt(d.dh,lang,1)+" "+C.h);
+  if(d.du!=null)parts.push("+"+ctrFmt(d.du,lang,0)+" "+C.u);
+  if(!parts.length)return "";
+  var t=parts.join(" · ");
+  if(d.days!=null&&d.days>=1){var dd=Math.round(d.days);t+=" "+C.inW+" "+dd+" "+(dd===1?C.day1:C.days)}
+  var rates=[];
+  if(d.hpd!=null)rates.push(ctrFmt(d.hpd,lang,1)+" "+C.perDay);
+  if(d.uph!=null)rates.push(ctrFmt(d.uph,lang,0)+" "+C.perHour);
+  return t+(rates.length?" ("+rates.join(" · ")+")":"");
+}
+// Everything the reports print about the counters, as rows and two lines.
+function ctrReport(s,R,lang){
+  var c=s&&s.counters,C=R.ctr;if(!c||!C)return null;
+  var a=ctrRead(c.arr),b=ctrRead(c.dep);if(!a&&!b)return null;
+  var rows=[];
+  [[C.arr,a],[C.dep,b]].forEach(function(x){if(x[1])rows.push([x[0],x[1].h!=null?ctrFmt(x[1].h,lang,1)+" "+C.h:"—",x[1].u!=null?ctrFmt(x[1].u,lang,0):"—",x[1].at?fts(x[1].at).slice(0,14):"—"])});
+  var pv=ctrPrev(s),since="",during="";
+  if(pv){var dt=ctrDeltaText(ctrDelta(pv.r,ctrFirst(s)),C,lang);if(dt)since=C.since+" ("+(pv.s.project?pv.s.project+", ":"")+(pv.r.at?mhDate(pv.r.at):"")+"): "+dt}
+  if(a&&b){var dd=ctrDeltaText(ctrDelta(a,b),C,lang);if(dd)during=C.during+": "+dd}
+  return {head:[C.read,C.hours,C.units,C.date],rows:rows,since:since,during:during,title:C.title};
+}
+function ctrHTML(s,R,lang){
+  var k=ctrReport(s,R,lang);if(!k)return "";
+  var td="padding:5px 8px;border:1px solid #e5e7eb;font-size:12px";
+  return "<h2 style=\"font-size:16px;margin:22px 0 6px;border-bottom:2px solid #2563eb;padding-bottom:5px\">"+esc(k.title)+"</h2>"
+    +"<table style=\"width:auto;min-width:60%\"><thead><tr>"+k.head.map(function(h){return "<th>"+esc(h)+"</th>"}).join("")+"</tr></thead><tbody>"
+    +k.rows.map(function(r){return "<tr>"+r.map(function(c,i){return "<td style=\""+td+(i?";text-align:right;font-family:monospace":";font-weight:700")+"\">"+esc(c)+"</td>"}).join("")+"</tr>"}).join("")
+    +"</tbody></table>"
+    +(k.since?"<div style=\"font-size:12px;margin-top:6px\"><strong>"+esc(k.since)+"</strong></div>":"")
+    +(k.during?"<div style=\"font-size:12px;color:#6b7280;margin-top:2px\">"+esc(k.during)+"</div>":"");
+}
+function pdfCtrSection(doc,s,R,lang,y,M,CW,H){
+  var k=ctrReport(s,R,lang);if(!k)return y;
+  if(y>H-40){doc.addPage();y=M}
+  doc.setFont("helvetica","bold");doc.setFontSize(10.5);doc.setTextColor(17,24,39);
+  doc.text(k.title,M,y+3.5);doc.setDrawColor(37,99,235);doc.setLineWidth(0.5);doc.line(M,y+5.5,M+CW,y+5.5);y+=8;
+  doc.autoTable({startY:y,margin:{left:M,right:M},tableWidth:Math.min(CW,120),theme:"grid",
+    styles:{fontSize:7.5,cellPadding:1.4,lineColor:[229,231,235],lineWidth:0.15},
+    head:[k.head],headStyles:{fillColor:[17,24,39],textColor:255,fontSize:7},body:k.rows,
+    columnStyles:{0:{fontStyle:"bold"},1:{halign:"right"},2:{halign:"right"},3:{halign:"right"}}});
+  y=doc.lastAutoTable.finalY+4;
+  doc.setFontSize(8);
+  if(k.since){doc.setFont("helvetica","bold");doc.setTextColor(17,24,39);doc.splitTextToSize(k.since,CW).forEach(function(l){doc.text(l,M,y+1.5);y+=3.8})}
+  if(k.during){doc.setFont("helvetica","normal");doc.setTextColor(107,114,128);doc.splitTextToSize(k.during,CW).forEach(function(l){doc.text(l,M,y+1.5);y+=3.8})}
+  doc.setFont("helvetica","normal");doc.setTextColor(0,0,0);
+  return y+5;
 }
 // ── INCIDENTS IN THE REPORT (2026-10-17) ─────────────────────────────────────
 // A cached translation, if it still matches its source text.
@@ -7316,6 +7505,7 @@ function buildReportHTML(s,forPrint,lang,rev){
     +"<div class=\"stat\" style=\"background:#f0fdf4;color:#16a34a\"><strong style=\"font-size:26px;display:block\">"+oks+"</strong><span style=\"font-size:11px\">"+esc(R.ok)+"</span></div>"
     +"<div class=\"stat\" style=\"background:#f1f5f9;color:#475569\"><strong style=\"font-size:26px;display:block\">"+entries.length+"</strong><span style=\"font-size:11px\">"+esc(R.total)+"</span></div>"
     +"</div>"
+    +ctrHTML(s,R,lang)
     +incidentsHTML(s,R,lang)
     +(function(){
       // ONE table and one header; each day is a slim bar inside it
@@ -8855,6 +9045,7 @@ async function buildPdfBlob(s,lang,rev,opts){
   stats.forEach(function(st){doc.setTextColor(st[1][0],st[1][1],st[1][2]);doc.text(st[0],sx,y);sx+=doc.getTextWidth(st[0])+9});
   y+=6;
 
+  y=pdfCtrSection(doc,s,R,lang,y,M,CW,H);
   y=pdfIncSection(doc,s,R,lang,y,M,CW,H,ar);
 
   // entries table. The spare parts and the outcome are DRAWN inside the
@@ -9325,6 +9516,14 @@ async function buildXlsxBlob(s,lang,rev){
             [R.status,s.status==="open"?R.open:R.closed],[R.manual,(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||""],
             [R.revLbl,rev?("0"+rev.n).slice(-2)+" · "+dmy(rev.date):""],
             [C.gen,fts(new Date().toISOString())],[C.lines,items.length],[C.refs,summarizeParts(items).length]];
+  (function(){var cc=s.counters||{},K=R.ctr;if(!K)return;
+    [["arr",K.arr],["dep",K.dep]].forEach(function(x){var r=ctrRead(cc[x[0]]);if(!r)return;
+      if(r.h!=null)info.push([K.hours+" · "+x[1],r.h]);
+      if(r.u!=null)info.push([K.units+" · "+x[1],r.u]);
+      if(r.at)info.push([K.date+" · "+x[1],fts(r.at)]);
+    });
+    var k=ctrReport(s,R,lang);if(k&&k.since)info.push([K.since,k.since.slice(k.since.indexOf(": ")+2)]);
+  })();
   var wsI=X.utils.aoa_to_sheet(info);
   wsI["!cols"]=autoCols(info);
 
@@ -9600,6 +9799,22 @@ async function buildDocxDocument(D,s,lang,rev){
     .concat([T({text:R.ok+": ",bold:true,size:hp(9),font:"Arial",color:"16A34A"}),T({text:oks+"      ",size:hp(9),font:"Arial",color:"16A34A"}),
              T({text:R.total+": ",bold:true,size:hp(9),font:"Arial",color:"475569"}),T({text:""+entries.length,size:hp(9),font:"Arial",color:"475569"})]);
 
+  // The machine counters, as in the PDF.
+  var ctrCh=(function(){
+    var k=ctrReport(s,R,lang);if(!k)return [];
+    var W=[34,38,38,40].map(tw);
+    function c(t,w,o){o=o||{};return new D.TableCell({borders:borders,margins:mg,width:{size:w,type:D.WidthType.DXA},
+      children:[P({alignment:o.right?D.AlignmentType.RIGHT:undefined,children:[T({text:String(t),bold:!!o.bold,size:hp(7.5),font:"Arial",color:"111827"})]})]})}
+    var trs=[new D.TableRow({tableHeader:true,children:k.head.map(function(h,i){return hdrCell(h,W[i])})})];
+    k.rows.forEach(function(r){trs.push(new D.TableRow({children:r.map(function(v,i){return c(v,W[i],{bold:!i,right:!!i})})}))});
+    var out=[P({spacing:{before:120,after:60},keepNext:true,border:{bottom:{style:D.BorderStyle.SINGLE,size:8,color:"2563EB",space:2}},
+        children:[T({text:k.title,bold:true,size:hp(10.5),font:"Arial",color:"111827"})]}),
+      new D.Table({width:{size:W.reduce(function(a,b){return a+b},0),type:D.WidthType.DXA},columnWidths:W,layout:D.TableLayoutType.FIXED,rows:trs})];
+    if(k.since)out.push(P({spacing:{before:60},children:[T({text:k.since,bold:true,size:hp(8),font:"Arial",color:"111827"})]}));
+    if(k.during)out.push(P({children:[T({text:k.during,size:hp(8),font:"Arial",color:"6B7280"})]}));
+    out.push(P({spacing:{after:60},children:[T({text:""})]}));
+    return out;
+  })();
   // The incidents summary, under the counters, as in the PDF.
   var incCh=(function(){
     var rows=incidentRows(s,lang);if(!rows.length)return [];
@@ -9623,7 +9838,7 @@ async function buildDocxDocument(D,s,lang,rev){
        children:[T({text:revLine(R,rev,tl),size:hp(9),font:"Arial",color:"6B7280"})]}),
     metaTable,
     P({spacing:{before:120,after:120},children:counters})
-  ].concat(incCh).concat((function(){
+  ].concat(ctrCh).concat(incCh).concat((function(){
     // ONE table: its header repeats at the top of each page, and each day is a
     // slim bar inside it, kept with its first entry — as in the PDF
     var trs=[new D.TableRow({tableHeader:true,children:[hdrCell(R.time,COLW[0]),hdrCell(R.severity,COLW[1]),hdrCell(R.tag,COLW[2]),hdrCell(R.desc,COLW[3]),hdrCell(R.att,COLW[4])]})];

@@ -1201,6 +1201,13 @@ under a signature made on the glass, or under both lines when there is no
 on-glass signature but a date was typed (signed on paper). Sheets saved before
 it fall back to `generatedAt`'s day if they were signed (`tsSignDate`).
 
+**A month on one page** (2026-10-17). `buildTimesheetBlob` shares the room
+between the visit data and the signature block (`sigRest`, minus the remarks
+and the gaps) among the rows + totals row: the vertical padding shrinks from
+1.8 mm to as little as 0.5 mm, then the type from 7.5pt to no less than 6pt.
+A short sheet keeps the old spacing. 31 days with all columns, four wrapped
+destinations, three lines of remarks and both signatures fit on one A4.
+
 ## Report revisions
 - **✍ Signa… — the report is signed on the glass, like the timesheet**
   (`openReportSign`, `revSign`, `setRevSign`; reuses `tsInitPad`, pointer

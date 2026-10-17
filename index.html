@@ -4813,7 +4813,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-17 · 7";
+var APP_VERSION="2026-10-17 · 8";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -7811,16 +7811,31 @@ async function buildTimesheetBlob(s){
     if(k!=="dest")colStyles[i].cellWidth=c.w*scale;
     if(k==="total")colStyles[i].fontStyle="bold";
   });
+  // A whole month on ONE page with its header and signatures (2026-10-17).
+  // The room between the visit data and the signature block (minus the
+  // remarks) is shared out among the rows: the padding shrinks first, then —
+  // only if that is not enough — the type, never below 6pt. A short sheet
+  // keeps the usual spacing. The signature block's place is the same `sigRest`
+  // used below, so the two cannot disagree.
+  var boxH=16,sigNeed=boxH+16,sigRest=H-(boxH+40);   // smaller since 2026-10-13
+  var remH=0;
+  if(T.remarks){doc.setFontSize(8.5);pdfFont(doc,ar,T.remarks,"normal");remH=doc.splitTextToSize(T.remarks,CW).length*4+8;doc.setFont("helvetica","normal")}
+  var K=doc.internal.scaleFactor,fs=7.5,padV=1.8,HEADH=2*7/K*1.15+4;   // head: two lines at most
+  var rowH=(sigRest-16-remH-y-HEADH)/(T.rows.length+1);                // +1: the totals row
+  if(rowH<fs/K*1.15+2*padV){
+    padV=Math.max(0.5,(rowH-fs/K*1.15)/2);
+    if(rowH<fs/K*1.15+2*padV)fs=Math.max(6,(rowH-2*padV)*K/1.15);
+  }
   doc.autoTable({
     startY:y,margin:{left:M,right:M},
     head:[cols.map(function(k){return t[tsColMeta(k).lab]})],
     body:body,foot:foot,
-    styles:{fontSize:7.5,cellPadding:1.8,overflow:"linebreak",valign:"middle"},
+    styles:{fontSize:fs,cellPadding:{top:padV,bottom:padV,left:1.8,right:1.8},overflow:"linebreak",valign:"middle"},
     // Tight side padding on the head only: the widest headings ("H. trabajo",
     // "H. treball") otherwise wrap mid-word inside their column.
     headStyles:{fillColor:[17,24,39],textColor:255,fontSize:7,halign:"center",
                 cellPadding:{top:2,bottom:2,left:0.8,right:0.8}},
-    footStyles:{fillColor:[243,244,246],textColor:[17,24,39],fontStyle:"bold",fontSize:7.5},
+    footStyles:{fillColor:[243,244,246],textColor:[17,24,39],fontStyle:"bold",fontSize:fs},
     alternateRowStyles:{fillColor:[249,250,251]},
     columnStyles:colStyles,
     didParseCell:function(d){
@@ -7848,7 +7863,6 @@ async function buildTimesheetBlob(s){
   // is where it sits when there is room, `need` is what it takes to fit at
   // all. Tying them together would make raising the block start a new page
   // earlier and waste a sheet.
-  var boxH=16,sigNeed=boxH+16,sigRest=H-(boxH+40);   // smaller since 2026-10-13
   if(y+sigNeed>H-10){doc.addPage();y=M}
   y=Math.max(y+8,sigRest);
   var bw=CW/2-6;

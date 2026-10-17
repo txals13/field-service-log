@@ -327,6 +327,10 @@
   <li><strong>Recanvis recomanats</strong>: el que s'ha recomanat en qualsevol visita, primer els urgents pendents i després els preventius. Quan en una visita posterior canvies aquella referència, surt amb ✓ i «canviat el…». El número del títol diu quants en queden de pendents sobre el total.</li>
 </ul>
 <p>Els textos surten sencers, mai tallats. El títol fa servir el nom de la màquina i del client tal com els vas escriure l'última vegada.</p>
+<h3>Les visites arxivades hi continuen</h3>
+<p>No cal tornar a importar els informes antics. Cada visita deixa un registre petit a l'historial: les dades de la visita, els problemes i avisos amb com van quedar, els recanvis i els comptadors. No hi van fotos ni vídeos. Quan l'arxives i l'esborres de l'app, el registre es queda, i la visita surt a l'historial amb <strong>🗄 arxivada</strong>. Tocar-la obre el seu ZIP a Drive. Els seus problemes oberts es poden tancar des d'una visita nova, i l'informe en mostra el text com sempre.</p>
+<p>Si esborres una visita que <em>no</em> s'ha arxivat (una de prova, per exemple), també desapareix de l'historial.</p>
+<p>Les visites que ja eren a la carpeta d'arxiu abans d'aquesta versió s'hi afegeixen soles el primer cop que obres l'app amb connexió. L'app llegeix només les dades de dins de cada ZIP, sense baixar-ne les fotos ni els vídeos. Per tornar-ho a fer: <span class="btn">📁 Carpetes › ↻ Reconstrueix l'historial des de l'arxiu</span>.</p>
 
 <h3>Imprimir-lo o enviar-lo</h3>
 <p><span class="btn">🖨 Imprimeix</span> obre el diàleg d'impressió del navegador. Des d'allà el pots imprimir o <strong>desar com a PDF</strong> per enviar-lo. Surt sobre fons blanc, amb la data d'impressió i el nom del tècnic.</p>
@@ -373,6 +377,7 @@
   <li><strong>Google Drive</strong> (per defecte): el ZIP es puja directament al Drive del compte amb què has entrat, a qualsevol aparell. Si entres amb un altre compte, va al Drive d'aquell compte. La primera vegada et demana que assenyalis la carpeta amb el selector de Google (per exemple <code>Field Service Log › Arxiu</code>), o en pots crear una de nova amb <span class="btn">＋ Crea'n una</span>. L'app comprova que el ZIP ha arribat sencer; si no, el descarrega perquè no es perdi.</li>
   <li><strong>Una carpeta d'aquest ordinador</strong> (només Chrome i Edge d'ordinador): per si l'has de desar en un altre lloc. <span class="btn">🗄 Tria la carpeta…</span> la tria, i <span class="btn">✕ Oblida-la</span> torna a Drive.</li>
 </ul>
+<p><span class="btn">↻ Reconstrueix l'historial des de l'arxiu</span> torna a llegir els ZIPs de la carpeta d'arxiu (de Drive i, a l'ordinador, de la carpeta local) i afegeix a l'historial les visites que hi faltin. Vegeu <a href="#historial">historial</a>.</p>
 <h3>Carpeta del projecte (fotos, a l'ordinador)</h3>
 <p>Només a Chrome i Edge d'ordinador, amb Drive per a escriptori. Tria <code>G:\My Drive\Field Service Log\Outputs</code> i el diàleg d'afegir fotos s'obrirà directament a la carpeta de la visita. La lletra de la unitat pot ser una altra, i «My Drive» pot dir-se «La meva unitat». Tria <strong>Outputs</strong> i no la carpeta d'una visita.</p>
 
@@ -388,6 +393,7 @@
 <h3>Com queda Drive</h3>
 <pre style="background:var(--bg2);border:1px solid var(--br);border-radius:8px;padding:12px;overflow-x:auto;font-size:13px;color:var(--tx)">Field Service Log/
   field_service_log_data.json      ← les dades de totes les visites
+  field_service_log_history.json   ← l'historial de les màquines (també les visites arxivades)
   Manuals/                         ← els manuals de recanvis
   Outputs/
     CLIENT_PROJECTE_MÀQUINA/       ← una carpeta per visita

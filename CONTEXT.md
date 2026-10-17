@@ -762,6 +762,40 @@ Field Service Log/
     that visit), or "✓ all OK".
   - New labels in RPT ca/es/en (`incTitle`…`resIn`, `h.kOpen`…`h.ago`); the
     tables cached for the other languages are re-translated once.
+- **The machine-history file keeps archived visits** (2026-10-17: "I don't want
+  to load every report again"). `field_service_log_history.json` (Drive root,
+  next to the data file) + IndexedDB `history`: `{visits:{id:record},seen}`.
+  A record (`histRecord`) is a visit's header, its counts and entry total, and
+  only the entries that matter to the history — problems, warnings, entries
+  with parts or `closes` — with their outcome, parts and cached translations;
+  no media. `histSession` dresses a record as a visit (`_hist`, `_counts`,
+  `_n`, `_range`, `_arch`); `machineSessions` returns the live visits plus
+  the records not live, so the history, "still open", the entry's "closes an
+  earlier problem" list and the reports' `closesInfo` (via `findAnySession`)
+  all see archived visits. Touching an archived card opens its ZIP on Drive
+  (`histOpenArchive`: `arch.id`, else the archive folder by
+  `appProperties.fslSession`).
+  - **Sync** (`histSync`, debounced by `histSchedule` from scheduleSave and
+    after every Drive load/save): live visits write their records
+    (`histUpsertLive`), the Drive file(s) are read and merged by `at` (the
+    visit's `sStamp`), written back only when the signature changed;
+    duplicates are folded into one. Offline it only updates IndexedDB.
+  - **Delete**: `deleteSession` → `histForget`: a visit with `zipAt` keeps its
+    record (marked archived; the archive now stamps `zipName`/`zipTo`), one
+    never archived gets a tombstone `{del:true,at}` that wins over older copies
+    and stops `histUpsertLive` resurrecting it.
+  - **Backfill** (`histBackfill`): once per device after the first sync with an
+    archive folder in reach (`fsl_v6_histfill`), and from 📁 Carpetes ›
+    ↻ Reconstrueix. Reads the archive folder on Drive and, on the desktop, the
+    local one; `zipMember` takes `session.json` out of each ZIP with three
+    ranged reads (the end-of-directory tail, the local header, the member;
+    stored or deflate-raw) — a 31 MB ZIP with a video costs ~70 kB. ZIPs
+    already read are remembered in `hist.seen`. A visit live in the app is never
+    replaced by its archived copy.
+  - Tested in the preview: archive-and-delete keeps the visit in the history,
+    report and closable list; delete-without-archive drops it; `zipMember` on
+    STORE and DEFLATE ZIPs. Not yet tested against real Drive (ranged reads,
+    the history file round trip, opening an archived ZIP).
 - **The PDF's entry table is laid out like the HTML report's**: the spare parts
   as a QT./REF./RECANVI table with its own grey header, and the outcome as a
   block with a coloured bar in its severity. autoTable can't nest a table in a

@@ -861,6 +861,10 @@ textarea{resize:none;line-height:1.4}
       <div style="display:flex;gap:6px;justify-content:flex-end;margin:0 0 18px;flex-wrap:wrap">
         <button class="btn-sm" id="fsaArxLoad" style="display:none">&#8681; Tria qu&egrave; carregar&hellip;</button>
       </div>
+      <div class="ts-note" style="margin:-8px 0 6px">L'historial de cada màquina guarda també les visites arxivades. Les que ja eren a l'arxiu s'hi afegeixen soles un cop; aquest botó ho torna a fer.</div>
+      <div style="display:flex;gap:6px;justify-content:flex-end;margin:0 0 18px;flex-wrap:wrap">
+        <button class="btn-sm" id="histFillBtn">&#8635; Reconstrueix l'historial des de l'arxiu</button>
+      </div>
       <div style="font-size:12px;font-weight:700;letter-spacing:.4px">CARPETA DEL PROJECTE <span style="font-weight:400;color:var(--tx3)">(fotos, a l'ordinador)</span></div>
       <div id="fsaNote" class="ts-note" style="margin:4px 0 6px">&mdash;</div>
       <div class="ts-note">Si tens Drive per a escriptori sincronitzant <code>Field Service Log/Outputs</code> en una unitat d'aquest ordinador, tria-la un cop i cada &laquo;afegeix foto&raquo; s'obrir&agrave; ja dins la carpeta de la sessi&oacute;. Nom&eacute;s serveix per dir-li al di&agrave;leg on ha de comen&ccedil;ar: l'aplicaci&oacute; no llegeix res de la carpeta pel seu compte, i els fitxers hi entren perqu&egrave; els tries tu.</div>
@@ -2888,6 +2892,7 @@ async function loadFromDrive(){
       await reconcileOutputs(token);
       refreshDriveInfo(token);
       setSyncSt("ok","Drive connectat");
+      histSchedule();
       return true;
     }
     // Keep the biggest — the one with the work in it, and its version history
@@ -2936,6 +2941,7 @@ async function loadFromDrive(){
     if((stillHere||ahead)&&!dupes.length){isDirty=true;setTimeout(function(){if(isLoggedIn)saveToDrive()},0)}
     refreshDriveInfo(token);
     setSyncSt("ok","Sincronitzat ✓");
+    histSchedule();
     return true;
   }catch(e){setSyncSt("error","Sense connexió (dades locals)");return false}
 }
@@ -2990,7 +2996,7 @@ async function saveToDrive(){
         if(r&&r.ok){driveFileId=(await r.json()).id;saveTok()}
       }
       if(r&&r.ok){isDirty=false;saveLocal();setSyncSt("ok","Desat ✓ "+fts(now()).slice(12));
-        lastDriveCount=sessions.length;lastDriveAt=fts(now()).slice(-8,-3);refreshDriveInfo(null)}
+        lastDriveCount=sessions.length;lastDriveAt=fts(now()).slice(-8,-3);refreshDriveInfo(null);histSchedule()}
       else{saveLocal();setSyncSt("error","Error en desar")}
     }catch(e){saveLocal();setSyncSt("error","Sense connexió (desat localment)")}
   }finally{
@@ -2998,7 +3004,7 @@ async function saveToDrive(){
     if(savePending){savePending=false;saveToDrive()}
   }
 }
-function scheduleSave(){if(aid)sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{updatedAt:now()}):s});isDirty=true;saveLocal();if(saveTimer)clearTimeout(saveTimer);saveTimer=setTimeout(function(){if(isDirty&&isLoggedIn)saveToDrive()},2000)}
+function scheduleSave(){if(aid)sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{updatedAt:now()}):s});isDirty=true;saveLocal();if(saveTimer)clearTimeout(saveTimer);saveTimer=setTimeout(function(){if(isDirty&&isLoggedIn)saveToDrive()},2000);histSchedule()}
 // The background sync. It used to skip itself whenever the cursor sat in a
 // text field — so as not to wipe what was being typed — and on the computer
 // the cursor nearly always sits in the description box, so it simply never
@@ -4021,6 +4027,10 @@ function wireFsa(){
   // with the click in hand. getFile() on each handle reads the size and the
   // date, not the contents: a folder of several gigabytes is listed for free
   // and only what you tick is ever read.
+  $$("histFillBtn").addEventListener("click",async function(){
+    var b=this;b.disabled=true;var t=b.innerHTML;b.textContent="Llegint l'arxiu…";
+    try{hist.seen={};await histBackfill(true)}finally{b.disabled=false;b.innerHTML=t}
+  });
   $$("fsaArxLoad").addEventListener("click",async function(){
     if(arxMode()==="drive"){
       var bd=$$("fsaArxLoad");bd.disabled=true;
@@ -4813,7 +4823,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-17 · 10";
+var APP_VERSION="2026-10-17 · 11";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -5135,6 +5145,8 @@ async function deleteSession(s){
   sessions=sessions.filter(function(x){return x.id!==s.id});
   if(aid===s.id)aid=null;
   goneAdd(s.id,s.folderId);
+  // archived: its record stays in the machine history; never archived: it goes
+  histForget(sessions.find(function(x){return x.id===s.id})||s);
   scheduleSave();renderAll();
   // The session's Drive folder used to be left behind for good. Send it to the
   // Drive trash instead: the media goes with it and stays recoverable there.
@@ -5527,7 +5539,7 @@ var RPT={
       voice:"nota de veu",video:"vídeo",photo:"foto",file:"fitxer",
       pre:{report:"informe",parts:"recanvis"},
       pt:{title:"Proves de producció",period:"Període",units:"Unitats",availS:"Disp.",perfS:"Rend.",qualS:"Qual.",rejS:"Rebuig",resultS:"Resultat",summaryNote:"El detall de cada prova —aturades, objectius i observacions— és a l'informe de validació.",test:"Prova",product:"Producte / format",nominal:"Velocitat nominal",start:"Inici",end:"Final",duration:"Durada",plannedStops:"Aturades planificades",downtime:"Aturades no planificades",run:"Temps en marxa",total:"Unitats totals",rejects:"Unitats rebutjades",good:"Unitats bones",speedAvg:"Velocitat mitjana",speedRun:"Velocitat en marxa",avail:"Disponibilitat",perf:"Rendiment",qual:"Qualitat",oee:"OEE",rejPct:"Rebuig",indicator:"Indicador",value:"Valor",target:"Objectiu",result:"Resultat",yes:"Compleix",no:"No compleix",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Aturades",kind:"Tipus",cause:"Causa",kinds:{machine:"Màquina",external:"Externa",planned:"Planificada"},notes:"Observacions",uph:"u/h",validation:"Informe de validació",file:"validacio"},
-      h:{title:"Historial de la màquina",visits:"visites",visitsH:"Visites",sn:"N/S",pending:"Pendents",pendOther:"Pendent d'altres visites",closedLater:"Tancats en una visita posterior",closedOn:"Tancat el",resolvedSt:"Resolt",pendingSt:"Pendent",entries:"entrades",parts:"Recanvis muntats",kOpen:"obertes",kDone:"resoltes",kUrg:"recanvis urgents",openTitle:"Què queda obert",closedHere:"tancat en aquesta visita",fromVisit:"de la visita del",allOk:"tot OK",ago:{today:"avui",d1:"fa 1 dia",d:"fa %n dies",m1:"fa 1 mes",m:"fa %n mesos",y1:"fa 1 any",y:"fa %n anys"},rec:"Recanvis recomanats",recOn:"recomanat el",fitOn:"canviat el",printed:"Imprès el"},
+      h:{title:"Historial de la màquina",visits:"visites",visitsH:"Visites",sn:"N/S",pending:"Pendents",pendOther:"Pendent d'altres visites",closedLater:"Tancats en una visita posterior",closedOn:"Tancat el",resolvedSt:"Resolt",pendingSt:"Pendent",entries:"entrades",parts:"Recanvis muntats",archived:"arxivada",kOpen:"obertes",kDone:"resoltes",kUrg:"recanvis urgents",openTitle:"Què queda obert",closedHere:"tancat en aquesta visita",fromVisit:"de la visita del",allOk:"tot OK",ago:{today:"avui",d1:"fa 1 dia",d:"fa %n dies",m1:"fa 1 mes",m:"fa %n mesos",y1:"fa 1 any",y:"fa %n anys"},rec:"Recanvis recomanats",recOn:"recomanat el",fitOn:"canviat el",printed:"Imprès el"},
       x:{sSession:"Sessió",sFit:"Canviats",sRec:"Recomanats",st:"Estat",prio:"Prioritat",sDetail:"Detall",sSummary:"Resum",qty:"Quantitat",ref:"Ref.",den:"Denominació",
          date:"Data",sev:"Gravetat",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunt",grup:"Grup / Dibuix",
          page:"Pàgina",project:"Projecte",type:"Tipus",gen:"Generat",lines:"Recanvis (línies)",refs:"Referències diferents"}},
@@ -5544,7 +5556,7 @@ var RPT={
       voice:"nota de voz",video:"vídeo",photo:"foto",file:"archivo",
       pre:{report:"informe",parts:"recambios"},
       pt:{title:"Pruebas de producción",period:"Período",units:"Unidades",availS:"Disp.",perfS:"Rend.",qualS:"Cal.",rejS:"Rechazo",resultS:"Resultado",summaryNote:"El detalle de cada prueba —paradas, objetivos y observaciones— está en el informe de validación.",test:"Prueba",product:"Producto / formato",nominal:"Velocidad nominal",start:"Inicio",end:"Final",duration:"Duración",plannedStops:"Paradas planificadas",downtime:"Paradas no planificadas",run:"Tiempo en marcha",total:"Unidades totales",rejects:"Unidades rechazadas",good:"Unidades buenas",speedAvg:"Velocidad media",speedRun:"Velocidad en marcha",avail:"Disponibilidad",perf:"Rendimiento",qual:"Calidad",oee:"OEE",rejPct:"Rechazo",indicator:"Indicador",value:"Valor",target:"Objetivo",result:"Resultado",yes:"Cumple",no:"No cumple",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Paradas",kind:"Tipo",cause:"Causa",kinds:{machine:"Máquina",external:"Externa",planned:"Planificada"},notes:"Observaciones",uph:"u/h",validation:"Informe de validación",file:"validacion"},
-      h:{title:"Historial de la máquina",visits:"visitas",visitsH:"Visitas",sn:"N/S",pending:"Pendientes",pendOther:"Pendiente de otras visitas",closedLater:"Cerrados en una visita posterior",closedOn:"Cerrado el",resolvedSt:"Resuelto",pendingSt:"Pendiente",entries:"entradas",parts:"Recambios montados",kOpen:"abiertas",kDone:"resueltas",kUrg:"recambios urgentes",openTitle:"Qué queda abierto",closedHere:"cerrado en esta visita",fromVisit:"de la visita del",allOk:"todo OK",ago:{today:"hoy",d1:"hace 1 día",d:"hace %n días",m1:"hace 1 mes",m:"hace %n meses",y1:"hace 1 año",y:"hace %n años"},rec:"Recambios recomendados",recOn:"recomendado el",fitOn:"cambiado el",printed:"Impreso el"},
+      h:{title:"Historial de la máquina",visits:"visitas",visitsH:"Visitas",sn:"N/S",pending:"Pendientes",pendOther:"Pendiente de otras visitas",closedLater:"Cerrados en una visita posterior",closedOn:"Cerrado el",resolvedSt:"Resuelto",pendingSt:"Pendiente",entries:"entradas",parts:"Recambios montados",archived:"archivada",kOpen:"abiertas",kDone:"resueltas",kUrg:"recambios urgentes",openTitle:"Qué queda abierto",closedHere:"cerrado en esta visita",fromVisit:"de la visita del",allOk:"todo OK",ago:{today:"hoy",d1:"hace 1 día",d:"hace %n días",m1:"hace 1 mes",m:"hace %n meses",y1:"hace 1 año",y:"hace %n años"},rec:"Recambios recomendados",recOn:"recomendado el",fitOn:"cambiado el",printed:"Impreso el"},
       x:{sSession:"Sesión",sFit:"Cambiados",sRec:"Recomendados",st:"Estado",prio:"Prioridad",sDetail:"Detalle",sSummary:"Resumen",qty:"Cantidad",ref:"Ref.",den:"Denominación",
          date:"Fecha",sev:"Gravedad",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunto",grup:"Grupo / Plano",
          page:"Página",project:"Proyecto",type:"Tipo",gen:"Generado",lines:"Recambios (líneas)",refs:"Referencias distintas"}},
@@ -5561,7 +5573,7 @@ var RPT={
       voice:"voice note",video:"video",photo:"photo",file:"file",
       pre:{report:"report",parts:"spare_parts"},
       pt:{title:"Production tests",period:"Period",units:"Units",availS:"Avail.",perfS:"Perf.",qualS:"Qual.",rejS:"Reject",resultS:"Result",summaryNote:"Each test in full — stops, targets and remarks — is in the validation report.",test:"Test",product:"Product / format",nominal:"Nominal speed",start:"Start",end:"End",duration:"Duration",plannedStops:"Planned stops",downtime:"Unplanned stops",run:"Run time",total:"Total units",rejects:"Rejected units",good:"Good units",speedAvg:"Average speed",speedRun:"Running speed",avail:"Availability",perf:"Performance",qual:"Quality",oee:"OEE",rejPct:"Reject rate",indicator:"Indicator",value:"Value",target:"Target",result:"Result",yes:"Met",no:"Not met",pass:"PASSED",fail:"NOT PASSED",stops:"Stops",kind:"Type",cause:"Cause",kinds:{machine:"Machine",external:"External",planned:"Planned"},notes:"Remarks",uph:"u/h",validation:"Validation report",file:"validation"},
-      h:{title:"Machine history",visits:"visits",visitsH:"Visits",sn:"S/N",pending:"Open items",pendOther:"Open from other visits",closedLater:"Closed on a later visit",closedOn:"Closed on",resolvedSt:"Resolved",pendingSt:"Open",entries:"entries",parts:"Spare parts fitted",kOpen:"open",kDone:"resolved",kUrg:"urgent spare parts",openTitle:"Still open",closedHere:"closed on this visit",fromVisit:"from the visit of",allOk:"all OK",ago:{today:"today",d1:"1 day ago",d:"%n days ago",m1:"1 month ago",m:"%n months ago",y1:"1 year ago",y:"%n years ago"},rec:"Recommended spare parts",recOn:"recommended on",fitOn:"replaced on",printed:"Printed on"},
+      h:{title:"Machine history",visits:"visits",visitsH:"Visits",sn:"S/N",pending:"Open items",pendOther:"Open from other visits",closedLater:"Closed on a later visit",closedOn:"Closed on",resolvedSt:"Resolved",pendingSt:"Open",entries:"entries",parts:"Spare parts fitted",archived:"archived",kOpen:"open",kDone:"resolved",kUrg:"urgent spare parts",openTitle:"Still open",closedHere:"closed on this visit",fromVisit:"from the visit of",allOk:"all OK",ago:{today:"today",d1:"1 day ago",d:"%n days ago",m1:"1 month ago",m:"%n months ago",y1:"1 year ago",y:"%n years ago"},rec:"Recommended spare parts",recOn:"recommended on",fitOn:"replaced on",printed:"Printed on"},
       x:{sSession:"Session",sFit:"Replaced",sRec:"Recommended",st:"Status",prio:"Priority",sDetail:"Detail",sSummary:"Summary",qty:"Quantity",ref:"Ref.",den:"Designation",
          date:"Date",sev:"Severity",tag:"Tag",entry:"Entry",pos:"Pos.",conj:"Assembly",grup:"Group / Drawing",
          page:"Page",project:"Project",type:"Type",gen:"Generated",lines:"Spare parts (lines)",refs:"Distinct references"}}
@@ -5806,6 +5818,7 @@ function todayISO(){var d=new Date();function p(n){return("0"+n).slice(-2)}retur
 // "The end date": the day the work actually finished — the last entry's — with
 // the session's own date as the fallback while there are none.
 function sessionEndDate(s){
+  if(s&&s._range&&s._range.to)return s._range.to;
   var es=(s&&s.entries)||[];
   for(var i=es.length-1;i>=0;i--){if(es[i]&&es[i].ts)return String(es[i].ts).slice(0,10)}
   return String((s&&s.createdAt)||now()).slice(0,10);
@@ -5983,8 +5996,15 @@ function keyNorm(t){
 function machineSessions(s){
   if(!s||!s.machine||!keyNorm(s.machine))return [];
   var k=machineKey(s);
-  return sessions.filter(function(x){return machineKey(x)===k})
-    .sort(function(a,b){return String(sessionEndDate(b)).localeCompare(String(sessionEndDate(a)))});
+  var live=sessions.filter(function(x){return machineKey(x)===k}),ids={};
+  live.forEach(function(x){ids[x.id]=1});
+  // plus the visits that are only in the history file (archived)
+  Object.keys(hist.visits).forEach(function(id){
+    var r=hist.visits[id];
+    if(ids[id]||!r||r.del||machineKey(r)!==k)return;
+    live.push(histSession(r));
+  });
+  return live.sort(function(a,b){return String(sessionEndDate(b)).localeCompare(String(sessionEndDate(a)))});
 }
 // Open means: a problem or a warning that got an outcome, or got one
 // that still says it is a problem. isResolved only counts ok/info outcomes, so
@@ -6032,7 +6052,9 @@ function wireMh(){
   $$("mhBody").addEventListener("click",function(e){
     var r=e.target.closest?e.target.closest("[data-sess]"):null;
     if(!r)return;
-    close();aid=r.dataset.sess;renderAll();
+    var id=r.dataset.sess;
+    if(!sessions.some(function(x){return x.id===id})){histOpenArchive(id);return}   // archived: its ZIP
+    close();aid=id;renderAll();
   });
   $$("mhPrint").addEventListener("click",printMachineHistory);
 }
@@ -6189,8 +6211,8 @@ function mhRender(cur,all,L,forPrint){
   // orange while the visit still has something open.
   h+="<div style=\"font-weight:700;margin:2px 0 6px\">"+esc(H.visitsH)+"</div>";
   h+=all.map(function(x,i){
-    var c=severityCounts(x.entries||[]),r=curRev(x),isCur=x.id===cur.id&&!forPrint;
-    var rng=tsRange(x),hasOpen=openEntries(x,closed).length>0,last=i===all.length-1;
+    var c=x._counts||severityCounts(x.entries||[]),r=curRev(x),isCur=x.id===cur.id&&!forPrint;
+    var rng=x._range||tsRange(x),hasOpen=openEntries(x,closed).length>0,last=i===all.length-1;
     var issues=mhCardIssues(x,closed,all,H),here=mhClosedHere(x,all,H);
     var dot=isCur?"var(--gold)":(hasOpen?"var(--orange)":"var(--tx3)");
     return "<div style=\"display:grid;grid-template-columns:12px minmax(0,1fr);gap:0 8px\">"
@@ -6205,11 +6227,12 @@ function mhRender(cur,all,L,forPrint){
       +(r?"<span style=\"font-size:11px;color:var(--tx3)\">"+esc(L.revLbl)+" "+("0"+r.n).slice(-2)+"</span>":"")
       +(x.status==="closed"?"<span style=\"font-size:11px;color:var(--red)\">"+esc(L.closed)+"</span>":"")
       +(isCur?"<span style=\"font-size:11px;color:var(--gold)\">aquesta</span>":"")
+      +(x._hist?"<span style=\"font-size:11px;color:var(--tx3)\">🗄 "+esc(H.archived)+"</span>":"")
       +(!issues&&!here?"<span style=\"font-size:11px;color:var(--green)\">✓ "+esc(H.allOk)+"</span>":"")
       +"</div>"
       +"<div style=\"font-size:11px;color:var(--tx3);font-family:monospace;margin-top:2px\">"
       +(c.issue?"■ "+c.issue+"  ":"")+(c.warning?"▲ "+c.warning+"  ":"")+(c.resolved?"✓ "+c.resolved+"  ":"")
-      +"● "+c.ok+"  ·  "+(x.entries||[]).length+" "+esc(H.entries)+"</div>"
+      +"● "+c.ok+"  ·  "+(x._n!=null?x._n:(x.entries||[]).length)+" "+esc(H.entries)+"</div>"
       +issues+here+"</div></div>";
   }).join("");
 
@@ -6583,7 +6606,7 @@ async function localizeSession(s,lang){
   var same=lang===writeLang(s),jobs=[];
   (s.entries||[]).forEach(function(e){
     if(!e||!e.closes||!e.closes.s||!e.closes.e)return;
-    var x=sessions.find(function(v){return v.id===e.closes.s});if(!x||lang===writeLang(x))return;
+    var x=findAnySession(e.closes.s);if(!x||lang===writeLang(x))return;
     var r=(x.entries||[]).find(function(v){return v.id===e.closes.e});if(!r)return;
     var src=(r.text||"").trim();
     if(src&&needsTranslation(src)&&!(r.tr&&r.tr[lang]&&r.tr[lang].h===txHash(src))&&!jobs.some(function(j){return j.ref&&j.ref.s===x.id&&j.ref.e===r.id}))
@@ -6609,6 +6632,21 @@ async function localizeSession(s,lang){
     var byId={},byFix={},notesT=null,byRef={};
     jobs.forEach(function(j,k){var v={h:txHash(j.src),t:got[k]};
       if(j.ref)byRef[j.ref.s+"|"+j.ref.e]=v;else if(!j.id)notesT=v;else if(j.fix)byFix[j.id]=v;else byId[j.id]=v;});
+    // translations of archived visits' texts are cached on their history records
+    Object.keys(hist.visits).forEach(function(hid){
+      var rec=hist.visits[hid];if(!rec||rec.del||!rec.entries)return;
+      var own=s._hist&&hid===s.id,hit=false;
+      var ents=rec.entries.map(function(e){
+        var v=byRef[hid+"|"+e.id]||(own?byId[e.id]:null),fv=own?byFix[e.id]:null;
+        if(!v&&!fv)return e;hit=true;
+        var ne=Object.assign({},e);
+        if(v){var tr=Object.assign({},e.tr||{});tr[lang]=v;ne.tr=tr}
+        if(fv){var tf=Object.assign({},e.trF||{});tf[lang]=fv;ne.trF=tf}
+        return ne;
+      });
+      if(hit){hist.visits[hid]=Object.assign({},rec,{entries:ents});histSaveLocal();histSchedule()}
+    });
+    if(s._hist)s=histSession(hist.visits[s.id])||s;
     // written without touching updatedAt, like the language choice
     sessions=sessions.map(function(x){
       if(x.id!==s.id){
@@ -6709,6 +6747,241 @@ function fixWhen(e){
   var fx=e&&e.fix;if(!fx||!fx.ts)return "";
   return dayKeyOf(fx.ts)===dayKeyOf(e.ts)?timeOf(fx.ts):fts(fx.ts);
 }
+// ── THE MACHINE-HISTORY FILE (2026-10-17) ─────────────────────────────────────
+// The history used to see only the visits still in the app: archive one (the
+// ZIP goes to the archive folder and the visit leaves the app) and it vanished
+// from every machine's history, so the old reports had to be imported again
+// just to know what happened last time. Now every visit leaves a small record
+// in `field_service_log_history.json`, next to the data file on Drive and in
+// IndexedDB here: its header, its problems and warnings with their outcome and
+// what they close, the entries that carry spare parts, and its counts — no
+// photos, no videos, a few kB. The history, "still open", the reports' "closes
+// an issue from…" and the list of earlier problems an entry can close all read
+// the live visits AND these records, so an archived visit stays in them.
+//   · A live visit always writes its own record (newest stamp wins).
+//   · Deleting a visit that was never archived deletes its record (a
+//     tombstone, so the other device drops it too); an archived one stays,
+//     marked with its ZIP.
+//   · Visits archived before this existed are read back ONCE from the archive
+//     folder (Drive, or this computer's) — only session.json, taken out of each
+//     ZIP by byte ranges, so no photo or video is downloaded.
+var HIST_FILE="field_service_log_history.json",HIST_KEY="history";
+var hist={v:1,visits:{},seen:{}},histFileId=null,histBusy=false,histTimer=null,histLoaded=false;
+async function histLoad(){
+  try{var v=idb?await idbGet(idb,HIST_KEY):null;if(v&&v.visits)hist={v:1,visits:v.visits||{},seen:v.seen||{}}}catch(e){}
+  histLoaded=true;
+}
+async function histSaveLocal(){try{if(idb)await idbSet(idb,HIST_KEY,hist)}catch(e){}}
+function histRecord(s,arch){
+  var es=s.entries||[],r=curRev(s);
+  var keep=es.filter(function(e){return e&&(e.severity==="issue"||e.severity==="warning"||(e.parts&&e.parts.length)||e.closes)})
+    .map(function(e){
+      var o={id:e.id,ts:e.ts,severity:e.severity,tag:e.tag||"",text:e.text||""};
+      if(e.fix)o.fix={severity:e.fix.severity,text:e.fix.text||"",ts:e.fix.ts||""};
+      if(e.closes)o.closes={s:e.closes.s,e:e.closes.e};
+      if(e.parts&&e.parts.length)o.parts=e.parts.map(function(p){var q={pos:p.pos||"",ref:p.ref||"",cant:p.cant||"",denominacio:p.denominacio||""};if(p.st)q.st=p.st;return q});
+      if(e.tr)o.tr=e.tr;
+      if(e.trF)o.trF=e.trF;
+      return o;
+    });
+  return {id:s.id,at:sStamp(s)||s.createdAt||"",client:s.client||"",machine:s.machine||"",project:s.project||"",location:s.location||"",
+    type:s.type||"",status:s.status||"",createdAt:s.createdAt||"",closedAt:s.closedAt||"",writeLang:s.writeLang||"",
+    serial:(s.manualRef&&s.manualRef.serial)||"",rev:r?{n:r.n,date:r.date}:null,range:tsRange(s),
+    counts:severityCounts(es),n:es.length,entries:keep,
+    arch:arch||(s.zipAt?{at:s.zipAt,name:s.zipName||"",to:s.zipTo||""}:null)};
+}
+// A record dressed as a visit, for the code that reads visits.
+function histSession(rec){
+  if(!rec||rec.del)return null;
+  return {id:rec.id,client:rec.client,machine:rec.machine,project:rec.project,location:rec.location,type:rec.type,status:rec.status,
+    createdAt:rec.createdAt,closedAt:rec.closedAt,writeLang:rec.writeLang,manualRef:rec.serial?{serial:rec.serial}:null,
+    revisions:rec.rev?[rec.rev]:[],entries:rec.entries||[],_hist:true,_counts:rec.counts,_n:rec.n,_range:rec.range,_arch:rec.arch};
+}
+function findAnySession(id){
+  return sessions.find(function(x){return x.id===id})||histSession(hist.visits[id]);
+}
+// Live visits write their records; a tombstone newer than the visit wins.
+function histUpsertLive(){
+  var changed=false;
+  sessions.forEach(function(x){
+    var cur=hist.visits[x.id];
+    if(cur&&cur.del&&String(cur.at)>=String(sStamp(x)))return;
+    var rec=histRecord(x,cur&&!cur.del&&cur.arch&&!x.zipAt?cur.arch:null);
+    if(!cur||cur.del||JSON.stringify(cur)!==JSON.stringify(rec)){hist.visits[x.id]=rec;changed=true}
+  });
+  return changed;
+}
+function histForget(s){
+  if(s.zipAt){hist.visits[s.id]=histRecord(s);}
+  else hist.visits[s.id]={id:s.id,del:true,at:now()};
+  histSaveLocal();histSchedule();
+}
+function histMerge(a,b){
+  var out={v:1,visits:{},seen:Object.assign({},(a&&a.seen)||{},(b&&b.seen)||{})};
+  [a,b].forEach(function(h){
+    Object.keys((h&&h.visits)||{}).forEach(function(id){
+      var r=h.visits[id],c=out.visits[id];
+      if(!c||String(r.at||"")>String(c.at||""))out.visits[id]=r;
+    });
+  });
+  return out;
+}
+function histSig(h){
+  return Object.keys(h.visits||{}).sort().map(function(id){var r=h.visits[id];return id+":"+(r.at||"")+(r.del?"x":"")+(r.arch?"a":"")}).join(",")
+    +"|"+Object.keys(h.seen||{}).sort().join(",");
+}
+function histSchedule(){clearTimeout(histTimer);histTimer=setTimeout(histSync,3000)}
+// Read the Drive file, merge, write it back only if it changed.
+async function histSync(){
+  if(histBusy||!histLoaded)return;
+  histBusy=true;
+  try{
+    histUpsertLive();
+    if(!isLoggedIn||navigator.onLine===false){await histSaveLocal();return}
+    var token=await ensureToken();if(!token){await histSaveLocal();return}
+    var rootId=await getRootId(token);
+    var q="name="+JSON.stringify(HIST_FILE)+" and trashed=false"+(rootId?" and "+JSON.stringify(rootId)+" in parents":"");
+    var lr=await fetch("https://www.googleapis.com/drive/v3/files?q="+encodeURIComponent(q)+"&fields=files(id)&pageSize=10",{headers:{Authorization:"Bearer "+token}});
+    if(!lr.ok){await histSaveLocal();return}
+    var files=(await lr.json()).files||[],remote={v:1,visits:{},seen:{}};
+    for(var i=0;i<files.length;i++){
+      try{var rr=await fetch("https://www.googleapis.com/drive/v3/files/"+files[i].id+"?alt=media",{headers:{Authorization:"Bearer "+token}});
+        if(rr.ok){var d=await rr.json();if(d&&d.visits)remote=histMerge(remote,d)}}catch(e){}
+    }
+    hist=histMerge(remote,hist);
+    histUpsertLive();
+    await histSaveLocal();
+    histFileId=files.length?files[0].id:null;
+    if(histSig(hist)===histSig(remote)&&files.length===1)return;
+    var body=JSON.stringify(hist);
+    if(histFileId){
+      await fetch("https://www.googleapis.com/upload/drive/v3/files/"+histFileId+"?uploadType=media",
+        {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:body});
+      for(var j=1;j<files.length;j++){
+        try{await fetch("https://www.googleapis.com/drive/v3/files/"+files[j].id,{method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({trashed:true})})}catch(e){}
+      }
+    }else{
+      var meta=JSON.stringify({name:HIST_FILE,mimeType:"application/json",parents:rootId?[rootId]:[]});
+      var bnd="fsl_h_"+Date.now();
+      var mp="--"+bnd+"\r\nContent-Type: application/json\r\n\r\n"+meta+"\r\n--"+bnd+"\r\nContent-Type: application/json\r\n\r\n"+body+"\r\n--"+bnd+"--";
+      var cr=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"multipart/related; boundary="+bnd},body:mp});
+      if(cr.ok)histFileId=(await cr.json()).id;
+    }
+    if(!histFilled())histBackfill(false);
+  }catch(e){}
+  finally{histBusy=false}
+}
+// ── Reading session.json out of a ZIP without downloading the ZIP ────────────
+// The end of the file holds the directory: where each member starts and how
+// long it is. Three small reads — the tail, the local header, the member —
+// whatever the photos and videos weigh. `readRange(a,b)` returns bytes [a,b).
+async function zipMember(readRange,size,want){
+  var tailLen=Math.min(size,66000),tail=new Uint8Array(await readRange(size-tailLen,size));
+  var dv=new DataView(tail.buffer,tail.byteOffset,tail.byteLength),eo=-1;
+  for(var i=tail.length-22;i>=0;i--){if(dv.getUint32(i,true)===0x06054b50){eo=i;break}}
+  if(eo<0)return null;
+  var cdSize=dv.getUint32(eo+12,true),cdOff=dv.getUint32(eo+16,true);
+  if(cdOff===0xFFFFFFFF)return null;                       // ZIP64: not something this app writes
+  var cd=cdOff>=size-tailLen?tail.subarray(cdOff-(size-tailLen),cdOff-(size-tailLen)+cdSize):new Uint8Array(await readRange(cdOff,cdOff+cdSize));
+  var cv=new DataView(cd.buffer,cd.byteOffset,cd.byteLength),p=0,dec=new TextDecoder("utf-8");
+  while(p+46<=cd.length&&cv.getUint32(p,true)===0x02014b50){
+    var method=cv.getUint16(p+10,true),csize=cv.getUint32(p+20,true),nl=cv.getUint16(p+28,true),el=cv.getUint16(p+30,true),kl=cv.getUint16(p+32,true),lho=cv.getUint32(p+42,true);
+    var name=dec.decode(cd.subarray(p+46,p+46+nl));
+    if(name===want){
+      var lh=new DataView(await readRange(lho,lho+30));
+      var start=lho+30+lh.getUint16(26,true)+lh.getUint16(28,true);
+      var data=await readRange(start,start+csize);
+      if(method===0)return dec.decode(new Uint8Array(data));
+      if(method===8&&typeof DecompressionStream==="function"){
+        var st=new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+        return dec.decode(new Uint8Array(await new Response(st).arrayBuffer()));
+      }
+      return null;
+    }
+    p+=46+nl+el+kl;
+  }
+  return null;
+}
+function histFilled(){try{return localStorage.getItem("fsl_v6_histfill")==="1"}catch(e){return true}}
+// Adds the archived visits the history does not know yet. `ask`: from the
+// button — it may ask for the computer folder's permission and says what it did.
+async function histBackfill(ask){
+  var added=0,read=0,failed=0,where=[];
+  function take(list,arch){
+    (Array.isArray(list)?list:[]).forEach(function(x){
+      if(!x||!x.id)return;
+      if(sessions.some(function(v){return v.id===x.id}))return;   // the live visit writes its own
+      var cur=hist.visits[x.id];
+      if(cur&&(cur.del||String(cur.at)>=String(sStamp(x)))&&cur.arch)return;
+      if(cur&&cur.del)return;
+      hist.visits[x.id]=histRecord(x,arch);added++;
+    });
+  }
+  try{
+    var token=isLoggedIn&&navigator.onLine!==false?await ensureToken():null;
+    if(token){
+      var fid=await driveArxFolder(token,false);
+      if(fid){
+        where.push("Drive");
+        var files=await listDriveArxiu(token,fid);
+        for(var i=0;i<files.length;i++){
+          var f=files[i];if(!/\.zip$/i.test(f.name)||hist.seen[f._drive])continue;
+          try{
+            var txt=await zipMember(async function(a,b){
+              var r=await fetch("https://www.googleapis.com/drive/v3/files/"+f._drive+"?alt=media",{headers:{Authorization:"Bearer "+token,Range:"bytes="+a+"-"+(b-1)}});
+              if(!r.ok)throw new Error("Drive "+r.status);
+              return await r.arrayBuffer();
+            },f.size,"session.json");
+            if(txt){take(JSON.parse(txt),{name:f.name,id:f._drive,to:"drive"});read++}
+            hist.seen[f._drive]=1;
+          }catch(e){failed++}
+        }
+      }
+    }
+    if(fsaOK()&&arxDir&&await arxPermission(!!ask)){
+      where.push("ordinador");
+      for await(var h of arxDir.values()){
+        if(h.kind!=="file"||!/\.zip$/i.test(h.name))continue;
+        try{
+          var file=await h.getFile(),key="local:"+h.name+":"+file.size;
+          if(hist.seen[key])continue;
+          var t2=await zipMember(async function(a,b){return await file.slice(a,b).arrayBuffer()},file.size,"session.json");
+          if(t2){take(JSON.parse(t2),{name:h.name,to:"local"});read++}
+          hist.seen[key]=1;
+        }catch(e){failed++}
+      }
+    }
+    if(where.length){try{localStorage.setItem("fsl_v6_histfill","1")}catch(e){}}
+  }catch(e){failed++}
+  await histSaveLocal();
+  if(added)histSchedule();
+  if(added||ask)renderAll();
+  if(ask)alert(where.length
+    ?"Historial: "+pl(read,"ZIP llegit","ZIPs llegits")+" de l'arxiu ("+where.join(" i ")+"), "+pl(added,"visita afegida","visites afegides")+"."
+      +(failed?"\n"+pl(failed,"ZIP no s'ha pogut llegir","ZIPs no s'han pogut llegir")+".":"")
+    :"No hi ha cap carpeta d'arxiu a la vista: assenyala-la aquí mateix, a Drive o en aquest ordinador.");
+  return added;
+}
+// An archived visit, touched in the history: its ZIP in Drive, if it is there.
+async function histOpenArchive(id){
+  var rec=hist.visits[id],a=rec&&rec.arch;
+  try{
+    var token=isLoggedIn?await ensureToken():null;
+    if(token){
+      var fileId=a&&a.id;
+      if(!fileId){
+        var fid=await driveArxFolder(token,false);
+        if(fid){
+          var q=JSON.stringify(fid)+" in parents and trashed=false and appProperties has { key='fslSession' and value='"+String(id).replace(/'/g,"")+"' }";
+          var r=await fetch("https://www.googleapis.com/drive/v3/files?q="+encodeURIComponent(q)+"&fields=files(id)",{headers:{Authorization:"Bearer "+token}});
+          if(r.ok){var fl=(await r.json()).files||[];if(fl.length)fileId=fl[0].id}
+        }
+      }
+      if(fileId){window.open("https://drive.google.com/file/d/"+encodeURIComponent(fileId)+"/view","_blank","noopener");return}
+    }
+  }catch(e){}
+  alert("Aquesta visita és a l'arxiu"+(a&&a.name?" ("+a.name+")":"")+", no a l'app.\n\nPer obrir-la sencera, importa'n el ZIP: Importa › tria el ZIP de la carpeta d'arxiu.");
+}
 // ── INCIDENTS IN THE REPORT (2026-10-17) ─────────────────────────────────────
 // A cached translation, if it still matches its source text.
 function trPick(src,c){src=(src||"").trim();return (src&&needsTranslation(src)&&c&&c.h===txHash(src))?c.t:null}
@@ -6720,7 +6993,7 @@ function closesInfo(s,lang){
   var out={};
   (s&&s.entries||[]).forEach(function(e){
     if(!e||!e.closes||!e.closes.s||!e.closes.e)return;
-    var x=sessions.find(function(v){return v.id===e.closes.s});if(!x)return;
+    var x=findAnySession(e.closes.s);if(!x)return;
     var r=(x.entries||[]).find(function(v){return v.id===e.closes.e});if(!r)return;
     var t=lang&&lang!==writeLang(x)?trPick(r.text,r.tr&&r.tr[lang]):null;
     out[e.id]={by:e,r:r,text:t!=null?t:(r.text||""),project:x.project||""};
@@ -9744,7 +10017,8 @@ async function exportSessionZip(s,kind){
     // so nothing could be restored from it.
     if(archive){
       var t=now();
-      sessions=sessions.map(function(x){return x.id===s.id?Object.assign({},x,{zipAt:t,updatedAt:t}):x});
+      sessions=sessions.map(function(x){return x.id===s.id?Object.assign({},x,{zipAt:t,updatedAt:t,
+        zipName:typeof arxOk==="string"?arxOk:"",zipTo:arxOn?"local":(drvArx?"drive":"")}):x});
       saveLocal();isDirty=true;
     }
   }catch(e){alert("No s'ha pogut exportar el ZIP: "+((e&&e.message)||e))}
@@ -9772,7 +10046,8 @@ $$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><di
   sessions=orderSessions(await loadSessions());
   markSeen();
   outDirLoad();arxDirLoad();
-  pendLoad().then(function(){refreshDriveInfo()});   // reports still waiting to go up        // idb is open by now; nothing waits on this
+  pendLoad().then(function(){refreshDriveInfo()});
+  histLoad();   // reports still waiting to go up        // idb is open by now; nothing waits on this
   labelsLoad();                     // so a language translated earlier is ready offline
   if(loadTok()&&accessToken&&Date.now()<tokenExp){
     isLoggedIn=true;

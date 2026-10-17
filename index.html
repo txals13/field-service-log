@@ -4809,7 +4809,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-17 · 3";
+var APP_VERSION="2026-10-17 · 4";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -6897,12 +6897,14 @@ function buildReportHTML(s,forPrint,lang,rev){
     +ptReportHTML(s,R,lang)
     +(function(){
       // Signed on the glass, or the same blank line as always to sign on paper.
-      // The image sits ON the rule, so the margin above it shrinks by its height.
+      // The image sits just ABOVE the rule (it used to overlap it and hide it),
+      // in the 48px the empty line leaves for a pen. Under the rule, in every
+      // document alike: the label, and the name in bold on its own line.
       var g=revSign(s,rev)||{};
       function half(lbl,name,img){
-        var ink=img?"<img src=\""+img+"\" style=\"display:block;max-width:170px;max-height:44px;margin:0 0 -2px\">":"";
+        var ink=img?"<div style=\"height:48px;display:flex;align-items:flex-end;padding-bottom:3px;box-sizing:border-box\"><img src=\""+img+"\" style=\"display:block;max-width:170px;max-height:44px\"></div>":"";
         return "<div>"+ink+"<div class=\"sl\""+(img?" style=\"margin-top:0\"":"")+">"+esc(lbl)
-          +(name?"<br><strong>"+esc(name)+"</strong>":"")+"</div></div>";
+          +(name?"<br><strong style=\"color:#111827\">"+esc(name)+"</strong>":"")+"</div></div>";
       }
       return "<div class=\"sig\">"
         +half(R.sigTech,g.techName||s.tech||"_________________",g.techSig)
@@ -7799,7 +7801,7 @@ async function buildTimesheetBlob(s){
   // is where it sits when there is room, `need` is what it takes to fit at
   // all. Tying them together would make raising the block start a new page
   // earlier and waste a sheet.
-  var boxH=16,sigNeed=boxH+12,sigRest=H-(boxH+36);   // smaller since 2026-10-13
+  var boxH=16,sigNeed=boxH+16,sigRest=H-(boxH+40);   // smaller since 2026-10-13
   if(y+sigNeed>H-10){doc.addPage();y=M}
   y=Math.max(y+8,sigRest);
   var bw=CW/2-6;
@@ -7811,16 +7813,18 @@ async function buildTimesheetBlob(s){
       // the box it would read as a different hand than the one that signed.
       var pr=doc.getImageProperties(b[2]);
       var iw=Math.min(bw,45),ih=iw*pr.height/pr.width;
-      if(ih>boxH){ih=boxH;iw=ih*pr.width/pr.height}
-      doc.addImage(b[2],"PNG",x,y+boxH-ih,iw,ih);
+      // 1 mm clear of the rule: ink on the line hid it
+      if(ih>boxH-1){ih=boxH-1;iw=ih*pr.width/pr.height}
+      doc.addImage(b[2],"PNG",x,y+boxH-1-ih,iw,ih);
     }catch(err){}
     doc.setDrawColor(107,114,128);doc.setLineWidth(0.2);
     doc.line(x,y+boxH,x+bw,y+boxH);
+    // as the report has it: the label, then the name in bold on its own line
     doc.setFontSize(8);doc.setTextColor(107,114,128);
-    var lbl=b[0]+(b[1]?" — "+b[1]:"");
-    pdfFont(doc,ar,lbl,"normal");doc.text(lbl,x,y+boxH+4);
-    doc.setFont("helvetica","normal");
-    doc.text(t.dt+": "+(b[2]?tsDMY((T.generatedAt||now()).slice(0,10)):""),x,y+boxH+8);
+    pdfFont(doc,ar,b[0],"normal");doc.text(b[0],x,y+boxH+4);
+    if(b[1]){doc.setFontSize(8.5);doc.setTextColor(17,24,39);pdfFont(doc,ar,b[1],"bold");doc.text(b[1],x,y+boxH+8.2)}
+    doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(107,114,128);
+    doc.text(t.dt+": "+(b[2]?tsDMY((T.generatedAt||now()).slice(0,10)):""),x,y+boxH+12.4);
   });
 
   var n=doc.internal.getNumberOfPages();
@@ -8675,14 +8679,16 @@ async function buildPdfBlob(s,lang,rev,opts){
       // as a different hand than the one that signed.
       var pr=doc.getImageProperties(b[2]);
       var iw=Math.min(hw,SIGW),ih=iw*pr.height/pr.width;
-      if(ih>sigH){ih=sigH;iw=ih*pr.width/pr.height}
-      doc.addImage(b[2],"PNG",b[3],y-ih,iw,ih);
+      // 1 mm clear of the rule: ink on the line hid it
+      if(ih>sigH-1){ih=sigH-1;iw=ih*pr.width/pr.height}
+      doc.addImage(b[2],"PNG",b[3],y-1-ih,iw,ih);
     }catch(err){}
     doc.setDrawColor(107,114,128);doc.setLineWidth(0.2);
     doc.line(b[3],y,b[3]+hw,y);
+    // as the HTML has it: the label, then the name in bold on its own line
     doc.setFontSize(8);doc.setTextColor(107,114,128);
-    var lbl=b[0]+(b[1]?" — "+b[1]:"");
-    pdfFont(doc,ar,lbl,"normal");doc.text(lbl,b[3],y+4);
+    pdfFont(doc,ar,b[0],"normal");doc.text(b[0],b[3],y+4);
+    if(b[1]){doc.setFontSize(8.5);doc.setTextColor(17,24,39);pdfFont(doc,ar,b[1],"bold");doc.text(b[1],b[3],y+8.2)}
   });
   doc.setFont("helvetica","normal");
 
@@ -9190,7 +9196,7 @@ async function buildDocxDocument(D,s,lang,rev){
       // load in the middle of building a document.
       var ar=pngRatio(id.bytes),wMm=Math.min(CW/2-10,42),hMm=wMm*ar;
       if(hMm>SIG_MM-2){hMm=SIG_MM-2;wMm=hMm/ar}
-      return [P({spacing:{before:0,after:0},children:[new D.ImageRun({data:id.bytes,type:id.type,
+      return [P({spacing:{before:0,after:57},children:[new D.ImageRun({data:id.bytes,type:id.type,
         // docx sizes images in PIXELS at 96 dpi, not points: at 72 the
         // signature came out a quarter smaller than the millimetres asked for
         transformation:{width:Math.round(wMm*96/25.4),height:Math.round(hMm*96/25.4)}})]})];
@@ -9207,7 +9213,9 @@ async function buildDocxDocument(D,s,lang,rev){
   function labelCell(lbl,name){
     return new D.TableCell({borders:noBorders,margins:{top:60,bottom:0,left:0,right:0},
       width:{size:sigW,type:D.WidthType.DXA},
-      children:[P({children:[T({text:lbl+(name?" \u2014 "+name:""),size:hp(8),font:"Arial",color:"6B7280"})]})]});
+      // as the HTML has it: the label, then the name in bold on its own line
+      children:[P({children:[T({text:lbl,size:hp(8),font:"Arial",color:"6B7280"})]})]
+        .concat(name?[P({spacing:{before:20},children:[T({text:name,bold:true,size:hp(8.5),font:"Arial",color:"111827"})]})]:[])});
   }
   function gapCell(){return new D.TableCell({borders:noBorders,width:{size:tw(20),type:D.WidthType.DXA},children:[P({})]})}
   children.push(P({spacing:{before:240,after:0},children:[T({text:"",size:hp(2)})]}));

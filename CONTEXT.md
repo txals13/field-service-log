@@ -254,6 +254,18 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
   Written 2026-10-04 to cover the app as it stood that day. **When a feature
   changes what the user sees or does, update the manual in the same change**
   — button names in it are quoted exactly as the app shows them.
+- **Reports never go to Downloads** (2026-10-17, the user's rule: "everything
+  goes to the project folder"). Every report export — PDF, Word, HTML, Excel,
+  timesheet, validation PDF, Word+media ZIP — goes through `saveReport`: a
+  resumable, size-checked upload (`reportToDrive` → `driveUploadZip`, which
+  now takes a mime) over the same-name file in the visit's Outputs folder,
+  then a note at the foot of the screen (`repNote`) with "Obre a Drive".
+  Without Drive (offline, not signed in, upload failed) the blob waits in
+  IndexedDB (`pendingReports`, one per visit+file name, newest wins) and
+  `flushPendingReports` sends it from `syncTick` and on the `online` event;
+  the sidebar line counts what is waiting. `uploadReportCopy` (download +
+  background copy) is gone. Still downloaded on purpose: the JSON backup, the
+  camera copy to the phone, and the archive ZIP when its archive folder fails.
 - **Two Claude Docs kept current with the app** (created 2026-10-17, private to
   the user, pinned in their claude.ai sidebar):
   [Presentació del projecte](https://claude.ai/code/artifact/356924d4-6ca4-4b48-88cf-e982777f4a5a)
@@ -700,6 +712,22 @@ Field Service Log/
     row** as the problem, so the table stays one line per entry. HTML and DOCX
     mark it with ✔; the PDF must not — ✔ is outside WinAnsi and would flip the
     line to UTF-16, exactly like the ▶/🎧 emoji.
+- **One table header, day bars, thumbnails in Adjunts** (2026-10-17, after a
+  mock-up the user picked). The per-day headings with a table each became ONE
+  header (PDF: `drawHead`, drawn by hand, redrawn in `didDrawPage` on each
+  continuation page, `showHead:"never"` on the per-day autoTables; Word: one
+  table, `tableHeader` row; HTML: one `<table>`) and a slim grey day bar with a
+  gold rule inside it (`drawDay` / a `columnSpan` row with `keepNext` / a
+  `colspan` row). The PDF keeps a bar with its first entry (`estRowH`).
+  Pictures (`attItems`: entry then outcome files; video = poster + play mark)
+  go INTO the Adjunts column, two across (`ATT_TW`, column = two thumbnails),
+  fitted whole on grey (`pdfThumb`), the file name wrapped under each, never
+  cut — the user called the names important. Over `ATT_MAX` (12) or with no
+  picture (voice notes) → a name line. The PDF books the room with blank lines
+  in the cell, like the parts/outcome blocks; Word reads each picture's size
+  first (`imgSize`) since ImageRun needs it. The PDF photo appendix stays ("for
+  now") and reuses the same embedded image (`alias`), and no longer stretches
+  photos out of shape.
 - **The PDF's entry table is laid out like the HTML report's**: the spare parts
   as a QT./REF./RECANVI table with its own grey header, and the outcome as a
   block with a coloured bar in its severity. autoTable can't nest a table in a

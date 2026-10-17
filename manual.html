@@ -211,7 +211,7 @@
 <p><span class="btn">↓ Informe ▾</span>, a la capçalera de la visita, té tots els formats:</p>
 <div class="scroll"><table>
   <tr><th>Opció</th><th>Què fa</th></tr>
-  <tr><td>📄 PDF</td><td>L'informe complet, amb les fotos en un annex al final.</td></tr>
+  <tr><td>📄 PDF</td><td>L'informe complet. Les fotos surten petites a la columna Adjunts de cada entrada i, en gran, en un annex al final.</td></tr>
   <tr><td>📄 Word (DOCX)</td><td>El mateix informe, editable. Té la mateixa forma que el PDF.</td></tr>
   <tr><td>📄 HTML</td><td>Es pot obrir a qualsevol navegador; els vídeos s'hi poden reproduir.</td></tr>
   <tr><td>📊 Recanvis (Excel)</td><td>Els recanvis de la visita: un full de recomanats per cotitzar, un de canviats, el detall i les dades de la sessió.</td></tr>
@@ -219,8 +219,8 @@
   <tr><td>🗄 ZIP del projecte (arxiu)</td><td>Tot: tots els informes, totes les revisions anteriors, les fotos, els vídeos, les notes de veu i les dades de la visita. <strong>És l'única còpia que es pot tornar a importar.</strong></td></tr>
   <tr><td>📦 ZIP Word + multimèdia</td><td>L'informe Word amb tots els fitxers, per lliurar. No es pot tornar a importar.</td></tr>
 </table></div>
-<p>Les entrades surten <strong>agrupades per dia</strong>, igual que a la pantalla: per a cada dia, un títol amb el dia de la setmana i la data, quantes entrades hi ha i els problemes, avisos, resolts i OK d'aquell dia, i a sota la seva taula, on cada entrada porta només l'hora.</p>
-<p>Cada informe es desa també a la carpeta de Drive de la visita, un sol fitxer per format, que se substitueix cada vegada.</p>
+<p>Les entrades surten en <strong>una sola taula</strong>, amb la capçalera (Hora, Gravetat, Etiqueta, Descripció, Adjunts) a dalt i repetida només quan la taula passa a una pàgina nova. Dins la taula, cada dia és una franja fina amb el dia de la setmana, la data, quantes entrades hi ha i els problemes, avisos, resolts i OK d'aquell dia. Cada entrada porta només l'hora. Una franja de dia mai queda sola a peu de pàgina.</p>
+<p>A la columna <strong>Adjunts</strong> (PDF, Word i HTML) les fotos surten en miniatura, dues per fila, amb el nom del fitxer sencer a sota. Els vídeos porten el símbol de reproducció i les notes de veu surten com una línia de text. Les fotos de la resolució («com ha quedat») també hi són. Si una entrada té més de 12 fotos, les que passen surten només pel nom. Al PDF, l'annex del final continua tenint totes les fotos en gran, ara sense deformar-les.</p>
 
 <h3>Els noms dels fitxers</h3>
 <p>Porten el client, el número de projecte i la màquina, la revisió i l'idioma. Per exemple:</p>
@@ -229,7 +229,8 @@
 <p>Si un informe ja tenia la Rev. 01 abans d'aquest format, conserva el seu nom antic perquè totes les revisions es diguin igual.</p>
 
 <h3>On va el fitxer</h3>
-<p>Tots els informes es descarreguen a Baixades. Des d'allà els pots enviar per correu, WhatsApp o l'app que vulguis.</p>
+<p><strong>Els informes no es descarreguen.</strong> Van directament a la carpeta de la visita a Drive (<code>Outputs</code>), un sol fitxer per format, que se substitueix cada vegada. A baix de la pantalla surt una nota amb el nom del fitxer i <strong>Obre a Drive</strong>; des de Drive el pots enviar per correu, WhatsApp o l'app que vulguis. Val per al PDF, el Word, l'HTML, l'Excel, el full d'hores, l'informe de validació i el ZIP Word + multimèdia. El ZIP del projecte va a la <a href="#arxiu">carpeta d'arxiu</a>, com sempre.</p>
+<p><strong>Sense connexió o sense haver entrat a Google</strong>, l'informe es genera igual i queda guardat a l'app. La nota t'ho diu, i a la barra lateral surt «⏳ N informes pendents de pujar». Es puja sol a la carpeta de la visita quan tornes a tenir connexió. Si mentrestant el tornes a generar, només es puja l'últim.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="revisions">8. Revisions i signatura</h2>

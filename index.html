@@ -290,6 +290,12 @@ textarea{resize:none;line-height:1.4}
 .part-form input{font-size:12px;padding:5px 7px}
 .part-form .pf-pos{width:64px}.part-form .pf-ref{width:110px}.part-form .pf-cant{width:56px}
 .part-form .pf-den{flex:1;min-width:140px}
+/* where a report went: the visit's Drive folder, or waiting for a connection */
+#repNote{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:400;display:none;gap:10px;align-items:center;
+  width:max-content;max-width:calc(100vw - 32px);background:var(--bg2);color:var(--tx1);border:1px solid var(--br2);border-left:3px solid var(--green);
+  border-radius:0 8px 8px 0;padding:9px 10px 9px 12px;font-size:13px;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+#repNote.wait{border-left-color:var(--orange)}
+#repNote span{min-width:0;overflow-wrap:anywhere}#repNote a{color:var(--blue)}#repNote code{font-size:12px}
 /* manuals manager */
 .manual-row{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--br2);border-radius:8px;padding:8px 10px;margin-bottom:6px}
 .manual-row .mr-info{flex:1;min-width:0}
@@ -1164,6 +1170,34 @@ var PST_TIP={fit:"Canviat en aquesta visita",urg:"Recomanat: convé canviar-lo a
 var PST_RGB={fit:[22,163,74],urg:[220,38,38],prev:[217,119,6]};
 var PST_HEX={fit:"16A34A",urg:"DC2626",prev:"D97706"};
 var lastPartSt="fit";   // the next part picked starts where the last one was left
+// What sits in an entry's Adjunts column: its own files, then the outcome's.
+// `src` is what can be drawn as a picture (a photo, or a video's poster).
+// In the reports (2026-10-17) the pictures go INTO the column as thumbnails,
+// two across, each with its file name under it — whole, wrapped, never cut:
+// the name is how the client asks for the original.
+var ATT_TW=15,ATT_GAP=1.5,ATT_MAX=12;   // thumbnail width (mm), gap, most per entry
+function attItems(e){
+  return ((e&&e.images)||[]).concat((e&&e.fix&&e.fix.images)||[]).map(function(im){
+    var src=im.type==="video"?im.poster:(im.type==="audio"?null:im.data);
+    return {im:im,src:src||null,vid:im.type==="video",aud:im.type==="audio"};
+  });
+}
+function attHasPics(entries){return (entries||[]).some(function(e){return attItems(e).some(function(a){return a.src})})}
+function imgSize(src){return new Promise(function(res){var i=new Image();i.onload=function(){res({w:i.naturalWidth,h:i.naturalHeight})};i.onerror=function(){res(null)};i.src=src})}
+// One thumbnail, fitted whole into its box (letterboxed on light grey); a
+// video gets a play mark. `alias` lets the photo appendix reuse the same
+// embedded image instead of storing it twice.
+function pdfThumb(doc,src,x,y,w,h,vid,alias){
+  doc.setFillColor(243,244,246);doc.rect(x,y,w,h,"F");
+  var iw=w,ih=h;
+  try{var pr=doc.getImageProperties(src),k=Math.min(w/pr.width,h/pr.height);iw=pr.width*k;ih=pr.height*k}catch(e){}
+  try{doc.addImage(src,x+(w-iw)/2,y+(h-ih)/2,iw,ih,alias,"FAST")}catch(e){}
+  if(vid){
+    var cx=x+w/2,cy=y+h/2;
+    doc.setFillColor(17,24,39);doc.circle(cx,cy,2.3,"F");
+    doc.setFillColor(255,255,255);doc.triangle(cx-0.7,cy-1.2,cx-0.7,cy+1.2,cx+1.3,cy,"F");
+  }
+}
 function partSt(p){return (p&&(p.st==="urg"||p.st==="prev"))?p.st:"fit"}
 // on-screen log view (uses the app's themed .log-parts grid)
 function partsBlockHTML(parts){
@@ -1853,19 +1887,79 @@ function sessionToJson(sess){return JSON.stringify([sess],null,2)}
 // Keeps ONE report per format in the session's Drive folder: a new export
 // overwrites the file of the same name instead of adding another timestamped
 // copy (folders were piling up — one session had 9 xlsx and 4 html).
-async function uploadReportCopy(sess,blob,fname,mime){
-  if(!isLoggedIn)return;
-  var token=await ensureToken();if(!token)return;
+//
+// 2026-10-17: and that copy is now the ONLY one. A report is never downloaded
+// (nothing lands in Downloads); it goes to the visit's own folder in Outputs,
+// and the note that comes up links to it. Without Drive — no connection, not
+// signed in — it waits in this device's IndexedDB (`pendingReports`) and goes
+// up at the next sync, so a report made offline at the client is not lost.
+var PEND_KEY="pendingReports",pendReps=null,pendBusy=false;
+async function pendLoad(){
+  if(pendReps)return pendReps;
+  var v=null;try{if(idb)v=await idbGet(idb,PEND_KEY)}catch(e){}
+  pendReps=Array.isArray(v)?v:[];
+  return pendReps;
+}
+async function pendSave(){try{if(idb)await idbSet(idb,PEND_KEY,pendReps||[])}catch(e){}refreshDriveInfo()}
+// Uploads one report (resumable, size-checked) over the file of the same name,
+// if there is one. Returns the Drive file, or null.
+async function reportToDrive(sess,blob,fname,mime,ui){
+  if(!isLoggedIn||navigator.onLine===false)return null;
   try{
-    var folderId=await getSessionFolder(token,sess);if(!folderId)return;
+    var token=await ensureToken();if(!token)return null;
+    var folderId=await getSessionFolder(token,sess);if(!folderId)return null;
     var existing=await driveFind(token,fname,folderId,mime);
-    if(existing){
-      await fetch("https://www.googleapis.com/upload/drive/v3/files/"+existing+"?uploadType=media",
-        {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":mime},body:blob});
-      return;
+    var meta=existing?{mimeType:mime}:{name:fname,parents:[folderId],mimeType:mime};
+    var up=await driveUploadZip(token,blob,meta,existing,ui?function(f){expBusy("Desant a Drive "+Math.round(f*100)+" %…")}:null,mime);
+    return (up&&String(up.size)===String(blob.size))?up:null;
+  }catch(e){return null}
+}
+async function saveReport(sess,blob,fname,mime){
+  expBusy("Desant a Drive…");
+  var up=null;
+  try{up=await reportToDrive(sess,blob,fname,mime,true)}finally{expBusy("")}
+  if(up){
+    repNote("&#10003; Desat a la carpeta del projecte: <code>"+esc(fname)+"</code>"
+      +(up.id?" · <a href=\"https://drive.google.com/file/d/"+encodeURIComponent(up.id)+"/view\" target=\"_blank\" rel=\"noopener\">Obre a Drive</a>":""),"ok");
+    // a newer copy of a report that was waiting replaces it
+    var q=await pendLoad(),k=q.length;
+    pendReps=q.filter(function(x){return !(x.sessId===sess.id&&x.fname===fname)});
+    if(pendReps.length!==k)await pendSave();
+    return true;
+  }
+  var q2=await pendLoad();
+  pendReps=q2.filter(function(x){return !(x.sessId===sess.id&&x.fname===fname)})
+    .concat([{sessId:sess.id,fname:fname,mime:mime,blob:blob,at:now()}]);
+  await pendSave();
+  repNote("&#9203; <b>"+esc(fname)+"</b> queda guardat a l'app i es pujarà a la carpeta del projecte "
+    +(isLoggedIn?"quan tornis a tenir connexió.":"quan entris a Google."),"wait");
+  return false;
+}
+async function flushPendingReports(){
+  var q=await pendLoad();
+  if(pendBusy||!q.length||!isLoggedIn||navigator.onLine===false)return;
+  pendBusy=true;
+  try{
+    var left=[],done=[];
+    for(var i=0;i<q.length;i++){
+      var it=q[i],sess=sessions.find(function(x){return x.id===it.sessId});
+      if(!sess)continue;                       // the visit is gone: nothing to file it under
+      var up=await reportToDrive(sess,it.blob,it.fname,it.mime,false);
+      if(up)done.push(it.fname);else left.push(it);
     }
-    await driveUploadBlob(token,blob,fname,mime,folderId);
-  }catch(e){}
+    pendReps=left;await pendSave();
+    if(done.length)repNote("&#10003; Pujat a la carpeta del projecte: <code>"+done.map(esc).join("</code>, <code>")+"</code>","ok");
+  }finally{pendBusy=false}
+}
+// The note at the foot of the screen: where the report went.
+function repNote(html,kind){
+  var t=$$("repNote");
+  if(!t){t=document.createElement("div");t.id="repNote";t.setAttribute("role","status");document.body.appendChild(t)}
+  t.className=kind==="wait"?"wait":"";
+  t.innerHTML="<span>"+html+"</span><button type=\"button\" class=\"btn-g\" aria-label=\"Tanca\">&#10005;</button>";
+  t.style.display="flex";
+  t.querySelector("button").addEventListener("click",function(){t.style.display="none"});
+  clearTimeout(repNote.tm);repNote.tm=setTimeout(function(){t.style.display="none"},kind==="wait"?15000:10000);
 }
 // Every failure has to come back as null, never as a rejected promise. The
 // thumbnails set "loading" before calling and only leave that state inside
@@ -2773,11 +2867,12 @@ async function refreshDriveInfo(token){
     }catch(e){}
   }
   var el=$$("driveInfo");if(!el)return;
-  if(!isLoggedIn){el.textContent="Sense entrar a Google: només aquest aparell";return}
+  var pend=pendReps&&pendReps.length?"<br><span style=\"color:var(--orange)\">&#9203; "+pl(pendReps.length,"informe pendent","informes pendents")+" de pujar</span>":"";
+  if(!isLoggedIn){el.innerHTML="Sense entrar a Google: només aquest aparell"+pend;return}
   el.innerHTML="Compte: <strong>"+esc(driveEmail||"?")+"</strong>"
     +(lastDriveCount!=null?"<br>A Drive: "+pl(lastDriveCount,"visita","visites")
       +(lastOutputs!=null?" · "+pl(lastOutputs,"carpeta","carpetes")+" a Outputs":"")
-      +" · "+(lastDriveAt||""):"");
+      +" · "+(lastDriveAt||""):"")+pend;
 }
 // Resolves true when Drive was read (or there was nothing there to read).
 async function loadFromDrive(){
@@ -2924,12 +3019,14 @@ function syncTick(force){
     else{redrawPending=false;renderAll()}
   }).catch(function(){}).then(function(){syncBusy=false});
   flushTrash();
+  flushPendingReports();
 }
 function scheduleSync(){
   if(syncStarted)return;syncStarted=true;
   setInterval(function(){syncTick(true)},30000);
   document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")syncTick()});
   window.addEventListener("focus",function(){syncTick()});
+  window.addEventListener("online",function(){flushPendingReports()});
   document.addEventListener("focusout",function(){
     setTimeout(function(){if(redrawPending&&!hasUnsaved()){redrawPending=false;renderAll()}},0);
   });
@@ -4095,13 +4192,13 @@ async function pickDriveArxFolder(token){
 // Resumable upload in 8 MB pieces, so a 300 MB project on a phone connection
 // survives and the progress can be shown. existingId: replace that file's
 // contents instead of creating one. Resolves with {id,name,size} or null.
-async function driveUploadZip(token,blob,meta,existingId,onProg){
+async function driveUploadZip(token,blob,meta,existingId,onProg,mime){
   try{
     var init=await fetch("https://www.googleapis.com/upload/drive/v3/files"+(existingId?"/"+existingId:"")
       +"?uploadType=resumable&fields=id,name,size",{
       method:existingId?"PATCH":"POST",
       headers:{Authorization:"Bearer "+token,"Content-Type":"application/json; charset=UTF-8",
-               "X-Upload-Content-Type":"application/zip","X-Upload-Content-Length":String(blob.size)},
+               "X-Upload-Content-Type":mime||"application/zip","X-Upload-Content-Length":String(blob.size)},
       body:JSON.stringify(meta||{})
     });
     if(!init.ok)return null;
@@ -4712,7 +4809,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-17 · 2";
+var APP_VERSION="2026-10-17 · 3";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -6727,18 +6824,24 @@ function buildReportHTML(s,forPrint,lang,rev){
   var cnt=severityCounts(entries),errs=cnt.issue,warns=cnt.warning,oks=cnt.ok;
   var rows=entries.map(function(e){
     var sm=SM[e.severity]||SM.info,sl=R.sev[e.severity]||R.sev.info;
+    // Thumbnails two across, the name under each (wrapped, never cut), as in
+    // the PDF; a voice note takes a whole line.
+    var nmS="font-size:9px;color:#6b7280;font-family:monospace;overflow-wrap:anywhere;line-height:1.25;margin-top:2px";
+    var thS="width:100px;height:75px;object-fit:contain;background:#f3f4f6;border-radius:3px;display:block";
     var imgCell=(e.images||[]).concat((e.fix&&e.fix.images)||[]).map(function(img){
       if(img.type==="video"){
-        var ph=img.poster?"<img src=\""+img.poster+"\" style=\"max-width:140px;max-height:100px;object-fit:cover;border-radius:4px;display:block\">":"<div style=\"width:130px;height:90px;background:#eee;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:24px\">🎬</div>";
+        var ph=img.poster?"<div style=\"position:relative\"><img src=\""+img.poster+"\" style=\""+thS+"\"><span style=\"position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:50%;background:#111827;color:#fff;font-size:10px;line-height:22px;text-align:center\">▶</span></div>"
+          :"<div style=\"width:100px;height:75px;background:#f3f4f6;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:22px\">🎬</div>";
         var lnk=(!forPrint&&img.driveId)?"<a href=\"https://drive.google.com/file/d/"+img.driveId+"/view\" target=\"_blank\" style=\"font-size:9px;color:#1d4ed8;display:block\">↗ "+esc(R.openDrive)+"</a>":"";
-        return "<div style=\"margin:2px;display:inline-block;vertical-align:top\">"+ph+"<div style=\"font-size:9px;color:#6b7280;font-family:monospace;white-space:nowrap\">▶ "+esc(img.name||R.video)+"</div>"+lnk+"</div>";
+        return "<div style=\"width:100px\">"+ph+"<div style=\""+nmS+"\">» "+esc(img.name||R.video)+"</div>"+lnk+"</div>";
       }
       if(img.type==="audio"){
         var alnk=(!forPrint&&img.driveId)?"<a href=\"https://drive.google.com/file/d/"+img.driveId+"/view\" target=\"_blank\" style=\"font-size:9px;color:#1d4ed8\">↗ Drive</a>":"";
-        return "<div style=\"margin:2px 0;padding:6px 8px;background:#f9fafb;border-left:3px solid #f59e0b;border-radius:4px\"><div style=\"font-size:9px;color:#6b7280;font-family:monospace;white-space:nowrap\">🎧 "+esc(img.name||R.voice)+" · "+fmtDur(img.duration)+" "+alnk+"</div></div>";
+        return "<div style=\"grid-column:1/-1;padding:5px 7px;background:#f9fafb;border-left:3px solid #f59e0b\"><div style=\""+nmS+";margin-top:0\">🎧 "+esc(img.name||R.voice)+" · "+fmtDur(img.duration)+" "+alnk+"</div></div>";
       }
-      return "<div style=\"margin:2px;display:inline-block;vertical-align:top\"><img src=\""+img.data+"\" style=\"max-width:140px;max-height:100px;object-fit:cover;border-radius:4px;display:block\"><div style=\"font-size:9px;color:#6b7280;font-family:monospace;white-space:nowrap\">"+esc(img.name||R.photo)+"</div></div>";
+      return "<div style=\"width:100px\"><img src=\""+img.data+"\" style=\""+thS+"\"><div style=\""+nmS+"\">"+esc(img.name||R.photo)+"</div></div>";
     }).join("");
+    if(imgCell)imgCell="<div style=\"display:grid;grid-template-columns:repeat(2,100px);gap:6px\">"+imgCell+"</div>";
     return "<tr>"
       +"<td style=\"font-family:monospace;font-size:11px;white-space:nowrap;padding:5px 8px;border:1px solid #e5e7eb;color:#6b7280;width:1%\">"+timeOf(e.ts)+(e.tsFromPhoto?"<br>📷":"")+"</td>"
       +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:11px;font-weight:700;white-space:nowrap;width:1%;color:"+sm.tx+"\">"+esc(sl)+"</td>"
@@ -6753,7 +6856,7 @@ function buildReportHTML(s,forPrint,lang,rev){
     +".meta{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;margin:16px 0}"
     +".ml{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:#9ca3af;font-weight:600}.mv{font-size:13px;font-weight:700}"
     +".stats{display:flex;gap:12px;margin:16px 0}.stat{text-align:center;padding:10px 20px;border-radius:8px}"
-    +"table{width:100%;border-collapse:collapse}th{background:#111827;color:#fff;padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.8px}"
+    +"table{width:100%;border-collapse:collapse}td{vertical-align:top}th{background:#111827;color:#fff;padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.8px}"
     +"tr:nth-child(even) td{background:#f9fafb}"
     +".sig{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:60px}.sl{border-top:1px solid #6b7280;padding-top:8px;font-size:12px;color:#6b7280;margin-top:48px}"
     +".ft{margin-top:28px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;display:flex;justify-content:space-between}"
@@ -6780,14 +6883,14 @@ function buildReportHTML(s,forPrint,lang,rev){
     +"<div class=\"stat\" style=\"background:#f1f5f9;color:#475569\"><strong style=\"font-size:26px;display:block\">"+entries.length+"</strong><span style=\"font-size:11px\">"+esc(R.total)+"</span></div>"
     +"</div>"
     +(function(){
-      var head="<table><thead><tr><th>"+esc(R.time)+"</th><th>"+esc(R.severity)+"</th><th>"+esc(R.tag)+"</th><th>"+esc(R.desc)+"</th><th>"+esc(R.att)+"</th></tr></thead><tbody>";
-      if(!entries.length)return head+"</tbody></table>";
-      return dayGroups(entries).map(function(g){
-        return "<div style=\"display:flex;align-items:baseline;gap:12px;margin:18px 0 6px;padding-bottom:4px;border-bottom:2px solid #f59e0b\">"
-          +"<strong style=\"font-size:14px\">"+esc(reportDayTitle(g.key,R,lang))+"</strong>"
-          +"<span style=\"font-size:12px;color:#6b7280\">"+esc(reportDaySummary(g.idx.map(function(i){return entries[i]}),R))+"</span></div>"
-          +head+g.idx.map(function(i){return rows[i]}).join("")+"</tbody></table>";
-      }).join("");
+      // ONE table and one header; each day is a slim bar inside it
+      return "<table style=\"margin-top:12px\"><thead><tr><th>"+esc(R.time)+"</th><th>"+esc(R.severity)+"</th><th>"+esc(R.tag)+"</th><th>"+esc(R.desc)+"</th><th>"+esc(R.att)+"</th></tr></thead><tbody>"
+        +dayGroups(entries).map(function(g){
+          return "<tr><td colspan=\"5\" style=\"background:#f3f4f6;border:1px solid #e5e7eb;border-bottom:2px solid #f59e0b;padding:5px 8px\">"
+            +"<strong style=\"font-size:12px\">"+esc(reportDayTitle(g.key,R,lang))+"</strong>"
+            +"<span style=\"font-size:11px;color:#6b7280;margin-left:12px\">"+esc(reportDaySummary(g.idx.map(function(i){return entries[i]}),R))+"</span></td></tr>"
+            +g.idx.map(function(i){return rows[i]}).join("");
+        }).join("")+"</tbody></table>";
     })()
     +partsSummaryHTML(s,R)
     +(s.notes?"<div style=\"margin-top:18px;padding:12px;background:#f9fafb;border-radius:6px;border-left:3px solid #f59e0b\"><strong>"+esc(R.notes)+":</strong><br>"+esc(s.notes)+"</div>":"")
@@ -6842,8 +6945,7 @@ async function exportRep(s,fmt){
   if(fmt==="html"){
     var htmlBlob=new Blob([buildReportHTML(R.s,false,R.lang,R.rev)],{type:"text/html;charset=utf-8"});
     var hn=P.report+"_"+base+".html";
-    dlBlob(htmlBlob,hn);
-    uploadReportCopy(s,htmlBlob,hn,"text/html");
+    await saveReport(s,htmlBlob,hn,"text/html");
   }
   else if(fmt==="pdf"){exportPDF(s,R,base)}
   else if(fmt==="valpdf"){
@@ -6852,7 +6954,7 @@ async function exportRep(s,fmt){
       var vb=await buildPdfBlob(R.s,R.lang,R.rev,{validation:true});
       if(!vb){alert("No s'ha pogut carregar la llibreria PDF. Comprova la connexió.");return}
       var vn=RPT[R.lang].pt.file+"_"+base+".pdf";
-      dlBlob(vb,vn);uploadReportCopy(s,vb,vn,"application/pdf");
+      await saveReport(s,vb,vn,"application/pdf");
     }finally{expBusy("")}
   }
   else if(fmt==="docx"){exportDOCX(s,R,base)}
@@ -7788,8 +7890,7 @@ async function exportTimesheet(s){
   var blob=await buildTimesheetBlob(s);
   if(!blob){alert("No s'ha pogut carregar la llibreria PDF. Comprova la connexió.");return}
   var fn=tsFileName(s);
-  dlBlob(blob,fn);
-  uploadReportCopy(s,blob,fn,"application/pdf");
+  await saveReport(s,blob,fn,"application/pdf");
 }
 
 // ── REPORT → PDF ──────────────────────────────────────────────────────────────
@@ -8151,7 +8252,7 @@ function pdfMetaBlock(doc,meta,M,CW,y,ar){
 // Head labels wrap between words, so every column must still fit its longest
 // single head WORD (bold 7.5 — in the PDF head styles beat column styles, so
 // the head can never be shrunk).
-function entryColWidths(doc,R,entries,attTexts,ar,CW){
+function entryColWidths(doc,R,entries,attTexts,ar,CW,minAtt){
   var PAD=5; // 2mm cell padding each side, plus slack
   doc.setFont("helvetica","bold");doc.setFontSize(7.5);
   function headW(t){var w=0;String(t).split(/\s+/).forEach(function(k){w=Math.max(w,doc.getTextWidth(k))});return w+PAD}
@@ -8167,7 +8268,8 @@ function entryColWidths(doc,R,entries,attTexts,ar,CW){
   // Tag and attachments never break: they take the width they need, and only if
   // that hits the cap is the text shrunk (never wrapped) to fit.
   var tagC=pdfFitCol(doc,entries.map(function(e){return e.tag||""}).concat([""]),hTag,32,PAD,ar);
-  var attC=pdfFitCol(doc,(attTexts||[]).concat([""]),Math.max(hAtt,16),50,PAD,ar);
+  // With thumbnails the column is as wide as two of them, side by side.
+  var attC=pdfFitCol(doc,(attTexts||[]).concat([""]),Math.max(hAtt,16,minAtt||0),Math.max(50,minAtt||0),PAD,ar);
   // Description keeps the lion's share; if the two measured columns leave it too
   // little they give the difference back, attachments first, and only as a last
   // resort do they go under the 5.8pt floor (still one line, just smaller).
@@ -8207,8 +8309,7 @@ async function exportPDF(s,R,base){
   var blob=await buildPdfBlob(R.s,R.lang,R.rev);
   if(!blob){alert("No s'ha pogut carregar la llibreria PDF. Comprova la connexió.");return}
   var fn=RPT[R.lang].pre.report+"_"+base+".pdf";
-  dlBlob(blob,fn);
-  uploadReportCopy(s,blob,fn,"application/pdf");
+  await saveReport(s,blob,fn,"application/pdf");
 }
 // Returns the report as PDF bytes so both the download and the ZIP can use it.
 // opts.validation: the production-test report — same header, data and
@@ -8289,7 +8390,10 @@ async function buildPdfBlob(s,lang,rev,opts){
             {content:R.sev[e.severity]||R.sev.info,styles:{textColor:hexRgb(sm.tx),fontStyle:"bold"}},
             e.tag||"",desc,att];
   });
-  var COL=entryColWidths(doc,R,entries,body.map(function(r){return r[4]}),ar,CW);
+  var anyPic=attHasPics(entries);
+  var COL=entryColWidths(doc,R,entries,anyPic?[]:body.map(function(r){return r[4]}),ar,CW,anyPic?2*ATT_TW+ATT_GAP+4:0);
+  // one embedded copy of each picture, shared by the thumbnails and the appendix
+  var imgAl=new Map();function alias(src){if(!imgAl.has(src))imgAl.set(src,"fslimg"+imgAl.size);return imgAl.get(src)}
   var tsW=COL.ts,sevW=COL.sev,tagC=COL.tagC,attC=COL.attC;
   function descW(){return COL.desc()}
 
@@ -8331,6 +8435,66 @@ async function buildPdfBlob(s,lang,rev,opts){
     body[i][3]=(body[i][3]||"")+new Array(X.blanks+1).join("\n");
     return X;
   });
+  // The Adjunts column with pictures: thumbnails two across, the name under
+  // each, then the files with no picture (voice notes) as lines. Room is
+  // booked with blank lines, as for the blocks under the description.
+  var NFS=5.6,NLH=NFS/doc.internal.scaleFactor*1.2,AIW=attC.cellWidth-4,TW2=(AIW-ATT_GAP)/2,TH2=TW2*0.75;
+  var attL=entries.map(function(e,i){
+    if(!anyPic)return null;
+    var its=attItems(e);if(!its.length)return null;
+    var pics=its.filter(function(a){return a.src}).slice(0,ATT_MAX);
+    var rest=its.filter(function(a){return pics.indexOf(a)<0});
+    doc.setFontSize(NFS);
+    var cells=pics.map(function(a){
+      var nm=(a.vid?"» ":"")+(a.im.name||R.file);
+      pdfFont(doc,ar,nm,"normal");
+      return {a:a,nm:nm,lines:doc.splitTextToSize(nm,TW2)};
+    });
+    var rowsH=[];
+    for(var k=0;k<cells.length;k+=2)
+      rowsH.push(TH2+0.8+Math.max(cells[k].lines.length,cells[k+1]?cells[k+1].lines.length:0)*NLH+1.6);
+    var restL=[];
+    rest.forEach(function(a){
+      var t=(a.vid?"» ":a.aud?"• ":"")+(a.im.name||R.file);
+      pdfFont(doc,ar,t,"normal");restL=restL.concat(doc.splitTextToSize(t,AIW));
+    });
+    doc.setFont("helvetica","normal");doc.setFontSize(8);
+    var h=rowsH.reduce(function(x,y){return x+y},0)+restL.length*NLH*1.15;
+    body[i][4]=new Array(Math.ceil(h/LH)).join("\n");
+    return {cells:cells,rowsH:rowsH,rest:restL};
+  });
+  // ONE header, at the top of the log and of each page it runs onto — not one
+  // per day (2026-10-17). Each day is a slim bar inside the table.
+  var HEADS=[R.time,R.severity,R.tag,R.desc,R.att],HFS=7.5,HLH=HFS/doc.internal.scaleFactor*1.15;
+  function colWs(){return [tsW,sevW,tagC.cellWidth,descW(),attC.cellWidth]}
+  function headLines(){var w=colWs();doc.setFont("helvetica","bold");doc.setFontSize(HFS);
+    var L=HEADS.map(function(h,i){return doc.splitTextToSize(String(h),w[i]-4)});doc.setFont("helvetica","normal");return L}
+  var HH=Math.max.apply(null,headLines().map(function(l){return l.length}))*HLH+4;
+  function drawHead(yy){
+    var w=colWs(),L=headLines(),x=M;
+    doc.setFillColor(17,24,39);doc.rect(M,yy,CW,HH,"F");
+    doc.setFont("helvetica","bold");doc.setFontSize(HFS);doc.setTextColor(255,255,255);
+    L.forEach(function(l,i){doc.text(l,x+2,yy+2,{baseline:"top",lineHeightFactor:1.15});x+=w[i]});
+    doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(0,0,0);
+    return yy+HH;
+  }
+  var DH=6.2;
+  function drawDay(g){
+    doc.setFillColor(243,244,246);doc.rect(M,y,CW,DH,"F");
+    doc.setDrawColor(245,158,11);doc.setLineWidth(0.4);doc.line(M,y+DH,M+CW,y+DH);
+    doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setTextColor(17,24,39);
+    var dt=reportDayTitle(g.key,R,lang);doc.text(dt,M+2,y+4.2);
+    var dw=doc.getTextWidth(dt);
+    doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor(107,114,128);
+    doc.text(reportDaySummary(g.idx.map(function(i){return entries[i]}),R),M+2+dw+4,y+4.2);
+    y+=DH;
+  }
+  // roughly how tall an entry's row will be, to keep a day's bar with it
+  function estRowH(i){
+    doc.setFont("helvetica","normal");doc.setFontSize(8);
+    var dl=doc.splitTextToSize(String(body[i][3]||""),descW()-4).length,al=String(body[i][4]||"").split("\n").length;
+    return Math.max(dl,al,1)*LH+4;
+  }
   doc.setFont("helvetica","normal");doc.setFontSize(8);
   // A row must not be cut in two: the blocks are painted at absolute positions
   // inside the cell, and half a cell on the next page would strand them.
@@ -8339,7 +8503,9 @@ async function buildPdfBlob(s,lang,rev,opts){
   function drawEntries(G){
     doc.autoTable({
       rowPageBreak:"avoid",
-      startY:y,margin:{left:M,right:M},
+      startY:y,margin:{left:M,right:M,top:M+HH},
+      showHead:"never",
+      didDrawPage:function(d){if(d.pageNumber>1)drawHead(M)},
       head:[[R.time,R.severity,R.tag,R.desc,R.att]],
       body:G.length?G.map(function(i){return body[i]}):[[{content:R.noEntries,colSpan:5,styles:{halign:"center",textColor:[156,163,175]}}]],
       styles:{fontSize:8,cellPadding:2,overflow:"linebreak",valign:"top"},
@@ -8361,6 +8527,23 @@ async function buildPdfBlob(s,lang,rev,opts){
       // The parts table and the outcome block, painted into the blank lines the
       // cell's text reserved for them.
       didDrawCell:function(d){
+        if(d.section==="body"&&d.column.index===4){
+          var A=attL[G[d.row.index]];if(!A)return;
+          var ax=d.cell.x+2,ay=d.cell.y+2;
+          A.cells.forEach(function(c,k){
+            var col=k%2;
+            if(col===0&&k>0)ay+=A.rowsH[k/2-1];
+            var tx=ax+col*(TW2+ATT_GAP);
+            pdfThumb(doc,c.a.src,tx,ay,TW2,TH2,c.a.vid,alias(c.a.src));
+            doc.setFontSize(NFS);doc.setTextColor(107,114,128);pdfFont(doc,ar,c.nm,"normal");
+            c.lines.forEach(function(l,j){doc.text(l,tx,ay+TH2+0.8+NLH*(j+0.8))});
+          });
+          if(A.cells.length)ay+=A.rowsH[A.rowsH.length-1];
+          doc.setFontSize(NFS);doc.setTextColor(107,114,128);
+          A.rest.forEach(function(l,j){pdfFont(doc,ar,l,"normal");doc.text(l,ax,ay+NLH*1.15*(j+0.8))});
+          doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(0,0,0);
+          return;
+        }
         if(d.section!=="body"||d.column.index!==3)return;
         var X=extras[G[d.row.index]];if(!X)return;
         var lines=[].concat(d.cell.text||[]);
@@ -8410,18 +8593,15 @@ async function buildPdfBlob(s,lang,rev,opts){
       }
     });
   }
+  if(y+HH+DH+20>H-15){doc.addPage();y=M}
+  y=drawHead(y);
   if(!entries.length)drawEntries([]);
   else dayGroups(entries).forEach(function(g){
-    if(y>H-40){doc.addPage();y=M}
-    doc.setFont("helvetica","bold");doc.setFontSize(10);doc.setTextColor(17,24,39);
-    var dt=reportDayTitle(g.key,R,lang);doc.text(dt,M,y+4);
-    var dw=doc.getTextWidth(dt);
-    doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(107,114,128);
-    doc.text(reportDaySummary(g.idx.map(function(i){return entries[i]}),R),M+dw+5,y+4);
-    doc.setDrawColor(245,158,11);doc.setLineWidth(0.5);doc.line(M,y+6,M+CW,y+6);
-    y+=8;
+    // a day's bar never sits alone at the foot of a page
+    if(y+DH+Math.min(estRowH(g.idx[0]),H/2)>H-15){doc.addPage();y=M;y=drawHead(y)}
+    drawDay(g);
     drawEntries(g.idx);
-    y=doc.lastAutoTable.finalY+5;
+    y=doc.lastAutoTable.finalY;
   });
   y=doc.lastAutoTable.finalY+8;
   y=pdfPartsSection(doc,s,R,y,M,CW,H,ar);
@@ -8453,7 +8633,9 @@ async function buildPdfBlob(s,lang,rev,opts){
       var c=i%cols;
       if(c===0&&y+ih+11>H-M){doc.addPage();y=M}
       var x=M+c*(iw+gap);
-      try{doc.addImage(sh.src,x,y,iw,ih,undefined,"FAST")}catch(err){}
+      // whole, not stretched: a portrait or panoramic photo used to be pulled
+      // out of shape to fill the box
+      pdfThumb(doc,sh.src,x,y,iw,ih,false,alias(sh.src));
       doc.setTextColor(107,114,128);
       doc.setFontSize(6.5);doc.text(sh.ts,x,y+ih+3);
       doc.setFontSize(nameFs);pdfFont(doc,ar,sh.name,"normal");doc.text(sh.name,x,y+ih+6);
@@ -8588,8 +8770,7 @@ async function exportXLSX(s,R,base){
   var blob=await buildXlsxBlob(R.s,R.lang,R.rev);
   if(!blob){alert("No s'ha pogut carregar la llibreria d'Excel. Comprova la connexió.");return}
   var fn=RPT[R.lang].pre.parts+"_"+base+".xlsx";
-  dlBlob(blob,fn);
-  uploadReportCopy(s,blob,fn,XLSX_MIME);
+  await saveReport(s,blob,fn,XLSX_MIME);
 }
 // Returns the spare-parts workbook, or null when the library fails or there are
 // no parts (the ZIP just leaves it out then, without nagging).
@@ -8692,8 +8873,7 @@ async function exportDOCX(s,R,base){
     var blob=await buildDocxBlob(R.s,R.lang,R.rev);
     if(!blob){alert("No s'ha pogut carregar la llibreria de Word. Comprova la connexió.");return}
     var fn=RPT[R.lang].pre.report+"_"+base+".docx";
-    dlBlob(blob,fn);
-    uploadReportCopy(s,blob,fn,DOCX_MIME);
+    await saveReport(s,blob,fn,DOCX_MIME);
   }catch(err){alert("Error en generar el Word: "+err.message)}
 }
 // The Word report is built to land on the SAME layout as the PDF, because the
@@ -8725,11 +8905,16 @@ async function buildDocxDocument(D,s,lang,rev){
       return (im.type==="video"?"» ":im.type==="audio"?"• ":"")+(im.name||R.file);
     }).join("\n");
   });
+  // Thumbnails in the Adjunts column, as in the PDF; their sizes are read
+  // first, since Word needs each picture's width and height spelled out.
+  var anyPic=attHasPics(entries),dims=new Map();
+  if(anyPic)await Promise.all(entries.map(attItems).reduce(function(a,b){return a.concat(b)},[])
+    .filter(function(a){return a.src}).map(function(a){return imgSize(a.src).then(function(d){dims.set(a.src,d)})}));
   // Measured by jsPDF, exactly as the PDF measures them.
   var L=await loadPdfLibs(),mdoc=L?new L.jsPDF({unit:"mm",format:"a4"}):null;
   var colMm,tagPt=8,attPt=8,valX=30;
   if(mdoc){
-    var COL=entryColWidths(mdoc,R,entries,attTexts,null,CW);
+    var COL=entryColWidths(mdoc,R,entries,anyPic?[]:attTexts,null,CW,anyPic?2*ATT_TW+ATT_GAP+4:0);
     colMm=[COL.ts,COL.sev,COL.tagC.cellWidth,COL.desc(),COL.attC.cellWidth];
     tagPt=COL.tagC.fontSize;attPt=COL.attC.fontSize;
     mdoc.setFont("helvetica","normal");mdoc.setFontSize(8.5);
@@ -8793,10 +8978,43 @@ async function buildDocxDocument(D,s,lang,rev){
     // Alternating rows, not a tint per severity: that's what the PDF and the
     // HTML report do, and the three have to look like one another.
     var fill=(i%2)?"F9FAFB":"FFFFFF";
-    // Names only, like the PDF: the photos themselves are in the appendix.
-    var att=(attTexts[i]?attTexts[i].split("\n"):[""]).map(function(line){
-      return P({spacing:{after:20},children:[T({text:line,size:hp(attPt),font:"Arial",color:"6B7280"})]});
-    });
+    var att;
+    if(anyPic&&attItems(e).length){
+      // thumbnails two across with the name under each, as in the PDF
+      var its=attItems(e),pics=its.filter(function(a){return a.src}).slice(0,ATT_MAX);
+      var rest=its.filter(function(a){return pics.indexOf(a)<0});
+      var aiw=colMm[4]-4,tw2=(aiw-ATT_GAP)/2,th2=tw2*0.75,PX=96/25.4;
+      var trs2=[];
+      for(var k=0;k<pics.length;k+=2){
+        trs2.push(new D.TableRow({cantSplit:true,children:[0,1].map(function(c){
+          var a=pics[k+c],ch=[];
+          if(a){
+            var id=toImg(a.src),dm=dims.get(a.src),w=tw2,h=th2;
+            if(dm&&dm.w&&dm.h){var r=Math.min(tw2/dm.w,th2/dm.h);w=dm.w*r;h=dm.h*r}
+            if(id){try{ch.push(P({spacing:{after:10},children:[new D.ImageRun({data:id.bytes,type:id.type,
+              transformation:{width:Math.round(w*PX),height:Math.round(h*PX)}})]}))}catch(err){}}
+            ch.push(P({spacing:{after:50},children:[T({text:(a.vid?"» ":"")+(a.im.name||R.file),size:hp(5.6),font:"Arial",color:"6B7280"})]}));
+          } else ch.push(P({}));
+          return new D.TableCell({borders:noBorders,margins:{top:0,bottom:0,left:0,right:c?0:tw(ATT_GAP)},
+            width:{size:tw(c?tw2:tw2+ATT_GAP),type:D.WidthType.DXA},children:ch});
+        })}));
+      }
+      att=[];
+      if(trs2.length){
+        att.push(new D.Table({width:{size:tw(aiw),type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED,
+          columnWidths:[tw(tw2+ATT_GAP),tw(tw2)],
+          borders:{top:NONE,bottom:NONE,left:NONE,right:NONE,insideHorizontal:NONE,insideVertical:NONE},rows:trs2}));
+      }
+      rest.forEach(function(a){
+        att.push(P({spacing:{after:20},children:[T({text:(a.vid?"» ":a.aud?"• ":"")+(a.im.name||R.file),size:hp(6),font:"Arial",color:"6B7280"})]}));
+      });
+      att.push(P({spacing:{after:0},children:[]}));   // Word needs a paragraph after a table
+    }else{
+      // names only: the pictures, if any, are in the appendix
+      att=(attTexts[i]?attTexts[i].split("\n"):[""]).map(function(line){
+        return P({spacing:{after:20},children:[T({text:line,size:hp(attPt),font:"Arial",color:"6B7280"})]});
+      });
+    }
     var descCh=[P({children:[T({text:e.text||"",size:hp(8),font:"Arial"})]})];
     if(e.parts&&e.parts.length){
       descCh.push(P({spacing:{before:60},children:[T({text:""})]}));
@@ -8855,19 +9073,18 @@ async function buildDocxDocument(D,s,lang,rev){
     metaTable,
     P({spacing:{before:120,after:120},children:counters})
   ].concat((function(){
-    // one table per day, under its own heading, as in the PDF
-    function hdrRow(){return new D.TableRow({tableHeader:true,children:[hdrCell(R.time,COLW[0]),hdrCell(R.severity,COLW[1]),hdrCell(R.tag,COLW[2]),hdrCell(R.desc,COLW[3]),hdrCell(R.att,COLW[4])]})}
-    function tbl(r){return new D.Table({width:{size:TBLW,type:D.WidthType.DXA},columnWidths:COLW,layout:D.TableLayoutType.FIXED,rows:[hdrRow()].concat(r)})}
-    if(!entries.length)return [tbl([])];
-    var out=[];
+    // ONE table: its header repeats at the top of each page, and each day is a
+    // slim bar inside it, kept with its first entry — as in the PDF
+    var trs=[new D.TableRow({tableHeader:true,children:[hdrCell(R.time,COLW[0]),hdrCell(R.severity,COLW[1]),hdrCell(R.tag,COLW[2]),hdrCell(R.desc,COLW[3]),hdrCell(R.att,COLW[4])]})];
     dayGroups(entries).forEach(function(g){
-      out.push(P({spacing:{before:200,after:60},keepNext:true,
-        border:{bottom:{style:D.BorderStyle.SINGLE,size:8,color:"F59E0B",space:2}},
-        children:[T({text:reportDayTitle(g.key,R,lang),bold:true,size:hp(10),font:"Arial",color:"111827"}),
-                  T({text:"    "+reportDaySummary(g.idx.map(function(i){return entries[i]}),R),size:hp(8),font:"Arial",color:"6B7280"})]}));
-      out.push(tbl(g.idx.map(function(i){return rows[i]})));
+      trs.push(new D.TableRow({cantSplit:true,children:[new D.TableCell({columnSpan:5,width:{size:TBLW,type:D.WidthType.DXA},
+        margins:{top:30,bottom:30,left:113,right:113},shading:{fill:"F3F4F6",type:D.ShadingType.CLEAR},
+        borders:{top:br,left:br,right:br,bottom:{style:D.BorderStyle.SINGLE,size:8,color:"F59E0B"}},
+        children:[P({keepNext:true,children:[T({text:reportDayTitle(g.key,R,lang),bold:true,size:hp(8.5),font:"Arial",color:"111827"}),
+          T({text:"    "+reportDaySummary(g.idx.map(function(i){return entries[i]}),R),size:hp(7.5),font:"Arial",color:"6B7280"})]})]})]}));
+      g.idx.forEach(function(i){trs.push(rows[i])});
     });
-    return out;
+    return [new D.Table({width:{size:TBLW,type:D.WidthType.DXA},columnWidths:COLW,layout:D.TableLayoutType.FIXED,rows:trs})];
   })()).concat([P({spacing:{after:120},children:[T({text:""})]})]);
 
   // The two lists under the entries, as in the PDF.
@@ -9239,7 +9456,8 @@ async function exportSessionZip(s,kind){
       arxOk=await saveToDriveArxiu(drvArx,zipName,zipBlob,s.id);
       if(!arxOk)alert("No s'ha pogut pujar el ZIP a Drive (o no hi ha arribat sencer). Es descarrega, perquè no es perdi.");
     }
-    if(!arxOk)dlBlob(zipBlob,zipName);
+    if(!archive)await saveReport(s,zipBlob,zipName,"application/zip");
+    else if(!arxOk)dlBlob(zipBlob,zipName);
     lastZipTo=arxOk?"arxiu":"download";
     // Only the archive stamps zipAt: the delete dialog reads it as "a complete
     // copy of this session exists", and the DOCX pack carries no session.json,
@@ -9273,7 +9491,8 @@ $$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><di
 (async function(){
   sessions=orderSessions(await loadSessions());
   markSeen();
-  outDirLoad();arxDirLoad();        // idb is open by now; nothing waits on this
+  outDirLoad();arxDirLoad();
+  pendLoad().then(function(){refreshDriveInfo()});   // reports still waiting to go up        // idb is open by now; nothing waits on this
   labelsLoad();                     // so a language translated earlier is ready offline
   if(loadTok()&&accessToken&&Date.now()<tokenExp){
     isLoggedIn=true;

@@ -728,6 +728,12 @@ Field Service Log/
   first (`imgSize`) since ImageRun needs it. The PDF photo appendix stays ("for
   now") and reuses the same embedded image (`alias`), and no longer stretches
   photos out of shape.
+  - **The HTML report has the appendix too** (2026-10-17: "the large photos
+    don't show in the HTML"). `buildReportHTML` numbers each picture as it
+    builds the rows (`shotLink` → `shots[]`), each thumbnail links to
+    `#fsl-ph-N`, and a "Fotos" section after the parts lists shows them three
+    across, 4:3, `object-fit:contain`, with time, file name and, for a video,
+    its Drive link. Word has no appendix change (its own was already there).
 - **The PDF's entry table is laid out like the HTML report's**: the spare parts
   as a QT./REF./RECANVI table with its own grey header, and the outcome as a
   block with a coloured bar in its severity. autoTable can't nest a table in a

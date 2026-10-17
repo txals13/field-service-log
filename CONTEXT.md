@@ -1224,7 +1224,7 @@ than asked; fixed.
   ended up in the Drive ZIP.
 - **DOCX:** via `docx@8.5.0` library loaded from unpkg.com (fallback: jsdelivr.net)
   - Images embedded as Uint8Array (not base64 string)
-  - Service Worker explicitly passes unpkg.com and jsdelivr.net through (not cached)
+  - Cached by the service worker for offline export — see "Service Worker CDN whitelist"
   - **It is built to land on the same layout as the PDF**, because the usual
     route is "export Word → Save as PDF" and the two had drifted apart. Same A4
     geometry (14 mm margins = 794 twips), same measured column widths
@@ -1325,14 +1325,30 @@ Pattern used:
 3. Store only: `{driveId, name, poster (thumbnail), type: "video"}`
 4. Play back via Drive streaming URL: `?alt=media&access_token=TOKEN`
 
-### Service Worker CDN whitelist
-The SW must NOT intercept requests to external CDNs:
-```js
-var sw = "self.addEventListener('fetch', function(e){" +
-  "if(/googleapis|accounts\\.google\\.com|unpkg\\.com|jsdelivr\\.net|cdnjs/.test(e.request.url)) return;" +
-  "e.respondWith(fetch(e.request).catch(function(){return caches.match(e.request)}));" +
-"});";
-```
+### Service Worker: CDN libraries are cached for offline export (2026-10-17)
+Until 2026-10-17 `sw.js` returned early for every cross-origin request, so
+jsPDF, autoTable, docx, xlsx, jszip, pdf.js and the PDF fonts lived only in the
+browser's HTTP cache: at a plant with no signal a report could fail to export
+("No s'ha pogut carregar la llibreria PDF"). Now:
+- **Own cache, `fsl-libs-1`**, separate from the shell's `fsl-vN` and kept by
+  `activate`, so publishing the app doesn't re-download megabytes. URLs pin
+  their version; a version change is a new URL. Bump `LIBS_CACHE` only to purge.
+- **Cache-first for unpkg.com, cdn.jsdelivr.net and cdnjs.cloudflare.com**
+  (`responLib`); a miss is fetched by the worker in **CORS mode** (`baixaLib`)
+  so its status is readable and an error is never stored — a `<script>` asks
+  no-cors, whose opaque reply could be a 404 kept forever. All three CDNs send
+  CORS headers, and a script runs from that reply all the same. A failed fetch
+  falls back to the original request, so the loaders' URL fallbacks still work.
+- **Precached on request from the page** (`postMessage("libs")` after
+  `serviceWorker.ready`; `precarregaLibs` fetches only what is missing). Not at
+  install/activate: while those run the worker doesn't serve the page, and a few
+  MB on poor coverage would hold it up. `LIBS` lists each loader's FIRST URL —
+  keep it in step when a library or font URL changes in `index.html`.
+- Google (auth, Drive, Gemini) is still never intercepted.
+- Verified with Playwright and a stand-in CDN: online open → jsPDF, autoTable,
+  docx cached; offline reload → all three served from the cache, a PDF with an
+  autoTable built and docx loaded; URLs the stand-in answered 404 were not
+  stored and were asked again on the next open.
 
 ### Auth + file:// restriction
 Google OAuth does NOT work from `file://` URLs.

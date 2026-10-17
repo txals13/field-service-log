@@ -2974,6 +2974,10 @@ if("serviceWorker" in navigator){
     navigator.serviceWorker.register("./sw.js",{scope:"./",updateViaCache:"none"})
       .then(function(reg){return reg.update()["catch"](function(){})})
       ["catch"](function(){});
+    // The PDF/Word/Excel/ZIP libraries, pdf.js and the PDF fonts come from a
+    // CDN. Ask the worker to keep a copy of each (it fetches only what it lacks),
+    // so a report still comes out at a plant with no signal.
+    navigator.serviceWorker.ready.then(function(reg){if(reg.active)reg.active.postMessage("libs")})["catch"](function(){});
   });
 }
 
@@ -4651,7 +4655,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-16 · 1";
+var APP_VERSION="2026-10-17 · 1";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,

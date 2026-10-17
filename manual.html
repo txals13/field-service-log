@@ -175,11 +175,25 @@
 <p>A la capçalera de la visita, <span class="btn">📚 Vincula manual</span>. Un cop vinculat apareix <span class="btn">📐 Dibuixos</span>, i les etiquetes proposen els grups del manual.</p>
 <h3>Afegir un recanvi a una entrada</h3>
 <ul>
-  <li><span class="btn">🔧 Afegeix un recanvi</span>: escrius quantitat, referència i nom.</li>
-  <li><span class="btn">📐 Tria des del dibuix</span>: toques el número de posició al dibuix, poses la quantitat i queda afegit.</li>
+  <li><span class="btn">🔧 Afegeix un recanvi</span>: escrius quantitat, referència i nom, i tries si és canviat o recomanat.</li>
+  <li><span class="btn">📐 Tria des del dibuix</span>: toques el número de posició al dibuix, poses la quantitat i tries què és (vegeu a sota).</li>
   <li><span class="btn">📐 Insereix un recanvi des del dibuix</span> (sota la descripció): escriu el nom i la referència dins del text, entre cometes, perquè la traducció no els canviï.</li>
 </ul>
-<p>Els recanvis surten a l'informe com una taula (quantitat, referència, recanvi) i a l'Excel de recanvis.</p>
+<h3>Canviat o recomanat</h3>
+<p>Cada recanvi té un estat:</p>
+<ul>
+  <li><span class="btn">🔧 Canviat</span>: l'has canviat en aquesta visita.</li>
+  <li><span class="btn">⚠ Urgent</span>: el recomanes, i convé canviar-lo aviat.</li>
+  <li><span class="btn">📋 Preventiu</span>: el recomanes com a preventiu, per tenir-ne en estoc o canviar-lo en una parada programada.</li>
+</ul>
+<p>Quan tries des del dibuix, aquests tres botons substitueixen «Afegeix»: un sol toc l'afegeix i diu què és. El darrer que has fet servir queda marcat, i <kbd>Enter</kbd> el repeteix. Al formulari de <span class="btn">🔧 Afegeix un recanvi</span> hi ha el mateix selector. Per canviar-ho després, edita l'entrada: cada recanvi té el seu selector al costat.</p>
+<p>Els recanvis que ja tenies d'abans compten com a canviats.</p>
+<h3>On surten</h3>
+<ul>
+  <li><strong>A l'informe</strong> (PDF, Word i HTML): dins de cada entrada, la taula de recanvis té la columna <em>Estat</em>. Després de les entrades hi ha dos resums sumats per referència: <strong>Recanvis canviats</strong> i <strong>Recanvis recomanats</strong>, amb la prioritat i els urgents primer. El client en té així la còpia de les recomanacions.</li>
+  <li><strong>A l'Excel de recanvis</strong>: el full <em>Recomanats</em> (prioritat, quantitat, referència i denominació) és el que s'envia a l'empresa per cotitzar. També hi ha el full <em>Canviats</em>, i el <em>Detall</em> té la columna <em>Estat</em>.</li>
+  <li><strong>A l'historial de la màquina</strong>: vegeu <a href="#historial">historial</a>.</li>
+</ul>
 
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="carpeta">6. La carpeta de la sessió</h2>
@@ -200,7 +214,7 @@
   <tr><td>📄 PDF</td><td>L'informe complet, amb les fotos en un annex al final.</td></tr>
   <tr><td>📄 Word (DOCX)</td><td>El mateix informe, editable. Té la mateixa forma que el PDF.</td></tr>
   <tr><td>📄 HTML</td><td>Es pot obrir a qualsevol navegador; els vídeos s'hi poden reproduir.</td></tr>
-  <tr><td>📊 Recanvis (Excel)</td><td>Tots els recanvis de la visita, amb un full de dades de la sessió.</td></tr>
+  <tr><td>📊 Recanvis (Excel)</td><td>Els recanvis de la visita: un full de recomanats per cotitzar, un de canviats, el detall i les dades de la sessió.</td></tr>
   <tr><td>🧾 Full d'hores…</td><td>Obre el full d'hores per signar (vegeu <a href="#hores">full d'hores</a>).</td></tr>
   <tr><td>🗄 ZIP del projecte (arxiu)</td><td>Tot: tots els informes, totes les revisions anteriors, les fotos, els vídeos, les notes de veu i les dades de la visita. <strong>És l'única còpia que es pot tornar a importar.</strong></td></tr>
   <tr><td>📦 ZIP Word + multimèdia</td><td>L'informe Word amb tots els fitxers, per lliurar. No es pot tornar a importar.</td></tr>
@@ -304,7 +318,8 @@
   <li><strong>⚠ Pendent d'altres visites</strong>: problemes i avisos de visites anteriors que encara estan oberts.</li>
   <li><strong>✓ Tancats en una visita posterior</strong>: el problema original, quan es va tancar i com va quedar.</li>
   <li><strong>Visites</strong>: una fitxa per visita, amb les dates, el tipus, el projecte i la revisió. A sota, totes les incidències de la visita amb el seu estat: <span class="sev-ok">✓ Resolt</span>, <span class="sev-ok">✓ Tancat el…</span> (amb el projecte de la visita que el va tancar) o <span class="sev-w">⚠ Pendent</span>. Tocar una fitxa obre aquella visita.</li>
-  <li><strong>Recanvis muntats</strong>: tots els recanvis posats a la màquina, del més recent al més antic.</li>
+  <li><strong>Recanvis muntats</strong>: tots els recanvis canviats a la màquina, del més recent al més antic. Els recomanats no hi surten.</li>
+  <li><strong>Recanvis recomanats</strong>: el que s'ha recomanat en qualsevol visita, primer els urgents pendents i després els preventius. Quan en una visita posterior canvies aquella referència, surt amb ✓ i «canviat el…». El número del títol diu quants en queden de pendents sobre el total.</li>
 </ul>
 <p>Els textos surten sencers, mai tallats. El títol fa servir el nom de la màquina i del client tal com els vas escriure l'última vegada.</p>
 

@@ -271,17 +271,21 @@ textarea{resize:none;line-height:1.4}
 /* Spare parts are tabular data, so they're laid out as columns: quantity first
    (the number you act on) right-aligned so a list scans vertically, then the
    reference, then the name. One grid per entry aligns every row. */
-.log-parts{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:3px 10px;align-items:baseline;margin-top:6px;font-size:12px;border-left:2px solid var(--blue);padding-left:10px}
+.log-parts{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;gap:3px 10px;align-items:baseline;margin-top:6px;font-size:12px;border-left:2px solid var(--blue);padding-left:10px}
 .log-parts .pq{font-family:monospace;color:var(--gold);text-align:right;white-space:nowrap}
 .log-parts .pr{font-family:monospace;color:var(--tx2);white-space:nowrap}
 .log-parts .pn{color:var(--tx1);min-width:0}
+/* replaced on this visit, or recommended (urgent / preventive) */
+.log-parts .ps,.eparts .ps-sel{font-size:10.5px;font-weight:600;white-space:nowrap}
+.ps-fit{color:var(--green)}.ps-urg{color:var(--red)}.ps-prev{color:var(--orange)}
 /* same columns in the edit modal, with an editable quantity and a remove button */
-.eparts{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;gap:5px 10px;align-items:center;font-size:12px}
+.eparts{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto auto;gap:5px 10px;align-items:center;font-size:12px}
 .eparts .pq-in{width:46px;font-family:monospace;font-size:12px;padding:3px 5px;text-align:right;background:var(--bg1);border:1px solid var(--br2);border-radius:4px;color:var(--tx1)}
 .eparts .pr{font-family:monospace;color:var(--tx2);white-space:nowrap}
 .eparts .pn{color:var(--tx1);min-width:0;overflow:hidden;text-overflow:ellipsis}
 .eparts .part-del{background:none;border:none;color:var(--tx3);cursor:pointer;font-size:12px;padding:0 2px}
 .eparts .part-del:hover{color:var(--red)}
+.eparts .ps-sel{padding:3px 4px;background:var(--bg1);border:1px solid var(--br2);border-radius:4px}
 .part-form{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;padding:8px;background:var(--bg2);border:1px solid var(--br2);border-radius:8px}
 .part-form input{font-size:12px;padding:5px 7px}
 .part-form .pf-pos{width:64px}.part-form .pf-ref{width:110px}.part-form .pf-cant{width:56px}
@@ -977,6 +981,7 @@ textarea{resize:none;line-height:1.4}
           <input type="text" class="pf-ref" id="pfRef" placeholder="Ref.">
           <input type="text" class="pf-cant" id="pfCant" placeholder="Qt.">
           <input type="text" class="pf-den" id="pfDen" placeholder="Denominació">
+          <select id="pfSt" title="Canviat en aquesta visita, o recomanat" style="font-size:12px;padding:5px 7px"><option value="fit">🔧 Canviat</option><option value="urg">⚠ Recomanat · urgent</option><option value="prev">📋 Recomanat · preventiu</option></select>
           <button class="btn-sm btn-gold" id="pfSave">Afegeix</button>
           <button class="btn-sm" id="pfCancel">Cancel·la</button>
         </div>
@@ -1147,14 +1152,28 @@ function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 function now(){return new Date().toISOString()}
 function fts(iso){var d=new Date(iso);return d.toLocaleDateString("en-GB",{day:"2-digit",month:"2-digit",year:"2-digit"})+" "+d.toTimeString().slice(0,8)}
 function esc(s){if(!s)return"";var d=document.createElement("div");d.textContent=s;return d.innerHTML}
-// -- Spare parts (entry.parts = [{pos,ref,cant,denominacio,conjunt,grup,page}]) --
+// -- Spare parts (entry.parts = [{pos,ref,cant,denominacio,conjunt,grup,page,st}]) --
+// `st` (2026-10-17): what the part is to this visit — "fit", replaced here;
+// "urg", recommended, to be replaced soon; "prev", recommended as preventive
+// (stock, or the next planned stop). Parts saved before it existed have no
+// `st` and were all replaced ones — the machine history already called them
+// "fitted" — so a missing `st` reads as "fit".
+var PART_STS=["fit","urg","prev"];
+var PST_APP={fit:"🔧 Canviat",urg:"⚠ Urgent",prev:"📋 Preventiu"};
+var PST_TIP={fit:"Canviat en aquesta visita",urg:"Recomanat: convé canviar-lo aviat",prev:"Recomanat com a preventiu: per tenir-ne en estoc o canviar-lo en una parada"};
+var PST_RGB={fit:[22,163,74],urg:[220,38,38],prev:[217,119,6]};
+var PST_HEX={fit:"16A34A",urg:"DC2626",prev:"D97706"};
+var lastPartSt="fit";   // the next part picked starts where the last one was left
+function partSt(p){return (p&&(p.st==="urg"||p.st==="prev"))?p.st:"fit"}
 // on-screen log view (uses the app's themed .log-parts grid)
 function partsBlockHTML(parts){
   if(!parts||!parts.length)return"";
   return "<div class=\"log-parts\">"+parts.map(function(p){
+    var st=partSt(p);
     return "<span class=\"pq\">"+(p.cant?esc(p.cant)+"×":"")+"</span>"
       +"<span class=\"pr\">"+esc(p.ref||"")+"</span>"
-      +"<span class=\"pn\">"+esc(p.denominacio||"")+"</span>";
+      +"<span class=\"pn\">"+esc(p.denominacio||"")+"</span>"
+      +"<span class=\"ps ps-"+st+"\" title=\""+esc(PST_TIP[st])+"\">"+PST_APP[st]+"</span>";
   }).join("")+"</div>";
 }
 // standalone HTML/PDF report (inline styles — the report has none of the app CSS)
@@ -1166,15 +1185,38 @@ function partsReportHTML(parts,R){
   var th="padding:2px 6px;text-align:left;font-size:8px;letter-spacing:.6px;color:#6b7280;font-weight:600;background:#f3f4f6;border:none";
   var td="padding:2px 6px;font-size:10px;border:none;vertical-align:top";
   var rows=parts.map(function(p){
+    var st=partSt(p);
     return "<tr>"
       +"<td style=\""+td+";font-family:monospace;color:#b45309;text-align:right;white-space:nowrap\">"+(p.cant?esc(p.cant)+"×":"")+"</td>"
       +"<td style=\""+td+";font-family:monospace;color:#1d4ed8;white-space:nowrap\">"+esc(p.ref||"")+"</td>"
       +"<td style=\""+td+";color:#111827\">"+esc(p.denominacio||"")+"</td>"
+      +"<td style=\""+td+";color:#"+PST_HEX[st]+";font-weight:600\">"+esc(R.pstL[st])+"</td>"
       +"</tr>";
   }).join("");
   return "<table style=\"margin-top:6px;border-collapse:collapse;width:100%;border:1px solid #e5e7eb\">"
-    +"<thead><tr><th style=\""+th+";text-align:right\">"+esc(R.qty)+"</th><th style=\""+th+"\">"+esc(R.ref)+"</th><th style=\""+th+"\">"+esc(R.part)+"</th></tr></thead>"
+    +"<thead><tr><th style=\""+th+";text-align:right\">"+esc(R.qty)+"</th><th style=\""+th+"\">"+esc(R.ref)+"</th><th style=\""+th+"\">"+esc(R.part)+"</th><th style=\""+th+"\">"+esc(R.st)+"</th></tr></thead>"
     +"<tbody>"+rows+"</tbody></table>";
+}
+// The two lists under the entries, summed by reference: replaced on this visit,
+// and recommended (urgent first) — the client's copy of what we advise.
+function partsSummaryHTML(s,R){
+  var S=partsSummary(s);if(!S.fit.length&&!S.rec.length)return "";
+  var td="padding:5px 6px;border:1px solid #e5e7eb;font-size:12px";
+  function block(title,col,list,prio,note){
+    var head=(prio?[R.prio]:[]).concat([R.qty,R.ref,R.part]);
+    return "<h2 style=\"font-size:17px;margin:30px 0 6px;border-bottom:2px solid #"+col+";padding-bottom:6px\">"+esc(title)+"</h2>"
+      +"<table><thead><tr>"+head.map(function(h,i){return "<th style=\"font-size:10px;padding:6px"+(i===(prio?1:0)?";text-align:right":"")+"\">"+esc(h)+"</th>"}).join("")+"</tr></thead><tbody>"
+      +list.map(function(m){
+        return "<tr>"
+          +(prio?"<td style=\""+td+";font-weight:700;white-space:nowrap;color:#"+PST_HEX[m.st]+"\">"+esc(R.pst[m.st])+"</td>":"")
+          +"<td style=\""+td+";text-align:right;font-family:monospace;color:#b45309;white-space:nowrap\">"+esc(String(partQty(m)))+"</td>"
+          +"<td style=\""+td+";font-family:monospace;color:#1d4ed8;white-space:nowrap\">"+esc(m.ref||"")+"</td>"
+          +"<td style=\""+td+"\">"+esc(m.denominacio||"")+"</td></tr>";
+      }).join("")+"</tbody></table>"
+      +(note?"<div style=\"font-size:11px;color:#6b7280;margin-top:6px\">"+esc(note)+"</div>":"");
+  }
+  return (S.fit.length?block(R.partsFit,PST_HEX.fit,S.fit,false,""):"")
+    +(S.rec.length?block(R.partsRec,PST_HEX.urg,S.rec,true,R.recNote):"");
 }
 function highlightText(text,query){
   var e=esc(text);
@@ -2350,11 +2392,12 @@ function attemptPick(clientX,clientY){
   if(!posTok){setDrawStatus("Això no és un número de posició.");return}
   resolvePartByPos(posTok);
 }
-function addResolvedPart(r,qty){
+function addResolvedPart(r,qty,st){
   var cant=(qty===undefined||qty===null)?r.cant:String(qty).trim();
-  eParts.push({pos:r.pos,ref:r.ref,cant:cant,denominacio:r.denominacio,conjunt:r.conjunt,grup:r.grup,page:r.page});
+  st=PART_STS.indexOf(st)>=0?st:lastPartSt;lastPartSt=st;
+  eParts.push({pos:r.pos,ref:r.ref,cant:cant,denominacio:r.denominacio,conjunt:r.conjunt,grup:r.grup,page:r.page,st:st});
   rEParts();
-  setDrawStatus("✓ Afegit: Pos "+r.pos+(cant?" ×"+cant:"")+". Toca'n un altre, o tanca per tornar.");
+  setDrawStatus("✓ Afegit ("+PST_APP[st]+"): Pos "+r.pos+(cant?" ×"+cant:"")+". Toca'n un altre, o tanca per tornar.");
 }
 // Writes "<denomination> - <reference>" into the description at the caret the
 // field had when picking started, keeping single spaces around it. The edit
@@ -2397,13 +2440,22 @@ function confirmAndAdd(r){
   var lab=document.createElement("span");lab.style.cssText="font-size:12px;color:var(--tx3)";lab.textContent="Qt.";
   var inp=document.createElement("input");inp.type="text";inp.inputMode="numeric";
   inp.value=r.cant||"";inp.style.cssText="width:70px;font-size:13px;padding:5px 7px;text-align:center";
-  var add=document.createElement("button");add.className="btn-sm btn-gold";add.textContent="✓ Afegeix";
+  // One tap says both "add it" and what it is: replaced here, or recommended.
+  // The one used last is highlighted, and Enter repeats it.
   var cancel=document.createElement("button");cancel.className="btn-sm";cancel.textContent="Cancel·la";
   function done(){box.style.display="none"}
-  add.addEventListener("click",function(){done();addResolvedPart(r,inp.value)});
+  var btns={};
+  PART_STS.forEach(function(st){
+    var b=document.createElement("button");
+    b.className="btn-sm"+(st===lastPartSt?" btn-gold":"");b.textContent=PST_APP[st];b.title=PST_TIP[st];
+    b.addEventListener("click",function(){done();addResolvedPart(r,inp.value,st)});
+    btns[st]=b;
+  });
+  inp.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();btns[lastPartSt].click()}});
   cancel.addEventListener("click",function(){done();setDrawStatus("")});
-  inp.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();add.click()}});
-  row.appendChild(lab);row.appendChild(inp);row.appendChild(add);row.appendChild(cancel);
+  row.appendChild(lab);row.appendChild(inp);row.appendChild(btns.fit);
+  var rl=document.createElement("span");rl.style.cssText="font-size:12px;color:var(--tx3);margin-left:4px";rl.textContent="Recomanat:";
+  row.appendChild(rl);row.appendChild(btns.urg);row.appendChild(btns.prev);row.appendChild(cancel);
   box.appendChild(row);
   setTimeout(function(){inp.focus();inp.select()},30);
 }
@@ -3506,9 +3558,13 @@ function rEParts(){
     qi.addEventListener("input",function(){p.cant=this.value.trim()});
     var ref=document.createElement("span");ref.className="pr";ref.textContent=p.ref||"";
     var nm=document.createElement("span");nm.className="pn";nm.textContent=p.denominacio||"";nm.title=p.denominacio||"";
+    var ss=document.createElement("select");ss.className="ps-sel ps-"+partSt(p);ss.title="Canviat en aquesta visita, o recomanat";
+    PART_STS.forEach(function(st){var o=document.createElement("option");o.value=st;o.textContent=PST_APP[st];ss.appendChild(o)});
+    ss.value=partSt(p);
+    ss.addEventListener("change",function(){p.st=this.value;lastPartSt=this.value;this.className="ps-sel ps-"+this.value});
     var del=document.createElement("button");del.className="part-del";del.title="Treu";del.innerHTML="&#10005;";
     del.addEventListener("click",function(){eParts.splice(idx,1);rEParts()});
-    box.appendChild(qi);box.appendChild(ref);box.appendChild(nm);box.appendChild(del);
+    box.appendChild(qi);box.appendChild(ref);box.appendChild(nm);box.appendChild(ss);box.appendChild(del);
   });
 }
 function clearPartForm(){["pfPos","pfRef","pfCant","pfDen"].forEach(function(id){var el=$$(id);if(el)el.value=""});var f=$$("ePartForm");if(f)f.style.display="none"}
@@ -4420,12 +4476,13 @@ showCaptureButtons();
 $$("fFileIn").addEventListener("change",function(e){handleFiles(e,"fix")});
 $$("fRec").addEventListener("click",function(){if(mediaRec&&recBk==="fix")stopRec();else if(!mediaRec)startRec("fix")});
 $$("eTagSel").addEventListener("change",function(){if(this.value)$$("eTag").value=this.value;this.selectedIndex=0});
-$$("ePartAdd").addEventListener("click",function(){var f=$$("ePartForm");f.style.display="flex";$$("pfPos").focus()});
+$$("ePartAdd").addEventListener("click",function(){var f=$$("ePartForm");f.style.display="flex";$$("pfSt").value=lastPartSt;$$("pfPos").focus()});
 $$("pfCancel").addEventListener("click",clearPartForm);
 $$("pfSave").addEventListener("click",function(){
   var pos=$$("pfPos").value.trim(),ref=$$("pfRef").value.trim(),cant=$$("pfCant").value.trim(),den=$$("pfDen").value.trim();
   if(!pos&&!ref&&!den){alert("Escriu com a mínim una posició, una referència o una denominació.");return}
-  eParts.push({pos:pos,ref:ref,cant:cant,denominacio:den});
+  var st=$$("pfSt").value;st=PART_STS.indexOf(st)>=0?st:"fit";lastPartSt=st;
+  eParts.push({pos:pos,ref:ref,cant:cant,denominacio:den,st:st});
   clearPartForm();rEParts();
 });
 $$("pfDen").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();$$("pfSave").click()}});
@@ -4655,7 +4712,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-17 · 1";
+var APP_VERSION="2026-10-17 · 2";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -5365,12 +5422,12 @@ var RPT={
       time:"Hora",entry1:"entrada",entryN:"entrades",noDate:"Sense data",ts:"Data i hora",severity:"Gravetat",tag:"Etiqueta",desc:"Descripció",att:"Adjunts",
       fix:"Com ha quedat",edited:"editat",noEntries:"Sense entrades",photos:"Fotos",notes:"Notes generals",
       sigTech:"Signatura del tècnic",sigCli:"Signatura del client / receptor",
-      qty:"QT.",ref:"REF.",part:"RECANVI",photoTag:"[foto]",openDrive:"Obre a Drive",
+      qty:"QT.",ref:"REF.",part:"RECANVI",st:"ESTAT",prio:"PRIORITAT",pstL:{fit:"Canviat",urg:"Recomanat · urgent",prev:"Recomanat · preventiu"},pst:{fit:"Canviat",urg:"Urgent",prev:"Preventiu"},partsFit:"Recanvis canviats",partsRec:"Recanvis recomanats",recNote:"Urgent: convé canviar-lo aviat. Preventiu: per tenir-ne en estoc o canviar-lo en una parada programada.",photoTag:"[foto]",openDrive:"Obre a Drive",
       voice:"nota de veu",video:"vídeo",photo:"foto",file:"fitxer",
       pre:{report:"informe",parts:"recanvis"},
       pt:{title:"Proves de producció",period:"Període",units:"Unitats",availS:"Disp.",perfS:"Rend.",qualS:"Qual.",rejS:"Rebuig",resultS:"Resultat",summaryNote:"El detall de cada prova —aturades, objectius i observacions— és a l'informe de validació.",test:"Prova",product:"Producte / format",nominal:"Velocitat nominal",start:"Inici",end:"Final",duration:"Durada",plannedStops:"Aturades planificades",downtime:"Aturades no planificades",run:"Temps en marxa",total:"Unitats totals",rejects:"Unitats rebutjades",good:"Unitats bones",speedAvg:"Velocitat mitjana",speedRun:"Velocitat en marxa",avail:"Disponibilitat",perf:"Rendiment",qual:"Qualitat",oee:"OEE",rejPct:"Rebuig",indicator:"Indicador",value:"Valor",target:"Objectiu",result:"Resultat",yes:"Compleix",no:"No compleix",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Aturades",kind:"Tipus",cause:"Causa",kinds:{machine:"Màquina",external:"Externa",planned:"Planificada"},notes:"Observacions",uph:"u/h",validation:"Informe de validació",file:"validacio"},
-      h:{title:"Historial de la màquina",visits:"visites",visitsH:"Visites",sn:"N/S",pending:"Pendents",pendOther:"Pendent d'altres visites",closedLater:"Tancats en una visita posterior",closedOn:"Tancat el",resolvedSt:"Resolt",pendingSt:"Pendent",entries:"entrades",parts:"Recanvis muntats",printed:"Imprès el"},
-      x:{sSession:"Sessió",sDetail:"Detall",sSummary:"Resum",qty:"Quantitat",ref:"Ref.",den:"Denominació",
+      h:{title:"Historial de la màquina",visits:"visites",visitsH:"Visites",sn:"N/S",pending:"Pendents",pendOther:"Pendent d'altres visites",closedLater:"Tancats en una visita posterior",closedOn:"Tancat el",resolvedSt:"Resolt",pendingSt:"Pendent",entries:"entrades",parts:"Recanvis muntats",rec:"Recanvis recomanats",recOn:"recomanat el",fitOn:"canviat el",printed:"Imprès el"},
+      x:{sSession:"Sessió",sFit:"Canviats",sRec:"Recomanats",st:"Estat",prio:"Prioritat",sDetail:"Detall",sSummary:"Resum",qty:"Quantitat",ref:"Ref.",den:"Denominació",
          date:"Data",sev:"Gravetat",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunt",grup:"Grup / Dibuix",
          page:"Pàgina",project:"Projecte",type:"Tipus",gen:"Generat",lines:"Recanvis (línies)",refs:"Referències diferents"}},
   es:{title:"Informe de servicio técnico",gen:"Generado el",
@@ -5382,12 +5439,12 @@ var RPT={
       time:"Hora",entry1:"entrada",entryN:"entradas",noDate:"Sin fecha",ts:"Fecha y hora",severity:"Gravedad",tag:"Etiqueta",desc:"Descripción",att:"Adjuntos",
       fix:"Cómo ha quedado",edited:"editado",noEntries:"Sin entradas",photos:"Fotos",notes:"Notas generales",
       sigTech:"Firma del técnico",sigCli:"Firma del cliente / receptor",
-      qty:"CANT.",ref:"REF.",part:"RECAMBIO",photoTag:"[foto]",openDrive:"Abrir en Drive",
+      qty:"CANT.",ref:"REF.",part:"RECAMBIO",st:"ESTADO",prio:"PRIORIDAD",pstL:{fit:"Cambiado",urg:"Recomendado · urgente",prev:"Recomendado · preventivo"},pst:{fit:"Cambiado",urg:"Urgente",prev:"Preventivo"},partsFit:"Recambios cambiados",partsRec:"Recambios recomendados",recNote:"Urgente: conviene cambiarlo pronto. Preventivo: para tenerlo en stock o cambiarlo en una parada programada.",photoTag:"[foto]",openDrive:"Abrir en Drive",
       voice:"nota de voz",video:"vídeo",photo:"foto",file:"archivo",
       pre:{report:"informe",parts:"recambios"},
       pt:{title:"Pruebas de producción",period:"Período",units:"Unidades",availS:"Disp.",perfS:"Rend.",qualS:"Cal.",rejS:"Rechazo",resultS:"Resultado",summaryNote:"El detalle de cada prueba —paradas, objetivos y observaciones— está en el informe de validación.",test:"Prueba",product:"Producto / formato",nominal:"Velocidad nominal",start:"Inicio",end:"Final",duration:"Duración",plannedStops:"Paradas planificadas",downtime:"Paradas no planificadas",run:"Tiempo en marcha",total:"Unidades totales",rejects:"Unidades rechazadas",good:"Unidades buenas",speedAvg:"Velocidad media",speedRun:"Velocidad en marcha",avail:"Disponibilidad",perf:"Rendimiento",qual:"Calidad",oee:"OEE",rejPct:"Rechazo",indicator:"Indicador",value:"Valor",target:"Objetivo",result:"Resultado",yes:"Cumple",no:"No cumple",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Paradas",kind:"Tipo",cause:"Causa",kinds:{machine:"Máquina",external:"Externa",planned:"Planificada"},notes:"Observaciones",uph:"u/h",validation:"Informe de validación",file:"validacion"},
-      h:{title:"Historial de la máquina",visits:"visitas",visitsH:"Visitas",sn:"N/S",pending:"Pendientes",pendOther:"Pendiente de otras visitas",closedLater:"Cerrados en una visita posterior",closedOn:"Cerrado el",resolvedSt:"Resuelto",pendingSt:"Pendiente",entries:"entradas",parts:"Recambios montados",printed:"Impreso el"},
-      x:{sSession:"Sesión",sDetail:"Detalle",sSummary:"Resumen",qty:"Cantidad",ref:"Ref.",den:"Denominación",
+      h:{title:"Historial de la máquina",visits:"visitas",visitsH:"Visitas",sn:"N/S",pending:"Pendientes",pendOther:"Pendiente de otras visitas",closedLater:"Cerrados en una visita posterior",closedOn:"Cerrado el",resolvedSt:"Resuelto",pendingSt:"Pendiente",entries:"entradas",parts:"Recambios montados",rec:"Recambios recomendados",recOn:"recomendado el",fitOn:"cambiado el",printed:"Impreso el"},
+      x:{sSession:"Sesión",sFit:"Cambiados",sRec:"Recomendados",st:"Estado",prio:"Prioridad",sDetail:"Detalle",sSummary:"Resumen",qty:"Cantidad",ref:"Ref.",den:"Denominación",
          date:"Fecha",sev:"Gravedad",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunto",grup:"Grupo / Plano",
          page:"Página",project:"Proyecto",type:"Tipo",gen:"Generado",lines:"Recambios (líneas)",refs:"Referencias distintas"}},
   en:{title:"Field Service Report",gen:"Generated on",
@@ -5399,12 +5456,12 @@ var RPT={
       time:"Time",entry1:"entry",entryN:"entries",noDate:"No date",ts:"Timestamp",severity:"Severity",tag:"Tag",desc:"Description",att:"Attachments",
       fix:"Outcome",edited:"edited",noEntries:"No entries",photos:"Photos",notes:"General notes",
       sigTech:"Technician signature",sigCli:"Client / Recipient signature",
-      qty:"QTY",ref:"REF.",part:"SPARE PART",photoTag:"[photo]",openDrive:"Open in Drive",
+      qty:"QTY",ref:"REF.",part:"SPARE PART",st:"STATUS",prio:"PRIORITY",pstL:{fit:"Replaced",urg:"Recommended · urgent",prev:"Recommended · preventive"},pst:{fit:"Replaced",urg:"Urgent",prev:"Preventive"},partsFit:"Spare parts replaced",partsRec:"Recommended spare parts",recNote:"Urgent: should be replaced soon. Preventive: to keep in stock or replace at a planned stop.",photoTag:"[photo]",openDrive:"Open in Drive",
       voice:"voice note",video:"video",photo:"photo",file:"file",
       pre:{report:"report",parts:"spare_parts"},
       pt:{title:"Production tests",period:"Period",units:"Units",availS:"Avail.",perfS:"Perf.",qualS:"Qual.",rejS:"Reject",resultS:"Result",summaryNote:"Each test in full — stops, targets and remarks — is in the validation report.",test:"Test",product:"Product / format",nominal:"Nominal speed",start:"Start",end:"End",duration:"Duration",plannedStops:"Planned stops",downtime:"Unplanned stops",run:"Run time",total:"Total units",rejects:"Rejected units",good:"Good units",speedAvg:"Average speed",speedRun:"Running speed",avail:"Availability",perf:"Performance",qual:"Quality",oee:"OEE",rejPct:"Reject rate",indicator:"Indicator",value:"Value",target:"Target",result:"Result",yes:"Met",no:"Not met",pass:"PASSED",fail:"NOT PASSED",stops:"Stops",kind:"Type",cause:"Cause",kinds:{machine:"Machine",external:"External",planned:"Planned"},notes:"Remarks",uph:"u/h",validation:"Validation report",file:"validation"},
-      h:{title:"Machine history",visits:"visits",visitsH:"Visits",sn:"S/N",pending:"Open items",pendOther:"Open from other visits",closedLater:"Closed on a later visit",closedOn:"Closed on",resolvedSt:"Resolved",pendingSt:"Open",entries:"entries",parts:"Spare parts fitted",printed:"Printed on"},
-      x:{sSession:"Session",sDetail:"Detail",sSummary:"Summary",qty:"Quantity",ref:"Ref.",den:"Designation",
+      h:{title:"Machine history",visits:"visits",visitsH:"Visits",sn:"S/N",pending:"Open items",pendOther:"Open from other visits",closedLater:"Closed on a later visit",closedOn:"Closed on",resolvedSt:"Resolved",pendingSt:"Open",entries:"entries",parts:"Spare parts fitted",rec:"Recommended spare parts",recOn:"recommended on",fitOn:"replaced on",printed:"Printed on"},
+      x:{sSession:"Session",sFit:"Replaced",sRec:"Recommended",st:"Status",prio:"Priority",sDetail:"Detail",sSummary:"Summary",qty:"Quantity",ref:"Ref.",den:"Designation",
          date:"Date",sev:"Severity",tag:"Tag",entry:"Entry",pos:"Pos.",conj:"Assembly",grup:"Group / Drawing",
          page:"Page",project:"Project",type:"Type",gen:"Generated",lines:"Spare parts (lines)",refs:"Distinct references"}}
 };
@@ -6004,14 +6061,20 @@ function mhRender(cur,all,L,forPrint){
 
   // Every part ever fitted to this machine, newest first: "we changed that
   // bearing eight months ago" is a question you ask on the way there.
-  var parts={};
+  // Recommended ones are not fitted: they get their own list below, and one
+  // counts as done once the same part is replaced on a later entry.
+  var parts={},recs={};
   all.forEach(function(x){
     collectSessionParts(x).forEach(function(it){
-      var k=(it.part.ref||it.part.denominacio||"?");
+      var k=(it.part.ref||it.part.denominacio||"?"),ts=String(it.entry.ts),st=partSt(it.part);
+      if(st!=="fit"){
+        if(!recs[k]||ts>recs[k].ts)recs[k]={ref:it.part.ref||"",den:it.part.denominacio||"",qty:it.part.cant||"",st:st,ts:ts};
+        return;
+      }
       var q=parseFloat(it.part.cant)||0;
-      if(!parts[k])parts[k]={ref:it.part.ref||"",den:it.part.denominacio||"",qty:0,last:""};
-      parts[k].qty+=q;
-      if(String(it.entry.ts)>parts[k].last)parts[k].last=String(it.entry.ts);
+      if(!parts[k])parts[k]={ref:it.part.ref||"",den:it.part.denominacio||"",qty:0,last:"",fits:[]};
+      parts[k].qty+=q;parts[k].fits.push(ts);
+      if(ts>parts[k].last)parts[k].last=ts;
       if(!parts[k].den&&it.part.denominacio)parts[k].den=it.part.denominacio;
     });
   });
@@ -6024,6 +6087,27 @@ function mhRender(cur,all,L,forPrint){
           +"<td style=\"padding:3px 6px 3px 0;font-family:monospace;color:var(--blue)\">"+esc(p.ref)+"</td>"
           +"<td style=\"padding:3px 6px 3px 0\">"+esc(p.den)+"</td>"
           +"<td style=\"padding:3px 0;color:var(--tx3);white-space:nowrap\">"+dmy(String(p.last).slice(0,10))+"</td></tr>";
+      }).join("")+"</table>";
+  }
+  var rk=Object.keys(recs);
+  if(rk.length){
+    rk.forEach(function(k){
+      var r=recs[k],later=((parts[k]&&parts[k].fits)||[]).filter(function(t){return t>r.ts}).sort();
+      r.done=later.length?later[0]:"";
+    });
+    var rank=function(r){return r.done?2:(r.st==="urg"?0:1)};
+    rk.sort(function(a,b){var x=recs[a],y=recs[b];return rank(x)-rank(y)||y.ts.localeCompare(x.ts)});
+    var open=rk.filter(function(k){return !recs[k].done}).length;
+    h+="<div style=\"height:14px\"></div><div style=\"font-weight:700;margin:2px 0 6px\">"+esc(H.rec)+" ("+open+"/"+rk.length+")</div>";
+    h+="<table style=\"width:100%;border-collapse:collapse;font-size:12px\">"
+      +rk.map(function(k){var r=recs[k];
+        var col=r.done?"var(--green)":(r.st==="urg"?"var(--red)":"var(--orange)");
+        return "<tr class=\"mh-row\"><td style=\"padding:3px 6px 3px 0;color:"+col+";font-weight:600;white-space:nowrap\">"+(r.done?"✓ ":"")+esc(L.pst[r.st])+"</td>"
+          +"<td style=\"padding:3px 6px 3px 0;color:var(--gold);text-align:right;white-space:nowrap\">"+(r.qty?esc(r.qty)+"×":"")+"</td>"
+          +"<td style=\"padding:3px 6px 3px 0;font-family:monospace;color:var(--blue)\">"+esc(r.ref)+"</td>"
+          +"<td style=\"padding:3px 6px 3px 0;"+(r.done?"color:var(--tx3)":"")+"\">"+esc(r.den)+"</td>"
+          +"<td style=\"padding:3px 0;color:var(--tx3);white-space:nowrap\">"+esc(H.recOn)+" "+dmy(r.ts.slice(0,10))
+          +(r.done?"<br>"+esc(H.fitOn)+" "+dmy(r.done.slice(0,10)):"")+"</td></tr>";
       }).join("")+"</table>";
   }
   return {title:title,note:note,body:h};
@@ -6548,6 +6632,39 @@ function ptReportHTML(s,R,lang,full){
         +"</div>";
     }).join("");
 }
+// The two lists under the entries, as in the HTML report.
+function pdfPartsSection(doc,s,R,y,M,CW,H,ar){
+  var S=partsSummary(s);if(!S.fit.length&&!S.rec.length)return y;
+  function block(title,st,list,prio,note){
+    if(y>H-40){doc.addPage();y=M}
+    var c=PST_RGB[st],o=prio?1:0,cs={};
+    doc.setFont("helvetica","bold");doc.setFontSize(12);doc.setTextColor(17,24,39);
+    doc.text(title,M,y+4);doc.setDrawColor(c[0],c[1],c[2]);doc.setLineWidth(0.6);doc.line(M,y+6.5,M+CW,y+6.5);y+=11;
+    if(prio)cs[0]={cellWidth:24,fontStyle:"bold"};
+    cs[o]={cellWidth:16,halign:"right"};cs[o+1]={cellWidth:34};
+    doc.autoTable({startY:y,margin:{left:M,right:M},theme:"grid",
+      styles:{fontSize:8,cellPadding:1.5,overflow:"linebreak"},
+      head:[(prio?[R.prio]:[]).concat([R.qty,R.ref,R.part])],headStyles:{fillColor:[17,24,39],textColor:255,fontSize:7.5},
+      body:list.map(function(m){return (prio?[R.pst[m.st]]:[]).concat([String(partQty(m)),m.ref||"",m.denominacio||""])}),
+      columnStyles:cs,
+      didParseCell:function(h){
+        if(h.section!=="body")return;
+        if(prio&&h.column.index===0)h.cell.styles.textColor=PST_RGB[list[h.row.index].st];
+        if(h.column.index===o)h.cell.styles.textColor=[180,83,9];
+        if(h.column.index===o+1)h.cell.styles.textColor=[29,78,216];
+        if(ar&&hasArabic([].concat(h.cell.text||[]).join("\n"))){h.cell.styles.font=ar;h.cell.styles.fontStyle="normal"}
+      }});
+    y=doc.lastAutoTable.finalY+3;
+    if(note){
+      doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor(107,114,128);
+      doc.splitTextToSize(note,CW).forEach(function(l){doc.text(l,M,y+2);y+=3.5});
+    }
+    y+=5;
+  }
+  if(S.fit.length)block(R.partsFit,"fit",S.fit,false,"");
+  if(S.rec.length)block(R.partsRec,"urg",S.rec,true,R.recNote);
+  return y;
+}
 function pdfProdSection(doc,s,R,lang,y,M,CW,H,full){
   var tests=(s&&s.prodTests)||[];if(!tests.length)return y;
   var L=R.pt;
@@ -6672,6 +6789,7 @@ function buildReportHTML(s,forPrint,lang,rev){
           +head+g.idx.map(function(i){return rows[i]}).join("")+"</tbody></table>";
       }).join("");
     })()
+    +partsSummaryHTML(s,R)
     +(s.notes?"<div style=\"margin-top:18px;padding:12px;background:#f9fafb;border-radius:6px;border-left:3px solid #f59e0b\"><strong>"+esc(R.notes)+":</strong><br>"+esc(s.notes)+"</div>":"")
     +ptReportHTML(s,R,lang)
     +(function(){
@@ -8181,8 +8299,17 @@ async function buildPdfBlob(s,lang,rev,opts){
   var extras=entries.map(function(e,i){
     var hasP=!!(e.parts&&e.parts.length),hasF=!!e.fix;
     if(!hasP&&!hasF)return null;
-    var X={qtyW:9,refW:Math.min(24,DW*0.3)};
-    X.nameW=DW-X.qtyW-X.refW-4;
+    var X={qtyW:9,refW:Math.min(24,DW*0.3),stW:0};
+    if(hasP){
+      // as wide as this entry's own labels need: a list of replaced parts
+      // only gets a narrow column
+      doc.setFont("helvetica","bold");doc.setFontSize(PT_FS-0.4);X.stW=doc.getTextWidth(R.st);
+      doc.setFontSize(PT_FS);
+      e.parts.forEach(function(p){X.stW=Math.max(X.stW,doc.getTextWidth(R.pstL[partSt(p)]))});
+      doc.setFont("helvetica","normal");
+      X.stW+=1;
+    }
+    X.nameW=DW-X.qtyW-X.refW-X.stW-6;
     X.rows=[];X.partsH=0;
     if(hasP){
       doc.setFontSize(PT_FS);
@@ -8247,6 +8374,8 @@ async function buildPdfBlob(s,lang,rev,opts){
           doc.text(R.qty,x+X.qtyW,tblTop+PT_LH,{align:"right"});
           doc.text(R.ref,x+X.qtyW+2,tblTop+PT_LH);
           doc.text(R.part,x+X.qtyW+X.refW+4,tblTop+PT_LH);
+          var stX=x+w-X.stW;
+          doc.text(R.st,stX,tblTop+PT_LH);
           doc.setFont("helvetica","normal");doc.setFontSize(PT_FS);
           X.rows.forEach(function(r){
             var base=rowY+PT_LH;
@@ -8257,6 +8386,9 @@ async function buildPdfBlob(s,lang,rev,opts){
             doc.setTextColor(17,24,39);
             pdfFont(doc,ar,r.p.denominacio,"normal");
             r.lines.forEach(function(l,k){doc.text(l,x+X.qtyW+X.refW+4,base+k*PT_LH)});
+            doc.setFont("helvetica","bold");
+            var sc=PST_RGB[partSt(r.p)];doc.setTextColor(sc[0],sc[1],sc[2]);
+            doc.text(R.pstL[partSt(r.p)],stX,base);
             doc.setFont("helvetica","normal");
             rowY+=r.h;
           });
@@ -8292,6 +8424,7 @@ async function buildPdfBlob(s,lang,rev,opts){
     y=doc.lastAutoTable.finalY+5;
   });
   y=doc.lastAutoTable.finalY+8;
+  y=pdfPartsSection(doc,s,R,y,M,CW,H,ar);
 
   // photo appendix — images stay out of the table so rows keep a sane height
   var shots=[];
@@ -8410,12 +8543,12 @@ function qtyNum(v){var n=parseFloat(String(v==null?"":v).replace(",","."));retur
 // Consolidates by reference (falling back to pos+denomination) and totals the
 // quantities — this is the sheet you hand to purchasing. Non-numeric quantities
 // can't be summed, so those rows report the raw values instead.
-function summarizeParts(items){
+function summarizeParts(items,bySt){
   var map={},order=[];
   items.forEach(function(it){
     var p=it.part;
-    var key=(p.ref||"").trim().toLowerCase()||("pos:"+(p.pos||"")+"|"+(p.denominacio||"").trim().toLowerCase());
-    if(!map[key]){map[key]={ref:p.ref||"",pos:p.pos||"",denominacio:p.denominacio||"",conjunt:p.conjunt||"",grup:p.grup||"",total:0,raw:[],times:0};order.push(key)}
+    var key=(bySt?partSt(p)+"|":"")+((p.ref||"").trim().toLowerCase()||("pos:"+(p.pos||"")+"|"+(p.denominacio||"").trim().toLowerCase()));
+    if(!map[key]){map[key]={ref:p.ref||"",pos:p.pos||"",denominacio:p.denominacio||"",conjunt:p.conjunt||"",grup:p.grup||"",st:partSt(p),total:0,raw:[],times:0};order.push(key)}
     var m=map[key];
     m.times++;
     var n=qtyNum(p.cant);
@@ -8426,6 +8559,17 @@ function summarizeParts(items){
   });
   return order.map(function(k){return map[k]});
 }
+// The two lists every format ends with: what was replaced on this visit, and
+// what we recommend — the second is the one purchasing quotes from, so it is
+// summed by reference AND priority, urgent first.
+function partsSummary(s){
+  var items=collectSessionParts(s);
+  var fit=summarizeParts(items.filter(function(it){return partSt(it.part)==="fit"}));
+  var rec=summarizeParts(items.filter(function(it){return partSt(it.part)!=="fit"}),true);
+  rec=rec.filter(function(m){return m.st==="urg"}).concat(rec.filter(function(m){return m.st!=="urg"}));
+  return {fit:fit,rec:rec};
+}
+function partQty(m){return m.raw.length?((m.total?m.total+" + ":"")+m.raw.join(" + ")):(m.total||"")}
 var XLSX_MIME="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 // Fit every column to its widest cell instead of guessing fixed widths — part
 // names run from a few characters to very long ones. Capped so one long
@@ -8457,43 +8601,44 @@ async function buildXlsxBlob(s,lang,rev){
   var R=RPT[lang]||RPT.ca,C=R.x;
   var sm=function(e){return R.sev[e.severity]||R.sev.info};
 
-  // Sheet 1 — consolidated, for ordering
-  var sum=summarizeParts(items);
-  // Just what you need to order material: how many, of which reference, of what.
+  // Consolidated sheets: the recommended parts (what purchasing quotes from —
+  // priority, how many, of which reference, of what) and the replaced ones.
   // Everything else (position, conjunt, which entries) lives in the Detall sheet.
-  var resum=[[C.qty,C.ref,C.den]];
-  sum.forEach(function(m){
-    var qty=m.raw.length?((m.total?m.total+" + ":"")+m.raw.join(" + ")):(m.total||"");
-    resum.push([qty,m.ref,m.denominacio]);
-  });
-  var wsR=X.utils.aoa_to_sheet(resum);
-  wsR["!cols"]=autoCols(resum);
-  wsR["!autofilter"]={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:resum.length-1,c:2}})};
+  var PS=partsSummary(s);
+  function sumSheet(list,prio){
+    var a=[(prio?[C.prio]:[]).concat([C.qty,C.ref,C.den])];
+    list.forEach(function(m){a.push((prio?[R.pst[m.st]]:[]).concat([partQty(m),m.ref,m.denominacio]))});
+    var ws=X.utils.aoa_to_sheet(a);
+    ws["!cols"]=autoCols(a);
+    ws["!autofilter"]={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:a.length-1,c:a[0].length-1}})};
+    return ws;
+  }
 
   // Sheet 2 — every occurrence, with the entry that needed it
-  var detall=[[C.date,C.sev,C.tag,C.entry,C.ref,C.pos,C.qty,C.den,C.conj,C.grup,C.page]];
+  var detall=[[C.date,C.sev,C.tag,C.entry,C.st,C.ref,C.pos,C.qty,C.den,C.conj,C.grup,C.page]];
   items.forEach(function(it){
     var e=it.entry,p=it.part;
-    detall.push([fts(e.ts),sm(e),e.tag||"",e.text||"",p.ref||"",p.pos||"",qtyNum(p.cant)!==null?qtyNum(p.cant):(p.cant||""),p.denominacio||"",p.conjunt||"",p.grup||"",p.page||""]);
+    detall.push([fts(e.ts),sm(e),e.tag||"",e.text||"",R.pstL[partSt(p)],p.ref||"",p.pos||"",qtyNum(p.cant)!==null?qtyNum(p.cant):(p.cant||""),p.denominacio||"",p.conjunt||"",p.grup||"",p.page||""]);
   });
   var wsD=X.utils.aoa_to_sheet(detall);
   wsD["!cols"]=autoCols(detall);
-  wsD["!autofilter"]={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:detall.length-1,c:10}})};
+  wsD["!autofilter"]={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:detall.length-1,c:11}})};
 
   // Sheet 3 — who/what/when this list belongs to
   var info=[[R.client,s.client||""],[R.contact,contactLine(s)],[C.project,s.project||""],[R.machine,s.machine||""],[R.location,s.location||""],
             [R.tech,s.tech||""],[C.type,R.types[s.type]||R.types.commissioning],[R.start,fts(s.createdAt)],
             [R.status,s.status==="open"?R.open:R.closed],[R.manual,(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||""],
             [R.revLbl,rev?("0"+rev.n).slice(-2)+" · "+dmy(rev.date):""],
-            [C.gen,fts(new Date().toISOString())],[C.lines,items.length],[C.refs,sum.length]];
+            [C.gen,fts(new Date().toISOString())],[C.lines,items.length],[C.refs,summarizeParts(items).length]];
   var wsI=X.utils.aoa_to_sheet(info);
   wsI["!cols"]=autoCols(info);
 
   var wb=X.utils.book_new();
   X.utils.book_append_sheet(wb,wsI,C.sSession);
   if(items.length){
+    if(PS.rec.length)X.utils.book_append_sheet(wb,sumSheet(PS.rec,true),String(C.sRec).slice(0,31));
+    if(PS.fit.length)X.utils.book_append_sheet(wb,sumSheet(PS.fit,false),String(C.sFit).slice(0,31));
     X.utils.book_append_sheet(wb,wsD,C.sDetail);
-    X.utils.book_append_sheet(wb,wsR,C.sSummary);
   }
   if(ptTests.length){
     // One row per test, numbers as numbers (percentages as fractions, minutes
@@ -8603,24 +8748,27 @@ async function buildDocxDocument(D,s,lang,rev){
 
   // The spare parts, as the same QT./REF./SPARE PART table the PDF draws.
   function partsTable(parts,descMm){
-    var innerMm=descMm-4,qty=9,ref=Math.min(24,innerMm*0.3),name=innerMm-qty-ref;
+    var innerMm=descMm-4,qty=9,ref=Math.min(24,innerMm*0.3);
+    var stMm=parts.some(function(p){return partSt(p)!=="fit"})?Math.min(26,innerMm*0.28):14,name=innerMm-qty-ref-stMm;
     var pmg={top:14,bottom:14,left:40,right:40};
     function cell(w,ch,fill){return new D.TableCell({width:{size:tw(w),type:D.WidthType.DXA},margins:pmg,
       borders:noBorders,shading:fill?{fill:fill,type:D.ShadingType.CLEAR}:undefined,children:ch})}
     var head=new D.TableRow({children:[
       cell(qty,[P({alignment:D.AlignmentType.RIGHT,children:[T({text:R.qty,bold:true,size:hp(6.4),font:"Arial",color:"6B7280"})]})],"F3F4F6"),
       cell(ref,[P({children:[T({text:R.ref,bold:true,size:hp(6.4),font:"Arial",color:"6B7280"})]})],"F3F4F6"),
-      cell(name,[P({children:[T({text:R.part,bold:true,size:hp(6.4),font:"Arial",color:"6B7280"})]})],"F3F4F6")
+      cell(name,[P({children:[T({text:R.part,bold:true,size:hp(6.4),font:"Arial",color:"6B7280"})]})],"F3F4F6"),
+      cell(stMm,[P({children:[T({text:R.st,bold:true,size:hp(6.4),font:"Arial",color:"6B7280"})]})],"F3F4F6")
     ]});
     var rows=parts.map(function(p){
       return new D.TableRow({children:[
         cell(qty,[P({alignment:D.AlignmentType.RIGHT,children:[T({text:p.cant?String(p.cant)+"×":"",size:hp(6.8),font:"Arial",color:"B45309"})]})]),
         cell(ref,[P({children:[T({text:p.ref||"",size:hp(6.8),font:"Arial",color:"1D4ED8"})]})]),
-        cell(name,[P({children:[T({text:p.denominacio||"",size:hp(6.8),font:"Arial",color:"111827"})]})])
+        cell(name,[P({children:[T({text:p.denominacio||"",size:hp(6.8),font:"Arial",color:"111827"})]})]),
+        cell(stMm,[P({children:[T({text:R.pstL[partSt(p)],bold:true,size:hp(6.4),font:"Arial",color:PST_HEX[partSt(p)]})]})])
       ]});
     });
     return new D.Table({width:{size:tw(innerMm),type:D.WidthType.DXA},
-      columnWidths:[tw(qty),tw(ref),tw(name)],layout:D.TableLayoutType.FIXED,
+      columnWidths:[tw(qty),tw(ref),tw(name),tw(stMm)],layout:D.TableLayoutType.FIXED,
       borders:{top:br,bottom:br,left:br,right:br,insideHorizontal:{style:D.BorderStyle.NONE,size:0,color:"FFFFFF"},insideVertical:{style:D.BorderStyle.NONE,size:0,color:"FFFFFF"}},
       rows:[head].concat(rows)});
   }
@@ -8721,6 +8869,30 @@ async function buildDocxDocument(D,s,lang,rev){
     });
     return out;
   })()).concat([P({spacing:{after:120},children:[T({text:""})]})]);
+
+  // The two lists under the entries, as in the PDF.
+  (function(){
+    var S=partsSummary(s);
+    function c(text,w,o){o=o||{};return new D.TableCell({borders:borders,margins:mg,width:{size:w,type:D.WidthType.DXA},
+      children:[P({alignment:o.right?D.AlignmentType.RIGHT:undefined,children:[T({text:String(text==null?"":text),bold:!!o.bold,size:hp(8),font:"Arial",color:o.color||"111827"})]})]})}
+    function block(title,st,list,prio,note){
+      var mm=prio?[24,16,34,CW-74]:[16,34,CW-50],W=mm.map(tw),o=prio?1:0;
+      var head=(prio?[R.prio]:[]).concat([R.qty,R.ref,R.part]);
+      var trs=[new D.TableRow({tableHeader:true,children:head.map(function(h,i){return hdrCell(h,W[i])})})];
+      list.forEach(function(m){
+        var cells=[];
+        if(prio)cells.push(c(R.pst[m.st],W[0],{bold:true,color:PST_HEX[m.st]}));
+        cells.push(c(partQty(m),W[o],{right:true,color:"B45309"}),c(m.ref||"",W[o+1],{color:"1D4ED8"}),c(m.denominacio||"",W[o+2]));
+        trs.push(new D.TableRow({children:cells}));
+      });
+      children.push(P({spacing:{before:240,after:80},keepNext:true,border:{bottom:{style:D.BorderStyle.SINGLE,size:8,color:PST_HEX[st],space:2}},
+        children:[T({text:title,bold:true,size:hp(12),font:"Arial",color:"111827"})]}));
+      children.push(new D.Table({width:{size:W.reduce(function(a,b){return a+b},0),type:D.WidthType.DXA},columnWidths:W,layout:D.TableLayoutType.FIXED,rows:trs}));
+      children.push(P({spacing:{before:60,after:160},children:note?[T({text:note,size:hp(7.5),font:"Arial",color:"6B7280"})]:[]}));
+    }
+    if(S.fit.length)block(R.partsFit,"fit",S.fit,false,"");
+    if(S.rec.length)block(R.partsRec,"urg",S.rec,true,R.recNote);
+  })();
 
   // Photo appendix, 3 across, like the PDF's — and for the same reason: images
   // inside the rows would blow the table up.

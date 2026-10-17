@@ -1000,6 +1000,32 @@ Field Service Log/
   and the conjunt › grup context are deliberately not shown — the position means
   nothing away from its drawing and the context repeats the tag. PDF and DOCX
   can't nest a table inside a cell, so they keep the same column ORDER as lines.
+- **Replaced or recommended** (2026-10-17): every part carries `st` —
+  `"fit"` replaced on this visit, `"urg"` recommended soon, `"prev"`
+  recommended as preventive. A part with no `st` (everything saved before) is
+  `"fit"`: the machine history already called them all "fitted". `partSt(p)`
+  is the only reader.
+  - **Set where the part is added.** The drawing's quantity panel has three
+    buttons instead of "✓ Afegeix" (one tap adds AND says what it is); the
+    last one used is highlighted and Enter repeats it (`lastPartSt`, session
+    memory only). The typed-in form has a selector, and the edit modal a
+    selector per row.
+  - **Reports**: each entry's parts table gets a STATUS column (long label,
+    `R.pstL`; the PDF measures it per entry, so an all-replaced list gets a
+    narrow one). After the entries, `partsSummary(s)` feeds two lists summed
+    by reference — replaced, and recommended summed by reference AND priority,
+    urgent first, with `R.recNote` explaining the two (`partsSummaryHTML`,
+    `pdfPartsSection`, the Word block after the day tables). The client's
+    report is the client's copy of the recommendations.
+  - **Excel**: sheets Session, Recommended (priority, qty, ref, designation —
+    what goes to the company to quote), Replaced, Detail (+ Status column).
+  - **Machine history**: "fitted" lists only `fit`; a new list shows each
+    recommended part (latest recommendation per ref), done (✓ "replaced on")
+    once the same ref is fitted on a LATER entry; open urgent first.
+  - Labels added to RPT ca/es/en (`st`, `prio`, `pst`, `pstL`, `partsFit`,
+    `partsRec`, `recNote`, `x.sFit/sRec/st/prio`, `h.rec/recOn/fitOn`). Label
+    tables cached for the other 26 languages no longer match `sameShape` and
+    are re-translated once, at their next export.
 - Picking from a drawing has two purposes, same tap, different result
   (`viewerPickPurpose`): **"Pick from drawing"** attaches a structured spare part
   (quantity panel, lands in `entry.parts[]`), while **"Insert part name from

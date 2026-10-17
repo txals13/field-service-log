@@ -3774,8 +3774,12 @@ function audioChipEl(img,cfg){
   return el;
 }
 // ── recording ──
+// .m4a first (2026-10-17): a voice note handed to a client in the ZIP has to
+// open with a double click on any computer or phone, and .webm often does not.
+// AAC inside MP4 is the one that plays everywhere; MP4 with the browser's own
+// codec next; WebM only where MP4 cannot be recorded at all.
 function pickAudioMime(){
-  var c=["audio/webm;codecs=opus","audio/webm","audio/mp4","audio/ogg;codecs=opus"];
+  var c=["audio/mp4;codecs=mp4a.40.2","audio/mp4","audio/webm;codecs=opus","audio/webm","audio/ogg;codecs=opus"];
   for(var i=0;i<c.length;i++){if(window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(c[i]))return c[i]}
   return"";
 }
@@ -4923,7 +4927,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-17 · 15";
+var APP_VERSION="2026-10-17 · 16";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,

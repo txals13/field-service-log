@@ -734,6 +734,13 @@ Field Service Log/
     `#fsl-ph-N`, and a "Fotos" section after the parts lists shows them three
     across, 4:3, `object-fit:contain`, with time, file name and, for a video,
     its Drive link. Word has no appendix change (its own was already there).
+- **Voice notes in .m4a** (2026-10-17): `pickAudioMime` now tries
+  `audio/mp4;codecs=mp4a.40.2` (AAC — opens with a double click anywhere, which
+  matters once a note reaches a client in the Word+media ZIP), then
+  `audio/mp4`, and WebM/Ogg only where MP4 cannot be recorded. The rest was
+  already in place: `buildAudioAttachment` names an MP4 blob `.m4a`. Checked in
+  Chrome 152: AAC in an `isom` MP4, plays back. Notes recorded before stay
+  `.webm`.
 - **Media named after the entry** (2026-10-17): a file still carrying a camera
   name (`camName`: IMG_, VID_, PXL_, DSC…, a bare date, voice_/nota_veu…) is
   renamed `shortDesc(text,tag)` — the first phrase, its first four words minus

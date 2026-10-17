@@ -153,7 +153,13 @@ mark{background:var(--goldbg);color:var(--goldtx);padding:0 1px;border-radius:2p
 .stat-bar{padding:5px 12px;border-top:1px solid var(--br);background:var(--bg1);font-size:11px;color:var(--tx3);display:flex;align-items:center;gap:12px;flex-shrink:0;font-family:monospace;flex-wrap:wrap}
 .closed-bar{padding:7px 12px;border-top:1px solid var(--br);background:var(--redbg);font-size:12px;color:var(--tx2);display:flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0;flex-wrap:wrap}
 /* sync bar */
-.sync-bar{padding:4px 12px;background:var(--goldbg);border-bottom:1px solid rgba(245,158,11,.2);font-size:11px;color:var(--goldtx);display:flex;align-items:center;gap:6px;flex-shrink:0}
+/* Floating, not in the flow (2026-10-17): it used to sit above everything and
+   push the whole screen down while it showed, then pull it back up — a tap
+   aimed at a button landed on the one that had just moved there. It also lets
+   taps through. */
+.sync-bar{position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:350;max-width:calc(100vw - 32px);pointer-events:none;
+  padding:4px 12px;background:var(--bg2);border:1px solid rgba(245,158,11,.45);border-radius:20px;box-shadow:0 4px 14px rgba(0,0,0,.3);
+  font-size:11px;color:var(--goldtx);display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* auth expired bar */
 .auth-bar{padding:6px 12px;background:var(--redbg);border-bottom:1px solid rgba(239,68,68,.3);font-size:12px;color:var(--red);display:flex;align-items:center;gap:8px;flex-shrink:0}
 /* storage-full bar */
@@ -3032,15 +3038,21 @@ var syncBusy=false,lastSyncAt=0,redrawPending=false;
 function syncTick(force){
   if(!isLoggedIn||syncBusy)return;
   if(!force&&Date.now()-lastSyncAt<5000)return;
-  syncBusy=true;lastSyncAt=Date.now();
+  syncBusy=true;lastSyncAt=Date.now();syncQuiet=true;
+  // Redrawn only when the visits actually changed (2026-10-17): every tick
+  // used to redraw the whole screen — and jump the log to its end — even when
+  // Drive brought nothing new.
+  var before=sessSig();
   var p=isDirty?saveToDrive():loadFromDrive();
   Promise.resolve(p).then(function(){
+    if(sessSig()===before&&!redrawPending)return;
     if(hasUnsaved()){renderSidebar();redrawPending=true}
     else{redrawPending=false;renderAll()}
-  }).catch(function(){}).then(function(){syncBusy=false});
+  }).catch(function(){}).then(function(){syncBusy=false;syncQuiet=false});
   flushTrash();
   flushPendingReports();
 }
+function sessSig(){return aid+"#"+sessions.map(function(x){return x.id+":"+sStamp(x)+":"+(x.status||"")}).join("|")}
 function scheduleSync(){
   if(syncStarted)return;syncStarted=true;
   setInterval(function(){syncTick(true)},30000);
@@ -3052,8 +3064,10 @@ function scheduleSync(){
   });
 }
 function hasUnsaved(){if(mediaRec)return true;var a=document.activeElement;if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return true;var e=$$("entIn");if(e&&e.value.trim())return true;if(pImgs.length)return true;if(editingId)return true;return false}
+var syncQuiet=false;   // set by the 30-second background sync: no "loading…" while it runs
 function setSyncSt(state,msg){
   var bar=$$("syncBar"),st=$$("syncSt");
+  if(state==="loading"&&syncQuiet)return;
   if(state==="loading"){bar.style.display="flex";$$("syncMsg").textContent=msg;st.innerHTML="<span class=\"spinner\"></span>"}
   else if(state==="ok"){bar.style.display="none";st.innerHTML="<span style=\"color:var(--green)\">● Drive</span>"}
   else{bar.style.display="none";st.innerHTML="<span style=\"color:var(--red)\" title=\""+esc(msg)+"\">● Local</span>"}
@@ -3278,6 +3292,9 @@ function renderLogArea(){
   var isOpen=active.status==="open";
   var ec=$$("entCount");if(ec)ec.textContent=(filterTxt?filtered.length+"/":"")+pl(entries.length,"entrada","entrades");
   var logArea=$$("logArea");if(!logArea)return;
+  if(logArea.childNodes.length)logCapture();
+  var keepTop=(logPos&&logPos.aid===aid&&!logPos.atBottom&&!logToBottom)?logPos.top:null;
+  logPos=null;logToBottom=false;logAid=aid;
   logArea.innerHTML="";
   if(!filtered.length){logArea.innerHTML="<div class=\"no-ent\">"+(filterTxt?"Cap resultat.":"— Encara no hi ha entrades. Registra la primera acció o incidència. —")+"</div>"}
   else{
@@ -3367,10 +3384,23 @@ function renderLogArea(){
       }
       logArea.appendChild(div);
     });
-    requestAnimationFrame(function(){logArea.scrollTop=logArea.scrollHeight});
+    // Right away — a second redraw straight after this one (saving an edit
+    // does two) must read the restored position, not a fresh 0 — and again
+    // once pictures have laid out. rAF alone never runs in a background tab.
+    var toPos=function(){logArea.scrollTop=keepTop==null?logArea.scrollHeight:keepTop};
+    toPos();requestAnimationFrame(toPos);
   }
 }
+// Where the log was scrolled to, kept across a redraw: it goes back there
+// unless it was at its end (then it stays at the end, where new entries
+// appear), another visit is shown, or an entry was just added here.
+var logPos=null,logAid=null,logToBottom=false;
+function logCapture(){
+  var la=$$("logArea");
+  if(la&&la.childNodes.length&&logAid)logPos={aid:logAid,top:la.scrollTop,atBottom:la.scrollHeight-la.scrollTop-la.clientHeight<48};
+}
 function renderContent(){
+  logCapture();
   var mc=$$("content");
   var active=sessions.find(function(s){return s.id===aid});
 
@@ -4440,6 +4470,7 @@ function addEntry(){
     sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{entries:sortEntries((s.entries||[]).concat([entry]))}):s});
     entIn.value="";var ti=$$("tagIn");if(ti)ti.value="";pImgs=[];
     if(m2Sheet==="compose")m2Hide();
+    logToBottom=true;   // the new entry is at the end: go and show it
     scheduleSave();renderAll();
   }
   tryAdd();
@@ -4839,7 +4870,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-17 · 12";
+var APP_VERSION="2026-10-17 · 14";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -7506,6 +7537,9 @@ function buildReportHTML(s,forPrint,lang,rev){
     +"<div class=\"stat\" style=\"background:#f1f5f9;color:#475569\"><strong style=\"font-size:26px;display:block\">"+entries.length+"</strong><span style=\"font-size:11px\">"+esc(R.total)+"</span></div>"
     +"</div>"
     +ctrHTML(s,R,lang)
+    // the summary of the visit, near the top; its line breaks kept (one line per day)
+    +(s.notes&&String(s.notes).trim()?"<h2 style=\"font-size:16px;margin:22px 0 6px;border-bottom:2px solid #f59e0b;padding-bottom:5px\">"+esc(R.notes)+"</h2>"
+      +"<div style=\"font-size:13px;line-height:1.55;white-space:pre-line\">"+esc(String(s.notes).trim())+"</div>":"")
     +incidentsHTML(s,R,lang)
     +(function(){
       // ONE table and one header; each day is a slim bar inside it
@@ -7518,26 +7552,6 @@ function buildReportHTML(s,forPrint,lang,rev){
         }).join("")+"</tbody></table>";
     })()
     +partsSummaryHTML(s,R)
-    +(function(){
-      // Large, whole (never cropped), three across; the time and the file name
-      // under each, like the PDF's appendix. A video shows its poster and, when
-      // it is on Drive, the link to play it there.
-      if(!shots.length)return "";
-      return "<h2 style=\"font-size:17px;margin:30px 0 10px;border-bottom:2px solid #f59e0b;padding-bottom:6px\">"+esc(R.photos)+"</h2>"
-        +"<div style=\"display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px\">"
-        +shots.map(function(sh,k){
-          var vid=sh.img.type==="video";
-          var lnk=(!forPrint&&sh.img.driveId)?" · <a href=\"https://drive.google.com/file/d/"+sh.img.driveId+"/view\" target=\"_blank\" style=\"color:#1d4ed8\">↗ "+esc(R.openDrive)+"</a>":"";
-          return "<figure id=\"fsl-ph-"+k+"\" style=\"margin:0;break-inside:avoid;page-break-inside:avoid\">"
-            +"<div style=\"position:relative;aspect-ratio:4/3;background:#f3f4f6;border-radius:4px;overflow:hidden\">"
-            +"<img src=\""+sh.src+"\" style=\"width:100%;height:100%;object-fit:contain;display:block\">"
-            +(vid?"<span style=\"position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:#111827;color:#fff;font-size:18px;line-height:44px;text-align:center\">▶</span>":"")
-            +"</div>"
-            +"<figcaption style=\"font-size:11px;color:#6b7280;margin-top:4px;line-height:1.35\">"+esc(sh.ts)+lnk+"<br>"
-            +"<span style=\"font-family:monospace;overflow-wrap:anywhere\">"+(vid?"» ":"")+esc(sh.img.name||(vid?R.video:R.photo))+"</span></figcaption></figure>";
-        }).join("")+"</div>";
-    })()
-    +(s.notes?"<div style=\"margin-top:18px;padding:12px;background:#f9fafb;border-radius:6px;border-left:3px solid #f59e0b\"><strong>"+esc(R.notes)+":</strong><br>"+esc(s.notes)+"</div>":"")
     +ptReportHTML(s,R,lang)
     +(function(){
       // Signed on the glass, or the same blank line as always to sign on paper.
@@ -7554,6 +7568,25 @@ function buildReportHTML(s,forPrint,lang,rev){
         +half(R.sigTech,g.techName||s.tech||"_________________",g.techSig)
         +half(R.sigCli,g.cliName||"",g.cliSig)
         +"</div>";
+    })()
+    +(function(){
+      // Large, whole (never cropped), three across; the time and the file name
+      // under each, like the PDF's appendix. A video shows its poster and, when
+      // it is on Drive, the link to play it there.
+      if(!shots.length)return "";
+      return "<h2 style=\"font-size:17px;margin:40px 0 10px;border-bottom:2px solid #f59e0b;padding-bottom:6px;break-before:page;page-break-before:always\">"+esc(R.photos)+"</h2>"
+        +"<div style=\"display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px\">"
+        +shots.map(function(sh,k){
+          var vid=sh.img.type==="video";
+          var lnk=(!forPrint&&sh.img.driveId)?" · <a href=\"https://drive.google.com/file/d/"+sh.img.driveId+"/view\" target=\"_blank\" style=\"color:#1d4ed8\">↗ "+esc(R.openDrive)+"</a>":"";
+          return "<figure id=\"fsl-ph-"+k+"\" style=\"margin:0;break-inside:avoid;page-break-inside:avoid\">"
+            +"<div style=\"position:relative;aspect-ratio:4/3;background:#f3f4f6;border-radius:4px;overflow:hidden\">"
+            +"<img src=\""+sh.src+"\" style=\"width:100%;height:100%;object-fit:contain;display:block\">"
+            +(vid?"<span style=\"position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:#111827;color:#fff;font-size:18px;line-height:44px;text-align:center\">▶</span>":"")
+            +"</div>"
+            +"<figcaption style=\"font-size:11px;color:#6b7280;margin-top:4px;line-height:1.35\">"+esc(sh.ts)+lnk+"<br>"
+            +"<span style=\"font-family:monospace;overflow-wrap:anywhere\">"+(vid?"» ":"")+esc(sh.img.name||(vid?R.video:R.photo))+"</span></figcaption></figure>";
+        }).join("")+"</div>";
     })()
     +"<div class=\"ft\"><span>ID: "+s.id+"</span><span>Field Service Log</span></div>"
     +"</body></html>";
@@ -9046,6 +9079,20 @@ async function buildPdfBlob(s,lang,rev,opts){
   y+=6;
 
   y=pdfCtrSection(doc,s,R,lang,y,M,CW,H);
+  // The general notes — the summary of the visit — near the top (2026-10-17):
+  // read first, then the issues, then the detail. Same order in the three
+  // formats: data, counters, notes, issues, log, parts, tests, signatures,
+  // and the photos last, as an annex.
+  if(s.notes&&String(s.notes).trim()&&!V){
+    if(y>H-40){doc.addPage();y=M}
+    doc.setFont("helvetica","bold");doc.setFontSize(10.5);doc.setTextColor(17,24,39);
+    doc.text(R.notes,M,y+3.5);doc.setDrawColor(245,158,11);doc.setLineWidth(0.5);doc.line(M,y+5.5,M+CW,y+5.5);y+=9.5;
+    pdfFont(doc,ar,s.notes,"normal");doc.setFontSize(8.5);doc.setTextColor(55,65,81);
+    var nl=doc.splitTextToSize(String(s.notes).trim(),CW),nr=startsRtl(s.notes);
+    nl.forEach(function(l){if(y>H-15){doc.addPage();y=M}doc.text(l,M+(nr?CW-doc.getTextWidth(l):0),y);y+=4});
+    doc.setFont("helvetica","normal");doc.setTextColor(0,0,0);
+    y+=4;
+  }
   y=pdfIncSection(doc,s,R,lang,y,M,CW,H,ar);
 
   // entries table. The spare parts and the outcome are DRAWN inside the
@@ -9074,7 +9121,7 @@ async function buildPdfBlob(s,lang,rev,opts){
   var anyPic=attHasPics(entries);
   var COL=entryColWidths(doc,R,entries,anyPic?[]:body.map(function(r){return r[4]}),ar,CW,anyPic?2*ATT_TW+ATT_GAP+4:0);
   // one embedded copy of each picture, shared by the thumbnails and the appendix
-  var imgAl=new Map();function alias(src){if(!imgAl.has(src))imgAl.set(src,"fslimg"+imgAl.size);return imgAl.get(src)}
+  var imgAl=new Map(),alias=function(src){if(!imgAl.has(src))imgAl.set(src,"fslimg"+imgAl.size);return imgAl.get(src)}
   var tsW=COL.ts,sevW=COL.sev,tagC=COL.tagC,attC=COL.attC;
   function descW(){return COL.desc()}
 
@@ -9309,6 +9356,40 @@ async function buildPdfBlob(s,lang,rev,opts){
   y=doc.lastAutoTable.finalY+8;
   y=pdfPartsSection(doc,s,R,y,M,CW,H,ar);
 
+  }
+  y=pdfProdSection(doc,s,R,lang,y,M,CW,H,V);
+  // The signature of THIS revision if it was signed on the glass, otherwise the
+  // same empty line as always, for signing the printout. The box is taller when
+  // there is ink to sit on the line, so it needs more room before deciding
+  // whether the page still fits it.
+  var gs=revSign(s,rev)||{};
+  // Kept small (2026-10-13: "they take up too much of the page"): 14 mm high,
+  // at most 45 mm wide — a signature, not an illustration.
+  var inked=!!(gs.techSig||gs.cliSig),sigH=inked?14:0,SIGW=45;
+  if(y>H-32-sigH){doc.addPage();y=M}
+  y=Math.max(y+14,H-32-sigH)+sigH;
+  var hw=CW/2-10;
+  [[R.sigTech,gs.techName||s.tech||"",gs.techSig,M],
+   [R.sigCli,gs.cliName||"",gs.cliSig,M+CW/2+10]].forEach(function(b){
+    if(b[2])try{
+      // On the line and at its own proportions: stretched to the box it reads
+      // as a different hand than the one that signed.
+      var pr=doc.getImageProperties(b[2]);
+      var iw=Math.min(hw,SIGW),ih=iw*pr.height/pr.width;
+      // 1 mm clear of the rule: ink on the line hid it
+      if(ih>sigH-1){ih=sigH-1;iw=ih*pr.width/pr.height}
+      doc.addImage(b[2],"PNG",b[3],y-1-ih,iw,ih);
+    }catch(err){}
+    doc.setDrawColor(107,114,128);doc.setLineWidth(0.2);
+    doc.line(b[3],y,b[3]+hw,y);
+    // as the HTML has it: the label, then the name in bold on its own line
+    doc.setFontSize(8);doc.setTextColor(107,114,128);
+    pdfFont(doc,ar,b[0],"normal");doc.text(b[0],b[3],y+4);
+    if(b[1]){doc.setFontSize(8.5);doc.setTextColor(17,24,39);pdfFont(doc,ar,b[1],"bold");doc.text(b[1],b[3],y+8.2)}
+  });
+  doc.setFont("helvetica","normal");
+
+  if(!V){
   // photo appendix — images stay out of the table so rows keep a sane height
   var shots=[];
   entries.forEach(function(e){
@@ -9318,6 +9399,7 @@ async function buildPdfBlob(s,lang,rev,opts){
     });
   });
   if(shots.length){
+    doc.addPage();y=M;   // an annex, after the signatures (2026-10-17)
     // the heading only goes where its first row of photos fits under it —
     // it used to be left alone at the foot of a page
     var firstRowH=(CW-8)/3*0.72+11;
@@ -9350,47 +9432,6 @@ async function buildPdfBlob(s,lang,rev,opts){
   }
 
   }
-  y=pdfProdSection(doc,s,R,lang,y,M,CW,H,V);
-  // notes + signatures
-  if(s.notes&&!V){
-    if(y>H-30){doc.addPage();y=M}
-    doc.setFont("helvetica","bold");doc.setFontSize(9);doc.setTextColor(17,24,39);doc.text(R.notes,M,y);y+=4;
-    pdfFont(doc,ar,s.notes,"normal");doc.setFontSize(8.5);doc.setTextColor(55,65,81);
-    var nl=doc.splitTextToSize(s.notes,CW),nr=startsRtl(s.notes);
-    nl.forEach(function(l,k){doc.text(l,M+(nr?CW-doc.getTextWidth(l):0),y+k*4)});
-    y+=nl.length*4+4;
-  }
-  // The signature of THIS revision if it was signed on the glass, otherwise the
-  // same empty line as always, for signing the printout. The box is taller when
-  // there is ink to sit on the line, so it needs more room before deciding
-  // whether the page still fits it.
-  var gs=revSign(s,rev)||{};
-  // Kept small (2026-10-13: "they take up too much of the page"): 14 mm high,
-  // at most 45 mm wide — a signature, not an illustration.
-  var inked=!!(gs.techSig||gs.cliSig),sigH=inked?14:0,SIGW=45;
-  if(y>H-32-sigH){doc.addPage();y=M}
-  y=Math.max(y+14,H-32-sigH)+sigH;
-  var hw=CW/2-10;
-  [[R.sigTech,gs.techName||s.tech||"",gs.techSig,M],
-   [R.sigCli,gs.cliName||"",gs.cliSig,M+CW/2+10]].forEach(function(b){
-    if(b[2])try{
-      // On the line and at its own proportions: stretched to the box it reads
-      // as a different hand than the one that signed.
-      var pr=doc.getImageProperties(b[2]);
-      var iw=Math.min(hw,SIGW),ih=iw*pr.height/pr.width;
-      // 1 mm clear of the rule: ink on the line hid it
-      if(ih>sigH-1){ih=sigH-1;iw=ih*pr.width/pr.height}
-      doc.addImage(b[2],"PNG",b[3],y-1-ih,iw,ih);
-    }catch(err){}
-    doc.setDrawColor(107,114,128);doc.setLineWidth(0.2);
-    doc.line(b[3],y,b[3]+hw,y);
-    // as the HTML has it: the label, then the name in bold on its own line
-    doc.setFontSize(8);doc.setTextColor(107,114,128);
-    pdfFont(doc,ar,b[0],"normal");doc.text(b[0],b[3],y+4);
-    if(b[1]){doc.setFontSize(8.5);doc.setTextColor(17,24,39);pdfFont(doc,ar,b[1],"bold");doc.text(b[1],b[3],y+8.2)}
-  });
-  doc.setFont("helvetica","normal");
-
   // page numbers
   var n=doc.internal.getNumberOfPages();
   for(var p=1;p<=n;p++){
@@ -9815,6 +9856,14 @@ async function buildDocxDocument(D,s,lang,rev){
     out.push(P({spacing:{after:60},children:[T({text:""})]}));
     return out;
   })();
+  // The general notes, near the top as in the PDF, one paragraph per line.
+  var notesCh=(function(){
+    var t=String(s.notes||"").trim();if(!t)return [];
+    return [P({spacing:{before:120,after:60},keepNext:true,border:{bottom:{style:D.BorderStyle.SINGLE,size:8,color:"F59E0B",space:2}},
+        children:[T({text:R.notes,bold:true,size:hp(10.5),font:"Arial",color:"111827"})]})]
+      .concat(t.split(/\r?\n/).map(function(l){return P({spacing:{after:40},children:[T({text:l,size:hp(8.5),font:"Arial",color:"374151"})]})}))
+      .concat([P({spacing:{after:60},children:[T({text:""})]})]);
+  })();
   // The incidents summary, under the counters, as in the PDF.
   var incCh=(function(){
     var rows=incidentRows(s,lang);if(!rows.length)return [];
@@ -9838,7 +9887,7 @@ async function buildDocxDocument(D,s,lang,rev){
        children:[T({text:revLine(R,rev,tl),size:hp(9),font:"Arial",color:"6B7280"})]}),
     metaTable,
     P({spacing:{before:120,after:120},children:counters})
-  ].concat(ctrCh).concat(incCh).concat((function(){
+  ].concat(ctrCh).concat(notesCh).concat(incCh).concat((function(){
     // ONE table: its header repeats at the top of each page, and each day is a
     // slim bar inside it, kept with its first entry — as in the PDF
     var trs=[new D.TableRow({tableHeader:true,children:[hdrCell(R.time,COLW[0]),hdrCell(R.severity,COLW[1]),hdrCell(R.tag,COLW[2]),hdrCell(R.desc,COLW[3]),hdrCell(R.att,COLW[4])]})];
@@ -9877,45 +9926,6 @@ async function buildDocxDocument(D,s,lang,rev){
     if(S.rec.length)block(R.partsRec,"urg",S.rec,true,R.recNote);
   })();
 
-  // Photo appendix, 3 across, like the PDF's — and for the same reason: images
-  // inside the rows would blow the table up.
-  var shots=[];
-  entries.forEach(function(e){
-    (e.images||[]).concat((e.fix&&e.fix.images)||[]).forEach(function(im){
-      var src=im.type==="video"?im.poster:(im.type==="audio"?null:im.data);
-      if(src)shots.push({src:src,ts:fts(e.ts),name:im.name||""});
-    });
-  });
-  if(shots.length){
-    var cols=3,gapMm=4,iwMm=(CW-gapMm*(cols-1))/cols,ihMm=iwMm*0.72;
-    children.push(P({spacing:{after:80},children:[T({text:R.photos,bold:true,size:hp(11),font:"Arial",color:"111827"})]}));
-    var shotRows=[];
-    for(var i=0;i<shots.length;i+=cols){
-      var cellsS=[];
-      for(var c=0;c<cols;c++){
-        var sh=shots[i+c],ch=[];
-        if(sh){
-          var id=toImg(sh.src);
-          if(id){try{ch.push(P({spacing:{after:20},children:[new D.ImageRun({data:id.bytes,type:id.type,
-            transformation:{width:Math.round(iwMm*72/25.4),height:Math.round(ihMm*72/25.4)}})]}))}catch(err){}}
-          ch.push(P({children:[T({text:sh.ts,size:hp(6.5),font:"Arial",color:"6B7280"})]}));
-          ch.push(P({spacing:{after:80},children:[T({text:sh.name,size:hp(6.5),font:"Arial",color:"6B7280"})]}));
-        } else ch.push(P({}));
-        cellsS.push(new D.TableCell({borders:noBorders,margins:{top:0,bottom:0,left:0,right:tw(gapMm)},
-          width:{size:tw(iwMm+gapMm),type:D.WidthType.DXA},children:ch}));
-      }
-      shotRows.push(new D.TableRow({children:cellsS}));
-    }
-    children.push(new D.Table({width:{size:tw(CW),type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED,
-      columnWidths:[tw(iwMm+gapMm),tw(iwMm+gapMm),tw(iwMm+gapMm)],
-      borders:{top:NONE,bottom:NONE,left:NONE,right:NONE,insideHorizontal:NONE,insideVertical:NONE},rows:shotRows}));
-    children.push(P({spacing:{after:120},children:[T({text:""})]}));
-  }
-
-  if(s.notes){
-    children.push(P({spacing:{before:120,after:40},children:[T({text:R.notes,bold:true,size:hp(9),font:"Arial",color:"111827"})]}));
-    children.push(P({spacing:{after:200},children:[T({text:s.notes,size:hp(8.5),font:"Arial",color:"374151"})]}));
-  }
   // The production tests: one compact row each, as in the PDF; the full sheet
   // of every test is the validation report's job.
   var ptTests=s.prodTests||[];
@@ -9988,6 +9998,41 @@ async function buildDocxDocument(D,s,lang,rev){
       new D.TableRow({children:[
         labelCell(R.sigTech,gsD.techName||s.tech||""),gapCell(),labelCell(R.sigCli,gsD.cliName||"")]})
     ]}));
+
+  // Photo appendix, 3 across, like the PDF's — and for the same reason: images
+  // inside the rows would blow the table up.
+  var shots=[];
+  entries.forEach(function(e){
+    (e.images||[]).concat((e.fix&&e.fix.images)||[]).forEach(function(im){
+      var src=im.type==="video"?im.poster:(im.type==="audio"?null:im.data);
+      if(src)shots.push({src:src,ts:fts(e.ts),name:im.name||""});
+    });
+  });
+  if(shots.length){
+    var cols=3,gapMm=4,iwMm=(CW-gapMm*(cols-1))/cols,ihMm=iwMm*0.72;
+    children.push(P({pageBreakBefore:true,spacing:{after:80},children:[T({text:R.photos,bold:true,size:hp(11),font:"Arial",color:"111827"})]}));
+    var shotRows=[];
+    for(var i=0;i<shots.length;i+=cols){
+      var cellsS=[];
+      for(var c=0;c<cols;c++){
+        var sh=shots[i+c],ch=[];
+        if(sh){
+          var id=toImg(sh.src);
+          if(id){try{ch.push(P({spacing:{after:20},children:[new D.ImageRun({data:id.bytes,type:id.type,
+            transformation:{width:Math.round(iwMm*72/25.4),height:Math.round(ihMm*72/25.4)}})]}))}catch(err){}}
+          ch.push(P({children:[T({text:sh.ts,size:hp(6.5),font:"Arial",color:"6B7280"})]}));
+          ch.push(P({spacing:{after:80},children:[T({text:sh.name,size:hp(6.5),font:"Arial",color:"6B7280"})]}));
+        } else ch.push(P({}));
+        cellsS.push(new D.TableCell({borders:noBorders,margins:{top:0,bottom:0,left:0,right:tw(gapMm)},
+          width:{size:tw(iwMm+gapMm),type:D.WidthType.DXA},children:ch}));
+      }
+      shotRows.push(new D.TableRow({children:cellsS}));
+    }
+    children.push(new D.Table({width:{size:tw(CW),type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED,
+      columnWidths:[tw(iwMm+gapMm),tw(iwMm+gapMm),tw(iwMm+gapMm)],
+      borders:{top:NONE,bottom:NONE,left:NONE,right:NONE,insideHorizontal:NONE,insideVertical:NONE},rows:shotRows}));
+    children.push(P({spacing:{after:120},children:[T({text:""})]}));
+  }
 
   // The PDF's footer: session id on the left, page x / y on the right.
   var footer=new D.Footer({children:[P({

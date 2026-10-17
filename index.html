@@ -645,6 +645,7 @@ textarea{resize:none;line-height:1.4}
         <button class="btn-sm" id="tsCorr" style="margin-top:6px" title="Corregeix ortografia i gramàtica">&#10003; Corregeix</button></div>
       <div style="border-top:1px solid var(--br);margin-top:12px;padding-top:12px">
         <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap"><strong style="font-size:12px;color:var(--tx2)">Signatures</strong><span class="ts-note">signa amb el dit o amb un llapis tàctil &mdash; deixa-ho en blanc per imprimir línies buides</span></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap"><label for="tsSigDate" style="font-size:11px;color:var(--tx3)">Data de signatura</label><input type="date" id="tsSigDate" style="font-size:12px;padding:4px 8px"><span class="ts-note">es posa sola el dia que es signa; la pots canviar</span></div>
         <div id="tsSigGrid">
           <div>
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:11px;color:var(--tx3);flex-shrink:0">Tècnic</span><input type="text" id="tsTechName" placeholder="Nom" style="flex:1;font-size:12px;padding:4px 8px"><button class="btn-xs" id="tsTechClr">Esborra</button></div>
@@ -4809,7 +4810,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-17 · 4";
+var APP_VERSION="2026-10-17 · 5";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -7482,6 +7483,7 @@ function tsInitPad(id,dataUrl){
   cv.addEventListener("pointerdown",function(e){
     e.preventDefault();try{cv.setPointerCapture(e.pointerId)}catch(err){}
     down=true;pad.dirty=true;var q=at(e);ctx.beginPath();ctx.moveTo(q[0],q[1]);ctx.lineTo(q[0]+0.1,q[1]);ctx.stroke();
+    if(pad.onInk)pad.onInk();
   });
   cv.addEventListener("pointermove",function(e){if(!down)return;e.preventDefault();var q=at(e);ctx.lineTo(q[0],q[1]);ctx.stroke()});
   ["pointerup","pointercancel","pointerleave"].forEach(function(ev){cv.addEventListener(ev,function(){down=false})});
@@ -7620,6 +7622,12 @@ function openTimesheet(){
   // in a backgrounded tab, and the pads would stay unusable.
   tsPads.tech=tsInitPad("tsTechSig",T.techSig||"");
   tsPads.cli=tsInitPad("tsCliSig",T.cliSig||"");
+  // The date under the signatures is the day the sheet is SIGNED, not the day
+  // it is saved (it used to be `generatedAt`, so saving again a week later
+  // re-dated a signature). Signing fills in today; a date typed by hand stays.
+  $$("tsSigDate").value=tsSignDate(T);
+  tsDateHand=false;
+  [tsPads.tech,tsPads.cli].forEach(function(pd){if(pd)pd.onInk=function(){if(!tsDateHand)$$("tsSigDate").value=todayISO()}});
   if(!tsWired){
     tsWired=true;
     wireCorrect("tsCorr","tsRem");
@@ -7632,6 +7640,7 @@ function openTimesheet(){
     $$("tsColReset").addEventListener("click",function(){tsCols=TSCOL_ALL.slice();tsColSaveDef(tsCols);tsRenderRows()});
     $$("tsAll").addEventListener("click",function(){tsAll.forEach(function(r){tsPick[r.date]=true});tsRenderRows()});
     $$("tsNone").addEventListener("click",function(){tsAll.forEach(function(r){tsPick[r.date]=false});tsRenderRows()});
+    $$("tsSigDate").addEventListener("input",function(){tsDateHand=true});
     $$("tsTechClr").addEventListener("click",function(){if(tsPads.tech)tsPads.tech.clear()});
     $$("tsCliClr").addEventListener("click",function(){if(tsPads.cli)tsPads.cli.clear()});
     $$("tsImportBtn").addEventListener("click",function(){$$("tsImportIn").click()});
@@ -7674,6 +7683,12 @@ function tsImportFile(e){
 // sheet must not change under them because a day was edited in the calendar
 // afterwards; it also means the PDF rebuilds offline and rides along in the
 // Drive ZIP like the other reports.
+var tsDateHand=false;
+function tsSignDate(T){
+  if(!T)return "";
+  if(T.signDate!=null)return T.signDate;
+  return (T.techSig||T.cliSig)&&T.generatedAt?String(T.generatedAt).slice(0,10):"";
+}
 function tsCommit(){
   var rows=tsChosen();
   if(!rows.length){alert("Tria com a mínim un dia per al full d'hores.");return false}
@@ -7683,6 +7698,7 @@ function tsCommit(){
     remarks:$$("tsRem").value.trim(),
     techName:$$("tsTechName").value.trim(),cliName:$$("tsCliName").value.trim(),
     techSig:tsPads.tech?tsPads.tech.data():"",cliSig:tsPads.cli?tsPads.cli.data():"",
+    signDate:$$("tsSigDate").value||"",
     rows:rows.map(function(r){return Object.assign({},r)}),
     generatedAt:now()
   };
@@ -7824,7 +7840,8 @@ async function buildTimesheetBlob(s){
     pdfFont(doc,ar,b[0],"normal");doc.text(b[0],x,y+boxH+4);
     if(b[1]){doc.setFontSize(8.5);doc.setTextColor(17,24,39);pdfFont(doc,ar,b[1],"bold");doc.text(b[1],x,y+boxH+8.2)}
     doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(107,114,128);
-    doc.text(t.dt+": "+(b[2]?tsDMY((T.generatedAt||now()).slice(0,10)):""),x,y+boxH+12.4);
+    var sd=tsSignDate(T),showD=sd&&(b[2]||!(T.techSig||T.cliSig));
+    doc.text(t.dt+": "+(showD?tsDMY(sd):""),x,y+boxH+12.4);
   });
 
   var n=doc.internal.getNumberOfPages();

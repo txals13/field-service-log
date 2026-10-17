@@ -1186,6 +1186,15 @@ padding. Under the rule, in the PDF, the timesheet, Word and HTML alike: the
 label in grey, then the name in bold on its own line (the PDFs and Word used
 to print "Label — Name" on one line). The timesheet's date moved one line down.
 
+**The timesheet's date is the day it was SIGNED** (2026-10-17). It used to be
+`generatedAt`, the moment the sheet was saved, so saving or re-exporting it a
+week later re-dated the client's signature. Now `timesheet.signDate`: a date
+field (`#tsSigDate`) beside the pads that the first stroke on either pad sets
+to today (`pad.onInk`), unless it was typed by hand (`tsDateHand`). It prints
+under a signature made on the glass, or under both lines when there is no
+on-glass signature but a date was typed (signed on paper). Sheets saved before
+it fall back to `generatedAt`'s day if they were signed (`tsSignDate`).
+
 ## Report revisions
 - **✍ Signa… — the report is signed on the glass, like the timesheet**
   (`openReportSign`, `revSign`, `setRevSign`; reuses `tsInitPad`, pointer

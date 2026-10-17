@@ -3153,7 +3153,10 @@ function buildSitem(s,applyFilter){
   div.innerHTML="<span class=\"sitem-badge\" style=\"background:"+tm.bg+";color:"+tm.tx+"\">"+tm.abbr+"</span>"
     +(issues?"<span style=\"float:right;font-size:10px;font-family:monospace;background:var(--redbg);color:var(--red);padding:1px 5px;border-radius:20px\">"+issues+" !</span>":"")
     +"<div class=\"sitem-name\">"+highlightText(s.client||"—",sessFilterTxt)+"</div>"
-    +"<div class=\"sitem-sub\">"+highlightText(s.machine||"",sessFilterTxt)+"</div>"
+    // the project number tells visits apart better than the machine (the same
+    // machine comes back visit after visit); the machine only stands in when
+    // there is no project yet
+    +"<div class=\"sitem-sub\">"+highlightText(s.project||s.machine||"",sessFilterTxt)+"</div>"
     +"<div class=\"sitem-sub\" style=\"margin-top:2px\">"+(s.status==="open"?"🟢 Oberta":"🔴 Tancada")+" · "+pl((s.entries||[]).length,"entrada","entrades")+"</div>"
     +"<button class=\"sitem-del\" title=\"Elimina\">✕</button>";
   div.addEventListener("click",function(){if(aid!==s.id)stopCurAudio();aid=s.id;filterTxt=applyFilter||"";if(mob())closeSide();renderAll()});
@@ -4810,7 +4813,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-17 · 6";
+var APP_VERSION="2026-10-17 · 7";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,

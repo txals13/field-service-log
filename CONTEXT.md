@@ -1178,6 +1178,14 @@ Always at the signature's own proportions. The Word image had also been sized
 in points where docx wants 96-dpi pixels, which made it a quarter smaller
 than asked; fixed.
 
+**Same layout everywhere (2026-10-17).** The ink sits just ABOVE the rule,
+never on it — the HTML pulled it 2 px over the line and hid it, and the
+timesheet PDF put it right on the line; now the PDFs keep 1 mm clear, Word has
+57 twips after the image, and the HTML holds it in a 48 px box with 3 px
+padding. Under the rule, in the PDF, the timesheet, Word and HTML alike: the
+label in grey, then the name in bold on its own line (the PDFs and Word used
+to print "Label — Name" on one line). The timesheet's date moved one line down.
+
 ## Report revisions
 - **✍ Signa… — the report is signed on the glass, like the timesheet**
   (`openReportSign`, `revSign`, `setRevSign`; reuses `tsInitPad`, pointer

@@ -734,6 +734,34 @@ Field Service Log/
     `#fsl-ph-N`, and a "Fotos" section after the parts lists shows them three
     across, 4:3, `object-fit:contain`, with time, file name and, for a video,
     its Drive link. Word has no appendix change (its own was already there).
+- **Incidents in the report, and a new machine history** (2026-10-17, the
+  user picked my recommendation from mock-ups: report A + C, history 1 + 2).
+  - **Report — incidents summary** under the counters (`incidentRows` →
+    `incCells`, drawn by `incidentsHTML` / `pdfIncSection` / the Word `incCh`
+    table): this visit's problems and warnings in time order with their state
+    ("Resolved dd/mm hh:mm", "Open", "Open · spare part recommended"), then the
+    earlier visits' problems this one closed ("Closed dd/mm hh:mm", with
+    "earlier visit · project"). Left out when there is nothing to list.
+  - **Report — "closes an issue from the visit of…"**: `closesInfo(s,lang)`
+    finds what each `entry.closes` points at in the other visits and prints it
+    as a grey block in the closing entry's row, ABOVE its parts and outcome
+    (PDF `X.refH` booked like the other blocks). That earlier text is
+    translated with the report: `localizeSession` now also queues those texts
+    and caches the translation on the OTHER visit's entry (`tr[lang]`), even
+    when this visit is already in the report's language.
+  - **Report — "resolved in 2 h 28 min"** (`resolvedIn`) appended to the
+    outcome label in the three formats, only for an outcome that resolves.
+  - **History — summary on top**: visits / open / resolved / open urgent
+    recommended parts, then "Still open": every open problem or warning of
+    every visit (this one included), oldest first, with project and age
+    (`mhAgo`, red past 90 days).
+  - **History — one timeline** of the visit cards (dot: gold = this visit,
+    orange = something still open, grey = clear), replacing the separate
+    "open on other visits" and "closed on a later visit" lists; each card
+    keeps `mhCardIssues` and adds `mhClosedHere` (earlier problems closed on
+    that visit), or "✓ all OK".
+  - New labels in RPT ca/es/en (`incTitle`…`resIn`, `h.kOpen`…`h.ago`); the
+    tables cached for the other languages are re-translated once.
 - **The PDF's entry table is laid out like the HTML report's**: the spare parts
   as a QT./REF./RECANVI table with its own grey header, and the outcome as a
   block with a coloured bar in its severity. autoTable can't nest a table in a

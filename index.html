@@ -3351,7 +3351,7 @@ function renderLogArea(){
           if(!file){alert("No es pot tornar a provar: el fitxer original ja no està disponible en aquesta sessió. Treu-lo i torna'l a afegir des d'Edita.");return}
           img.uploadStatus="loading";renderLogArea();
           uploadMedia(active,file,img.type==="video"?"videos":"photos").then(function(r){
-            if(r){img.driveId=r.driveId;img.name=r.name;img.uploadStatus="ok"}else img.uploadStatus="err";
+            if(r)mediaUploaded(img,r);else img.uploadStatus="err";
             scheduleSave();renderLogArea();
           });
         });
@@ -3669,7 +3669,7 @@ function retryUpload(img,bk){
   img.uploadStatus="loading";
   renderThumbs(bk);
   uploadMedia(active,file,img.type==="video"?"videos":"photos").then(function(r){
-    if(r){img.driveId=r.driveId;img.name=r.name;img.uploadStatus="ok"}else img.uploadStatus="err";
+    if(r)mediaUploaded(img,r);else img.uploadStatus="err";
     renderThumbs(bk);
     scheduleSave();
   });
@@ -3731,7 +3731,7 @@ function rNames(bk){
     var inp=row.querySelector("input"),st=row.querySelector(".fname-st");
     inp.addEventListener("change",function(){
       var n=inp.value.trim();if(!n||n===img.name)return;
-      var old=img.name;img.name=n;
+      var old=img.name;img.name=n;img.userNamed=true;img.autoName=false;
       if(img.driveId){st.textContent="⟳";driveRename(img.driveId,n).then(function(ok){st.textContent=ok?"✓":"✗";if(!ok){img.name=old;inp.value=old}scheduleSave()})}
       else scheduleSave();
     });
@@ -3830,7 +3830,7 @@ function buildAudioAttachment(blob,dur,bk){
     img.data=ev.target.result;
     MB[bk].set(MB[bk].get().concat([img]));renderThumbs(bk);
     if(active&&isLoggedIn)uploadAudio(active,blob,name).then(function(r){
-      if(r){img.driveId=r.driveId;img.name=r.name;img.uploadStatus="ok"}else img.uploadStatus="err";
+      if(r)mediaUploaded(img,r);else img.uploadStatus="err";
       renderThumbs(bk);scheduleSave();
     });
   };
@@ -4412,7 +4412,7 @@ function handleFiles(e,bk){
       inc();getFileTs(file).then(function(ts){img.capturedAt=ts;dec();renderThumbs(bk)});
       inc();genThumb(file).then(function(t){if(t)img.poster=t;dec();renderThumbs(bk)});
       inc();uploadMedia(active,file,"videos").then(function(r){
-        if(r){img.driveId=r.driveId;img.name=r.name;img.uploadStatus="ok"}else img.uploadStatus="err";
+        if(r)mediaUploaded(img,r);else img.uploadStatus="err";
         dec();renderThumbs(bk);scheduleSave();
       });
     } else {
@@ -4427,7 +4427,7 @@ function handleFiles(e,bk){
       B.busy(1);
       getFileTs(file).then(function(ts){img2.capturedAt=ts;B.busy(-1);renderThumbs(bk)});
       if(active&&isLoggedIn)uploadMedia(active,file,"photos").then(function(r3){
-        if(r3){img2.driveId=r3.driveId;img2.name=r3.name;img2.uploadStatus="ok"}else img2.uploadStatus="err";
+        if(r3)mediaUploaded(img2,r3);else img2.uploadStatus="err";
         renderThumbs(bk);scheduleSave();
       });
     }
@@ -4435,6 +4435,55 @@ function handleFiles(e,bk){
   e.target.value="";
 }
 
+// ── NAMES FROM THE DESCRIPTION (2026-10-17) ───────────────────────────────────
+// A photo, video or voice note still carrying the camera's name
+// (IMG_20261014_091200.jpg) is renamed after what the entry says — a very short
+// description: the first phrase, its first three or four words without the
+// little ones, numbered when the entry has several ("Rodament motor principal
+// joc 1.jpg"). The outcome's files take the outcome's text. Worked out here,
+// with no network and nothing sent anywhere; a name typed by hand is never
+// touched (`userNamed`), and an automatic one follows the description when it
+// is edited (`autoName`). On Drive the file is renamed too — at once, or when
+// its upload finishes, which used to write the camera's name back.
+var NAME_STOP=" a al als amb de del dels d el els en es hi ho i l la les per pel pels que s un una uns unes ha han he hem molt mes més ja y con los las se muy por para lo the of and to with on in at an is are has was ";
+function cleanName(t){return String(t||"").replace(/[\\\/:*?"<>|#%{}~]+/g,"").replace(/\s+/g," ").trim().slice(0,40).trim()}
+function shortDesc(text,tag){
+  var t=String(text||"").trim();
+  if(/^\[.*\]$/.test(t))t="";                    // "[Multimèdia — afegeix-hi una descripció]"
+  if(!t)return cleanName(tag);
+  var first=t.split(/[.;:!?\n(]/)[0]||t;
+  var words=first.split(/[\s,\/]+/).map(function(w){return w.replace(/^(l|d|s|n|m|t)['’]/i,"").replace(/['’"«»“”]/g,"")}).filter(Boolean);
+  var keep=words.filter(function(w){return NAME_STOP.indexOf(" "+w.toLowerCase()+" ")<0});
+  if(!keep.length)keep=words;
+  var sel=keep.slice(0,4);
+  while(sel.length>1&&/^[\d.,]+$/.test(sel[sel.length-1]))sel.pop();   // never end on a number cut from its unit
+  var out=sel.join(" ");
+  return cleanName(out.charAt(0).toUpperCase()+out.slice(1));
+}
+function camName(nm){
+  var b=String(nm||"").replace(/\.[^.]*$/,"");
+  return !b||/^(IMG|VID|PXL|DSC[NF]?|MVIMG|PANO|MOV|Screenshot|Captura|WhatsApp|image|video|photo|voice|nota_veu|recording|Grabaci|Gravaci|\d{8}[_-]\d{6}|\d{4}-\d{2}-\d{2})/i.test(b);
+}
+function mediaExt(im){
+  var m=/\.([A-Za-z0-9]{2,5})$/.exec(im.name||"");
+  return m?"."+m[1].toLowerCase():(im.type==="video"?".mp4":im.type==="audio"?".webm":".jpg");
+}
+function autoNameMedia(list,base){
+  base=cleanName(base);if(!base)return;
+  var cand=(list||[]).filter(function(im){return im&&!im.userNamed&&(im.autoName||camName(im.name))});
+  cand.forEach(function(im,i){
+    var nm=base+(cand.length>1?" "+(i+1):"")+mediaExt(im);
+    if(im.name===nm)return;
+    im.name=nm;im.autoName=true;
+    if(im.driveId)driveRename(im.driveId,nm);
+  });
+}
+// An upload has finished: keep a name given meanwhile, and give it to Drive.
+function mediaUploaded(im,r){
+  im.driveId=r.driveId;im.uploadStatus="ok";
+  if((im.autoName||im.userNamed)&&im.name&&im.name!==r.name)driveRename(r.driveId,im.name);
+  else im.name=r.name;
+}
 // ── ADD / EDIT / DELETE ENTRY ─────────────────────────────────────────────────
 function earliestTs(imgs){var d=(imgs||[]).map(function(i){return i.capturedAt}).filter(Boolean).sort();return d.length?d[0]:null}
 // ── ENTRY ORDER ───────────────────────────────────────────────────────────────
@@ -4466,6 +4515,7 @@ function addEntry(){
     var b2=$$("btnAdd");if(b2){b2.disabled=false;b2.innerHTML="↵ Afegeix"}
     var imgs=pImgs.slice(),pts=earliestTs(imgs);
     var entry={id:uid(),ts:pts||now(),text:captText,severity:captSev,tag:captTag,images:imgs};
+    autoNameMedia(imgs,shortDesc(text,captTag));
     if(pts)entry.tsFromPhoto=true;
     sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{entries:sortEntries((s.entries||[]).concat([entry]))}):s});
     entIn.value="";var ti=$$("tagIn");if(ti)ti.value="";pImgs=[];
@@ -4591,6 +4641,9 @@ function saveEdit(){
       if(fixOn)up.fix={severity:fixSev,text:fixText,images:fImgs.slice(),
                        ts:(en.fix&&en.fix.ts)||now(),editedAt:en.fix?now():null};
       else delete up.fix;
+      var sd=shortDesc(text,newTag);
+      autoNameMedia(up.images,sd);
+      if(up.fix)autoNameMedia(up.fix.images,shortDesc(fixText,"")||(sd?sd+" - resolt":""));
       return up;}))})});
     closeEdit();scheduleSave();renderAll();
   }tryS();
@@ -4870,7 +4923,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-17 · 14";
+var APP_VERSION="2026-10-17 · 15";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,

@@ -734,6 +734,19 @@ Field Service Log/
     `#fsl-ph-N`, and a "Fotos" section after the parts lists shows them three
     across, 4:3, `object-fit:contain`, with time, file name and, for a video,
     its Drive link. Word has no appendix change (its own was already there).
+- **Media named after the entry** (2026-10-17): a file still carrying a camera
+  name (`camName`: IMG_, VID_, PXL_, DSC…, a bare date, voice_/nota_veu…) is
+  renamed `shortDesc(text,tag)` — the first phrase, its first four words minus
+  articles/prepositions (`NAME_STOP`, ca/es/en), never ending on a number cut
+  from its unit — numbered when there are several, extension kept
+  (`mediaExt`; NOT `extOf`, which already exists for a different job further
+  down and, being declared later, silently won). On add (`addEntry`) and on
+  every edit save (the outcome's files from the outcome text, else
+  "<entry> - resolt"); `autoName` marks ours so they follow later edits,
+  `userNamed` (set in `rNames`) protects a typed name for good. Drive gets the
+  name at once (`driveRename`) or when the upload finishes:
+  `mediaUploaded` replaced the five `img.name=r.name` that wrote the camera
+  name back — which also lost a hand rename made during the upload.
 - **One order for the three report formats** (2026-10-17): header and visit
   data (+ entry counters), machine counters, GENERAL NOTES (moved up from the
   end: with ✨ Resum per dies they are the visit's summary), incidents summary,

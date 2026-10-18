@@ -3066,6 +3066,7 @@ async function loadFromDrive(){
     refreshDriveInfo(token);
     setSyncSt("ok","Sincronitzat ✓");
     histSchedule();
+    setTimeout(renamePass,0);
     return true;
   }catch(e){setSyncSt("error","Sense connexió (dades locals)");return false}
 }
@@ -4576,7 +4577,35 @@ function shortDesc(text,tag){
 }
 function camName(nm){
   var b=String(nm||"").replace(/\.[^.]*$/,"");
-  return !b||/^(IMG|VID|PXL|DSC[NF]?|MVIMG|PANO|MOV|Screenshot|Captura|WhatsApp|image|video|photo|voice|nota_veu|recording|Grabaci|Gravaci|\d{8}[_-]\d{6}|\d{4}-\d{2}-\d{2})/i.test(b);
+  return !b||/^(IMG|VID|PXL|DSC[NF]?|MVIMG|PANO|MOV|Screenshot|Captura|WhatsApp|image|video|photo|voice|nota_veu|recording|Grabaci|Gravaci|\d{8}[_-]\d{6}|\d{4}-\d{2}-\d{2})/i.test(b)
+    // nothing but a long run of digits — Android's photo picker hands files
+    // over as 1792319410611143361690826977666.jpg (2026-10-18). Ten or more,
+    // and digits only: a name typed as a part number (3025.1478, 6208-2RS)
+    // is the technician's and stays.
+    ||/^\d{10,}(\s*\(\d+\))?$/.test(b);
+}
+// The files of OPEN visits still named by the camera — added before names
+// came from the description, from a device on an older version, or through
+// the picker's numeric names — are renamed once per page, after the first
+// Drive load (on Drive too). Closed visits are left as they are: their
+// reports have been handed over with those names.
+var renamePassDone=false;
+function renamePass(){
+  if(renamePassDone||!isLoggedIn||navigator.onLine===false)return;
+  renamePassDone=true;
+  var any=false;
+  sessions=sessions.map(function(s){
+    if(s.status!=="open")return s;
+    var ch=false;
+    (s.entries||[]).forEach(function(e){
+      function want(list){return (list||[]).some(function(im){return im&&!im.userNamed&&!im.autoName&&camName(im.name)})}
+      if(want(e.images)){var sd=shortDesc(e.text,e.tag);if(sd){autoNameMedia(e.images,sd);ch=true}}
+      if(e.fix&&want(e.fix.images)){var fd=shortDesc(e.fix.text,"")||(shortDesc(e.text,e.tag)?shortDesc(e.text,e.tag)+" - resolt":"");if(fd){autoNameMedia(e.fix.images,fd);ch=true}}
+    });
+    if(!ch)return s;
+    any=true;return Object.assign({},s);          // a new object: the change is stamped and synced
+  });
+  if(any){saveLocal();isDirty=true;setTimeout(function(){if(isLoggedIn)saveToDrive()},500);if(!hasUnsaved())renderAll()}
 }
 function mediaExt(im){
   var m=/\.([A-Za-z0-9]{2,5})$/.exec(im.name||"");
@@ -5037,7 +5066,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 6";
+var APP_VERSION="2026-10-18 · 7";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,

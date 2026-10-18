@@ -1205,12 +1205,25 @@ var lastPartSt="fit";   // the next part picked starts where the last one was le
 // two across, each with its file name under it — whole, wrapped, never cut:
 // the name is how the client asks for the original.
 var ATT_TW=15,ATT_GAP=1.5,ATT_MAX=12;   // thumbnail width (mm), gap, most per entry
+// Videos (2026-10-18): no picture any more — only the name and the link, and
+// only the ones that are in the visit's folder (on Drive); a video that never
+// went up is not in the folder or in the ZIP, so it is not listed.
 function attItems(e){
-  return ((e&&e.images)||[]).concat((e&&e.fix&&e.fix.images)||[]).map(function(im){
-    var src=im.type==="video"?im.poster:(im.type==="audio"?null:im.data);
+  return ((e&&e.images)||[]).concat((e&&e.fix&&e.fix.images)||[]).filter(function(im){
+    return im&&(im.type!=="video"||im.driveId);
+  }).map(function(im){
+    var src=im.type==="video"||im.type==="audio"?null:im.data;
     return {im:im,src:src||null,vid:im.type==="video",aud:im.type==="audio"};
   });
 }
+function attLine(a,R){return (a.vid?"» ":a.aud?"• ":"")+(a.im.name||R.file)}
+// Where a report's file opens. On Drive: works from anywhere while the file is
+// there. Next to the report: `photos/…`, `videos/…`, `audio/…` — as in the
+// visit's folder and in the project ZIP, so an HTML or Word report read from
+// the unzipped archive (or from the Drive folder on the computer) opens the
+// file beside it, with no connection and after the Drive copy is gone.
+function driveView(id){return id?"https://drive.google.com/file/d/"+encodeURIComponent(id)+"/view":""}
+function mediaRel(im){return im&&im.name?mediaKind(im)+"/"+encodeURIComponent(im.name):""}
 function attHasPics(entries){return (entries||[]).some(function(e){return attItems(e).some(function(a){return a.src})})}
 function imgSize(src){return new Promise(function(res){var i=new Image();i.onload=function(){res({w:i.naturalWidth,h:i.naturalHeight})};i.onerror=function(){res(null)};i.src=src})}
 // One thumbnail, fitted whole into its box (letterboxed on light grey); a
@@ -5186,7 +5199,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 13";
+var APP_VERSION="2026-10-18 · 14";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -7946,6 +7959,13 @@ function buildReportHTML(s,forPrint,lang,rev){
     var k=shots.length;shots.push({img:img,src:src,ts:fts(e.ts)});
     return "<a href=\"#fsl-ph-"+k+"\" title=\""+esc(img.name||"")+"\" style=\"display:block\">"+inner+"</a>";
   }
+  // A link to the file: its place beside the report, with the Drive copy as
+  // data-drive — the script at the end takes that one when the report is NOT
+  // read from disk (opened from Drive, or inside the app).
+  function mediaA(img,inner){
+    var rel=mediaRel(img);if(forPrint||!rel)return inner;
+    return "<a href=\""+esc(rel)+"\""+(img.driveId?" data-drive=\""+driveView(img.driveId)+"\"":"")+" target=\"_blank\" style=\"color:inherit\">"+inner+"</a>";
+  }
   var CI=closesInfo(s,lang);
   var rows=entries.map(function(e){
     var sm=SM[e.severity]||SM.info,sl=R.sev[e.severity]||R.sev.info;
@@ -7953,19 +7973,15 @@ function buildReportHTML(s,forPrint,lang,rev){
     // the PDF; a voice note takes a whole line.
     var nmS="font-size:9px;color:#6b7280;font-family:monospace;overflow-wrap:anywhere;line-height:1.25;margin-top:2px";
     var thS="width:100px;height:75px;object-fit:contain;background:#f3f4f6;border-radius:3px;display:block";
-    var imgCell=(e.images||[]).concat((e.fix&&e.fix.images)||[]).map(function(img){
-      if(img.type==="video"){
-        var ph=img.poster?shotLink(img,e,img.poster,"<div style=\"position:relative\"><img src=\""+img.poster+"\" style=\""+thS+"\"><span style=\"position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:50%;background:#111827;color:#fff;font-size:10px;line-height:22px;text-align:center\">▶</span></div>")
-          :"<div style=\"width:100px;height:75px;background:#f3f4f6;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:22px\">🎬</div>";
-        var lnk=(!forPrint&&img.driveId)?"<a href=\"https://drive.google.com/file/d/"+img.driveId+"/view\" target=\"_blank\" style=\"font-size:9px;color:#1d4ed8;display:block\">↗ "+esc(R.openDrive)+"</a>":"";
-        return "<div style=\"width:100px\">"+ph+"<div style=\""+nmS+"\">» "+esc(img.name||R.video)+"</div>"+lnk+"</div>";
-      }
-      if(img.type==="audio"){
-        var alnk=(!forPrint&&img.driveId)?"<a href=\"https://drive.google.com/file/d/"+img.driveId+"/view\" target=\"_blank\" style=\"font-size:9px;color:#1d4ed8\">↗ Drive</a>":"";
-        return "<div style=\"grid-column:1/-1;padding:5px 7px;background:#f9fafb;border-left:3px solid #f59e0b\"><div style=\""+nmS+";margin-top:0\">🎧 "+esc(img.name||R.voice)+" · "+fmtDur(img.duration)+" "+alnk+"</div></div>";
-      }
-      if(!img.data)return "<div style=\"width:100px\"><div style=\""+nmS+"\">"+esc(img.name||R.photo)+"</div></div>";
-      return "<div style=\"width:100px\">"+shotLink(img,e,img.data,"<img src=\""+img.data+"\" style=\""+thS+"\">")+"<div style=\""+nmS+"\">"+esc(img.name||R.photo)+"</div></div>";
+    // The name opens the file itself (beside the report, or on Drive — see
+    // mediaA); a video is its name and that link, nothing more.
+    var imgCell=attItems(e).map(function(a){
+      var img=a.im;
+      var dl=(!forPrint&&img.driveId)?" <a href=\""+driveView(img.driveId)+"\" target=\"_blank\" style=\"color:#1d4ed8;white-space:nowrap\">↗ "+esc(R.openDrive)+"</a>":"";
+      if(a.vid)return "<div style=\"grid-column:1/-1;"+nmS+";margin-top:0\">» "+mediaA(img,esc(img.name||R.video))+dl+"</div>";
+      if(a.aud)return "<div style=\"grid-column:1/-1;padding:5px 7px;background:#f9fafb;border-left:3px solid #f59e0b\"><div style=\""+nmS+";margin-top:0\">🎧 "+mediaA(img,esc(img.name||R.voice))+" · "+fmtDur(img.duration)+dl+"</div></div>";
+      if(!img.data)return "<div style=\"width:100px\"><div style=\""+nmS+"\">"+mediaA(img,esc(img.name||R.photo))+"</div></div>";
+      return "<div style=\"width:100px\">"+shotLink(img,e,img.data,"<img src=\""+img.data+"\" style=\""+thS+"\">")+"<div style=\""+nmS+"\">"+mediaA(img,esc(img.name||R.photo))+"</div></div>";
     }).join("");
     if(imgCell)imgCell="<div style=\"display:grid;grid-template-columns:repeat(2,100px);gap:6px\">"+imgCell+"</div>";
     return "<tr>"
@@ -8043,8 +8059,8 @@ function buildReportHTML(s,forPrint,lang,rev){
     })()
     +(function(){
       // Large, whole (never cropped), three across; the time and the file name
-      // under each, like the PDF's appendix. A video shows its poster and, when
-      // it is on Drive, the link to play it there.
+      // under each, like the PDF's appendix. Photos only; the picture opens
+      // the original file.
       if(!shots.length)return "";
       return "<h2 style=\"font-size:17px;margin:40px 0 10px;border-bottom:2px solid #f59e0b;padding-bottom:6px;break-before:page;page-break-before:always\">"+esc(R.photos)+"</h2>"
         +"<div style=\"display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px\">"
@@ -8053,14 +8069,16 @@ function buildReportHTML(s,forPrint,lang,rev){
           var lnk=(!forPrint&&sh.img.driveId)?" · <a href=\"https://drive.google.com/file/d/"+sh.img.driveId+"/view\" target=\"_blank\" style=\"color:#1d4ed8\">↗ "+esc(R.openDrive)+"</a>":"";
           return "<figure id=\"fsl-ph-"+k+"\" style=\"margin:0;break-inside:avoid;page-break-inside:avoid\">"
             +"<div style=\"position:relative;aspect-ratio:4/3;background:#f3f4f6;border-radius:4px;overflow:hidden\">"
-            +"<img src=\""+sh.src+"\" style=\"width:100%;height:100%;object-fit:contain;display:block\">"
+            +mediaA(sh.img,"<img src=\""+sh.src+"\" style=\"width:100%;height:100%;object-fit:contain;display:block\">")
             +(vid?"<span style=\"position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:#111827;color:#fff;font-size:18px;line-height:44px;text-align:center\">▶</span>":"")
             +"</div>"
             +"<figcaption style=\"font-size:11px;color:#6b7280;margin-top:4px;line-height:1.35\">"+esc(sh.ts)+lnk+"<br>"
-            +"<span style=\"font-family:monospace;overflow-wrap:anywhere\">"+(vid?"» ":"")+esc(sh.img.name||(vid?R.video:R.photo))+"</span></figcaption></figure>";
+            +"<span style=\"font-family:monospace;overflow-wrap:anywhere\">"+mediaA(sh.img,(vid?"» ":"")+esc(sh.img.name||(vid?R.video:R.photo)))+"</span></figcaption></figure>";
         }).join("")+"</div>";
     })()
     +"<div class=\"ft\"><span>ID: "+s.id+"</span><span>Field Service Log</span></div>"
+    +(forPrint?"":"<script>document.addEventListener(\"click\",function(e){var a=e.target&&e.target.closest&&e.target.closest(\"a[data-drive]\");"
+      +"if(a&&location.protocol!==\"file:\"){e.preventDefault();window.open(a.getAttribute(\"data-drive\"),\"_blank\")}})<\/script>")
     +"</body></html>";
 }
 
@@ -9611,7 +9629,7 @@ async function buildPdfBlob(s,lang,rev,opts){
     // WinAnsi markers, not emoji: jsPDF's standard fonts have no ▶ or 🎧, and a
     // single character outside the encoding flips the whole string to UTF-16 —
     // the name came out as "%¶\0V\0I\0D…" and measured wrong on top of that.
-    var att=(e.images||[]).concat((e.fix&&e.fix.images)||[]).map(function(im){return (im.type==="video"?"» ":im.type==="audio"?"• ":"")+(im.name||R.file)}).join("\n");
+    var att=attItems(e).map(function(a){return attLine(a,R)}).join("\n");
     // Date and time on their own lines: the column then only has to be as wide
     // as the longer of the two, not both plus a space.
     return [{content:timeOf(e.ts)+(e.tsFromPhoto?"\n"+R.photoTag:"")},
@@ -9691,15 +9709,17 @@ async function buildPdfBlob(s,lang,rev,opts){
     var rowsH=[];
     for(var k=0;k<cells.length;k+=2)
       rowsH.push(TH2+0.8+Math.max(cells[k].lines.length,cells[k+1]?cells[k+1].lines.length:0)*NLH+1.6);
-    var restL=[];
+    var restL=[],restU=[];
     rest.forEach(function(a){
-      var t=(a.vid?"» ":a.aud?"• ":"")+(a.im.name||R.file);
-      pdfFont(doc,ar,t,"normal");restL=restL.concat(doc.splitTextToSize(t,AIW));
+      var t=attLine(a,R);
+      pdfFont(doc,ar,t,"normal");
+      var ls=doc.splitTextToSize(t,AIW);restL=restL.concat(ls);
+      ls.forEach(function(){restU.push(driveView(a.im.driveId))});
     });
     doc.setFont("helvetica","normal");doc.setFontSize(8);
     var h=rowsH.reduce(function(x,y){return x+y},0)+restL.length*NLH*1.15;
     body[i][4]=new Array(Math.ceil(h/LH)).join("\n");
-    return {cells:cells,rowsH:rowsH,rest:restL};
+    return {cells:cells,rowsH:rowsH,rest:restL,restU:restU};
   });
   // ONE header, at the top of the log and of each page it runs onto — not one
   // per day (2026-10-17). Each day is a slim bar inside the table.
@@ -9766,19 +9786,34 @@ async function buildPdfBlob(s,lang,rev,opts){
       // cell's text reserved for them.
       didDrawCell:function(d){
         if(d.section==="body"&&d.column.index===4){
-          var A=attL[G[d.row.index]];if(!A)return;
+          var A=attL[G[d.row.index]];
+          if(!A){
+            // names only: each one a link to its file on Drive
+            var fsA=d.cell.styles.fontSize,lhA=fsA/doc.internal.scaleFactor*1.15,wA=d.cell.width-4,lnA=0;
+            doc.setFontSize(fsA);
+            attItems(entries[G[d.row.index]]).forEach(function(a){
+              var t=attLine(a,R);pdfFont(doc,ar,t,"normal");
+              var k=doc.splitTextToSize(t,wA).length,u=driveView(a.im.driveId);
+              if(u)doc.link(d.cell.x+2,d.cell.y+2+lnA*lhA,wA,k*lhA,{url:u});
+              lnA+=k;
+            });
+            doc.setFont("helvetica","normal");doc.setFontSize(8);
+            return;
+          }
           var ax=d.cell.x+2,ay=d.cell.y+2;
           A.cells.forEach(function(c,k){
             var col=k%2;
             if(col===0&&k>0)ay+=A.rowsH[k/2-1];
             var tx=ax+col*(TW2+ATT_GAP);
             pdfThumb(doc,c.a.src,tx,ay,TW2,TH2,c.a.vid,alias(c.a.src));
-            doc.setFontSize(NFS);doc.setTextColor(107,114,128);pdfFont(doc,ar,c.nm,"normal");
-            c.lines.forEach(function(l,j){doc.text(l,tx,ay+TH2+0.8+NLH*(j+0.8))});
+            var cu=driveView(c.a.im.driveId);
+            doc.setFontSize(NFS);if(cu)doc.setTextColor(29,78,216);else doc.setTextColor(107,114,128);pdfFont(doc,ar,c.nm,"normal");
+            c.lines.forEach(function(l,j){doc.text(l,tx,ay+TH2+0.8+NLH*(j+0.8))});if(cu)doc.link(tx,ay,TW2,TH2+0.8+c.lines.length*NLH,{url:cu});
           });
           if(A.cells.length)ay+=A.rowsH[A.rowsH.length-1];
           doc.setFontSize(NFS);doc.setTextColor(107,114,128);
-          A.rest.forEach(function(l,j){pdfFont(doc,ar,l,"normal");doc.text(l,ax,ay+NLH*1.15*(j+0.8))});
+          A.rest.forEach(function(l,j){pdfFont(doc,ar,l,"normal");if(A.restU[j])doc.setTextColor(29,78,216);else doc.setTextColor(107,114,128);doc.text(l,ax,ay+NLH*1.15*(j+0.8));
+            if(A.restU[j])doc.link(ax,ay+NLH*1.15*j,AIW,NLH*1.15,{url:A.restU[j]})});
           doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(0,0,0);
           return;
         }
@@ -9893,10 +9928,7 @@ async function buildPdfBlob(s,lang,rev,opts){
   // photo appendix — images stay out of the table so rows keep a sane height
   var shots=[];
   entries.forEach(function(e){
-    (e.images||[]).concat((e.fix&&e.fix.images)||[]).forEach(function(im){
-      var src=im.type==="video"?im.poster:(im.type==="audio"?null:im.data);
-      if(src)shots.push({src:src,ts:fts(e.ts),name:im.name||""});
-    });
+    attItems(e).forEach(function(a){if(a.src)shots.push({src:a.src,ts:fts(e.ts),name:a.im.name||"",url:driveView(a.im.driveId)})});
   });
   if(shots.length){
     doc.addPage();y=M;   // an annex, after the signatures (2026-10-17)
@@ -9921,6 +9953,7 @@ async function buildPdfBlob(s,lang,rev,opts){
       // whole, not stretched: a portrait or panoramic photo used to be pulled
       // out of shape to fill the box
       pdfThumb(doc,sh.src,x,y,iw,ih,false,alias(sh.src));
+      if(sh.url)doc.link(x,y,iw,ih+7,{url:sh.url});
       doc.setTextColor(107,114,128);
       doc.setFontSize(6.5);doc.text(sh.ts,x,y+ih+3);
       doc.setFontSize(nameFs);pdfFont(doc,ar,sh.name,"normal");doc.text(sh.name,x,y+ih+6);
@@ -10121,10 +10154,13 @@ function loadDocxLib(){
   });
 }
 var DOCX_MIME="application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-async function buildDocxBlob(s,lang,rev){
+// opts.local: the copy that goes INTO the project ZIP — its links point at the
+// files beside it (photos/…, videos/…), which Word opens from the unzipped
+// folder; every other copy links to Drive.
+async function buildDocxBlob(s,lang,rev,opts){
   var D=await loadDocxLib();
   if(!D)return null;
-  return await D.Packer.toBlob(await buildDocxDocument(D,s,lang,rev));
+  return await D.Packer.toBlob(await buildDocxDocument(D,s,lang,rev,opts));
 }
 async function exportDOCX(s,R,base){
   try{
@@ -10142,7 +10178,8 @@ async function exportDOCX(s,R,base){
 // to twips), and every block is the PDF's block in Word's vocabulary. Page
 // breaks will still fall where Word decides — that's the one thing this can't
 // control.
-async function buildDocxDocument(D,s,lang,rev){
+async function buildDocxDocument(D,s,lang,rev,opts){
+  var localLinks=!!(opts&&opts.local);
   var R=RPT[lang]||RPT.ca;
   var tl=R.types[s.type]||R.types.commissioning,entries=s.entries||[];
   var cnt=severityCounts(entries),errs=cnt.issue,warns=cnt.warning,oks=cnt.ok;
@@ -10159,10 +10196,15 @@ async function buildDocxDocument(D,s,lang,rev){
   // Same attachment lines as the PDF, same WinAnsi markers, so both reports
   // name the files identically.
   var attTexts=entries.map(function(e){
-    return (e.images||[]).concat((e.fix&&e.fix.images)||[]).map(function(im){
-      return (im.type==="video"?"» ":im.type==="audio"?"• ":"")+(im.name||R.file);
-    }).join("\n");
+    return attItems(e).map(function(a){return attLine(a,R)}).join("\n");
   });
+  // A file's name as a link: beside the report in the ZIP's copy, on Drive otherwise.
+  function attRun(a,size){
+    var t=T({text:attLine(a,R),size:hp(size),font:"Arial",color:"1D4ED8",underline:{}});
+    var u=localLinks?mediaRel(a.im):driveView(a.im.driveId);
+    if(!u)return T({text:attLine(a,R),size:hp(size),font:"Arial",color:"6B7280"});
+    try{return new D.ExternalHyperlink({link:u,children:[t]})}catch(e){return t}
+  }
   // Thumbnails in the Adjunts column, as in the PDF; their sizes are read
   // first, since Word needs each picture's width and height spelled out.
   var anyPic=attHasPics(entries),dims=new Map();
@@ -10266,7 +10308,7 @@ async function buildDocxDocument(D,s,lang,rev){
             if(dm&&dm.w&&dm.h){var r=Math.min(tw2/dm.w,th2/dm.h);w=dm.w*r;h=dm.h*r}
             if(id){try{ch.push(P({spacing:{after:10},children:[new D.ImageRun({data:id.bytes,type:id.type,
               transformation:{width:Math.round(w*PX),height:Math.round(h*PX)}})]}))}catch(err){}}
-            ch.push(P({spacing:{after:50},children:[T({text:(a.vid?"» ":"")+(a.im.name||R.file),size:hp(5.6),font:"Arial",color:"6B7280"})]}));
+            ch.push(P({spacing:{after:50},children:[attRun(a,5.6)]}));
           } else ch.push(P({}));
           return new D.TableCell({borders:noBorders,margins:{top:0,bottom:0,left:0,right:c?0:tw(ATT_GAP)},
             width:{size:tw(c?tw2:tw2+ATT_GAP),type:D.WidthType.DXA},children:ch});
@@ -10279,14 +10321,14 @@ async function buildDocxDocument(D,s,lang,rev){
           borders:{top:NONE,bottom:NONE,left:NONE,right:NONE,insideHorizontal:NONE,insideVertical:NONE},rows:trs2}));
       }
       rest.forEach(function(a){
-        att.push(P({spacing:{after:20},children:[T({text:(a.vid?"» ":a.aud?"• ":"")+(a.im.name||R.file),size:hp(6),font:"Arial",color:"6B7280"})]}));
+        att.push(P({spacing:{after:20},children:[attRun(a,6)]}));
       });
       att.push(P({spacing:{after:0},children:[]}));   // Word needs a paragraph after a table
     }else{
-      // names only: the pictures, if any, are in the appendix
-      att=(attTexts[i]?attTexts[i].split("\n"):[""]).map(function(line){
-        return P({spacing:{after:20},children:[T({text:line,size:hp(attPt),font:"Arial",color:"6B7280"})]});
-      });
+      // names only: each a link to its file
+      var itsW=attItems(e);
+      att=itsW.length?itsW.map(function(a){return P({spacing:{after:20},children:[attRun(a,attPt)]})})
+        :[P({spacing:{after:20},children:[T({text:"",size:hp(attPt),font:"Arial"})]})];
     }
     var descCh=[P({children:[T({text:e.text||"",size:hp(8),font:"Arial"})]})];
     if(CIw[e.id]){
@@ -10508,10 +10550,7 @@ async function buildDocxDocument(D,s,lang,rev){
   // inside the rows would blow the table up.
   var shots=[];
   entries.forEach(function(e){
-    (e.images||[]).concat((e.fix&&e.fix.images)||[]).forEach(function(im){
-      var src=im.type==="video"?im.poster:(im.type==="audio"?null:im.data);
-      if(src)shots.push({src:src,ts:fts(e.ts),name:im.name||""});
-    });
+    attItems(e).forEach(function(a){if(a.src)shots.push({src:a.src,ts:fts(e.ts),name:a.im.name||"",a:a})});
   });
   if(shots.length){
     var cols=3,gapMm=4,iwMm=(CW-gapMm*(cols-1))/cols,ihMm=iwMm*0.72;
@@ -10526,7 +10565,7 @@ async function buildDocxDocument(D,s,lang,rev){
           if(id){try{ch.push(P({spacing:{after:20},children:[new D.ImageRun({data:id.bytes,type:id.type,
             transformation:{width:Math.round(iwMm*72/25.4),height:Math.round(ihMm*72/25.4)}})]}))}catch(err){}}
           ch.push(P({children:[T({text:sh.ts,size:hp(6.5),font:"Arial",color:"6B7280"})]}));
-          ch.push(P({spacing:{after:80},children:[T({text:sh.name,size:hp(6.5),font:"Arial",color:"6B7280"})]}));
+          ch.push(P({spacing:{after:80},children:[attRun(sh.a,6.5)]}));
         } else ch.push(P({}));
         cellsS.push(new D.TableCell({borders:noBorders,margins:{top:0,bottom:0,left:0,right:tw(gapMm)},
           width:{size:tw(iwMm+gapMm),type:D.WidthType.DXA},children:ch}));
@@ -10676,7 +10715,7 @@ async function exportSessionZip(s,kind){
     // ZIP always carries one current copy of each — pdf, xlsx, html and docx —
     // in the language chosen for this session's reports.
     expBusy("Informes…");
-    var docxBlob=await buildDocxBlob(R.s,R.lang,R.rev);
+    var docxBlob=await buildDocxBlob(R.s,R.lang,R.rev,{local:true});
     if(docxBlob)zip.file(P.report+"_"+base+".docx",docxBlob);
     else if(!archive)throw new Error("no s'ha pogut generar l'informe Word");
     if(archive){

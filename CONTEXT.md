@@ -1632,6 +1632,26 @@ Now (`syncTick`, `scheduleSync`):
   written into a tab opened synchronously on the tap (so no popup block;
   `document.write` rather than a blob URL, which also works in the installed
   app on Android); anything else still goes to the viewer.
+- **Videos by name, and files that open from the report** (2026-10-18: "no
+  video thumbnails, only the names of the video files in the folder, and open
+  in Drive; reading a report from the ZIP, open the videos and photos if
+  possible"): `attItems` gives a video no picture (`src` null) and drops a
+  video with no driveId (not in the folder, not in the ZIP); every format
+  lists videos by name only, and the photo appendices take photos only.
+  `attLine` is the one "» name / • name" text. Links: `driveView(id)` and
+  `mediaRel(im)` = `photos|videos|audio/<encoded name>`, as laid out in the
+  folder and the ZIP. HTML: `mediaA` makes each name (and each appendix
+  photo) a relative link with `data-drive`; a small script at the end sends
+  the click to Drive unless `location.protocol` is `file:` — so from the
+  unzipped archive or the Drive-for-desktop folder the file beside the report
+  opens, from Drive or the in-app viewer (about:blank) the Drive copy does;
+  videos also get "↗ Obre a Drive". PDF: Drive links (`doc.link`) on the
+  thumbnails, the names (blue) and the appendix — not relative ones: Chrome's
+  and Edge's PDF viewers turn a scheme-less URI into https://…. Word:
+  `ExternalHyperlink` per name (`attRun`); `buildDocxBlob(..,{local:true})`
+  for the copy inside the project ZIP links to the relative path, other
+  copies to Drive. Tested with the real builders in the preview (links in all
+  three, no video pictures, the un-uploaded video left out, PDF rendered).
 - **A fourth part status: the client's quotation request** (2026-10-18:
   "another category for spare parts: the client asks for a quotation"):
   `st:"quo"` (💬 Cotització, blue). Not replaced and not our recommendation,

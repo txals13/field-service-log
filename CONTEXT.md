@@ -1632,6 +1632,19 @@ Now (`syncTick`, `scheduleSync`):
   written into a tab opened synchronously on the tap (so no popup block;
   `document.write` rather than a blob URL, which also works in the installed
   app on Android); anything else still goes to the viewer.
+- **Drive links from the app, local links in the ZIP** (2026-10-18: "only when
+  the ZIP is archived do the links look locally; working in the app, the
+  exports link to Drive — both with the folder layout already set"): the
+  builders take `opts.local` (`buildReportHTML(..,opts)`, `buildPdfBlob`,
+  `buildDocxBlob`/`buildDocxDocument`); `mediaHref(im,local)` = `mediaRel`
+  (photos|videos|audio/<name>) or `driveView(driveId)`. Only
+  `exportSessionZip` passes `{local:true}` (the ZIP's PDF, HTML and Word,
+  both packs); the PDF's Launch rewrite (`pdfBlobLocal`) runs for that copy
+  only. The layout is the same in both: a photo's name → its appendix copy,
+  the appendix photo and video/voice names → the file. Tested both: the
+  app's exports (Drive URIs in HTML/PDF/Word, GoTo to the appendix) and a
+  temporary copy forced to local (relative links, 3 Launch actions, Word
+  relative targets).
 - **Videos wait in a queue** (2026-10-18: "offline videos don't go up — fine,
   but I want to pick the video and have it wait in a queue"): a picked video
   used to be held only in memory (`fileCache`) and, not signed in, refused.

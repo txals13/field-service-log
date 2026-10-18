@@ -3102,6 +3102,7 @@ async function loadFromDrive(){
     sessions=orderSessions(merged.concat(onlyHere));
     markSeen();          // a merge is not a change of ours
     saveLocal();
+    histApplyGone();     // deleted on another device (the history file says so)
     if(dupes.length){
       // one file again: write the merge, then bin the copies that were read
       var w=await fetch("https://www.googleapis.com/upload/drive/v3/files/"+keep.id+"?uploadType=media",
@@ -5125,7 +5126,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 9";
+var APP_VERSION="2026-10-18 · 10";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -7263,29 +7264,77 @@ function histUpsertLive(){
   sessions.forEach(function(x){
     var cur=hist.visits[x.id];
     if(cur&&cur.del&&String(cur.at)>=String(sStamp(x)))return;
+    if(cur&&cur.gone&&String(cur.gone)>=String(sStamp(x)))return;
     var rec=histRecord(x,cur&&!cur.del&&cur.arch&&!x.zipAt?cur.arch:null);
     if(!cur||cur.del||JSON.stringify(cur)!==JSON.stringify(rec)){hist.visits[x.id]=rec;changed=true}
   });
   return changed;
 }
+// ── A DELETION REACHES EVERY DEVICE (2026-10-18) ─────────────────────────────
+// A deletion used to travel only by its Outputs folder (binned, the other
+// devices drop the visit) or by the data file (a device that never had the
+// visit doesn't get it). A visit with NO folder — imported, like the test
+// visits — deleted on the computer stayed on the phone, which still had it:
+// it saw it missing from the data file, took it for one of its own and put it
+// back; the computer took it out again, and so on (P-2026-165 and 140). Now
+// the deletion goes into the history file all devices share: a never-archived
+// visit's record becomes a tombstone (`del`, as before), an archived one keeps
+// its record for the history and gets `gone` = the moment it was deleted.
+// At each sync every device drops the visits a deletion is newer than, with a
+// note like its own deletions; a copy changed after it still wins. The notes
+// a device already had are put into the file too (`histGoneNotes`).
 function histForget(s){
-  if(s.zipAt){hist.visits[s.id]=histRecord(s);}
+  if(s.zipAt){hist.visits[s.id]=Object.assign(histRecord(s),{gone:now()});}
   else hist.visits[s.id]={id:s.id,del:true,at:now()};
   histSaveLocal();histSchedule();
 }
+function histGoneStamp(r){return r?String(r.del?(r.at||""):(r.gone||"")):""}
 function histMerge(a,b){
   var out={v:1,visits:{},seen:Object.assign({},(a&&a.seen)||{},(b&&b.seen)||{})};
   [a,b].forEach(function(h){
     Object.keys((h&&h.visits)||{}).forEach(function(id){
       var r=h.visits[id],c=out.visits[id];
-      if(!c||String(r.at||"")>String(c.at||""))out.visits[id]=r;
+      if(!c){out.visits[id]=r;return}
+      var w=String(r.at||"")>String(c.at||"")?r:c,g=[r.gone||"",c.gone||""].sort().pop();
+      // a deletion stamp survives the merge unless the winner is newer
+      if(!w.del&&g&&String(g)>=String(w.at||"")&&w.gone!==g)w=Object.assign({},w,{gone:g});
+      out.visits[id]=w;
     });
   });
   return out;
 }
 function histSig(h){
-  return Object.keys(h.visits||{}).sort().map(function(id){var r=h.visits[id];return id+":"+(r.at||"")+(r.del?"x":"")+(r.arch?"a":"")}).join(",")
+  return Object.keys(h.visits||{}).sort().map(function(id){var r=h.visits[id];return id+":"+(r.at||"")+(r.del?"x":"")+(r.arch?"a":"")+(r.gone?"g"+r.gone:"")}).join(",")
     +"|"+Object.keys(h.seen||{}).sort().join(",");
+}
+// Deletions noted on this device that the file does not know yet.
+function histGoneNotes(){
+  var gm=goneGet(),c=false;
+  Object.keys(gm).forEach(function(id){
+    if(sessions.some(function(x){return x.id===id}))return;          // came back: not deleted
+    var t=goneAt(gm,id);if(!t)return;
+    var r=hist.visits[id];
+    if(!r){hist.visits[id]={id:id,del:true,at:t};c=true}
+    else if(!r.del&&String(t)>=String(r.at||"")&&String(r.gone||"")<String(t)){hist.visits[id]=Object.assign({},r,{gone:t});c=true}
+  });
+  return c;
+}
+// Visits a deletion in the file is newer than leave this device too.
+function histApplyGone(){
+  var gm=goneGet(),drop={},any=false;
+  sessions.forEach(function(x){
+    var t=histGoneStamp(hist.visits[x.id]);
+    if(!t||String(sStamp(x))>t)return;
+    drop[x.id]=1;any=true;
+    if(String(goneAt(gm,x.id)||"")<t)gm[x.id]={f:x.folderId||"",done:true,at:t};
+  });
+  if(!any)return false;
+  goneSet(gm);
+  sessions=sessions.filter(function(x){return !drop[x.id]});
+  if(aid&&drop[aid]){aid=null;stopCurAudio()}
+  isDirty=true;saveLocal();renderAll();
+  if(isLoggedIn)setTimeout(function(){if(isLoggedIn)saveToDrive()},0);
+  return true;
 }
 function histSchedule(){clearTimeout(histTimer);histTimer=setTimeout(histSync,3000)}
 // Read the Drive file, merge, write it back only if it changed.
@@ -7306,6 +7355,8 @@ async function histSync(){
         if(rr.ok){var d=await rr.json();if(d&&d.visits)remote=histMerge(remote,d)}}catch(e){}
     }
     hist=histMerge(remote,hist);
+    histGoneNotes();
+    histApplyGone();
     histUpsertLive();
     await histSaveLocal();
     histFileId=files.length?files[0].id:null;

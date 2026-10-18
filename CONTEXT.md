@@ -1632,6 +1632,24 @@ Now (`syncTick`, `scheduleSync`):
   written into a tab opened synchronously on the tap (so no popup block;
   `document.write` rather than a blob URL, which also works in the installed
   app on Android); anything else still goes to the viewer.
+- **A deletion reaches every device** (2026-10-18: "P-2026-165 and 140,
+  deleted on the computer, are still on the phone but not on the tablet"):
+  a deletion travelled only by its Outputs folder (binned → other devices
+  drop the visit) or by the data file (only reaches a device without the
+  visit). These were imported test visits with no folder: the phone, which
+  still had them, saw them missing from the file, kept them as `onlyHere` and
+  pushed them back; the computer's gone notes took them out again, forever.
+  Now the history file carries deletions: `histForget` keeps an archived
+  visit's record but adds `gone` = deletion time (never-archived: the `del`
+  tombstone, as before); `histMerge` keeps the newest `gone` unless the
+  winning record is newer; `histGoneNotes` puts this device's existing gone
+  notes into the file (so 165/140, deleted before this, travel too);
+  `histApplyGone` (each `histSync` after the merge, and in `loadFromDrive`
+  before the reconcile) drops every visit a deletion stamp is not older than,
+  writes a gone note `{f:folderId, done:true, at:stamp}` so `goneBlocks` keeps
+  data-file copies out, and re-saves. A copy changed after the deletion still
+  wins (its record is newer). `histUpsertLive` skips a visit `gone` is newer
+  than. Tested with three simulated devices (13 checks).
 - **A folder binned in Drive deletes its visit for good** (2026-10-18: "a
   Celler de l'Albera folder I can't get rid of"): reconcile step 1 dropped a
   visit whose folder was in the trash but left no gone note, so the data file,

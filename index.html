@@ -125,6 +125,7 @@ mark{background:var(--goldbg);color:var(--goldtx);padding:0 1px;border-radius:2p
 .thumb-up.loading{background:var(--blue);animation:spin .8s linear infinite}
 .thumb-up.err{background:var(--red)}
 .thumb-up.ok{background:var(--green)}
+.thumb-up.queued{background:var(--orange)}
 /* audio / voice notes */
 .audio-chip{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--br2);border-radius:8px;padding:6px 9px;width:100%;position:relative;font-size:12px;flex-wrap:wrap}
 .ac-play{flex-shrink:0;width:28px;height:28px;border-radius:50%;border:none;background:var(--gold);color:#000;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
@@ -1445,6 +1446,12 @@ function idbSet(db,key,val){
     catch(e){rej(e)}
   });
 }
+function idbDel(db,key){
+  return new Promise(function(res){
+    try{var t=db.transaction("kv","readwrite");t.objectStore("kv").delete(key);t.oncomplete=function(){res(true)};t.onerror=function(){res(false)}}
+    catch(e){res(false)}
+  });
+}
 function loadLocal(){try{return JSON.parse(localStorage.getItem(LS_DATA)||"[]")}catch(e){return[]}}
 // Loads sessions, opening IndexedDB and migrating any existing localStorage
 // data into it once (then freeing the localStorage copy).
@@ -1902,7 +1909,7 @@ async function syncSessionToDrive(token,sess){
           continue;
         }
       }
-      if(img.type==="video"){if(!img.driveId)res.missingVideos++;continue}
+      if(img.type==="video"){if(!img.driveId&&!img.qid)res.missingVideos++;continue}
       if(img.driveId||!img.data)continue;
       var blob=dataUrlToBlob(img.data);if(!blob)continue;
       var isAudio=img.type==="audio";
@@ -2096,6 +2103,95 @@ async function saveReport(sess,blob,fname,mime){
   repNote("&#9203; <b>"+esc(fname)+"</b> queda guardat a l'app i es pujarà a la carpeta del projecte "
     +(isLoggedIn?"quan tornis a tenir connexió.":"quan entris a Google."),"wait");
   return false;
+}
+// ── VIDEOS WAIT IN A QUEUE (2026-10-18) ──────────────────────────────────────
+// "Offline videos don't go up. Fine — but I want to pick the video and have it
+// wait in a queue." A video was only ever held in memory: offline (or not
+// signed in) it was refused, or failed and was gone with the next reload. Now
+// the picked file is kept in IndexedDB ("mq:<qid>", listed under MQ_KEY) and
+// the attachment carries its `qid`, marked ⏳ (uploadStatus "queued"). The
+// queue goes up on its own at every sync, when the connection comes back and
+// at start-up; each one that makes it gets its driveId, leaves the queue and
+// its visit is re-saved. Until then it plays from this device. An uploaded one
+// stays listed (`done`, without its file) until its visit carries the Drive id
+// — a sync can swap the visit for a copy made before the upload finished, and
+// that copy is then given the id too. A queued video whose entry is not found
+// for a day (the entry was never saved, or the video was taken out) is dropped.
+var MQ_KEY="mediaQueue",mqBusy=false,mqN=0,mqActive={};
+async function mqList(){try{var v=idb?await idbGet(idb,MQ_KEY):null;return Array.isArray(v)?v:[]}catch(e){return[]}}
+function mqWaiting(l){return l.filter(function(x){return !x.done}).length}
+async function mqSave(l){try{if(idb)await idbSet(idb,MQ_KEY,l)}catch(e){}mqN=mqWaiting(l);refreshDriveInfo()}
+async function mqAdd(sessId,img,file){
+  if(!idb)return false;
+  img.qid=img.qid||uid();
+  try{await idbSet(idb,"mq:"+img.qid,file)}catch(e){delete img.qid;return false}
+  var l=(await mqList()).filter(function(x){return x.qid!==img.qid});
+  l.push({qid:img.qid,sessId:sessId,name:file.name||img.name||"video.mp4",mime:file.type||"video/mp4",at:now()});
+  await mqSave(l);
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}   // ask the browser not to clear it
+  return true;
+}
+async function mqBlob(qid){try{return idb&&qid?await idbGet(idb,"mq:"+qid):null}catch(e){return null}}
+async function mqDrop(qid){
+  if(!idb||!qid)return;
+  await idbDel(idb,"mq:"+qid);
+  await mqSave((await mqList()).filter(function(x){return x.qid!==qid}));
+}
+// Uploaded: the file leaves, the Drive id stays with the entry until used.
+async function mqDone(qid,r){
+  await idbDel(idb,"mq:"+qid);
+  await mqSave((await mqList()).map(function(x){return x.qid===qid?{qid:qid,sessId:x.sessId,at:x.at,done:{driveId:r.driveId,name:r.name}}:x}));
+}
+function mqFind(qid){
+  for(var i=0;i<sessions.length;i++){
+    var es=sessions[i].entries||[];
+    for(var j=0;j<es.length;j++){
+      var im=entryMedia(es[j]).find(function(x){return x&&x.qid===qid});
+      if(im)return {sess:sessions[i],img:im};
+    }
+  }
+  return null;
+}
+// Upload one queued video (the file from the queue); true when it is on Drive.
+async function mqUpload(sess,img,file){
+  var q=img.qid;if(!q||mqActive[q])return false;
+  mqActive[q]=1;
+  try{
+    var r=await uploadMedia(sess,file,"videos");
+    if(!r)return false;
+    mediaUploaded(img,r);delete img.qid;await mqDone(q,r);
+    return true;
+  }finally{delete mqActive[q]}
+}
+async function mqFlush(){
+  if(mqBusy||!idb||!isLoggedIn||navigator.onLine===false||tokenStale())return;
+  var l=await mqList();mqN=mqWaiting(l);if(!l.length)return;
+  mqBusy=true;
+  try{
+    var done=0,changed={};
+    for(var i=0;i<l.length;i++){
+      var it=l[i];if(mqActive[it.qid])continue;
+      var f=mqFind(it.qid);
+      if(it.done){                                   // already up: hand the id to any copy still waiting
+        if(f){if(!f.img.driveId)mediaUploaded(f.img,it.done);delete f.img.qid;changed[f.sess.id]=1}
+        else await mqDrop(it.qid);
+        continue;
+      }
+      if(!f){if(Date.now()-Date.parse(it.at||0)>864e5)await mqDrop(it.qid);continue}
+      if(f.img.driveId){await mqDrop(it.qid);delete f.img.qid;changed[f.sess.id]=1;continue}
+      var b=await mqBlob(it.qid);
+      if(!b){await mqDrop(it.qid);delete f.img.qid;f.img.uploadStatus="err";changed[f.sess.id]=1;continue}
+      var file;try{file=new File([b],f.img.name||it.name,{type:it.mime||b.type||"video/mp4"})}catch(e){file=b}
+      if(await mqUpload(f.sess,f.img,file)){done++;changed[f.sess.id]=1}
+    }
+    if(Object.keys(changed).length){
+      // new objects, so the change is stamped and goes to Drive with the next save
+      sessions=sessions.map(function(x){return changed[x.id]?Object.assign({},x):x});
+      isDirty=true;saveLocal();
+      if(hasUnsaved())renderSidebar();else renderAll();
+    }
+    if(done)repNote("&#10003; "+pl(done,"vídeo de la cua pujat","vídeos de la cua pujats")+" a la carpeta del projecte","ok");
+  }finally{mqBusy=false}
 }
 async function flushPendingReports(){
   var q=await pendLoad();
@@ -3173,6 +3269,7 @@ async function refreshDriveInfo(token){
   var left=lk.length?"<br><span style=\"color:var(--orange)\" title=\""+esc(lk.map(function(k){return lm[k].why}).filter(Boolean).join(" · "))+"\">⚠ Esborra a mà a Drive (Outputs): "
     +lk.map(function(k){return "«"+esc(lm[k].name||k)+"»"}).join(", ")+" — hi ha un fitxer que l'app no pot tocar (p. ex. una còpia de Google Docs)</span>":"";
   var pend=pendReps&&pendReps.length?"<br><span style=\"color:var(--orange)\">&#9203; "+pl(pendReps.length,"informe pendent","informes pendents")+" de pujar</span>":"";
+  if(mqN)pend+="<br><span style=\"color:var(--orange)\">&#9203; "+pl(mqN,"vídeo a la cua","vídeos a la cua")+" per pujar</span>";
   if(!isLoggedIn){el.innerHTML="Sense entrar a Google: només aquest aparell"+pend+left;return}
   el.innerHTML="Compte: <strong>"+esc(driveEmail||"?")+"</strong>"
     +(lastDriveCount!=null?"<br>A Drive: "+pl(lastDriveCount,"visita","visites")
@@ -3335,6 +3432,7 @@ function syncTick(force){
   }).catch(function(){}).then(function(){syncBusy=false;syncQuiet=false});
   flushTrash();
   flushPendingReports();
+  mqFlush();
 }
 function sessSig(){return aid+"#"+sessions.map(function(x){return x.id+":"+sStamp(x)+":"+(x.status||"")}).join("|")}
 function scheduleSync(){
@@ -3342,7 +3440,7 @@ function scheduleSync(){
   setInterval(function(){syncTick(true)},30000);
   document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")syncTick()});
   window.addEventListener("focus",function(){syncTick()});
-  window.addEventListener("online",function(){flushPendingReports()});
+  window.addEventListener("online",function(){flushPendingReports();mqFlush()});
   document.addEventListener("focusout",function(){
     setTimeout(function(){if(redrawPending&&!hasUnsaved()){redrawPending=false;renderAll()}},0);
   });
@@ -3632,6 +3730,7 @@ function renderLogArea(){
           ev.stopPropagation();
           var img=logImgAt(e,t);if(!img)return;
           var file=fileCache.get(img)||fileFromLocal(img);
+          if(!file&&img.qid){mqFlush();return}
           if(!file){alert("No es pot tornar a provar: el fitxer original ja no està disponible en aquesta sessió. Treu-lo i torna'l a afegir des d'Edita.");return}
           img.uploadStatus="loading";renderLogArea();
           uploadMedia(active,file,img.type==="video"?"videos":"photos").then(function(r){
@@ -3644,6 +3743,13 @@ function renderLogArea(){
           if(img.type==="video"){
             var fc=fileCache.get(img);
             if(fc){openMedia(URL.createObjectURL(fc),"video",img.name);return}   // still in memory here: play it straight
+            if(img.qid&&!img.driveId){                                          // waiting in the queue
+              mqBlob(img.qid).then(function(b){
+                if(b)openMedia(URL.createObjectURL(b),"video",img.name);
+                else alert("Aquest vídeo és a la cua de l'aparell on el vas afegir: es pujarà quan aquell aparell tingui connexió.");
+              });
+              return;
+            }
             if(!img.driveId||!accessToken){alert(img.uploadStatus==="err"?"No s'ha pogut pujar el vídeo. Toca la marca ! per tornar-ho a provar."
               :!img.driveId&&isLoggedIn?"Aquest vídeo no és a Drive: la visita es va importar d'un ZIP que no el portava. Torna a importar el ZIP de la visita (⇧ Importa): si el vídeo encara és a Drive, també a la paperera, l'app el recupera."
               :"El vídeo és a Drive. Inicia la sessió per reproduir-lo.");return}
@@ -3923,6 +4029,7 @@ function renderContent(){
 // ── THUMBNAILS ────────────────────────────────────────────────────────────────
 function upBadge(img){
   if(img.uploadStatus==="loading")return"<div class=\"thumb-up loading\">⟳</div>";
+  if(img.uploadStatus==="queued")return"<div class=\"thumb-up queued\" title=\"A la cua: es pujarà sol quan hi hagi connexió\">⏳</div>";
   if(img.uploadStatus==="err")return"<div class=\"thumb-up err\" title=\"No s'ha pogut pujar — toca per tornar-ho a provar\" style=\"cursor:pointer\">!</div>";
   if(img.uploadStatus==="ok")return"<div class=\"thumb-up ok\">✓</div>";
   return"";
@@ -3969,7 +4076,13 @@ function retryUpload(img,bk){
 function renderThumbs(bk){
   var B=MB[bk],c=$$(B.thumbs);if(!c)return;c.innerHTML="";
   B.get().forEach(function(img,i){
-    function removeAt(){B.set(B.get().filter(function(_,j){return j!==i}));renderThumbs(bk)}
+    function removeAt(){
+      // a video taken out before its entry was ever saved leaves the queue too
+      // (in an edit, the saved entry may still have it: the queue's own clean-up
+      // drops it a day after no entry carries it)
+      if(bk==="pend"&&img.qid)mqDrop(img.qid);
+      B.set(B.get().filter(function(_,j){return j!==i}));renderThumbs(bk);
+    }
     if(img.type==="audio"){
       c.appendChild(audioChipEl(img,{editable:true,bk:bk,onDelete:function(){stopCurAudio();removeAt()}}));
       return;
@@ -4688,27 +4801,33 @@ function handleFiles(e,bk){
   var B=MB[bk];
   var active=sessions.find(function(s){return s.id===aid});
   var files=Array.from(e.target.files||[]);
-  // Videos are never stored locally (only uploaded to Drive as a blob, see
-  // CONTEXT.md) — without a session and an active Drive login there is
-  // nowhere for the file to go, so block it up front instead of silently
-  // losing the video after showing a fake "uploaded" thumbnail.
-  if(files.some(isVidFile)&&(!active||!isLoggedIn)){
-    alert("Inicia la sessió amb Google per adjuntar vídeos: es pugen directament a Drive i no es guarden en aquest dispositiu.");
+  // A video waits in the queue (mqAdd) until it can go up — offline, or not
+  // signed in yet, it is kept on this device instead of being refused.
+  if(files.some(isVidFile)&&!active){
+    alert("Obre o crea primer una visita per adjuntar-hi vídeos.");
     files=files.filter(function(f){return !isVidFile(f)});
   }
   files.forEach(function(file){
     var isVid=isVidFile(file);
     if(isVid){
-      var img={data:null,type:"video",name:file.name,uploadStatus:"loading",poster:null};
+      var img={data:null,type:"video",name:file.name,uploadStatus:"queued",poster:null};
       fileCache.set(img,file);
       B.set(B.get().concat([img]));renderThumbs(bk);
       function inc(){B.busy(1)}
       function dec(){B.busy(-1)}
       inc();getFileTs(file).then(function(ts){img.capturedAt=ts;dec();renderThumbs(bk)});
       inc();genThumb(file).then(function(t){if(t)img.poster=t;dec();renderThumbs(bk)});
-      inc();uploadMedia(active,file,"videos").then(function(r){
-        if(r)mediaUploaded(img,r);else img.uploadStatus="err";
-        dec();renderThumbs(bk);scheduleSave();
+      // into the queue first (the entry can be saved as soon as it is kept),
+      // then straight up if there is a connection
+      inc();mqAdd(active.id,img,file).then(function(kept){
+        dec();
+        if(!isLoggedIn||navigator.onLine===false||tokenStale()){img.uploadStatus=kept?"queued":"err";renderThumbs(bk);return}
+        img.uploadStatus="loading";renderThumbs(bk);
+        var up=kept?mqUpload(active,img,file):uploadMedia(active,file,"videos").then(function(r){if(r)mediaUploaded(img,r);return !!r});
+        up.then(function(ok){
+          if(!ok)img.uploadStatus=kept?"queued":"err";
+          renderThumbs(bk);scheduleSave();
+        });
       });
     } else {
       // Store a downscaled copy locally (fast to render, small to store); the
@@ -5246,7 +5365,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 18";
+var APP_VERSION="2026-10-18 · 19";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -10902,6 +11021,7 @@ $$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><di
   markSeen();
   outDirLoad();arxDirLoad();
   pendLoad().then(function(){refreshDriveInfo()});
+  mqList().then(function(l){mqN=mqWaiting(l);refreshDriveInfo()});
   histLoad();   // reports still waiting to go up        // idb is open by now; nothing waits on this
   labelsLoad();                     // so a language translated earlier is ready offline
   if(loadTok()&&accessToken&&Date.now()<tokenExp){

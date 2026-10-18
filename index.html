@@ -1459,8 +1459,8 @@ function exportAllBackup(){
     dlBlob(new Blob([str],{type:"application/json;charset=utf-8"}),"field_service_log_backup_"+fnameStamp()+".json");
   }catch(e){alert("No s'ha pogut crear la còpia: "+((e&&e.message)||e))}
 }
-function saveTok(){try{localStorage.setItem(LS_TOKEN,JSON.stringify({accessToken,tokenExp,driveFileId,rootFolderId}))}catch(e){}}
-function loadTok(){try{var t=JSON.parse(localStorage.getItem(LS_TOKEN)||"null");if(!t)return false;accessToken=t.accessToken;tokenExp=t.tokenExp||0;driveFileId=t.driveFileId||null;rootFolderId=t.rootFolderId||null;return true}catch(e){return false}}
+function saveTok(){try{localStorage.setItem(LS_TOKEN,JSON.stringify({accessToken,tokenExp,driveFileId,rootFolderId,email:driveEmail||""}))}catch(e){}}
+function loadTok(){try{var t=JSON.parse(localStorage.getItem(LS_TOKEN)||"null");if(!t)return false;accessToken=t.accessToken;tokenExp=t.tokenExp||0;driveFileId=t.driveFileId||null;rootFolderId=t.rootFolderId||null;if(t.email&&!driveEmail)driveEmail=t.email;return true}catch(e){return false}}
 function clearTok(){accessToken=null;tokenExp=0;driveFileId=null;rootFolderId=null;try{localStorage.removeItem(LS_TOKEN)}catch(e){}}
 
 // ── EXIF / MP4 TIMESTAMP ────────────────────────────────────────────────────
@@ -1578,15 +1578,64 @@ async function googleLogin(){
   if(result==="timeout"){alert("L'inici de sessió no s'ha completat. Si s'ha bloquejat una finestra emergent de Google, permet-les per a aquest lloc i torna-ho a provar.");return null}
   return result;
 }
+// ── STAYING CONNECTED (2026-10-18) ───────────────────────────────────────────
+// Google's access token lasts an hour, and on expiry the app used to sign
+// out: token cleared, "● Local", the red bar, sign in again — in the middle of
+// a visit. Now an expired token does NOT sign out. The app stays connected and
+// renews it quietly (prompt "", the account as hint) — but Google only lets
+// that window open from a tap, so it happens on the next tap anywhere: as soon
+// as the token has run out, or already in its last five minutes, so while the
+// app is in use it never runs out at all. Only a renewal that fails (signed
+// out of Google in the browser, access withdrawn) brings the "Reconnecta" bar;
+// only "Tanca la sessió" signs out.
+var tokClient=null,tokCb=null,renewing=null,needRenew=false;
+function tokClientGet(){
+  if(tokClient)return tokClient;
+  if(!window.google||!window.google.accounts||!window.google.accounts.oauth2)return null;
+  tokClient=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:"https://www.googleapis.com/auth/drive.file",
+    callback:function(r){var cb=tokCb;tokCb=null;if(cb)cb(r)},
+    error_callback:function(e){var cb=tokCb;tokCb=null;if(cb)cb({error:(e&&e.type)||"error"})}});
+  return tokClient;
+}
+function renewToken(){
+  if(renewing)return renewing;
+  var c=tokClientGet();if(!c)return Promise.resolve(null);
+  renewing=new Promise(function(res){
+    tokCb=function(r){
+      if(r&&!r.error&&r.access_token){accessToken=r.access_token;tokenExp=Date.now()+(((r.expires_in||3600)-120)*1000);saveTok();res(accessToken)}
+      else res(null);
+    };
+    try{c.requestAccessToken(Object.assign({prompt:""},driveEmail?{login_hint:driveEmail}:{}))}catch(e){res(null)}
+    setTimeout(function(){res(null)},20000);
+  }).then(function(t){
+    renewing=null;tokCb=null;
+    if(t){needRenew=false;hideAuthExpired();refreshSyncDot();if(!syncStarted)loadFromDrive().then(function(){renderAll();scheduleSync();flushTrash()});else syncTick(true)}
+    else{showAuthExpired();refreshSyncDot()}
+    return t;
+  });
+  return renewing;
+}
+function tokenStale(){return !accessToken||Date.now()>=tokenExp}
+function refreshSyncDot(){
+  var st=$$("syncSt");if(!st||!isLoggedIn)return;
+  if(needRenew&&tokenStale())st.innerHTML="<span style=\"color:var(--orange)\" title=\"La connexió amb Google es renova al proper toc a la pantalla\">● Drive</span>";
+}
+// any tap: renew if the token has run out or is about to
+document.addEventListener("click",function(){
+  if(!isLoggedIn||renewing)return;
+  if(tokenStale()||tokenExp-Date.now()<5*60000){loadGIS().then(function(){renewToken()})}
+},true);
 async function getToken(){
   if(accessToken&&Date.now()<tokenExp)return accessToken;
-  var wasLoggedIn=isLoggedIn;
-  clearTok();isLoggedIn=false;
-  updateAuthUI();
-  if(wasLoggedIn)showAuthExpired();
+  if(isLoggedIn){needRenew=true;refreshSyncDot()}    // stays connected: the next tap renews it
   return null;
 }
-async function ensureToken(){var t=await getToken();return t||(await googleLogin())}
+async function ensureToken(){
+  var t=await getToken();if(t)return t;
+  if(renewing)return await renewing;          // a tap has just started a renewal: wait for it
+  if(isLoggedIn)return null;                  // connected, token out of date: no popup out of the blue
+  return await googleLogin();
+}
 
 // ── DRIVE FOLDERS ────────────────────────────────────────────────────────────
 async function driveFind(token,name,parentId,mime){
@@ -2989,7 +3038,7 @@ async function refreshDriveInfo(token){
   if(!driveEmail&&token){
     try{
       var r=await fetch("https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)",{headers:{Authorization:"Bearer "+token}});
-      if(r.ok){var u=(await r.json()).user;driveEmail=u&&u.emailAddress||null}
+      if(r.ok){var u=(await r.json()).user;driveEmail=u&&u.emailAddress||null;if(driveEmail)saveTok()}   // remembered: the hint for a quiet renewal
     }catch(e){}
   }
   var el=$$("driveInfo");if(!el)return;
@@ -3143,6 +3192,7 @@ function scheduleSave(){if(aid)sessions=sessions.map(function(s){return s.id===a
 var syncBusy=false,lastSyncAt=0,redrawPending=false;
 function syncTick(force){
   if(!isLoggedIn||syncBusy)return;
+  if(tokenStale()){needRenew=true;refreshSyncDot();return}      // waiting for a tap to renew
   if(!force&&Date.now()-lastSyncAt<5000)return;
   syncBusy=true;lastSyncAt=Date.now();syncQuiet=true;
   // Redrawn only when the visits actually changed (2026-10-17): every tick
@@ -5066,7 +5116,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 7";
+var APP_VERSION="2026-10-18 · 8";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -10612,6 +10662,11 @@ $$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><di
   if(loadTok()&&accessToken&&Date.now()<tokenExp){
     isLoggedIn=true;
     loadFromDrive().then(function(){renderAll();scheduleSync();flushTrash()});
+  } else if(accessToken){
+    // signed in before and never signed out: connected, the first tap renews
+    isLoggedIn=true;needRenew=true;
+    renderAll();setTimeout(refreshSyncDot,0);
+    loadGIS().then(tokClientGet);
   } else {
     renderAll();
   }

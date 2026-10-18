@@ -1589,6 +1589,20 @@ Now (`syncTick`, `scheduleSync`):
 - it also runs on `visibilitychange` → visible and on window `focus`
   (throttled to one every 5 s): a phone app's interval does not run while it
   sleeps, so coming back to it waited up to half a minute.
+- **Staying connected to Google** (2026-10-18: "don't disconnect while I have
+  a visit open"): the hour-long token used to sign the app out on expiry
+  (`getToken` cleared it, `isLoggedIn=false`, red bar). Now expiry only sets
+  `needRenew` (orange ● Drive, `refreshSyncDot`); `isLoggedIn`, the data-file
+  and root ids stay. A capture-phase `click` listener renews with one shared
+  token client (`tokClientGet`, `renewToken`: prompt "", `login_hint` = the
+  account, now remembered in the stored token as `email`) when the token is
+  out of date or in its last 5 minutes — Google only opens that window from a
+  tap. `ensureToken` waits for a renewal in progress, returns null (no popup
+  out of the blue) when connected but stale, and only opens the full sign-in
+  when not connected at all; `syncTick` skips while stale. Boot with a stored
+  but expired token = connected + `needRenew`. A failed renewal shows the
+  Reconnecta bar; only "Tanca la sessió" signs out. Tested against a fake
+  GIS: renewal on tap, near-expiry renewal, failure → bar, boot state.
 - **Playing a video from Drive** (2026-10-18: "a window opens and nothing
   loads"): the player's `src` was Drive with the token in the URL
   (`driveStreamUrl`, `?access_token=`); a refusal or an undecodable file (HEVC,

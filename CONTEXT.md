@@ -1632,6 +1632,26 @@ Now (`syncTick`, `scheduleSync`):
   written into a tab opened synchronously on the tap (so no popup block;
   `document.write` rather than a blob URL, which also works in the installed
   app on Android); anything else still goes to the viewer.
+- **Names only; a photo's name goes to the appendix, the appendix photo to
+  the file** (2026-10-18: "no thumbnails of photos or videos, only the names;
+  the names take you to the photo at the end, and clicking that photo opens
+  the file in its folder"): the Adjunts column is text in all three formats —
+  `attHasPics`, `imgSize`, the ATT_* sizes, the PDF's `attL` thumbnail
+  drawing and Word's thumbnail table are gone; the column is sized by its
+  names. The appendix photos are gathered before the table (`shots`,
+  `shotOf` img → index). HTML: a photo's name links `#fsl-ph-N`; the
+  appendix photo and its caption name link the file (`mediaA`). PDF: column 4
+  text is blue; in `didDrawCell` a video's or voice note's line gets its
+  relative link (→ Launch), a photo's line is queued in `toShot` with its
+  page and rect, and once the appendix has drawn (each shot records `page`
+  and `top`) those become GoTo links (`{pageNumber, top}`) — added with
+  `doc.setPage`, then back to the last page. Word: photo names are
+  `InternalHyperlink`s to a `Bookmark` "fslphN" on the appendix photo's time
+  line; the appendix image sits in an `ExternalHyperlink` to the file, as
+  does its name (`attRun(a,size,toFile)`). Checked: HTML anchors and ids
+  match; PDF 2 GoTo + 3 file links on page 1, 2 file links on the appendix,
+  xref exact, no thumbnails; Word anchors = bookmarks, 2 hyperlinked
+  drawings.
 - **…and they open from their own folder, never from Drive** (2026-10-18:
   "I don't want them opened from Drive; from their own folder, the paths are
   the same, so they can be checked offline"): every link is `mediaRel` now —

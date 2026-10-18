@@ -1199,15 +1199,12 @@ var PST_TIP={fit:"Canviat en aquesta visita",urg:"Recomanat: convé canviar-lo a
 var PST_RGB={fit:[22,163,74],urg:[220,38,38],prev:[217,119,6],quo:[37,99,235]};
 var PST_HEX={fit:"16A34A",urg:"DC2626",prev:"D97706",quo:"2563EB"};
 var lastPartSt="fit";   // the next part picked starts where the last one was left
-// What sits in an entry's Adjunts column: its own files, then the outcome's.
-// `src` is what can be drawn as a picture (a photo, or a video's poster).
-// In the reports (2026-10-17) the pictures go INTO the column as thumbnails,
-// two across, each with its file name under it — whole, wrapped, never cut:
-// the name is how the client asks for the original.
-var ATT_TW=15,ATT_GAP=1.5,ATT_MAX=12;   // thumbnail width (mm), gap, most per entry
-// Videos (2026-10-18): no picture any more — only the name and the link, and
-// only the ones that are in the visit's folder (on Drive); a video that never
-// went up is not in the folder or in the ZIP, so it is not listed.
+// What sits in an entry's Adjunts column: its own files, then the outcome's —
+// by NAME only, no thumbnails (2026-10-18, "no thumbnails of photos or videos,
+// only the names; a name takes you to the photo at the end of the report, and
+// clicking that photo opens the file in its folder"). `src` is the picture a
+// photo shows in the appendix. Videos only when they are in the visit's
+// folder (on Drive): one that never went up is not in the folder or the ZIP.
 function attItems(e){
   return ((e&&e.images)||[]).concat((e&&e.fix&&e.fix.images)||[]).filter(function(im){
     return im&&(im.type!=="video"||im.driveId);
@@ -1264,8 +1261,6 @@ function pdfBlobLocal(doc){
   }catch(e){}
   return doc.output("blob");
 }
-function attHasPics(entries){return (entries||[]).some(function(e){return attItems(e).some(function(a){return a.src})})}
-function imgSize(src){return new Promise(function(res){var i=new Image();i.onload=function(){res({w:i.naturalWidth,h:i.naturalHeight})};i.onerror=function(){res(null)};i.src=src})}
 // One thumbnail, fitted whole into its box (letterboxed on light grey); a
 // video gets a play mark. `alias` lets the photo appendix reuse the same
 // embedded image instead of storing it twice.
@@ -5239,7 +5234,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 15";
+var APP_VERSION="2026-10-18 · 16";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -7991,13 +7986,12 @@ function buildReportHTML(s,forPrint,lang,rev){
   var R=RPT[lang],tm=TM[s.type]||TM.commissioning,tl=R.types[s.type]||R.types.commissioning;
   var entries=s.entries||[];
   var cnt=severityCounts(entries),errs=cnt.issue,warns=cnt.warning,oks=cnt.ok;
-  // The pictures, in log order, for the appendix of large photos at the end —
-  // as the PDF has it (2026-10-17: the HTML had only the thumbnails). Each
-  // thumbnail is a link down to its large copy.
+  // The pictures, in log order, for the appendix of large photos at the end.
+  // A photo's name in the Adjunts column is a link down to its large copy.
   var shots=[];
   function shotLink(img,e,src,inner){
     var k=shots.length;shots.push({img:img,src:src,ts:fts(e.ts)});
-    return "<a href=\"#fsl-ph-"+k+"\" title=\""+esc(img.name||"")+"\" style=\"display:block\">"+inner+"</a>";
+    return "<a href=\"#fsl-ph-"+k+"\" style=\"color:#1d4ed8\">"+inner+"</a>";
   }
   // A link to the file beside the report (photos/…, videos/…, audio/…).
   function mediaA(img,inner){
@@ -8007,20 +8001,16 @@ function buildReportHTML(s,forPrint,lang,rev){
   var CI=closesInfo(s,lang);
   var rows=entries.map(function(e){
     var sm=SM[e.severity]||SM.info,sl=R.sev[e.severity]||R.sev.info;
-    // Thumbnails two across, the name under each (wrapped, never cut), as in
-    // the PDF; a voice note takes a whole line.
-    var nmS="font-size:9px;color:#6b7280;font-family:monospace;overflow-wrap:anywhere;line-height:1.25;margin-top:2px";
-    var thS="width:100px;height:75px;object-fit:contain;background:#f3f4f6;border-radius:3px;display:block";
-    // The name opens the file itself, beside the report (mediaA); a video is
-    // its name and that link, nothing more.
+    // Names only, one per line: a photo's goes down to its large copy in the
+    // appendix; a video's or a voice note's opens the file beside the report.
+    var nmS="font-size:10px;font-family:monospace;overflow-wrap:anywhere;line-height:1.35";
     var imgCell=attItems(e).map(function(a){
-      var img=a.im,dl="";
-      if(a.vid)return "<div style=\"grid-column:1/-1;"+nmS+";margin-top:0\">» "+mediaA(img,esc(img.name||R.video))+dl+"</div>";
-      if(a.aud)return "<div style=\"grid-column:1/-1;padding:5px 7px;background:#f9fafb;border-left:3px solid #f59e0b\"><div style=\""+nmS+";margin-top:0\">🎧 "+mediaA(img,esc(img.name||R.voice))+" · "+fmtDur(img.duration)+dl+"</div></div>";
-      if(!img.data)return "<div style=\"width:100px\"><div style=\""+nmS+"\">"+mediaA(img,esc(img.name||R.photo))+"</div></div>";
-      return "<div style=\"width:100px\">"+shotLink(img,e,img.data,"<img src=\""+img.data+"\" style=\""+thS+"\">")+"<div style=\""+nmS+"\">"+mediaA(img,esc(img.name||R.photo))+"</div></div>";
+      var img=a.im;
+      if(a.vid)return "<div style=\""+nmS+"\">» "+mediaA(img,esc(img.name||R.video))+"</div>";
+      if(a.aud)return "<div style=\""+nmS+"\">• "+mediaA(img,esc(img.name||R.voice))+" <span style=\"color:#6b7280\">· "+fmtDur(img.duration)+"</span></div>";
+      if(!a.src)return "<div style=\""+nmS+"\">"+mediaA(img,esc(img.name||R.photo))+"</div>";
+      return "<div style=\""+nmS+"\">"+shotLink(img,e,a.src,esc(img.name||R.photo))+"</div>";
     }).join("");
-    if(imgCell)imgCell="<div style=\"display:grid;grid-template-columns:repeat(2,100px);gap:6px\">"+imgCell+"</div>";
     return "<tr>"
       +"<td style=\"font-family:monospace;font-size:11px;white-space:nowrap;padding:5px 8px;border:1px solid #e5e7eb;color:#6b7280;width:1%\">"+timeOf(e.ts)+(e.tsFromPhoto?"<br>📷":"")+"</td>"
       +"<td style=\"padding:5px 8px;border:1px solid #e5e7eb;font-size:11px;font-weight:700;white-space:nowrap;width:1%;color:"+sm.tx+"\">"+esc(sl)+"</td>"
@@ -9671,10 +9661,15 @@ async function buildPdfBlob(s,lang,rev,opts){
             {content:R.sev[e.severity]||R.sev.info,styles:{textColor:hexRgb(sm.tx),fontStyle:"bold"}},
             e.tag||"",desc,att];
   });
-  var anyPic=attHasPics(entries);
-  var COL=entryColWidths(doc,R,entries,anyPic?[]:body.map(function(r){return r[4]}),ar,CW,anyPic?2*ATT_TW+ATT_GAP+4:0);
-  // one embedded copy of each picture, shared by the thumbnails and the appendix
+  var COL=entryColWidths(doc,R,entries,body.map(function(r){return r[4]}),ar,CW,0);
+  // one embedded copy of each picture
   var imgAl=new Map(),alias=function(src){if(!imgAl.has(src))imgAl.set(src,"fslimg"+imgAl.size);return imgAl.get(src)}
+  // The appendix's photos, known before the table so a photo's name can point
+  // at its copy; the jumps are added once the appendix has its pages (toShot).
+  var shots=[],shotOf=new Map(),toShot=[];
+  entries.forEach(function(e){
+    attItems(e).forEach(function(a){if(a.src){shotOf.set(a.im,shots.length);shots.push({src:a.src,ts:fts(e.ts),name:a.im.name||"",url:mediaRel(a.im)})}});
+  });
   var tsW=COL.ts,sevW=COL.sev,tagC=COL.tagC,attC=COL.attC;
   function descW(){return COL.desc()}
 
@@ -9726,36 +9721,6 @@ async function buildPdfBlob(s,lang,rev,opts){
     body[i][3]=(body[i][3]||"")+new Array(X.blanks+1).join("\n");
     return X;
   });
-  // The Adjunts column with pictures: thumbnails two across, the name under
-  // each, then the files with no picture (voice notes) as lines. Room is
-  // booked with blank lines, as for the blocks under the description.
-  var NFS=5.6,NLH=NFS/doc.internal.scaleFactor*1.2,AIW=attC.cellWidth-4,TW2=(AIW-ATT_GAP)/2,TH2=TW2*0.75;
-  var attL=entries.map(function(e,i){
-    if(!anyPic)return null;
-    var its=attItems(e);if(!its.length)return null;
-    var pics=its.filter(function(a){return a.src}).slice(0,ATT_MAX);
-    var rest=its.filter(function(a){return pics.indexOf(a)<0});
-    doc.setFontSize(NFS);
-    var cells=pics.map(function(a){
-      var nm=(a.vid?"» ":"")+(a.im.name||R.file);
-      pdfFont(doc,ar,nm,"normal");
-      return {a:a,nm:nm,lines:doc.splitTextToSize(nm,TW2)};
-    });
-    var rowsH=[];
-    for(var k=0;k<cells.length;k+=2)
-      rowsH.push(TH2+0.8+Math.max(cells[k].lines.length,cells[k+1]?cells[k+1].lines.length:0)*NLH+1.6);
-    var restL=[],restU=[];
-    rest.forEach(function(a){
-      var t=attLine(a,R);
-      pdfFont(doc,ar,t,"normal");
-      var ls=doc.splitTextToSize(t,AIW);restL=restL.concat(ls);
-      ls.forEach(function(){restU.push(mediaRel(a.im))});
-    });
-    doc.setFont("helvetica","normal");doc.setFontSize(8);
-    var h=rowsH.reduce(function(x,y){return x+y},0)+restL.length*NLH*1.15;
-    body[i][4]=new Array(Math.ceil(h/LH)).join("\n");
-    return {cells:cells,rowsH:rowsH,rest:restL,restU:restU};
-  });
   // ONE header, at the top of the log and of each page it runs onto — not one
   // per day (2026-10-17). Each day is a slim bar inside the table.
   var HEADS=[R.time,R.severity,R.tag,R.desc,R.att],HFS=7.5,HLH=HFS/doc.internal.scaleFactor*1.15;
@@ -9806,7 +9771,7 @@ async function buildPdfBlob(s,lang,rev,opts){
       alternateRowStyles:{fillColor:[249,250,251]},
       columnStyles:{0:{cellWidth:tsW},1:{cellWidth:sevW},
                     2:{cellWidth:tagC.cellWidth,fontSize:tagC.fontSize},
-                    4:{cellWidth:attC.cellWidth,fontSize:attC.fontSize}},
+                    4:{cellWidth:attC.cellWidth,fontSize:attC.fontSize,textColor:[29,78,216]}},
       // Per cell, so a table with one Arabic entry keeps helvetica everywhere
       // else. autoTable measures with the cell's own styles, so the wrap follows.
       didParseCell:function(d){
@@ -9821,35 +9786,18 @@ async function buildPdfBlob(s,lang,rev,opts){
       // cell's text reserved for them.
       didDrawCell:function(d){
         if(d.section==="body"&&d.column.index===4){
-          var A=attL[G[d.row.index]];
-          if(!A){
-            // names only: each one a link to its file beside the report
-            var fsA=d.cell.styles.fontSize,lhA=fsA/doc.internal.scaleFactor*1.15,wA=d.cell.width-4,lnA=0;
-            doc.setFontSize(fsA);
-            attItems(entries[G[d.row.index]]).forEach(function(a){
-              var t=attLine(a,R);pdfFont(doc,ar,t,"normal");
-              var k=doc.splitTextToSize(t,wA).length,u=mediaRel(a.im);
-              if(u)doc.link(d.cell.x+2,d.cell.y+2+lnA*lhA,wA,k*lhA,{url:u});
-              lnA+=k;
-            });
-            doc.setFont("helvetica","normal");doc.setFontSize(8);
-            return;
-          }
-          var ax=d.cell.x+2,ay=d.cell.y+2;
-          A.cells.forEach(function(c,k){
-            var col=k%2;
-            if(col===0&&k>0)ay+=A.rowsH[k/2-1];
-            var tx=ax+col*(TW2+ATT_GAP);
-            pdfThumb(doc,c.a.src,tx,ay,TW2,TH2,c.a.vid,alias(c.a.src));
-            var cu=mediaRel(c.a.im);
-            doc.setFontSize(NFS);if(cu)doc.setTextColor(29,78,216);else doc.setTextColor(107,114,128);pdfFont(doc,ar,c.nm,"normal");
-            c.lines.forEach(function(l,j){doc.text(l,tx,ay+TH2+0.8+NLH*(j+0.8))});if(cu)doc.link(tx,ay,TW2,TH2+0.8+c.lines.length*NLH,{url:cu});
+          // Each name a link: a photo's to its copy in the appendix (added
+          // when the appendix is drawn), the rest to the file beside the report.
+          var fsA=d.cell.styles.fontSize,lhA=fsA/doc.internal.scaleFactor*1.15,wA=d.cell.width-4,lnA=0;
+          doc.setFontSize(fsA);
+          attItems(entries[G[d.row.index]]).forEach(function(a){
+            var t=attLine(a,R);pdfFont(doc,ar,t,"normal");
+            var k=doc.splitTextToSize(t,wA).length,r={x:d.cell.x+2,y:d.cell.y+2+lnA*lhA,w:wA,h:k*lhA};
+            if(shotOf.has(a.im)){r.page=doc.internal.getCurrentPageInfo().pageNumber;r.shot=shotOf.get(a.im);toShot.push(r)}
+            else{var u=mediaRel(a.im);if(u)doc.link(r.x,r.y,r.w,r.h,{url:u})}
+            lnA+=k;
           });
-          if(A.cells.length)ay+=A.rowsH[A.rowsH.length-1];
-          doc.setFontSize(NFS);doc.setTextColor(107,114,128);
-          A.rest.forEach(function(l,j){pdfFont(doc,ar,l,"normal");if(A.restU[j])doc.setTextColor(29,78,216);else doc.setTextColor(107,114,128);doc.text(l,ax,ay+NLH*1.15*(j+0.8));
-            if(A.restU[j])doc.link(ax,ay+NLH*1.15*j,AIW,NLH*1.15,{url:A.restU[j]})});
-          doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(0,0,0);
+          doc.setFont("helvetica","normal");doc.setFontSize(8);
           return;
         }
         if(d.section!=="body"||d.column.index!==3)return;
@@ -9960,11 +9908,7 @@ async function buildPdfBlob(s,lang,rev,opts){
   doc.setFont("helvetica","normal");
 
   if(!V){
-  // photo appendix — images stay out of the table so rows keep a sane height
-  var shots=[];
-  entries.forEach(function(e){
-    attItems(e).forEach(function(a){if(a.src)shots.push({src:a.src,ts:fts(e.ts),name:a.im.name||"",url:mediaRel(a.im)})});
-  });
+  // photo appendix (shots: gathered before the table)
   if(shots.length){
     doc.addPage();y=M;   // an annex, after the signatures (2026-10-17)
     // the heading only goes where its first row of photos fits under it —
@@ -9988,7 +9932,8 @@ async function buildPdfBlob(s,lang,rev,opts){
       // whole, not stretched: a portrait or panoramic photo used to be pulled
       // out of shape to fill the box
       pdfThumb(doc,sh.src,x,y,iw,ih,false,alias(sh.src));
-      if(sh.url)doc.link(x,y,iw,ih+7,{url:sh.url});
+      if(sh.url)doc.link(x,y,iw,ih+7,{url:sh.url});        // the photo opens the file beside the report
+      sh.page=doc.internal.getCurrentPageInfo().pageNumber;sh.top=y;
       doc.setTextColor(107,114,128);
       doc.setFontSize(6.5);doc.text(sh.ts,x,y+ih+3);
       doc.setFontSize(nameFs);pdfFont(doc,ar,sh.name,"normal");doc.text(sh.name,x,y+ih+6);
@@ -9997,6 +9942,10 @@ async function buildPdfBlob(s,lang,rev,opts){
     });
     doc.setFontSize(6.5);
     if(shots.length%cols)y+=ih+11;
+    // the names in the Adjunts column jump to their photo here
+    toShot.forEach(function(r){var sh=shots[r.shot];if(!sh||!sh.page)return;
+      doc.setPage(r.page);doc.link(r.x,r.y,r.w,r.h,{pageNumber:sh.page,top:Math.max(0,sh.top-4)})});
+    doc.setPage(doc.internal.getNumberOfPages());
   }
 
   }
@@ -10229,24 +10178,28 @@ async function buildDocxDocument(D,s,lang,rev){
   var attTexts=entries.map(function(e){
     return attItems(e).map(function(a){return attLine(a,R)}).join("\n");
   });
-  // A file's name as a link to the file beside the report (Word resolves it
-  // from the document's own folder).
-  function attRun(a,size){
+  // The appendix's photos, known up front so a name can point at its copy.
+  var shots=[],shotOf=new Map();
+  entries.forEach(function(e){
+    attItems(e).forEach(function(a){if(a.src){shotOf.set(a.im,shots.length);shots.push({src:a.src,ts:fts(e.ts),name:a.im.name||"",a:a})}});
+  });
+  // A file's name as a link: a photo's to its copy in the appendix (unless
+  // `toFile`), anything else to the file beside the report — Word resolves
+  // that from the document's own folder.
+  function attRun(a,size,toFile){
     var t=T({text:attLine(a,R),size:hp(size),font:"Arial",color:"1D4ED8",underline:{}});
-    var u=mediaRel(a.im);
-    if(!u)return T({text:attLine(a,R),size:hp(size),font:"Arial",color:"6B7280"});
-    try{return new D.ExternalHyperlink({link:u,children:[t]})}catch(e){return t}
+    try{
+      if(!toFile&&shotOf.has(a.im))return new D.InternalHyperlink({anchor:"fslph"+shotOf.get(a.im),children:[t]});
+      var u=mediaRel(a.im);
+      if(u)return new D.ExternalHyperlink({link:u,children:[t]});
+    }catch(e){return t}
+    return T({text:attLine(a,R),size:hp(size),font:"Arial",color:"6B7280"});
   }
-  // Thumbnails in the Adjunts column, as in the PDF; their sizes are read
-  // first, since Word needs each picture's width and height spelled out.
-  var anyPic=attHasPics(entries),dims=new Map();
-  if(anyPic)await Promise.all(entries.map(attItems).reduce(function(a,b){return a.concat(b)},[])
-    .filter(function(a){return a.src}).map(function(a){return imgSize(a.src).then(function(d){dims.set(a.src,d)})}));
   // Measured by jsPDF, exactly as the PDF measures them.
   var L=await loadPdfLibs(),mdoc=L?new L.jsPDF({unit:"mm",format:"a4"}):null;
   var colMm,tagPt=8,attPt=8,valX=30;
   if(mdoc){
-    var COL=entryColWidths(mdoc,R,entries,anyPic?[]:attTexts,null,CW,anyPic?2*ATT_TW+ATT_GAP+4:0);
+    var COL=entryColWidths(mdoc,R,entries,attTexts,null,CW,0);
     colMm=[COL.ts,COL.sev,COL.tagC.cellWidth,COL.desc(),COL.attC.cellWidth];
     tagPt=COL.tagC.fontSize;attPt=COL.attC.fontSize;
     mdoc.setFont("helvetica","normal");mdoc.setFontSize(8.5);
@@ -10325,43 +10278,10 @@ async function buildDocxDocument(D,s,lang,rev){
     // Alternating rows, not a tint per severity: that's what the PDF and the
     // HTML report do, and the three have to look like one another.
     var fill=(i%2)?"F9FAFB":"FFFFFF";
-    var att;
-    if(anyPic&&attItems(e).length){
-      // thumbnails two across with the name under each, as in the PDF
-      var its=attItems(e),pics=its.filter(function(a){return a.src}).slice(0,ATT_MAX);
-      var rest=its.filter(function(a){return pics.indexOf(a)<0});
-      var aiw=colMm[4]-4,tw2=(aiw-ATT_GAP)/2,th2=tw2*0.75,PX=96/25.4;
-      var trs2=[];
-      for(var k=0;k<pics.length;k+=2){
-        trs2.push(new D.TableRow({cantSplit:true,children:[0,1].map(function(c){
-          var a=pics[k+c],ch=[];
-          if(a){
-            var id=toImg(a.src),dm=dims.get(a.src),w=tw2,h=th2;
-            if(dm&&dm.w&&dm.h){var r=Math.min(tw2/dm.w,th2/dm.h);w=dm.w*r;h=dm.h*r}
-            if(id){try{ch.push(P({spacing:{after:10},children:[new D.ImageRun({data:id.bytes,type:id.type,
-              transformation:{width:Math.round(w*PX),height:Math.round(h*PX)}})]}))}catch(err){}}
-            ch.push(P({spacing:{after:50},children:[attRun(a,5.6)]}));
-          } else ch.push(P({}));
-          return new D.TableCell({borders:noBorders,margins:{top:0,bottom:0,left:0,right:c?0:tw(ATT_GAP)},
-            width:{size:tw(c?tw2:tw2+ATT_GAP),type:D.WidthType.DXA},children:ch});
-        })}));
-      }
-      att=[];
-      if(trs2.length){
-        att.push(new D.Table({width:{size:tw(aiw),type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED,
-          columnWidths:[tw(tw2+ATT_GAP),tw(tw2)],
-          borders:{top:NONE,bottom:NONE,left:NONE,right:NONE,insideHorizontal:NONE,insideVertical:NONE},rows:trs2}));
-      }
-      rest.forEach(function(a){
-        att.push(P({spacing:{after:20},children:[attRun(a,6)]}));
-      });
-      att.push(P({spacing:{after:0},children:[]}));   // Word needs a paragraph after a table
-    }else{
-      // names only: each a link to its file
-      var itsW=attItems(e);
-      att=itsW.length?itsW.map(function(a){return P({spacing:{after:20},children:[attRun(a,attPt)]})})
-        :[P({spacing:{after:20},children:[T({text:"",size:hp(attPt),font:"Arial"})]})];
-    }
+    // names only, each a link (attRun)
+    var itsW=attItems(e);
+    var att=itsW.length?itsW.map(function(a){return P({spacing:{after:20},children:[attRun(a,attPt)]})})
+      :[P({spacing:{after:20},children:[T({text:"",size:hp(attPt),font:"Arial"})]})];
     var descCh=[P({children:[T({text:e.text||"",size:hp(8),font:"Arial"})]})];
     if(CIw[e.id]){
       descCh.push(P({spacing:{before:60},children:[T({text:""})]}));
@@ -10580,10 +10500,6 @@ async function buildDocxDocument(D,s,lang,rev){
 
   // Photo appendix, 3 across, like the PDF's — and for the same reason: images
   // inside the rows would blow the table up.
-  var shots=[];
-  entries.forEach(function(e){
-    attItems(e).forEach(function(a){if(a.src)shots.push({src:a.src,ts:fts(e.ts),name:a.im.name||"",a:a})});
-  });
   if(shots.length){
     var cols=3,gapMm=4,iwMm=(CW-gapMm*(cols-1))/cols,ihMm=iwMm*0.72;
     children.push(P({pageBreakBefore:true,spacing:{after:80},children:[T({text:R.photos,bold:true,size:hp(11),font:"Arial",color:"111827"})]}));
@@ -10593,11 +10509,14 @@ async function buildDocxDocument(D,s,lang,rev){
       for(var c=0;c<cols;c++){
         var sh=shots[i+c],ch=[];
         if(sh){
-          var id=toImg(sh.src);
-          if(id){try{ch.push(P({spacing:{after:20},children:[new D.ImageRun({data:id.bytes,type:id.type,
-            transformation:{width:Math.round(iwMm*72/25.4),height:Math.round(ihMm*72/25.4)}})]}))}catch(err){}}
-          ch.push(P({children:[T({text:sh.ts,size:hp(6.5),font:"Arial",color:"6B7280"})]}));
-          ch.push(P({spacing:{after:80},children:[attRun(sh.a,6.5)]}));
+          // the photo, and its name, open the file beside the report; the
+          // bookmark is where the name in the Adjunts column lands
+          var id=toImg(sh.src),rel=mediaRel(sh.a.im);
+          if(id){try{var ir=new D.ImageRun({data:id.bytes,type:id.type,
+            transformation:{width:Math.round(iwMm*72/25.4),height:Math.round(ihMm*72/25.4)}});
+            ch.push(P({spacing:{after:20},children:[rel?new D.ExternalHyperlink({link:rel,children:[ir]}):ir]}))}catch(err){}}
+          ch.push(P({children:[new D.Bookmark({id:"fslph"+(i+c),children:[T({text:sh.ts,size:hp(6.5),font:"Arial",color:"6B7280"})]})]}));
+          ch.push(P({spacing:{after:80},children:[attRun(sh.a,6.5,true)]}));
         } else ch.push(P({}));
         cellsS.push(new D.TableCell({borders:noBorders,margins:{top:0,bottom:0,left:0,right:tw(gapMm)},
           width:{size:tw(iwMm+gapMm),type:D.WidthType.DXA},children:ch}));

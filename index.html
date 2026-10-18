@@ -805,7 +805,7 @@ textarea{resize:none;line-height:1.4}
       <div class="pt-grid">
         <div class="field pt-wide"><label>Nom de la prova</label><input type="text" id="ptName" autocomplete="off"></div>
         <div class="field"><label>Producte / format</label><input type="text" id="ptProduct" placeholder="Cava 75 cl" autocomplete="off"></div>
-        <div class="field"><label>Velocitat nominal (u/h)</label><input type="text" id="ptNominal" inputmode="decimal" placeholder="1800" autocomplete="off"></div>
+        <div class="field"><label>Velocitat nominal</label><div style="display:flex;gap:6px"><input type="text" id="ptNominal" inputmode="decimal" placeholder="1800" autocomplete="off" style="flex:1;min-width:0"><select id="ptUnit" title="Les velocitats d'aquesta prova, en unitats per hora o per minut" style="width:auto"><option value="h">u/h</option><option value="min">u/min</option></select></div></div>
         <div class="field"><label>Inici</label><input type="datetime-local" id="ptStart" step="60"></div>
         <div class="field"><label>Final</label><input type="datetime-local" id="ptEnd" step="60"></div>
         <div class="field"><label>Comptador inicial</label><input type="text" id="ptCs" inputmode="numeric" placeholder="opcional" autocomplete="off"></div>
@@ -4927,7 +4927,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-17 · 16";
+var APP_VERSION="2026-10-18 · 1";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -4947,12 +4947,27 @@ var APP_VERSION="2026-10-17 · 16";
 var PT_KINDS=["machine","external","planned"];
 function ptNum(v){if(v===""||v==null)return null;var x=parseFloat(String(v).replace(/\s/g,"").replace(",","."));return isFinite(x)?x:null}
 function ptMs(iso){var t=Date.parse(iso||"");return isNaN(t)?null:t}
+// ── UNITS PER HOUR OR PER MINUTE (2026-10-18) ────────────────────────────────
+// Rates — nominal speed, average and running speed, units per machine hour
+// between visits — can be read in u/h or u/min. Each production test keeps
+// its own (`rateUnit`, the nominal is typed in it); the machine counters keep
+// theirs (`counters.unit`). Inside, everything stays per hour; only the
+// display divides. A new test or reading starts in the unit used last.
+function rateDefUnit(){try{return localStorage.getItem("fsl_v6_rateunit")==="min"?"min":"h"}catch(e){return "h"}}
+function rateSetDef(u){try{localStorage.setItem("fsl_v6_rateunit",u==="min"?"min":"h")}catch(e){}}
+function ptUnit(t){return t&&t.rateUnit==="min"?"min":"h"}
+// a per-hour value shown in unit u
+function rateShow(v,u,lang,lblH,lblM){
+  if(v==null||isNaN(v))return "—";
+  return u==="min"?ptN(v/60,lang,1)+" "+lblM:ptN(v,lang,0)+" "+lblH;
+}
 function ptCalc(t,nowMs){
   nowMs=nowMs||Date.now();
   var st=ptMs(t.start),en=ptMs(t.end)||(t.running?nowMs:null),r={complete:false,checks:[],verdict:null};
   var cs=ptNum(t.counterStart),ce=ptNum(t.counterEnd);
   var total=(cs!=null&&ce!=null&&ce>=cs)?ce-cs:ptNum(t.total);
   var rej=ptNum(t.rejects)||0,nom=ptNum(t.nominal);
+  if(nom!=null&&ptUnit(t)==="min")nom*=60;          // typed per minute: per hour inside
   r.total=total;r.rejects=total!=null?rej:null;r.good=total!=null?Math.max(0,total-rej):null;
   r.qual=total?(total-rej)/total:null;r.rejPct=total?rej/total:null;
   if(st!=null&&en!=null&&en>st){
@@ -4995,13 +5010,13 @@ function ptReportData(t,R,lang,pdf){
   function ck(key){return r.checks.filter(function(k){return k.key===key})[0]}
   function tg(key){var c=ck(key);return c?(c.min?(pdf?">= ":"≥ "):(pdf?"<= ":"≤ "))+ptN(c.lim,lang,1)+" %":""}
   function rs(key){var c=ck(key);return c&&c.ok!=null?(c.ok?L.yes:L.no):""}
-  var uph=" "+L.uph;
+  var u=ptUnit(t),rl=function(v){return rateShow(v,u,lang,L.uph,L.upm)};
   return {r:r,
-    data:[[L.product,t.product||"—"],[L.nominal,ptNum(t.nominal)!=null?ptN(ptNum(t.nominal),lang)+uph:"—"],
+    data:[[L.product,t.product||"—"],[L.nominal,ptNum(t.nominal)!=null?ptN(ptNum(t.nominal),lang,u==="min"?1:0)+" "+(u==="min"?L.upm:L.uph):"—"],
           [L.start,ptWhen(t.start)],[L.end,ptWhen(t.end)],[L.duration,ptDur(r.durMin)],
           [L.plannedStops,ptDur(r.plannedStopMin)],[L.downtime,ptDur(r.downMin)],[L.run,ptDur(r.runMin)],
           [L.total,ptN(r.total,lang)],[L.rejects,ptN(r.rejects,lang)],[L.good,ptN(r.good,lang)],
-          [L.speedAvg,r.speedAvg==null?"—":ptN(r.speedAvg,lang)+uph],[L.speedRun,r.speedRun==null?"—":ptN(r.speedRun,lang)+uph]],
+          [L.speedAvg,rl(r.speedAvg)],[L.speedRun,rl(r.speedRun)]],
     kpi:[[L.avail,ptPct(r.avail,lang),tg("avail"),rs("avail")],[L.perf,ptPct(r.perf,lang),tg("perf"),rs("perf")],
          [L.qual,ptPct(r.qual,lang),"",""],[L.oee,ptPct(r.oee,lang),tg("oee"),rs("oee")],
          [L.rejPct,ptPct(r.rejPct,lang),tg("rejPct"),rs("rejPct")]],
@@ -5035,13 +5050,17 @@ function openCounters(){
       +"<button type=\"button\" class=\"btn-xs\" data-ctrnow=\""+k+"\" title=\"Ara\">Ara</button></span></label>"
       +"</div></div>";
   }
-  $$("ctrGrid").innerHTML=blk("arr","Arribada")+blk("dep","Sortida");
+  var cu=c.unit||rateDefUnit();
+  $$("ctrGrid").innerHTML=blk("arr","Arribada")+blk("dep","Sortida")
+    +"<label style=\"display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx3)\">Ritme de producció en"
+    +"<select id=\"ctrUnit\" style=\"width:auto\"><option value=\"h\""+(cu==="h"?" selected":"")+">unitats/h</option><option value=\"min\""+(cu==="min"?" selected":"")+">unitats/min</option></select></label>";
   $$("ctrBack").style.display="flex";
   if(!ctrWired){
     ctrWired=true;
     $$("ctrCancel").addEventListener("click",function(){$$("ctrBack").style.display="none"});
     $$("ctrBack").addEventListener("click",function(e){if(e.target===$$("ctrBack"))$$("ctrBack").style.display="none"});
     // a number typed with no time yet takes "now": the reading is taken as it is typed
+    $$("ctrGrid").addEventListener("change",function(e){if(e.target.id==="ctrUnit"){rateSetDef(e.target.value);ctrSum()}});
     $$("ctrGrid").addEventListener("input",function(e){
       var k=e.target.dataset.ctr;if(!k||/at$/.test(k))return ctrSum();
       var at=$$("ctrGrid").querySelector("[data-ctr=\""+k.slice(0,3)+"at\"]");
@@ -5067,6 +5086,7 @@ function ctrCollect(){
         at=g.querySelector("[data-ctr=\""+k+"at\"]").value;
     if(h||u)o[k]={h:h,u:u,at:at?(inputToTs(at)||""):""};
   });
+  var su=g.querySelector("#ctrUnit");if(su&&su.value==="min")o.unit="min";
   return o;
 }
 // The sums, live, as the numbers are typed.
@@ -5077,11 +5097,11 @@ function ctrSum(){
   if(pv){
     out.push("<div style=\"color:var(--tx3);font-size:12px\">Visita anterior amb lectura: "+esc(pv.s.project||"")+(pv.r.at?" · "+mhDate(pv.r.at):"")
       +" · "+(pv.r.h!=null?esc(ctrFmt(pv.r.h,"ca",1))+" h":"")+(pv.r.h!=null&&pv.r.u!=null?" · ":"")+(pv.r.u!=null?esc(ctrFmt(pv.r.u,"ca",0))+" u":"")+"</div>");
-    var t=first?ctrDeltaText(ctrDelta(pv.r,first),C,"ca"):"";
+    var t=first?ctrDeltaText(ctrDelta(pv.r,first),C,"ca",s.counters.unit):"";
     if(t)out.push("<div><strong>"+esc(C.since)+":</strong> "+esc(t)+"</div>");
   }else out.push("<div style=\"color:var(--tx3);font-size:12px\">Cap visita anterior d'aquesta màquina amb lectures: aquesta serà la primera.</div>");
   var c=s.counters,da=ctrRead(c.arr),db=ctrRead(c.dep);
-  if(da&&db){var d=ctrDeltaText(ctrDelta(da,db),C,"ca");if(d)out.push("<div><strong>"+esc(C.during)+":</strong> "+esc(d)+"</div>")}
+  if(da&&db){var d=ctrDeltaText(ctrDelta(da,db),C,"ca",s.counters.unit);if(d)out.push("<div><strong>"+esc(C.during)+":</strong> "+esc(d)+"</div>")}
   $$("ctrSum").innerHTML=out.join("");
 }
 function prodChipHTML(s){
@@ -5139,7 +5159,7 @@ function wirePd(){
 function ptNew(){
   var s=ptSess();if(!s)return;
   var k=(s.prodTests||[]).length+1,id=uid();
-  ptSetTests(function(l){return l.concat([{id:id,name:"Prova "+k,product:"",nominal:"",start:"",end:"",running:false,
+  ptSetTests(function(l){return l.concat([{id:id,name:"Prova "+k,product:"",nominal:"",rateUnit:rateDefUnit(),start:"",end:"",running:false,
     counterStart:"",counterEnd:"",total:"",rejects:"",stops:[],crit:ptCritDefaults(),notes:""}])});
   openProdTest(id);
 }
@@ -5163,11 +5183,12 @@ function ptFill(){
   [["ptName","name"],["ptProduct","product"],["ptNominal","nominal"],["ptCs","counterStart"],["ptCe","counterEnd"],
    ["ptTotal","total"],["ptRej","rejects"],["ptNotes","notes"]].forEach(function(f){$$(f[0]).value=t[f[1]]||""});
   $$("ptCOee").value=c.oee||"";$$("ptCAv").value=c.avail||"";$$("ptCPf").value=c.perf||"";$$("ptCRj").value=c.rej||"";
+  $$("ptUnit").value=ptUnit(t);$$("ptNominal").placeholder=ptUnit(t)==="min"?"30":"1800";
   ptFillTimes();ptRenderStops();ptRenderLive();ptRenderRes();
 }
 function ptCollect(){
   var t=ptTest();if(!t)return;
-  var p={name:$$("ptName").value,product:$$("ptProduct").value,nominal:$$("ptNominal").value,
+  var p={name:$$("ptName").value,product:$$("ptProduct").value,nominal:$$("ptNominal").value,rateUnit:$$("ptUnit").value,
     counterStart:$$("ptCs").value,counterEnd:$$("ptCe").value,total:$$("ptTotal").value,rejects:$$("ptRej").value,notes:$$("ptNotes").value,
     crit:{oee:$$("ptCOee").value,avail:$$("ptCAv").value,perf:$$("ptCPf").value,rej:$$("ptCRj").value}};
   // A time is only rewritten when it was CHANGED: the field holds minutes, the
@@ -5225,11 +5246,11 @@ function ptRenderRes(){
     return "<tr><td>"+esc(lbl)+"</td><td class=\"v\">"+val+"</td><td class=\"v\" style=\"color:var(--tx3)\">"
       +(c?(c.min?"≥ ":"≤ ")+ptN(c.lim,"ca",1)+" %":"")+"</td><td>"+(c&&c.ok!=null?(c.ok?"<span class=\"ok\">✓</span>":"<span class=\"ko\">✗</span>"):"")+"</td></tr>";
   }
-  var uph=" u/h";
+  var u=ptUnit(t),rl=function(v){return rateShow(v,u,"ca","u/h","u/min")};
   $$("ptRes").innerHTML="<table class=\"pt-res\">"
     +row(L.duration,ptDur(r.durMin))+row(L.plannedStops,ptDur(r.plannedStopMin))+row(L.downtime,ptDur(r.downMin))+row(L.run,ptDur(r.runMin))
     +row(L.total,ptN(r.total))+row(L.good,ptN(r.good))
-    +row(L.speedAvg,r.speedAvg==null?"—":ptN(r.speedAvg)+uph)+row(L.speedRun,r.speedRun==null?"—":ptN(r.speedRun)+uph)
+    +row(L.speedAvg,rl(r.speedAvg))+row(L.speedRun,rl(r.speedRun))
     +row(L.avail,ptPct(r.avail),"avail")+row(L.perf,ptPct(r.perf),"perf")+row(L.qual,ptPct(r.qual))
     +row(L.oee,"<strong>"+ptPct(r.oee)+"</strong>","oee")+row(L.rejPct,ptPct(r.rejPct),"rejPct")
     +"</table>"
@@ -5245,6 +5266,14 @@ function wirePt(){
     $$(id).addEventListener("input",ptCollect);
   });
   ["ptStart","ptEnd"].forEach(function(id){$$(id).addEventListener("change",ptCollect)});
+  // Switching the unit converts the nominal already typed, so it still means
+  // the same speed: 1.800 u/h becomes 30 u/min.
+  $$("ptUnit").addEventListener("change",function(){
+    var t=ptTest(),was=ptUnit(t),to=this.value,v=ptNum($$("ptNominal").value);
+    if(v!=null&&was!==to){var x=to==="min"?v/60:v*60;$$("ptNominal").value=String(Math.round(x*(to==="min"?10:1))/(to==="min"?10:1)).replace(".",",")}
+    $$("ptNominal").placeholder=to==="min"?"30":"1800";
+    rateSetDef(to);ptCollect();
+  });
   $$("ptDone").addEventListener("click",ptClose);
   $$("ptBack").addEventListener("click",function(e){if(e.target===$$("ptBack"))ptClose()});
   $$("ptDel").addEventListener("click",function(){
@@ -5710,10 +5739,10 @@ var RPT={
       time:"Hora",entry1:"entrada",entryN:"entrades",noDate:"Sense data",ts:"Data i hora",severity:"Gravetat",tag:"Etiqueta",desc:"Descripció",att:"Adjunts",
       fix:"Com ha quedat",edited:"editat",noEntries:"Sense entrades",photos:"Fotos",notes:"Notes generals",
       sigTech:"Signatura del tècnic",sigCli:"Signatura del client / receptor",
-      qty:"QT.",ref:"REF.",part:"RECANVI",ctr:{title:"Comptadors de la màquina",read:"Lectura",arr:"Arribada",dep:"Sortida",hours:"Hores de màquina",units:"Producte total",date:"Data",since:"Des de la visita anterior",during:"Durant la visita",inW:"en",day1:"dia",days:"dies",perDay:"h/dia",perHour:"unitats/h",h:"h",u:"unitats",reset:"el comptador ha baixat: s'ha canviat o reiniciat?"},incTitle:"Incidències d'aquesta visita",incWhen:"Quan",incWhat:"Incidència",incState:"Estat",stRes:"Resolt",stPend:"Pendent",stClosed:"Tancat",stRec:"recanvi recomanat",prevVisit:"visita anterior",closesPrev:"Tanca un problema de la visita del",resIn:"resolt en",st:"ESTAT",prio:"PRIORITAT",pstL:{fit:"Canviat",urg:"Recomanat · urgent",prev:"Recomanat · preventiu"},pst:{fit:"Canviat",urg:"Urgent",prev:"Preventiu"},partsFit:"Recanvis canviats",partsRec:"Recanvis recomanats",recNote:"Urgent: convé canviar-lo aviat. Preventiu: per tenir-ne en estoc o canviar-lo en una parada programada.",photoTag:"[foto]",openDrive:"Obre a Drive",
+      qty:"QT.",ref:"REF.",part:"RECANVI",ctr:{title:"Comptadors de la màquina",read:"Lectura",arr:"Arribada",dep:"Sortida",hours:"Hores de màquina",units:"Producte total",date:"Data",since:"Des de la visita anterior",during:"Durant la visita",inW:"en",day1:"dia",days:"dies",perDay:"h/dia",perHour:"unitats/h",perMin:"unitats/min",h:"h",u:"unitats",reset:"el comptador ha baixat: s'ha canviat o reiniciat?"},incTitle:"Incidències d'aquesta visita",incWhen:"Quan",incWhat:"Incidència",incState:"Estat",stRes:"Resolt",stPend:"Pendent",stClosed:"Tancat",stRec:"recanvi recomanat",prevVisit:"visita anterior",closesPrev:"Tanca un problema de la visita del",resIn:"resolt en",st:"ESTAT",prio:"PRIORITAT",pstL:{fit:"Canviat",urg:"Recomanat · urgent",prev:"Recomanat · preventiu"},pst:{fit:"Canviat",urg:"Urgent",prev:"Preventiu"},partsFit:"Recanvis canviats",partsRec:"Recanvis recomanats",recNote:"Urgent: convé canviar-lo aviat. Preventiu: per tenir-ne en estoc o canviar-lo en una parada programada.",photoTag:"[foto]",openDrive:"Obre a Drive",
       voice:"nota de veu",video:"vídeo",photo:"foto",file:"fitxer",
       pre:{report:"informe",parts:"recanvis"},
-      pt:{title:"Proves de producció",period:"Període",units:"Unitats",availS:"Disp.",perfS:"Rend.",qualS:"Qual.",rejS:"Rebuig",resultS:"Resultat",summaryNote:"El detall de cada prova —aturades, objectius i observacions— és a l'informe de validació.",test:"Prova",product:"Producte / format",nominal:"Velocitat nominal",start:"Inici",end:"Final",duration:"Durada",plannedStops:"Aturades planificades",downtime:"Aturades no planificades",run:"Temps en marxa",total:"Unitats totals",rejects:"Unitats rebutjades",good:"Unitats bones",speedAvg:"Velocitat mitjana",speedRun:"Velocitat en marxa",avail:"Disponibilitat",perf:"Rendiment",qual:"Qualitat",oee:"OEE",rejPct:"Rebuig",indicator:"Indicador",value:"Valor",target:"Objectiu",result:"Resultat",yes:"Compleix",no:"No compleix",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Aturades",kind:"Tipus",cause:"Causa",kinds:{machine:"Màquina",external:"Externa",planned:"Planificada"},notes:"Observacions",uph:"u/h",validation:"Informe de validació",file:"validacio"},
+      pt:{title:"Proves de producció",period:"Període",units:"Unitats",availS:"Disp.",perfS:"Rend.",qualS:"Qual.",rejS:"Rebuig",resultS:"Resultat",summaryNote:"El detall de cada prova —aturades, objectius i observacions— és a l'informe de validació.",test:"Prova",product:"Producte / format",nominal:"Velocitat nominal",start:"Inici",end:"Final",duration:"Durada",plannedStops:"Aturades planificades",downtime:"Aturades no planificades",run:"Temps en marxa",total:"Unitats totals",rejects:"Unitats rebutjades",good:"Unitats bones",speedAvg:"Velocitat mitjana",speedRun:"Velocitat en marxa",avail:"Disponibilitat",perf:"Rendiment",qual:"Qualitat",oee:"OEE",rejPct:"Rebuig",indicator:"Indicador",value:"Valor",target:"Objectiu",result:"Resultat",yes:"Compleix",no:"No compleix",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Aturades",kind:"Tipus",cause:"Causa",kinds:{machine:"Màquina",external:"Externa",planned:"Planificada"},notes:"Observacions",uph:"u/h",upm:"u/min",validation:"Informe de validació",file:"validacio"},
       h:{title:"Historial de la màquina",visits:"visites",visitsH:"Visites",sn:"N/S",pending:"Pendents",pendOther:"Pendent d'altres visites",closedLater:"Tancats en una visita posterior",closedOn:"Tancat el",resolvedSt:"Resolt",pendingSt:"Pendent",entries:"entrades",parts:"Recanvis muntats",archived:"arxivada",kOpen:"obertes",kDone:"resoltes",kUrg:"recanvis urgents",openTitle:"Què queda obert",closedHere:"tancat en aquesta visita",fromVisit:"de la visita del",allOk:"tot OK",ago:{today:"avui",d1:"fa 1 dia",d:"fa %n dies",m1:"fa 1 mes",m:"fa %n mesos",y1:"fa 1 any",y:"fa %n anys"},rec:"Recanvis recomanats",recOn:"recomanat el",fitOn:"canviat el",printed:"Imprès el"},
       x:{sSession:"Sessió",sFit:"Canviats",sRec:"Recomanats",st:"Estat",prio:"Prioritat",sDetail:"Detall",sSummary:"Resum",qty:"Quantitat",ref:"Ref.",den:"Denominació",
          date:"Data",sev:"Gravetat",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunt",grup:"Grup / Dibuix",
@@ -5727,10 +5756,10 @@ var RPT={
       time:"Hora",entry1:"entrada",entryN:"entradas",noDate:"Sin fecha",ts:"Fecha y hora",severity:"Gravedad",tag:"Etiqueta",desc:"Descripción",att:"Adjuntos",
       fix:"Cómo ha quedado",edited:"editado",noEntries:"Sin entradas",photos:"Fotos",notes:"Notas generales",
       sigTech:"Firma del técnico",sigCli:"Firma del cliente / receptor",
-      qty:"CANT.",ref:"REF.",part:"RECAMBIO",ctr:{title:"Contadores de la máquina",read:"Lectura",arr:"Llegada",dep:"Salida",hours:"Horas de máquina",units:"Producto total",date:"Fecha",since:"Desde la visita anterior",during:"Durante la visita",inW:"en",day1:"día",days:"días",perDay:"h/día",perHour:"unidades/h",h:"h",u:"unidades",reset:"el contador ha bajado: ¿se ha cambiado o reiniciado?"},incTitle:"Incidencias de esta visita",incWhen:"Cuándo",incWhat:"Incidencia",incState:"Estado",stRes:"Resuelto",stPend:"Pendiente",stClosed:"Cerrado",stRec:"recambio recomendado",prevVisit:"visita anterior",closesPrev:"Cierra un problema de la visita del",resIn:"resuelto en",st:"ESTADO",prio:"PRIORIDAD",pstL:{fit:"Cambiado",urg:"Recomendado · urgente",prev:"Recomendado · preventivo"},pst:{fit:"Cambiado",urg:"Urgente",prev:"Preventivo"},partsFit:"Recambios cambiados",partsRec:"Recambios recomendados",recNote:"Urgente: conviene cambiarlo pronto. Preventivo: para tenerlo en stock o cambiarlo en una parada programada.",photoTag:"[foto]",openDrive:"Abrir en Drive",
+      qty:"CANT.",ref:"REF.",part:"RECAMBIO",ctr:{title:"Contadores de la máquina",read:"Lectura",arr:"Llegada",dep:"Salida",hours:"Horas de máquina",units:"Producto total",date:"Fecha",since:"Desde la visita anterior",during:"Durante la visita",inW:"en",day1:"día",days:"días",perDay:"h/día",perHour:"unidades/h",perMin:"unidades/min",h:"h",u:"unidades",reset:"el contador ha bajado: ¿se ha cambiado o reiniciado?"},incTitle:"Incidencias de esta visita",incWhen:"Cuándo",incWhat:"Incidencia",incState:"Estado",stRes:"Resuelto",stPend:"Pendiente",stClosed:"Cerrado",stRec:"recambio recomendado",prevVisit:"visita anterior",closesPrev:"Cierra un problema de la visita del",resIn:"resuelto en",st:"ESTADO",prio:"PRIORIDAD",pstL:{fit:"Cambiado",urg:"Recomendado · urgente",prev:"Recomendado · preventivo"},pst:{fit:"Cambiado",urg:"Urgente",prev:"Preventivo"},partsFit:"Recambios cambiados",partsRec:"Recambios recomendados",recNote:"Urgente: conviene cambiarlo pronto. Preventivo: para tenerlo en stock o cambiarlo en una parada programada.",photoTag:"[foto]",openDrive:"Abrir en Drive",
       voice:"nota de voz",video:"vídeo",photo:"foto",file:"archivo",
       pre:{report:"informe",parts:"recambios"},
-      pt:{title:"Pruebas de producción",period:"Período",units:"Unidades",availS:"Disp.",perfS:"Rend.",qualS:"Cal.",rejS:"Rechazo",resultS:"Resultado",summaryNote:"El detalle de cada prueba —paradas, objetivos y observaciones— está en el informe de validación.",test:"Prueba",product:"Producto / formato",nominal:"Velocidad nominal",start:"Inicio",end:"Final",duration:"Duración",plannedStops:"Paradas planificadas",downtime:"Paradas no planificadas",run:"Tiempo en marcha",total:"Unidades totales",rejects:"Unidades rechazadas",good:"Unidades buenas",speedAvg:"Velocidad media",speedRun:"Velocidad en marcha",avail:"Disponibilidad",perf:"Rendimiento",qual:"Calidad",oee:"OEE",rejPct:"Rechazo",indicator:"Indicador",value:"Valor",target:"Objetivo",result:"Resultado",yes:"Cumple",no:"No cumple",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Paradas",kind:"Tipo",cause:"Causa",kinds:{machine:"Máquina",external:"Externa",planned:"Planificada"},notes:"Observaciones",uph:"u/h",validation:"Informe de validación",file:"validacion"},
+      pt:{title:"Pruebas de producción",period:"Período",units:"Unidades",availS:"Disp.",perfS:"Rend.",qualS:"Cal.",rejS:"Rechazo",resultS:"Resultado",summaryNote:"El detalle de cada prueba —paradas, objetivos y observaciones— está en el informe de validación.",test:"Prueba",product:"Producto / formato",nominal:"Velocidad nominal",start:"Inicio",end:"Final",duration:"Duración",plannedStops:"Paradas planificadas",downtime:"Paradas no planificadas",run:"Tiempo en marcha",total:"Unidades totales",rejects:"Unidades rechazadas",good:"Unidades buenas",speedAvg:"Velocidad media",speedRun:"Velocidad en marcha",avail:"Disponibilidad",perf:"Rendimiento",qual:"Calidad",oee:"OEE",rejPct:"Rechazo",indicator:"Indicador",value:"Valor",target:"Objetivo",result:"Resultado",yes:"Cumple",no:"No cumple",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Paradas",kind:"Tipo",cause:"Causa",kinds:{machine:"Máquina",external:"Externa",planned:"Planificada"},notes:"Observaciones",uph:"u/h",upm:"u/min",validation:"Informe de validación",file:"validacion"},
       h:{title:"Historial de la máquina",visits:"visitas",visitsH:"Visitas",sn:"N/S",pending:"Pendientes",pendOther:"Pendiente de otras visitas",closedLater:"Cerrados en una visita posterior",closedOn:"Cerrado el",resolvedSt:"Resuelto",pendingSt:"Pendiente",entries:"entradas",parts:"Recambios montados",archived:"archivada",kOpen:"abiertas",kDone:"resueltas",kUrg:"recambios urgentes",openTitle:"Qué queda abierto",closedHere:"cerrado en esta visita",fromVisit:"de la visita del",allOk:"todo OK",ago:{today:"hoy",d1:"hace 1 día",d:"hace %n días",m1:"hace 1 mes",m:"hace %n meses",y1:"hace 1 año",y:"hace %n años"},rec:"Recambios recomendados",recOn:"recomendado el",fitOn:"cambiado el",printed:"Impreso el"},
       x:{sSession:"Sesión",sFit:"Cambiados",sRec:"Recomendados",st:"Estado",prio:"Prioridad",sDetail:"Detalle",sSummary:"Resumen",qty:"Cantidad",ref:"Ref.",den:"Denominación",
          date:"Fecha",sev:"Gravedad",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunto",grup:"Grupo / Plano",
@@ -5744,10 +5773,10 @@ var RPT={
       time:"Time",entry1:"entry",entryN:"entries",noDate:"No date",ts:"Timestamp",severity:"Severity",tag:"Tag",desc:"Description",att:"Attachments",
       fix:"Outcome",edited:"edited",noEntries:"No entries",photos:"Photos",notes:"General notes",
       sigTech:"Technician signature",sigCli:"Client / Recipient signature",
-      qty:"QTY",ref:"REF.",part:"SPARE PART",ctr:{title:"Machine counters",read:"Reading",arr:"Arrival",dep:"Departure",hours:"Machine hours",units:"Total output",date:"Date",since:"Since the previous visit",during:"During the visit",inW:"in",day1:"day",days:"days",perDay:"h/day",perHour:"units/h",h:"h",u:"units",reset:"the counter went down: replaced or reset?"},incTitle:"Issues on this visit",incWhen:"When",incWhat:"Issue",incState:"Status",stRes:"Resolved",stPend:"Open",stClosed:"Closed",stRec:"spare part recommended",prevVisit:"earlier visit",closesPrev:"Closes an issue from the visit of",resIn:"resolved in",st:"STATUS",prio:"PRIORITY",pstL:{fit:"Replaced",urg:"Recommended · urgent",prev:"Recommended · preventive"},pst:{fit:"Replaced",urg:"Urgent",prev:"Preventive"},partsFit:"Spare parts replaced",partsRec:"Recommended spare parts",recNote:"Urgent: should be replaced soon. Preventive: to keep in stock or replace at a planned stop.",photoTag:"[photo]",openDrive:"Open in Drive",
+      qty:"QTY",ref:"REF.",part:"SPARE PART",ctr:{title:"Machine counters",read:"Reading",arr:"Arrival",dep:"Departure",hours:"Machine hours",units:"Total output",date:"Date",since:"Since the previous visit",during:"During the visit",inW:"in",day1:"day",days:"days",perDay:"h/day",perHour:"units/h",perMin:"units/min",h:"h",u:"units",reset:"the counter went down: replaced or reset?"},incTitle:"Issues on this visit",incWhen:"When",incWhat:"Issue",incState:"Status",stRes:"Resolved",stPend:"Open",stClosed:"Closed",stRec:"spare part recommended",prevVisit:"earlier visit",closesPrev:"Closes an issue from the visit of",resIn:"resolved in",st:"STATUS",prio:"PRIORITY",pstL:{fit:"Replaced",urg:"Recommended · urgent",prev:"Recommended · preventive"},pst:{fit:"Replaced",urg:"Urgent",prev:"Preventive"},partsFit:"Spare parts replaced",partsRec:"Recommended spare parts",recNote:"Urgent: should be replaced soon. Preventive: to keep in stock or replace at a planned stop.",photoTag:"[photo]",openDrive:"Open in Drive",
       voice:"voice note",video:"video",photo:"photo",file:"file",
       pre:{report:"report",parts:"spare_parts"},
-      pt:{title:"Production tests",period:"Period",units:"Units",availS:"Avail.",perfS:"Perf.",qualS:"Qual.",rejS:"Reject",resultS:"Result",summaryNote:"Each test in full — stops, targets and remarks — is in the validation report.",test:"Test",product:"Product / format",nominal:"Nominal speed",start:"Start",end:"End",duration:"Duration",plannedStops:"Planned stops",downtime:"Unplanned stops",run:"Run time",total:"Total units",rejects:"Rejected units",good:"Good units",speedAvg:"Average speed",speedRun:"Running speed",avail:"Availability",perf:"Performance",qual:"Quality",oee:"OEE",rejPct:"Reject rate",indicator:"Indicator",value:"Value",target:"Target",result:"Result",yes:"Met",no:"Not met",pass:"PASSED",fail:"NOT PASSED",stops:"Stops",kind:"Type",cause:"Cause",kinds:{machine:"Machine",external:"External",planned:"Planned"},notes:"Remarks",uph:"u/h",validation:"Validation report",file:"validation"},
+      pt:{title:"Production tests",period:"Period",units:"Units",availS:"Avail.",perfS:"Perf.",qualS:"Qual.",rejS:"Reject",resultS:"Result",summaryNote:"Each test in full — stops, targets and remarks — is in the validation report.",test:"Test",product:"Product / format",nominal:"Nominal speed",start:"Start",end:"End",duration:"Duration",plannedStops:"Planned stops",downtime:"Unplanned stops",run:"Run time",total:"Total units",rejects:"Rejected units",good:"Good units",speedAvg:"Average speed",speedRun:"Running speed",avail:"Availability",perf:"Performance",qual:"Quality",oee:"OEE",rejPct:"Reject rate",indicator:"Indicator",value:"Value",target:"Target",result:"Result",yes:"Met",no:"Not met",pass:"PASSED",fail:"NOT PASSED",stops:"Stops",kind:"Type",cause:"Cause",kinds:{machine:"Machine",external:"External",planned:"Planned"},notes:"Remarks",uph:"u/h",upm:"u/min",validation:"Validation report",file:"validation"},
       h:{title:"Machine history",visits:"visits",visitsH:"Visits",sn:"S/N",pending:"Open items",pendOther:"Open from other visits",closedLater:"Closed on a later visit",closedOn:"Closed on",resolvedSt:"Resolved",pendingSt:"Open",entries:"entries",parts:"Spare parts fitted",archived:"archived",kOpen:"open",kDone:"resolved",kUrg:"urgent spare parts",openTitle:"Still open",closedHere:"closed on this visit",fromVisit:"from the visit of",allOk:"all OK",ago:{today:"today",d1:"1 day ago",d:"%n days ago",m1:"1 month ago",m:"%n months ago",y1:"1 year ago",y:"%n years ago"},rec:"Recommended spare parts",recOn:"recommended on",fitOn:"replaced on",printed:"Printed on"},
       x:{sSession:"Session",sFit:"Replaced",sRec:"Recommended",st:"Status",prio:"Priority",sDetail:"Detail",sSummary:"Summary",qty:"Quantity",ref:"Ref.",den:"Designation",
          date:"Date",sev:"Severity",tag:"Tag",entry:"Entry",pos:"Pos.",conj:"Assembly",grup:"Group / Drawing",
@@ -6261,7 +6290,7 @@ function mhLine(e){
 function mhCtrLine(x,all,L){
   var C=L.ctr,r=ctrLast(x);if(!C||!r)return "";
   var lang=L===RPT.ca?"ca":(Object.keys(RPT).filter(function(k){return RPT[k]===L})[0]||"ca");
-  var pv=ctrPrev(x,all),d=pv?ctrDeltaText(ctrDelta(pv.r,ctrFirst(x)),C,lang):"";
+  var pv=ctrPrev(x,all),d=pv?ctrDeltaText(ctrDelta(pv.r,ctrFirst(x)),C,lang,x.counters&&x.counters.unit):"";
   return "<div style=\"font-size:11.5px;margin-top:3px;color:var(--tx2)\">&#9201; "
     +(r.h!=null?esc(ctrFmt(r.h,lang,1))+" "+esc(C.h):"")+(r.h!=null&&r.u!=null?" · ":"")+(r.u!=null?esc(ctrFmt(r.u,lang,0))+" "+esc(C.u):"")
     +(d?"<div style=\"color:var(--blue)\">↑ "+esc(d)+"</div>":"")+"</div>";
@@ -7208,7 +7237,7 @@ function ctrFmt(n,lang,dec){
   try{return Number(n).toLocaleString(loc,{maximumFractionDigits:dec==null?1:dec})}catch(e){return String(Math.round(n*10)/10)}
 }
 // "+412 h · +620.000 units in 96 days (4,3 h/day · 1.505 units/h)"
-function ctrDeltaText(d,C,lang){
+function ctrDeltaText(d,C,lang,unit){
   if(!d)return "";
   if(d.reset)return C.reset;
   var parts=[];
@@ -7219,7 +7248,7 @@ function ctrDeltaText(d,C,lang){
   if(d.days!=null&&d.days>=1){var dd=Math.round(d.days);t+=" "+C.inW+" "+dd+" "+(dd===1?C.day1:C.days)}
   var rates=[];
   if(d.hpd!=null)rates.push(ctrFmt(d.hpd,lang,1)+" "+C.perDay);
-  if(d.uph!=null)rates.push(ctrFmt(d.uph,lang,0)+" "+C.perHour);
+  if(d.uph!=null)rates.push(unit==="min"?ctrFmt(d.uph/60,lang,1)+" "+(C.perMin||C.perHour):ctrFmt(d.uph,lang,0)+" "+C.perHour);
   return t+(rates.length?" ("+rates.join(" · ")+")":"");
 }
 // Everything the reports print about the counters, as rows and two lines.
@@ -7228,9 +7257,9 @@ function ctrReport(s,R,lang){
   var a=ctrRead(c.arr),b=ctrRead(c.dep);if(!a&&!b)return null;
   var rows=[];
   [[C.arr,a],[C.dep,b]].forEach(function(x){if(x[1])rows.push([x[0],x[1].h!=null?ctrFmt(x[1].h,lang,1)+" "+C.h:"—",x[1].u!=null?ctrFmt(x[1].u,lang,0):"—",x[1].at?fts(x[1].at).slice(0,14):"—"])});
-  var pv=ctrPrev(s),since="",during="";
-  if(pv){var dt=ctrDeltaText(ctrDelta(pv.r,ctrFirst(s)),C,lang);if(dt)since=C.since+" ("+(pv.s.project?pv.s.project+", ":"")+(pv.r.at?mhDate(pv.r.at):"")+"): "+dt}
-  if(a&&b){var dd=ctrDeltaText(ctrDelta(a,b),C,lang);if(dd)during=C.during+": "+dd}
+  var pv=ctrPrev(s),since="",during="",cu=c.unit==="min"?"min":"h";
+  if(pv){var dt=ctrDeltaText(ctrDelta(pv.r,ctrFirst(s)),C,lang,cu);if(dt)since=C.since+" ("+(pv.s.project?pv.s.project+", ":"")+(pv.r.at?mhDate(pv.r.at):"")+"): "+dt}
+  if(a&&b){var dd=ctrDeltaText(ctrDelta(a,b),C,lang,cu);if(dd)during=C.during+": "+dd}
   return {head:[C.read,C.hours,C.units,C.date],rows:rows,since:since,during:during,title:C.title};
 }
 function ctrHTML(s,R,lang){
@@ -9636,15 +9665,17 @@ async function buildXlsxBlob(s,lang,rev){
     // One row per test, numbers as numbers (percentages as fractions, minutes
     // as minutes), so the sheet can be summed and charted.
     var PL=R.pt;
-    var head=[PL.test,PL.product,PL.nominal+" ("+PL.uph+")",PL.start,PL.end,PL.duration+" (min)",PL.plannedStops+" (min)",PL.downtime+" (min)",PL.run+" (min)",
-              PL.total,PL.rejects,PL.good,PL.speedAvg+" ("+PL.uph+")",PL.speedRun+" ("+PL.uph+")",PL.avail,PL.perf,PL.qual,PL.oee,PL.rejPct,PL.result];
+    var xm=ptTests.every(function(t){return ptUnit(t)==="min"}),xu=xm?PL.upm:PL.uph,xd=xm?60:1;
+    var head=[PL.test,PL.product,PL.nominal+" ("+xu+")",PL.start,PL.end,PL.duration+" (min)",PL.plannedStops+" (min)",PL.downtime+" (min)",PL.run+" (min)",
+              PL.total,PL.rejects,PL.good,PL.speedAvg+" ("+xu+")",PL.speedRun+" ("+xu+")",PL.avail,PL.perf,PL.qual,PL.oee,PL.rejPct,PL.result];
     var rowsT=[head];
     function r2(v,k){return v==null?"":Math.round(v*Math.pow(10,k))/Math.pow(10,k)}
     ptTests.forEach(function(t){
       var r=ptCalc(t);
-      rowsT.push([t.name||"",t.product||"",ptNum(t.nominal)==null?"":ptNum(t.nominal),t.start?fts(t.start).slice(0,14):"",t.end?fts(t.end).slice(0,14):"",
+      var nomH=ptNum(t.nominal)==null?null:ptNum(t.nominal)*(ptUnit(t)==="min"?60:1);
+      rowsT.push([t.name||"",t.product||"",nomH==null?"":r2(nomH/xd,xm?1:0),t.start?fts(t.start).slice(0,14):"",t.end?fts(t.end).slice(0,14):"",
         r2(r.durMin,1),r2(r.plannedStopMin,1),r2(r.downMin,1),r2(r.runMin,1),r.total==null?"":r.total,r.rejects==null?"":r.rejects,r.good==null?"":r.good,
-        r2(r.speedAvg,0),r2(r.speedRun,0),r2(r.avail,4),r2(r.perf,4),r2(r.qual,4),r2(r.oee,4),r2(r.rejPct,4),
+        r.speedAvg==null?"":r2(r.speedAvg/xd,xm?1:0),r.speedRun==null?"":r2(r.speedRun/xd,xm?1:0),r2(r.avail,4),r2(r.perf,4),r2(r.qual,4),r2(r.oee,4),r2(r.rejPct,4),
         r.verdict?(r.verdict==="pass"?PL.pass:PL.fail):""]);
     });
     var wsT=X.utils.aoa_to_sheet(rowsT);wsT["!cols"]=autoCols(rowsT);

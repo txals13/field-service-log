@@ -750,6 +750,17 @@ Field Service Log/
   already in place: `buildAudioAttachment` names an MP4 blob `.m4a`. Checked in
   Chrome 152: AAC in an `isom` MP4, plays back. Notes recorded before stay
   `.webm`.
+- **…and the ones that slipped through** (2026-10-18: "the names don't follow
+  the description"): Android's photo picker names files by number
+  (1792319410611143361690826977666.jpg), which `camName` did not take for a
+  camera name — it now also takes ten or more bare digits (not a part number
+  like 3025.1478 or 6208-2RS, typed by hand). And names were only given on
+  add/edit on the device where it happened, so files added before, or from a
+  device still on an older version, kept the camera's: `renamePass` runs once
+  per page after the first Drive load and renames, in OPEN visits only (closed
+  ones' reports are out with those names), every file not `userNamed`/
+  `autoName` that still has a camera name; the session object is replaced so
+  the change is stamped and synced.
 - **Media named after the entry** (2026-10-17): a file still carrying a camera
   name (`camName`: IMG_, VID_, PXL_, DSC…, a bare date, voice_/nota_veu…) is
   renamed `shortDesc(text,tag)` — the first phrase, its first four words minus

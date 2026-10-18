@@ -1944,7 +1944,7 @@ async function saveReport(sess,blob,fname,mime){
   try{up=await reportToDrive(sess,blob,fname,mime,true)}finally{expBusy("")}
   if(up){
     repNote("&#10003; Desat a la carpeta del projecte: <code>"+esc(fname)+"</code>"
-      +(up.id?" · <a href=\"https://drive.google.com/file/d/"+encodeURIComponent(up.id)+"/view\" target=\"_blank\" rel=\"noopener\">Obre a Drive</a>":""),"ok");
+      +(up.id?" · <a href=\"https://drive.google.com/file/d/"+encodeURIComponent(up.id)+"/view\" target=\"_blank\" rel=\"noopener\" data-openfile=\""+esc(up.id)+"\" data-name=\""+esc(fname)+"\">"+(isHtmlName(fname)?"Obre":"Obre a Drive")+"</a>":""),"ok");
     // a newer copy of a report that was waiting replaces it
     var q=await pendLoad(),k=q.length;
     pendReps=q.filter(function(x){return !(x.sessId===sess.id&&x.fname===fname)});
@@ -1983,6 +1983,8 @@ function repNote(html,kind){
   t.innerHTML="<span>"+html+"</span><button type=\"button\" class=\"btn-g\" aria-label=\"Tanca\">&#10005;</button>";
   t.style.display="flex";
   t.querySelector("button").addEventListener("click",function(){t.style.display="none"});
+  var of=t.querySelector("[data-openfile]");
+  if(of&&isHtmlName(of.dataset.name))of.addEventListener("click",function(ev){ev.preventDefault();openDriveFile(of.dataset.openfile,of.dataset.name)});
   clearTimeout(repNote.tm);repNote.tm=setTimeout(function(){t.style.display="none"},kind==="wait"?15000:10000);
 }
 // Every failure has to come back as null, never as a rejected promise. The
@@ -5006,7 +5008,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 3";
+var APP_VERSION="2026-10-18 · 4";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -8097,6 +8099,34 @@ function folAdopt(ids){
   saveLocal();isDirty=true;if(isLoggedIn)saveToDrive();
   loadFolder(true);
 }
+// ── AN .HTML FROM DRIVE, SHOWN AS A PAGE (2026-10-18) ────────────────────────
+// Drive's viewer shows an .html file as its source code — and offers "Open
+// with Google Docs", which leaves a .gdoc copy in the visit's folder: the very
+// file that later stopped the app from binning that folder. So an .html is
+// fetched and written into a new tab, where the browser lays it out (photos
+// included: they are inside the file). Everything else still opens in Drive's
+// viewer, which shows PDFs, Word files, photos and videos well. The tab is
+// opened at once, while the tap still counts, and filled when the file is in.
+function isHtmlName(nm){return /\.html?$/i.test(String(nm||""))}
+function openDriveFile(id,name){
+  var viewer="https://drive.google.com/file/d/"+encodeURIComponent(id)+"/view";
+  if(!isHtmlName(name)){window.open(viewer,"_blank");return}
+  var w=window.open("","_blank");
+  if(w){try{w.document.write("<p style=\"font:14px sans-serif;padding:20px;color:#555\">Obrint "+esc(name||"")+"…</p>")}catch(e){}}
+  (async function(){
+    try{
+      var token=await ensureToken();if(!token)throw new Error("sense sessió de Google");
+      var r=await fetch("https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(id)+"?alt=media",{headers:{Authorization:"Bearer "+token}});
+      if(!r.ok)throw new Error("Drive ha respost "+r.status);
+      var html=await r.text();
+      if(!w||w.closed){alert("El navegador no ha deixat obrir una pestanya nova. Permet les finestres emergents d'aquesta app i torna-ho a provar.");return}
+      w.document.open();w.document.write(html);w.document.close();
+    }catch(e){
+      try{if(w)w.close()}catch(e2){}
+      alert("No s'ha pogut obrir "+(name||"el fitxer")+": "+((e&&e.message)||e));
+    }
+  })();
+}
 function folRow(f,kind,extra){
   return "<div class=\"fol-row"+(kind==="rep"?" fol-rep":"")+"\" data-id=\""+esc(f.id)+"\">"
     +"<span class=\"fol-name\" title=\""+esc(f.path)+"\">"+esc(f.name||f.path)+"</span>"
@@ -8146,7 +8176,7 @@ function folAct(ev){
   var row=b.closest(".fol-row");if(!row)return;
   var id=row.dataset.id,f=folFiles.filter(function(x){return x.id===id})[0];if(!f)return;
   var act=b.dataset.fol;
-  if(act==="open"){window.open("https://drive.google.com/file/d/"+id+"/view","_blank");return}
+  if(act==="open"){openDriveFile(id,f.name||f.path);return}
   if(act==="ren")return folDoRename(f);
   if(act==="del")return folDoDelete(f);
   if(act==="unlink")return folSetLink(id,null);

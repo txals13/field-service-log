@@ -1578,6 +1578,13 @@ Now (`syncTick`, `scheduleSync`):
 - it also runs on `visibilitychange` → visible and on window `focus`
   (throttled to one every 5 s): a phone app's interval does not run while it
   sleeps, so coming back to it waited up to half a minute.
+- **.html from Drive opens as a page** (2026-10-18): the folder dialog's ↗ and
+  the "saved" note used Drive's viewer, which shows an .html as source and
+  offers "Open with Google Docs" — the route by which the .gdoc above got into
+  the folder. `openDriveFile(id,name)`: an .html is fetched (`alt=media`) and
+  written into a tab opened synchronously on the tap (so no popup block;
+  `document.write` rather than a blob URL, which also works in the installed
+  app on Android); anything else still goes to the viewer.
 - **A later edit beats a deletion** (2026-10-18, same incident, the real
   cause): P-2026-171 had been archived and deleted on the computer while the
   user kept working on it on the TABLET. The gone note hid every later copy

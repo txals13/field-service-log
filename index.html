@@ -2739,12 +2739,25 @@ function goneSet(m){
 // again on the computer stayed invisible on the phone (2026-10-12).
 // Old notes were a plain string: the folder id while pending, "" once binned.
 function goneEntry(m,id){var v=m[id];return typeof v==="string"?{f:v,done:v===""}:(v||{f:"",done:true})}
-function goneAdd(id,folderId){var m=goneGet();m[id]={f:folderId||"",done:false};goneSet(m)}
+function goneAdd(id,folderId){var m=goneGet();m[id]={f:folderId||"",done:false,at:now()};goneSet(m)}
+// A visit deleted here but CHANGED somewhere else afterwards comes back
+// (2026-10-18): P-2026-171 was archived and deleted on the computer while the
+// tablet kept working on it, and the note hid it from the computer for good.
+// The deletion's moment is the note's own `at`; notes written before it had
+// one fall back to when the visit was archived (its history record's arch.at),
+// and with neither the old rule stands.
+function goneAt(m,id){
+  var g=goneEntry(m,id);if(g.at)return g.at;
+  var rec=hist&&hist.visits&&hist.visits[id];
+  return (rec&&!rec.del&&rec.arch&&rec.arch.at)||"";
+}
+function newerThanGone(m,x){var t=x&&goneAt(m,x.id);return !!t&&String(sStamp(x))>String(t)}
 function goneFolderDone(id){var m=goneGet();if(id in m){m[id]={f:goneEntry(m,id).f,done:true};goneSet(m)}}
 // Does the note still hold this copy back? Only when the copy has no folder,
 // or has the very folder that was deleted.
 function goneBlocks(m,x){
   if(!x||!(x.id in m))return false;
+  if(newerThanGone(m,x))return false;
   var g=goneEntry(m,x.id);
   return !x.folderId||x.folderId===g.f;
 }
@@ -2786,6 +2799,21 @@ async function trashFolderOrContents(token,fid,name){
   var m=leftGet();m[fid]={name:name||"",why:why,at:now()};leftSet(m);
   return {ok:true,leftover:true};
 }
+// Out of the trash again: everything this app had binned inside the folder.
+async function restoreFolderContents(token,fid){
+  try{
+    var q=JSON.stringify(fid)+" in parents and trashed=true";
+    var r=await fetch("https://www.googleapis.com/drive/v3/files?q="+encodeURIComponent(q)+"&fields=files(id)&pageSize=1000",{headers:{Authorization:"Bearer "+token}});
+    if(!r.ok)return false;
+    var kids=(await r.json()).files||[],ok=true;
+    for(var i=0;i<kids.length;i++){
+      var u=await fetch("https://www.googleapis.com/drive/v3/files/"+kids[i].id,
+        {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({trashed:false})});
+      if(!u.ok)ok=false;
+    }
+    return ok;
+  }catch(e){return false}
+}
 async function reconcileOutputs(token){
   try{
     var rootId=await getRootId(token);if(!rootId)return;
@@ -2808,6 +2836,8 @@ async function reconcileOutputs(token){
     // 0 · deleted here while offline: bin the folder now
     for(var gid in gone){
       var ge=goneEntry(gone,gid),gf=ge.done?"":ge.f;
+      var back=sessions.find(function(x){return x.id===gid});
+      if(back&&newerThanGone(gone,back))continue;            // it is coming back: step 1
       if(gf&&live[gf]&&!sessions.some(function(x){return x.id!==gid&&x.folderId===gf})){
         var tr=await trashFolderOrContents(token,gf,live[gf].name);
         if(tr.ok){if(!tr.leftover)delete live[gf];goneFolderDone(gid)}
@@ -2819,7 +2849,7 @@ async function reconcileOutputs(token){
       var x=sessions[i];
       if(x.id in gone){
         var gx=goneEntry(gone,x.id);
-        if(x.folderId&&live[x.folderId]&&x.folderId!==gx.f){goneForget([x.id]);delete gone[x.id]}
+        if(newerThanGone(gone,x)||(x.folderId&&live[x.folderId]&&x.folderId!==gx.f)){goneForget([x.id]);delete gone[x.id]}
         else{drop[x.id]=1;continue}
       }
       if(!x.folderId||live[x.folderId])continue;
@@ -2853,11 +2883,20 @@ async function reconcileOutputs(token){
       if(!Array.isArray(list))continue;
       list.forEach(function(v){
         if(!v||!v.id||sessions.some(function(y){return y.id===v.id}))return;
-        if(v.id in gone){if(goneEntry(gone,v.id).f===f.id)return;goneForget([v.id])}
+        if(v.id in gone){if(goneEntry(gone,v.id).f===f.id&&!newerThanGone(gone,v))return;goneForget([v.id])}
         sessions.push(Object.assign({},v,{folderId:f.id,folderName:f.name}));
         changed=true;
       });
     }
+    // 3 · a visit that came back gets back what was binned from its folder
+    var lm=leftGet(),lc=false;
+    for(var q2=0;q2<sessions.length;q2++){
+      var xf=sessions[q2].folderId;
+      if(xf&&lm[xf]&&live[xf]){
+        if(await restoreFolderContents(token,xf)){delete lm[xf];lc=true}
+      }
+    }
+    if(lc){leftSet(lm);refreshDriveInfo()}
     if(changed){
       sessions=orderSessions(sessions);
       markSeen();
@@ -4967,7 +5006,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 2";
+var APP_VERSION="2026-10-18 · 3";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,

@@ -1578,6 +1578,19 @@ Now (`syncTick`, `scheduleSync`):
 - it also runs on `visibilitychange` → visible and on window `focus`
   (throttled to one every 5 s): a phone app's interval does not run while it
   sleeps, so coming back to it waited up to half a minute.
+- **A later edit beats a deletion** (2026-10-18, same incident, the real
+  cause): P-2026-171 had been archived and deleted on the computer while the
+  user kept working on it on the TABLET. The gone note hid every later copy
+  for good (same folder), and the leftover fallback above then binned the
+  folder's contents under a live visit. Now gone notes carry `at` (the
+  deletion's moment; older notes fall back to the visit's history record
+  `arch.at`), and `newerThanGone` — a copy whose `sStamp` is later — wins in
+  `goneBlocks` (save merge), in reconcile steps 1 and 2, and keeps step 0 from
+  binning that visit's folder. Step 3 of the reconcile then untrashes what the
+  fallback had binned (`restoreFolderContents`: the folder's trashed children
+  this app can see) for any live visit whose folder is in `fsl_v6_leftover`,
+  and clears the note. A copy untouched since before the deletion stays gone.
+  Tested in a sandbox of `reconcileOutputs` with the incident's exact state.
 - **A visit's folder Drive won't let us bin** (2026-10-18: "the computer isn't
   refreshing the folders in Outputs"). Seen on the user's data: P-2026-171 was
   archived and deleted at 12:39; its Outputs folder stayed, and the gone note

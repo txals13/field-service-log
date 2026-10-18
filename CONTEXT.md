@@ -1632,6 +1632,18 @@ Now (`syncTick`, `scheduleSync`):
   written into a tab opened synchronously on the tap (so no popup block;
   `document.write` rather than a blob URL, which also works in the installed
   app on Android); anything else still goes to the viewer.
+- **Choosing what goes into the project ZIP** (2026-10-18: "choose which files
+  to export to the .zip, I don't always need the .docx or the .xlsx"): the
+  menu's ZIP opens `#zipPickBack` (`openZipPick`) — PDF, Word, HTML, Excel,
+  validation PDF, timesheet, media, earlier revisions, manual; session.json
+  always, shown ticked and disabled; items the visit lacks are greyed; the
+  choice is kept in `fsl_v6_zippick`. OK → `exportSessionZip(s,"project",
+  pick)` from that tap (the permission prompts need a gesture). `want(k)` is
+  true for everything when no pick is passed — archiving and the delete
+  dialog's "export now" still make the whole ZIP. zipAt (the delete dialog's
+  "complete copy") is stamped only when the media AND the earlier revisions
+  went in: those cannot be rebuilt from session.json. Tested the dialog in
+  the preview (greyed items, note, remembered choice, hand-off to export).
 - **The PDF's entry table fitted again** (2026-10-18, the P-2026-171 Rev. 05
   PDF: "the format is wrong"): with the thumbnails gone, the Adjunts column
   was still sized as text that never wraps (up to 50mm, shrunk), and the

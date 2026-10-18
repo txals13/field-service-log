@@ -5234,7 +5234,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 16";
+var APP_VERSION="2026-10-18 · 17";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -9519,11 +9519,19 @@ function entryColWidths(doc,R,entries,attTexts,ar,CW,minAtt){
   ["info","ok","warning","issue"].forEach(function(k){sev=Math.max(sev,doc.getTextWidth(R.sev[k])+PAD)});
   doc.setFont("helvetica","normal");
   var ts=Math.max(hTs,doc.getTextWidth("00:00:00")+PAD,doc.getTextWidth(R.photoTag)+PAD);
-  // Tag and attachments never break: they take the width they need, and only if
-  // that hits the cap is the text shrunk (never wrapped) to fit.
+  // The tag never breaks: it takes the width it needs, and only if that hits
+  // the cap is the text shrunk (never wrapped) to fit.
   var tagC=pdfFitCol(doc,entries.map(function(e){return e.tag||""}).concat([""]),hTag,32,PAD,ar);
-  // With thumbnails the column is as wide as two of them, side by side.
-  var attC=pdfFitCol(doc,(attTexts||[]).concat([""]),Math.max(hAtt,16,minAtt||0),Math.max(50,minAtt||0),PAD,ar);
+  // The attachments are names only (2026-10-18): at 7.5pt, as wide as the
+  // longest name up to 36mm, and a longer name WRAPS — it used to be shrunk to
+  // fit a 50mm column, which left the description too narrow for its parts
+  // table (names broken letter by letter, "RECANVI" over "ESTAT").
+  doc.setFontSize(7.5);
+  var aw=0;(attTexts||[]).forEach(function(t){String(t||"").split("\n").forEach(function(l){pdfFont(doc,ar,l,"normal");aw=Math.max(aw,doc.getTextWidth(l))})});
+  doc.setFont("helvetica","normal");
+  var attMin=Math.max(hAtt,16,minAtt||0);
+  var attC={w:aw,fontSize:7.5,cellWidth:Math.max(attMin,Math.min(aw+PAD,36))};
+  attC.set=function(cw){attC.cellWidth=Math.max(attMin,cw)};
   // Description keeps the lion's share; if the two measured columns leave it too
   // little they give the difference back, attachments first, and only as a last
   // resort do they go under the 5.8pt floor (still one line, just smaller).
@@ -9680,7 +9688,7 @@ async function buildPdfBlob(s,lang,rev,opts){
   var extras=entries.map(function(e,i){
     var hasP=!!(e.parts&&e.parts.length),hasF=!!e.fix,cl=CI[e.id];
     if(!hasP&&!hasF&&!cl)return null;
-    var X={qtyW:9,refW:Math.min(24,DW*0.3),stW:0,refH:0};
+    var X={qtyW:9,refW:0,stW:0,refH:0};
     // "closes an issue from the visit of…": a grey block above the rest
     if(cl){
       doc.setFont("helvetica","bold");doc.setFontSize(FX_FS-0.4);
@@ -9691,13 +9699,16 @@ async function buildPdfBlob(s,lang,rev,opts){
       X.refH=2+(X.clHead.length+X.clLines.length)*FX_LH+2;
     }
     if(hasP){
-      // as wide as this entry's own labels need: a list of replaced parts
-      // only gets a narrow column
-      doc.setFont("helvetica","bold");doc.setFontSize(PT_FS-0.4);X.stW=doc.getTextWidth(R.st);
+      // as wide as this entry's own labels need, and the SHORT ones (Canviat,
+      // Urgent, Preventiu, Cotització): the long "Recomanat · preventiu" /
+      // "Petició de cotització" took the name's room (2026-10-18). The full
+      // wording is in the summaries' headings at the end.
+      doc.setFont("helvetica","bold");doc.setFontSize(PT_FS-0.4);X.stW=doc.getTextWidth(R.st);X.refW=doc.getTextWidth(R.ref);
       doc.setFontSize(PT_FS);
-      e.parts.forEach(function(p){X.stW=Math.max(X.stW,doc.getTextWidth(R.pstL[partSt(p)]))});
+      e.parts.forEach(function(p){X.stW=Math.max(X.stW,doc.getTextWidth(R.pst[partSt(p)]))});
       doc.setFont("helvetica","normal");
-      X.stW+=1;
+      e.parts.forEach(function(p){X.refW=Math.max(X.refW,doc.getTextWidth(String(p.ref||"")))});
+      X.stW+=1;X.refW=Math.min(X.refW+2,DW*0.3);
     }
     X.nameW=DW-X.qtyW-X.refW-X.stW-6;
     X.rows=[];X.partsH=0;
@@ -9715,7 +9726,10 @@ async function buildPdfBlob(s,lang,rev,opts){
       doc.setFontSize(FX_FS);pdfFont(doc,ar,e.fix.text,"normal");
       X.fixLines=e.fix.text?doc.splitTextToSize(e.fix.text,DW-5):[];
       X.fixLabel=R.fix.toUpperCase()+" ("+(R.sev[e.fix.severity]||R.sev.ok)+")"+(e.fix.ts?" · "+fixWhen(e):"")+(resolvedIn(e,R)?" · "+resolvedIn(e,R):"");
-      X.fixH=2+FX_LH+X.fixLines.length*FX_LH+2;
+      // the heading wraps too: one long line ran out of the box (2026-10-18)
+      doc.setFont("helvetica","bold");doc.setFontSize(FX_FS-0.4);
+      X.fixHead=doc.splitTextToSize(X.fixLabel,DW-5);doc.setFont("helvetica","normal");
+      X.fixH=2+X.fixHead.length*FX_LH+X.fixLines.length*FX_LH+2;
     }
     X.blanks=Math.ceil((X.refH+X.partsH+X.fixH)/LH);
     body[i][3]=(body[i][3]||"")+new Array(X.blanks+1).join("\n");
@@ -9839,7 +9853,7 @@ async function buildPdfBlob(s,lang,rev,opts){
             r.lines.forEach(function(l,k){doc.text(l,x+X.qtyW+X.refW+4,base+k*PT_LH)});
             doc.setFont("helvetica","bold");
             var sc=PST_RGB[partSt(r.p)];doc.setTextColor(sc[0],sc[1],sc[2]);
-            doc.text(R.pstL[partSt(r.p)],stX,base);
+            doc.text(R.pst[partSt(r.p)],stX,base);
             doc.setFont("helvetica","normal");
             rowY+=r.h;
           });
@@ -9852,10 +9866,10 @@ async function buildPdfBlob(s,lang,rev,opts){
           doc.setFillColor(249,250,251);doc.rect(x,fy,w,fh,"F");
           doc.setFillColor(fc[0],fc[1],fc[2]);doc.rect(x,fy,0.8,fh,"F");
           doc.setFont("helvetica","bold");doc.setFontSize(FX_FS-0.4);doc.setTextColor(fc[0],fc[1],fc[2]);
-          doc.text(X.fixLabel,x+2.5,fy+FX_LH);
+          X.fixHead.forEach(function(l,k){doc.text(l,x+2.5,fy+FX_LH*(k+1))});
           doc.setFont("helvetica","normal");doc.setFontSize(FX_FS);doc.setTextColor(55,65,81);
           pdfFont(doc,ar,entries[G[d.row.index]].fix.text,"normal");
-          X.fixLines.forEach(function(l,k){doc.text(l,x+2.5,fy+FX_LH+(k+1)*FX_LH)});
+          X.fixLines.forEach(function(l,k){doc.text(l,x+2.5,fy+FX_LH*(X.fixHead.length+k+1))});
         }
         doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(0,0,0);
       }
@@ -10218,8 +10232,17 @@ async function buildDocxDocument(D,s,lang,rev){
 
   // The spare parts, as the same QT./REF./SPARE PART table the PDF draws.
   function partsTable(parts,descMm){
-    var innerMm=descMm-4,qty=9,ref=Math.min(24,innerMm*0.3);
-    var stMm=parts.some(function(p){return partSt(p)!=="fit"})?Math.min(26,innerMm*0.28):14,name=innerMm-qty-ref-stMm;
+    // the PDF's measure: short status labels, references as wide as they are
+    var innerMm=descMm-4,qty=9,ref=24,stMm=14;
+    if(mdoc){
+      mdoc.setFont("helvetica","bold");mdoc.setFontSize(6.4);stMm=mdoc.getTextWidth(R.st);ref=mdoc.getTextWidth(R.ref);
+      mdoc.setFontSize(6.8);
+      parts.forEach(function(p){stMm=Math.max(stMm,mdoc.getTextWidth(R.pst[partSt(p)]))});
+      mdoc.setFont("helvetica","normal");
+      parts.forEach(function(p){ref=Math.max(ref,mdoc.getTextWidth(String(p.ref||"")))});
+      stMm+=3;ref=Math.min(ref+3,innerMm*0.3);
+    }
+    var name=innerMm-qty-ref-stMm;
     var pmg={top:14,bottom:14,left:40,right:40};
     function cell(w,ch,fill){return new D.TableCell({width:{size:tw(w),type:D.WidthType.DXA},margins:pmg,
       borders:noBorders,shading:fill?{fill:fill,type:D.ShadingType.CLEAR}:undefined,children:ch})}
@@ -10234,7 +10257,7 @@ async function buildDocxDocument(D,s,lang,rev){
         cell(qty,[P({alignment:D.AlignmentType.RIGHT,children:[T({text:p.cant?String(p.cant)+"×":"",size:hp(6.8),font:"Arial",color:"B45309"})]})]),
         cell(ref,[P({children:[T({text:p.ref||"",size:hp(6.8),font:"Arial",color:"1D4ED8"})]})]),
         cell(name,[P({children:[T({text:p.denominacio||"",size:hp(6.8),font:"Arial",color:"111827"})]})]),
-        cell(stMm,[P({children:[T({text:R.pstL[partSt(p)],bold:true,size:hp(6.4),font:"Arial",color:PST_HEX[partSt(p)]})]})])
+        cell(stMm,[P({children:[T({text:R.pst[partSt(p)],bold:true,size:hp(6.4),font:"Arial",color:PST_HEX[partSt(p)]})]})])
       ]});
     });
     return new D.Table({width:{size:tw(innerMm),type:D.WidthType.DXA},

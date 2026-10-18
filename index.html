@@ -994,12 +994,12 @@ textarea{resize:none;line-height:1.4}
         <div id="eThumbs" class="thumbs"></div>
         <div id="eFileNames" class="fnames"></div>
         <button class="btn-sm cap-only" id="eCam" style="margin-top:6px;display:none">&#128247; Fes una foto</button>
-        <button class="btn-sm cap-only" id="eVid" style="margin-top:6px;display:none">&#127909; Grava un v&iacute;deo</button>
+        <button class="btn-sm cap-only" id="eVid" style="margin-top:6px;display:none" title="Tria un vídeo de la galeria. Grava'l abans amb la càmera del mòbil: hi tens la càmera lenta, i el vídeo queda guardat al telèfon">&#127909; Afegeix un v&iacute;deo</button>
         <button class="btn-sm" id="eAddPhoto" style="margin-top:6px">&#128247; Afegeix foto / vídeo</button>
         <button class="btn-sm" id="eRec" title="Grava una nota de veu" style="margin-top:6px">&#127897; Grava una nota de veu</button>
         <input type="file" id="eFileIn" accept="image/*,video/*" multiple style="display:none">
         <input type="file" id="eCamIn" accept="image/*" capture="environment" style="display:none">
-        <input type="file" id="eVidIn" accept="video/*" capture="environment" style="display:none">
+        <input type="file" id="eVidIn" accept="video/*" multiple style="display:none">
       </div>
       <div class="field">
         <label>Recanvis</label>
@@ -1045,12 +1045,12 @@ textarea{resize:none;line-height:1.4}
         <div id="fFileNames" class="fnames"></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn-sm cap-only" id="fCam" style="display:none">&#128247; Fes una foto</button>
-          <button class="btn-sm cap-only" id="fVid" style="display:none">&#127909; Grava un v&iacute;deo</button>
+          <button class="btn-sm cap-only" id="fVid" style="display:none" title="Tria un vídeo de la galeria. Grava'l abans amb la càmera del mòbil: hi tens la càmera lenta, i el vídeo queda guardat al telèfon">&#127909; Afegeix un v&iacute;deo</button>
           <button class="btn-sm" id="fAddPhoto">&#128247; Foto / v&iacute;deo</button>
           <button class="btn-sm" id="fRec" title="Grava una nota de veu">&#127897; Grava una nota de veu</button>
           <input type="file" id="fFileIn" accept="image/*,video/*" multiple style="display:none">
           <input type="file" id="fCamIn" accept="image/*" capture="environment" style="display:none">
-          <input type="file" id="fVidIn" accept="video/*" capture="environment" style="display:none">
+          <input type="file" id="fVidIn" accept="video/*" multiple style="display:none">
         </div>
       </div>
       <div class="modal-actions">
@@ -1895,10 +1895,32 @@ async function driveUploadBlob(token,blob,name,mime,parentId){
     if(!initR.ok)return null;
     var uploadUrl=initR.headers.get("Location");
     if(!uploadUrl)return null;
-    var putR=await fetch(uploadUrl,{method:"PUT",headers:{"Content-Type":mime},body:blob});
-    if(!putR.ok)return null;
-    var cr=await putR.json();
-    return{id:cr.id,name:cr.name};
+    var CH=8*1024*1024,total=blob.size;
+    if(total<=CH){
+      var putR=await fetch(uploadUrl,{method:"PUT",headers:{"Content-Type":mime},body:blob});
+      if(!putR.ok)return null;
+      var cr=await putR.json();
+      return{id:cr.id,name:cr.name};
+    }
+    // Big (a video, above all a slow-motion one): in 8 MB pieces. A piece that
+    // fails is not the end — Drive is asked how far it got and the upload goes
+    // on from there, up to four times in a row (2026-10-18: a video sent in
+    // one go over a phone connection simply never arrived).
+    var off=0,fails=0;
+    while(off<total){
+      var end=Math.min(off+CH,total),r=null;
+      try{r=await fetch(uploadUrl,{method:"PUT",headers:{"Content-Range":"bytes "+off+"-"+(end-1)+"/"+total},body:blob.slice(off,end)})}catch(e){r=null}
+      if(r&&r.status===308){var rg=r.headers.get("Range");off=rg?parseInt(rg.split("-")[1],10)+1:end;fails=0;continue}
+      if(r&&r.ok){var cj=await r.json();return{id:cj.id,name:cj.name}}
+      if(++fails>4)return null;
+      await new Promise(function(res){setTimeout(res,1500*fails)});
+      try{
+        var q=await fetch(uploadUrl,{method:"PUT",headers:{"Content-Range":"bytes */"+total}});
+        if(q.ok){var qj=await q.json();return{id:qj.id,name:qj.name}}
+        if(q.status===308){var qr=q.headers.get("Range");off=qr?parseInt(qr.split("-")[1],10)+1:0}
+      }catch(e){}
+    }
+    return null;
   }catch(e){return null}
 }
 function fnameStamp(){return now().replace(/[:.]/g,"-")}
@@ -3606,14 +3628,18 @@ function renderContent(){
         // folder. Same button row, different first button.
         +(handheld()
           ?"<button class=\"btn-sm\" id=\"btnCam\" title=\"Fes una foto\">📷</button>"
-           +"<button class=\"btn-sm\" id=\"btnVid\" title=\"Grava un vídeo\">🎥</button>"
+           +"<button class=\"btn-sm\" id=\"btnVid\" title=\"Tria un vídeo de la galeria. Grava'l abans amb la càmera del mòbil: hi tens la càmera lenta, i el vídeo queda guardat al telèfon\">🎥</button>"
            +"<button class=\"btn-sm\" id=\"btnPhoto\" title=\"Tria una foto o un vídeo que ja tens\">🖼</button>"
           :"<button class=\"btn-sm\" id=\"btnPhoto\" title=\"Afegeix una foto o un vídeo\">📷</button>")
         +"<button class=\"btn-sm\" id=\"btnRec\" title=\"Grava una nota de veu\">🎙</button>"
         +"<button class=\"btn-sm\" id=\"entCorr\" title=\"Corregeix ortografia i gramàtica de la descripció\">✓</button>"
         +"<input type=\"file\" id=\"fileIn\" accept=\"image/*,video/*\" multiple style=\"display:none\">"
         +"<input type=\"file\" id=\"camIn\" accept=\"image/*\" capture=\"environment\" style=\"display:none\">"
-        +"<input type=\"file\" id=\"vidIn\" accept=\"video/*\" capture=\"environment\" style=\"display:none\">"
+        // No `capture` (2026-10-18): the browser's own recorder has no slow
+        // motion and keeps nothing on the phone, so a failed upload lost the
+        // video. The phone's camera app records it — slow motion included —
+        // into the gallery, and 🎥 picks it from there.
+        +"<input type=\"file\" id=\"vidIn\" accept=\"video/*\" multiple style=\"display:none\">"
         +"</div></div>"
         +"<textarea id=\"notesIn\" class=\"inp-notes\" placeholder=\"Notes generals d'aquesta sessió…\"></textarea>"
         +"<div id=\"notesBtns\" style=\"display:flex;gap:6px;flex-wrap:wrap;margin-top:4px\">"
@@ -5008,7 +5034,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 4";
+var APP_VERSION="2026-10-18 · 5";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,

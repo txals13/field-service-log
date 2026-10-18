@@ -1578,6 +1578,16 @@ Now (`syncTick`, `scheduleSync`):
 - it also runs on `visibilitychange` → visible and on window `focus`
   (throttled to one every 5 s): a phone app's interval does not run while it
   sleeps, so coming back to it waited up to half a minute.
+- **Videos come from the gallery, and big files go up in pieces**
+  (2026-10-18): the 🎥 buttons (composer, edit, outcome) lost `capture` and
+  gained `multiple` — the browser's recorder has no slow motion and leaves no
+  copy on the phone, so a video whose upload failed was gone; now the phone's
+  camera app records it into the gallery and 🎥 picks it. `driveUploadBlob`
+  (all media) sends anything over 8 MB in resumable 8 MB pieces; a failed
+  piece asks Drive how far it got (`Content-Range: bytes */N`) and goes on
+  from there, up to four failures in a row with a growing pause — the single
+  PUT never got a long video through a phone connection. Tested against a
+  fake Drive dropping one piece of a 20 MB file.
 - **.html from Drive opens as a page** (2026-10-18): the folder dialog's ↗ and
   the "saved" note used Drive's viewer, which shows an .html as source and
   offers "Open with Google Docs" — the route by which the .gdoc above got into

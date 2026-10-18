@@ -1632,6 +1632,19 @@ Now (`syncTick`, `scheduleSync`):
   written into a tab opened synchronously on the tap (so no popup block;
   `document.write` rather than a blob URL, which also works in the installed
   app on Android); anything else still goes to the viewer.
+- **The PDF's entry table fitted again** (2026-10-18, the P-2026-171 Rev. 05
+  PDF: "the format is wrong"): with the thumbnails gone, the Adjunts column
+  was still sized as text that never wraps (up to 50mm, shrunk), and the
+  per-entry parts table used the long status labels ("Petició de
+  cotització", "Recomanat · preventiu") — the name column was left ~2mm wide,
+  names broken letter by letter and "RECANVI" over "ESTAT"; the outcome's
+  heading ran out of its box. Now: `entryColWidths` gives the attachments
+  7.5pt, as wide as the longest name up to 36mm, and longer names wrap (the
+  link rectangles follow the same wrap); the entry's parts table (PDF and
+  Word) uses the short `R.pst` labels and a reference column as wide as its
+  references (≤30%); the PDF wraps the outcome heading (`X.fixHead`). The
+  summaries at the end keep the full wording. Re-checked with the real
+  P-2026-171 data.
 - **Names only; a photo's name goes to the appendix, the appendix photo to
   the file** (2026-10-18: "no thumbnails of photos or videos, only the names;
   the names take you to the photo at the end, and clicking that photo opens

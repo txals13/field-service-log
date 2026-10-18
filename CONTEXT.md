@@ -1632,6 +1632,27 @@ Now (`syncTick`, `scheduleSync`):
   written into a tab opened synchronously on the tap (so no popup block;
   `document.write` rather than a blob URL, which also works in the installed
   app on Android); anything else still goes to the viewer.
+- **Videos wait in a queue** (2026-10-18: "offline videos don't go up — fine,
+  but I want to pick the video and have it wait in a queue"): a picked video
+  used to be held only in memory (`fileCache`) and, not signed in, refused.
+  Now `handleFiles` keeps it in IndexedDB first (`mqAdd`: blob at
+  "mq:<qid>", the list under `mediaQueue`; `navigator.storage.persist()`
+  asked), the attachment carries `qid` and uploadStatus "queued" (⏳, orange
+  `.thumb-up.queued`); the entry can be saved as soon as it is kept, and the
+  upload is tried straight away if there is a connection. `mqFlush` (each
+  `syncTick`, the `online` event; the count is read at start-up) uploads
+  each queued one (`mqUpload`, never twice at once — `mqActive`); success →
+  `mediaUploaded`, the qid goes, the blob is deleted and the list keeps
+  `{done:{driveId,name}}` until no visit carries the qid — so a stale copy
+  of the visit swapped in by a sync still gets the id, without a second
+  upload. Not found for a day (entry never saved, video taken out) →
+  dropped; taken out of the composer → dropped at once. A queued video plays
+  from the queue (`mqBlob`); on another device its ⏳ says it is waiting on
+  the device that added it. The sidebar shows "⏳ N vídeos a la cua". The
+  manual Drive sync no longer counts a queued video as lost. Tested in the
+  preview (offline pick → ⏳, kept across a reload, played from IndexedDB)
+  and in a sandbox (failed upload stays queued; upload once, blob gone, list
+  cleared; the stale-copy race; the one-day clean-up).
 - **Choosing what goes into the project ZIP** (2026-10-18: "choose which files
   to export to the .zip, I don't always need the .docx or the .xlsx"): the
   menu's ZIP opens `#zipPickBack` (`openZipPick`) — PDF, Word, HTML, Excel,

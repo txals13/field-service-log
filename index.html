@@ -1227,12 +1227,19 @@ function attItems(e){
   });
 }
 function attLine(a,R){return (a.vid?"» ":a.aud?"• ":"")+(a.im.name||R.file)}
-// Where a report's file opens: ALWAYS the file beside the report (2026-10-18,
-// "not from Drive — from its own folder, the paths are the same, so it can be
-// checked with no connection"). `photos/…`, `videos/…`, `audio/…` is how the
-// visit's folder and the project ZIP are both laid out, so the same link works
-// from the unzipped archive and from the Drive folder on the computer.
+// Where a report's file opens (2026-10-18, "only when the ZIP is archived do
+// the links look for the file locally; working in the app, the exports link to
+// Drive"). Two kinds of report, one layout:
+//   · exported from the app (to the visit's Drive folder): the file on Drive,
+//     which opens from anywhere — `driveView`;
+//   · built INTO the project ZIP (`opts.local`): the file beside the report,
+//     `photos/…`, `videos/…`, `audio/…`, as the ZIP is laid out, so the
+//     unzipped archive can be checked with no connection — `mediaRel`.
+// mediaHref picks one. Either way a photo's name goes to its copy in the
+// appendix, and the appendix photo (or a video's / voice note's name) opens it.
 function mediaRel(im){return im&&im.name?mediaKind(im)+"/"+encodeURIComponent(im.name).replace(/[()'!*]/g,function(c){return "%"+c.charCodeAt(0).toString(16).toUpperCase()}):""}
+function driveView(id){return id?"https://drive.google.com/file/d/"+encodeURIComponent(id)+"/view":""}
+function mediaHref(im,local){return local?mediaRel(im):driveView(im&&im.driveId)}
 // The PDF's links are turned from "open this address" into "open this file"
 // (a Launch action, the PDF's own way to open a file next to it — Acrobat
 // Reader and most desktop viewers follow it, after asking; the Chrome/Edge
@@ -5365,7 +5372,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 19";
+var APP_VERSION="2026-10-18 · 20";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -8112,7 +8119,8 @@ function pdfProdSection(doc,s,R,lang,y,M,CW,H,full){
   });
   return y;
 }
-function buildReportHTML(s,forPrint,lang,rev){
+function buildReportHTML(s,forPrint,lang,rev,opts){
+  var local=!!(opts&&opts.local);
   lang=RPT[lang]?lang:"ca";
   var R=RPT[lang],tm=TM[s.type]||TM.commissioning,tl=R.types[s.type]||R.types.commissioning;
   var entries=s.entries||[];
@@ -8124,10 +8132,10 @@ function buildReportHTML(s,forPrint,lang,rev){
     var k=shots.length;shots.push({img:img,src:src,ts:fts(e.ts)});
     return "<a href=\"#fsl-ph-"+k+"\" style=\"color:#1d4ed8\">"+inner+"</a>";
   }
-  // A link to the file beside the report (photos/…, videos/…, audio/…).
+  // A link to the file: on Drive, or beside the report in the ZIP (mediaHref).
   function mediaA(img,inner){
-    var rel=mediaRel(img);if(forPrint||!rel)return inner;
-    return "<a href=\""+esc(rel)+"\" target=\"_blank\" style=\"color:#1d4ed8\">"+inner+"</a>";
+    var u=mediaHref(img,local);if(forPrint||!u)return inner;
+    return "<a href=\""+esc(u)+"\" target=\"_blank\" rel=\"noopener\" style=\"color:#1d4ed8\">"+inner+"</a>";
   }
   var CI=closesInfo(s,lang);
   var rows=entries.map(function(e){
@@ -9708,7 +9716,7 @@ async function exportPDF(s,R,base){
 // opts.validation: the production-test report — same header, data and
 // signatures, but the tests instead of the log, the counters and the photos.
 async function buildPdfBlob(s,lang,rev,opts){
-  var V=!!(opts&&opts.validation);
+  var V=!!(opts&&opts.validation),local=!!(opts&&opts.local);
   var L=await loadPdfLibs();
   if(!L)return null;
   var R=RPT[lang]||RPT.ca;
@@ -9807,7 +9815,7 @@ async function buildPdfBlob(s,lang,rev,opts){
   // at its copy; the jumps are added once the appendix has its pages (toShot).
   var shots=[],shotOf=new Map(),toShot=[];
   entries.forEach(function(e){
-    attItems(e).forEach(function(a){if(a.src){shotOf.set(a.im,shots.length);shots.push({src:a.src,ts:fts(e.ts),name:a.im.name||"",url:mediaRel(a.im)})}});
+    attItems(e).forEach(function(a){if(a.src){shotOf.set(a.im,shots.length);shots.push({src:a.src,ts:fts(e.ts),name:a.im.name||"",url:mediaHref(a.im,local)})}});
   });
   var tsW=COL.ts,sevW=COL.sev,tagC=COL.tagC,attC=COL.attC;
   function descW(){return COL.desc()}
@@ -9939,7 +9947,7 @@ async function buildPdfBlob(s,lang,rev,opts){
             var t=attLine(a,R);pdfFont(doc,ar,t,"normal");
             var k=doc.splitTextToSize(t,wA).length,r={x:d.cell.x+2,y:d.cell.y+2+lnA*lhA,w:wA,h:k*lhA};
             if(shotOf.has(a.im)){r.page=doc.internal.getCurrentPageInfo().pageNumber;r.shot=shotOf.get(a.im);toShot.push(r)}
-            else{var u=mediaRel(a.im);if(u)doc.link(r.x,r.y,r.w,r.h,{url:u})}
+            else{var u=mediaHref(a.im,local);if(u)doc.link(r.x,r.y,r.w,r.h,{url:u})}
             lnA+=k;
           });
           doc.setFont("helvetica","normal");doc.setFontSize(8);
@@ -10102,7 +10110,7 @@ async function buildPdfBlob(s,lang,rev,opts){
     doc.text(p+" / "+n,W-M,H-6,{align:"right"});
   }
 
-  return pdfBlobLocal(doc);
+  return local?pdfBlobLocal(doc):doc.output("blob");   // the ZIP's copy: "open the file beside it"
 }
 
 // ── SPARE PARTS → EXCEL ───────────────────────────────────────────────────────
@@ -10283,10 +10291,10 @@ function loadDocxLib(){
   });
 }
 var DOCX_MIME="application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-async function buildDocxBlob(s,lang,rev){
+async function buildDocxBlob(s,lang,rev,opts){
   var D=await loadDocxLib();
   if(!D)return null;
-  return await D.Packer.toBlob(await buildDocxDocument(D,s,lang,rev));
+  return await D.Packer.toBlob(await buildDocxDocument(D,s,lang,rev,opts));
 }
 async function exportDOCX(s,R,base){
   try{
@@ -10304,7 +10312,8 @@ async function exportDOCX(s,R,base){
 // to twips), and every block is the PDF's block in Word's vocabulary. Page
 // breaks will still fall where Word decides — that's the one thing this can't
 // control.
-async function buildDocxDocument(D,s,lang,rev){
+async function buildDocxDocument(D,s,lang,rev,opts){
+  var local=!!(opts&&opts.local);
   var R=RPT[lang]||RPT.ca;
   var tl=R.types[s.type]||R.types.commissioning,entries=s.entries||[];
   var cnt=severityCounts(entries),errs=cnt.issue,warns=cnt.warning,oks=cnt.ok;
@@ -10329,13 +10338,13 @@ async function buildDocxDocument(D,s,lang,rev){
     attItems(e).forEach(function(a){if(a.src){shotOf.set(a.im,shots.length);shots.push({src:a.src,ts:fts(e.ts),name:a.im.name||"",a:a})}});
   });
   // A file's name as a link: a photo's to its copy in the appendix (unless
-  // `toFile`), anything else to the file beside the report — Word resolves
-  // that from the document's own folder.
+  // `toFile`), anything else to the file — on Drive, or beside the report in
+  // the ZIP (Word resolves that from the document's own folder).
   function attRun(a,size,toFile){
     var t=T({text:attLine(a,R),size:hp(size),font:"Arial",color:"1D4ED8",underline:{}});
     try{
       if(!toFile&&shotOf.has(a.im))return new D.InternalHyperlink({anchor:"fslph"+shotOf.get(a.im),children:[t]});
-      var u=mediaRel(a.im);
+      var u=mediaHref(a.im,local);
       if(u)return new D.ExternalHyperlink({link:u,children:[t]});
     }catch(e){return t}
     return T({text:attLine(a,R),size:hp(size),font:"Arial",color:"6B7280"});
@@ -10665,7 +10674,7 @@ async function buildDocxDocument(D,s,lang,rev){
         if(sh){
           // the photo, and its name, open the file beside the report; the
           // bookmark is where the name in the Adjunts column lands
-          var id=toImg(sh.src),rel=mediaRel(sh.a.im);
+          var id=toImg(sh.src),rel=mediaHref(sh.a.im,local);
           if(id){try{var ir=new D.ImageRun({data:id.bytes,type:id.type,
             transformation:{width:Math.round(iwMm*72/25.4),height:Math.round(ihMm*72/25.4)}});
             ch.push(P({spacing:{after:20},children:[rel?new D.ExternalHyperlink({link:rel,children:[ir]}):ir]}))}catch(err){}}
@@ -10862,13 +10871,13 @@ async function exportSessionZip(s,kind,pick){
     // in the language chosen for this session's reports.
     expBusy("Informes…");
     if(!archive||want("docx")){
-      var docxBlob=await buildDocxBlob(R.s,R.lang,R.rev);
+      var docxBlob=await buildDocxBlob(R.s,R.lang,R.rev,{local:true});
       if(docxBlob)zip.file(P.report+"_"+base+".docx",docxBlob);
       else if(!archive)throw new Error("no s'ha pogut generar l'informe Word");
     }
     if(archive){
-      if(want("html"))zip.file(P.report+"_"+base+".html",new Blob([buildReportHTML(R.s,false,R.lang,R.rev)],{type:"text/html;charset=utf-8"}));
-      if(want("pdf")){var pdfBlob=await buildPdfBlob(R.s,R.lang,R.rev); if(pdfBlob)zip.file(P.report+"_"+base+".pdf",pdfBlob)}
+      if(want("html"))zip.file(P.report+"_"+base+".html",new Blob([buildReportHTML(R.s,false,R.lang,R.rev,{local:true})],{type:"text/html;charset=utf-8"}));
+      if(want("pdf")){var pdfBlob=await buildPdfBlob(R.s,R.lang,R.rev,{local:true}); if(pdfBlob)zip.file(P.report+"_"+base+".pdf",pdfBlob)}
       if(want("xlsx")){var xlsxBlob=await buildXlsxBlob(R.s,R.lang,R.rev); if(xlsxBlob)zip.file(P.parts+"_"+base+".xlsx",xlsxBlob)}
       if(want("val")&&(R.s.prodTests||[]).length){var valBlob=await buildPdfBlob(R.s,R.lang,R.rev,{validation:true});if(valBlob)zip.file(RPT[R.lang].pt.file+"_"+base+".pdf",valBlob)}
       // The sheet has its own language and its own words: same treatment here

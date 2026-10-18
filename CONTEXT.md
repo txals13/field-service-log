@@ -1632,6 +1632,18 @@ Now (`syncTick`, `scheduleSync`):
   written into a tab opened synchronously on the tap (so no popup block;
   `document.write` rather than a blob URL, which also works in the installed
   app on Android); anything else still goes to the viewer.
+- **A fourth part status: the client's quotation request** (2026-10-18:
+  "another category for spare parts: the client asks for a quotation"):
+  `st:"quo"` (💬 Cotització, blue). Not replaced and not our recommendation,
+  so `partIsRec` (urg/prev) replaces `!=="fit"` where "recommended" is meant:
+  `partsSummary` returns `{fit, rec, quo}`; the HTML, PDF and Word reports get
+  a third block (`partsQuo` + `quoNote`), the Excel a "Cotització" sheet
+  (`x.sQuo`) after Recomanats; the incidents' "spare part recommended" flag
+  and the machine history's recommended list leave quotes out. New labels in
+  ca/es/en; other languages' cached tables no longer match RPT.en's shape and
+  are translated again on the next export (`sameShape`). The pick panel puts
+  the 💬 button next to 🔧 Canviat, before "Recomanat:". Tested the summary,
+  the HTML block and the PDF section with real jsPDF.
 - **A whole assembly as one part** (2026-10-18: "spare parts: whole
   assemblies, showing only the name and reference, not the list of
   pieces"): each subgrup of the catalog is one drawing = one assembly with its

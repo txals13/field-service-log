@@ -283,7 +283,7 @@ textarea{resize:none;line-height:1.4}
 .log-parts .pn{color:var(--tx1);min-width:0}
 /* replaced on this visit, or recommended (urgent / preventive) */
 .log-parts .ps,.eparts .ps-sel{font-size:10.5px;font-weight:600;white-space:nowrap}
-.ps-fit{color:var(--green)}.ps-urg{color:var(--red)}.ps-prev{color:var(--orange)}
+.ps-fit{color:var(--green)}.ps-urg{color:var(--red)}.ps-prev{color:var(--orange)}.ps-quo{color:var(--blue)}
 /* same columns in the edit modal, with an editable quantity and a remove button */
 .eparts{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto auto;gap:5px 10px;align-items:center;font-size:12px}
 .eparts .pq-in{width:46px;font-family:monospace;font-size:12px;padding:3px 5px;text-align:right;background:var(--bg1);border:1px solid var(--br2);border-radius:4px;color:var(--tx1)}
@@ -1012,7 +1012,7 @@ textarea{resize:none;line-height:1.4}
           <input type="text" class="pf-ref" id="pfRef" placeholder="Ref.">
           <input type="text" class="pf-cant" id="pfCant" placeholder="Qt.">
           <input type="text" class="pf-den" id="pfDen" placeholder="Denominació">
-          <select id="pfSt" title="Canviat en aquesta visita, o recomanat" style="font-size:12px;padding:5px 7px"><option value="fit">🔧 Canviat</option><option value="urg">⚠ Recomanat · urgent</option><option value="prev">📋 Recomanat · preventiu</option></select>
+          <select id="pfSt" title="Canviat en aquesta visita, o recomanat" style="font-size:12px;padding:5px 7px"><option value="fit">🔧 Canviat</option><option value="urg">⚠ Recomanat · urgent</option><option value="prev">📋 Recomanat · preventiu</option><option value="quo">💬 Petició de cotització</option></select>
           <button class="btn-sm btn-gold" id="pfSave">Afegeix</button>
           <button class="btn-sm" id="pfCancel">Cancel·la</button>
         </div>
@@ -1191,11 +1191,13 @@ function esc(s){if(!s)return"";var d=document.createElement("div");d.textContent
 // (stock, or the next planned stop). Parts saved before it existed have no
 // `st` and were all replaced ones — the machine history already called them
 // "fitted" — so a missing `st` reads as "fit".
-var PART_STS=["fit","urg","prev"];
-var PST_APP={fit:"🔧 Canviat",urg:"⚠ Urgent",prev:"📋 Preventiu"};
-var PST_TIP={fit:"Canviat en aquesta visita",urg:"Recomanat: convé canviar-lo aviat",prev:"Recomanat com a preventiu: per tenir-ne en estoc o canviar-lo en una parada"};
-var PST_RGB={fit:[22,163,74],urg:[220,38,38],prev:[217,119,6]};
-var PST_HEX={fit:"16A34A",urg:"DC2626",prev:"D97706"};
+// "quo" (2026-10-18): the client asks for a price — not replaced, not our
+// recommendation; it gets its own list in the reports and its own Excel sheet.
+var PART_STS=["fit","urg","prev","quo"];
+var PST_APP={fit:"🔧 Canviat",urg:"⚠ Urgent",prev:"📋 Preventiu",quo:"💬 Cotització"};
+var PST_TIP={fit:"Canviat en aquesta visita",urg:"Recomanat: convé canviar-lo aviat",prev:"Recomanat com a preventiu: per tenir-ne en estoc o canviar-lo en una parada",quo:"Petició de cotització: el client en demana el preu"};
+var PST_RGB={fit:[22,163,74],urg:[220,38,38],prev:[217,119,6],quo:[37,99,235]};
+var PST_HEX={fit:"16A34A",urg:"DC2626",prev:"D97706",quo:"2563EB"};
 var lastPartSt="fit";   // the next part picked starts where the last one was left
 // What sits in an entry's Adjunts column: its own files, then the outcome's.
 // `src` is what can be drawn as a picture (a photo, or a video's poster).
@@ -1225,7 +1227,8 @@ function pdfThumb(doc,src,x,y,w,h,vid,alias){
     doc.setFillColor(255,255,255);doc.triangle(cx-0.7,cy-1.2,cx-0.7,cy+1.2,cx+1.3,cy,"F");
   }
 }
-function partSt(p){return (p&&(p.st==="urg"||p.st==="prev"))?p.st:"fit"}
+function partSt(p){return (p&&(p.st==="urg"||p.st==="prev"||p.st==="quo"))?p.st:"fit"}
+function partIsRec(p){var st=partSt(p);return st==="urg"||st==="prev"}
 // on-screen log view (uses the app's themed .log-parts grid)
 function partsBlockHTML(parts){
   if(!parts||!parts.length)return"";
@@ -1261,7 +1264,7 @@ function partsReportHTML(parts,R){
 // The two lists under the entries, summed by reference: replaced on this visit,
 // and recommended (urgent first) — the client's copy of what we advise.
 function partsSummaryHTML(s,R){
-  var S=partsSummary(s);if(!S.fit.length&&!S.rec.length)return "";
+  var S=partsSummary(s);if(!S.fit.length&&!S.rec.length&&!S.quo.length)return "";
   var td="padding:5px 6px;border:1px solid #e5e7eb;font-size:12px";
   function block(title,col,list,prio,note){
     var head=(prio?[R.prio]:[]).concat([R.qty,R.ref,R.part]);
@@ -1277,7 +1280,8 @@ function partsSummaryHTML(s,R){
       +(note?"<div style=\"font-size:11px;color:#6b7280;margin-top:6px\">"+esc(note)+"</div>":"");
   }
   return (S.fit.length?block(R.partsFit,PST_HEX.fit,S.fit,false,""):"")
-    +(S.rec.length?block(R.partsRec,PST_HEX.urg,S.rec,true,R.recNote):"");
+    +(S.rec.length?block(R.partsRec,PST_HEX.urg,S.rec,true,R.recNote):"")
+    +(S.quo.length?block(R.partsQuo,PST_HEX.quo,S.quo,false,R.quoNote):"");
 }
 function highlightText(text,query){
   var e=esc(text);
@@ -2660,7 +2664,7 @@ function confirmAndAdd(r){
   });
   inp.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();btns[lastPartSt].click()}});
   cancel.addEventListener("click",function(){done();setDrawStatus("")});
-  row.appendChild(lab);row.appendChild(inp);row.appendChild(btns.fit);
+  row.appendChild(lab);row.appendChild(inp);row.appendChild(btns.fit);row.appendChild(btns.quo);
   var rl=document.createElement("span");rl.style.cssText="font-size:12px;color:var(--tx3);margin-left:4px";rl.textContent="Recomanat:";
   row.appendChild(rl);row.appendChild(btns.urg);row.appendChild(btns.prev);row.appendChild(cancel);
   box.appendChild(row);
@@ -5182,7 +5186,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 12";
+var APP_VERSION="2026-10-18 · 13";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -6069,12 +6073,12 @@ var RPT={
       time:"Hora",entry1:"entrada",entryN:"entrades",noDate:"Sense data",ts:"Data i hora",severity:"Gravetat",tag:"Etiqueta",desc:"Descripció",att:"Adjunts",
       fix:"Com ha quedat",edited:"editat",noEntries:"Sense entrades",photos:"Fotos",notes:"Notes generals",
       sigTech:"Signatura del tècnic",sigCli:"Signatura del client / receptor",
-      qty:"QT.",ref:"REF.",part:"RECANVI",ctr:{title:"Comptadors de la màquina",read:"Lectura",arr:"Arribada",dep:"Sortida",hours:"Hores de màquina",units:"Producte total",date:"Data",since:"Des de la visita anterior",during:"Durant la visita",inW:"en",day1:"dia",days:"dies",perDay:"h/dia",perHour:"unitats/h",perMin:"unitats/min",h:"h",u:"unitats",reset:"el comptador ha baixat: s'ha canviat o reiniciat?"},incTitle:"Incidències d'aquesta visita",incWhen:"Quan",incWhat:"Incidència",incState:"Estat",stRes:"Resolt",stPend:"Pendent",stClosed:"Tancat",stRec:"recanvi recomanat",prevVisit:"visita anterior",closesPrev:"Tanca un problema de la visita del",resIn:"resolt en",st:"ESTAT",prio:"PRIORITAT",pstL:{fit:"Canviat",urg:"Recomanat · urgent",prev:"Recomanat · preventiu"},pst:{fit:"Canviat",urg:"Urgent",prev:"Preventiu"},partsFit:"Recanvis canviats",partsRec:"Recanvis recomanats",recNote:"Urgent: convé canviar-lo aviat. Preventiu: per tenir-ne en estoc o canviar-lo en una parada programada.",photoTag:"[foto]",openDrive:"Obre a Drive",
+      qty:"QT.",ref:"REF.",part:"RECANVI",ctr:{title:"Comptadors de la màquina",read:"Lectura",arr:"Arribada",dep:"Sortida",hours:"Hores de màquina",units:"Producte total",date:"Data",since:"Des de la visita anterior",during:"Durant la visita",inW:"en",day1:"dia",days:"dies",perDay:"h/dia",perHour:"unitats/h",perMin:"unitats/min",h:"h",u:"unitats",reset:"el comptador ha baixat: s'ha canviat o reiniciat?"},incTitle:"Incidències d'aquesta visita",incWhen:"Quan",incWhat:"Incidència",incState:"Estat",stRes:"Resolt",stPend:"Pendent",stClosed:"Tancat",stRec:"recanvi recomanat",prevVisit:"visita anterior",closesPrev:"Tanca un problema de la visita del",resIn:"resolt en",st:"ESTAT",prio:"PRIORITAT",pstL:{fit:"Canviat",urg:"Recomanat · urgent",prev:"Recomanat · preventiu",quo:"Petició de cotització"},pst:{fit:"Canviat",urg:"Urgent",prev:"Preventiu",quo:"Cotització"},partsFit:"Recanvis canviats",partsRec:"Recanvis recomanats",recNote:"Urgent: convé canviar-lo aviat. Preventiu: per tenir-ne en estoc o canviar-lo en una parada programada.",partsQuo:"Cotització demanada pel client",quoNote:"Recanvis dels quals el client ha demanat el preu.",photoTag:"[foto]",openDrive:"Obre a Drive",
       voice:"nota de veu",video:"vídeo",photo:"foto",file:"fitxer",
       pre:{report:"informe",parts:"recanvis"},
       pt:{title:"Proves de producció",period:"Període",units:"Unitats",availS:"Disp.",perfS:"Rend.",qualS:"Qual.",rejS:"Rebuig",resultS:"Resultat",summaryNote:"El detall de cada prova —aturades, objectius i observacions— és a l'informe de validació.",test:"Prova",product:"Producte / format",nominal:"Velocitat nominal",start:"Inici",end:"Final",duration:"Durada",plannedStops:"Aturades planificades",downtime:"Aturades no planificades",run:"Temps en marxa",total:"Unitats totals",rejects:"Unitats rebutjades",good:"Unitats bones",speedAvg:"Velocitat mitjana",speedRun:"Velocitat en marxa",avail:"Disponibilitat",perf:"Rendiment",qual:"Qualitat",oee:"OEE",rejPct:"Rebuig",indicator:"Indicador",value:"Valor",target:"Objectiu",result:"Resultat",yes:"Compleix",no:"No compleix",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Aturades",kind:"Tipus",cause:"Causa",kinds:{machine:"Màquina",external:"Externa",planned:"Planificada"},notes:"Observacions",uph:"u/h",upm:"u/min",validation:"Informe de validació",file:"validacio"},
       h:{title:"Historial de la màquina",visits:"visites",visitsH:"Visites",sn:"N/S",pending:"Pendents",pendOther:"Pendent d'altres visites",closedLater:"Tancats en una visita posterior",closedOn:"Tancat el",resolvedSt:"Resolt",pendingSt:"Pendent",entries:"entrades",parts:"Recanvis muntats",archived:"arxivada",kOpen:"obertes",kDone:"resoltes",kUrg:"recanvis urgents",openTitle:"Què queda obert",closedHere:"tancat en aquesta visita",fromVisit:"de la visita del",allOk:"tot OK",ago:{today:"avui",d1:"fa 1 dia",d:"fa %n dies",m1:"fa 1 mes",m:"fa %n mesos",y1:"fa 1 any",y:"fa %n anys"},rec:"Recanvis recomanats",recOn:"recomanat el",fitOn:"canviat el",printed:"Imprès el"},
-      x:{sSession:"Sessió",sFit:"Canviats",sRec:"Recomanats",st:"Estat",prio:"Prioritat",sDetail:"Detall",sSummary:"Resum",qty:"Quantitat",ref:"Ref.",den:"Denominació",
+      x:{sSession:"Sessió",sFit:"Canviats",sRec:"Recomanats",sQuo:"Cotització",st:"Estat",prio:"Prioritat",sDetail:"Detall",sSummary:"Resum",qty:"Quantitat",ref:"Ref.",den:"Denominació",
          date:"Data",sev:"Gravetat",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunt",grup:"Grup / Dibuix",
          page:"Pàgina",project:"Projecte",type:"Tipus",gen:"Generat",lines:"Recanvis (línies)",refs:"Referències diferents"}},
   es:{title:"Informe de servicio técnico",gen:"Generado el",
@@ -6086,12 +6090,12 @@ var RPT={
       time:"Hora",entry1:"entrada",entryN:"entradas",noDate:"Sin fecha",ts:"Fecha y hora",severity:"Gravedad",tag:"Etiqueta",desc:"Descripción",att:"Adjuntos",
       fix:"Cómo ha quedado",edited:"editado",noEntries:"Sin entradas",photos:"Fotos",notes:"Notas generales",
       sigTech:"Firma del técnico",sigCli:"Firma del cliente / receptor",
-      qty:"CANT.",ref:"REF.",part:"RECAMBIO",ctr:{title:"Contadores de la máquina",read:"Lectura",arr:"Llegada",dep:"Salida",hours:"Horas de máquina",units:"Producto total",date:"Fecha",since:"Desde la visita anterior",during:"Durante la visita",inW:"en",day1:"día",days:"días",perDay:"h/día",perHour:"unidades/h",perMin:"unidades/min",h:"h",u:"unidades",reset:"el contador ha bajado: ¿se ha cambiado o reiniciado?"},incTitle:"Incidencias de esta visita",incWhen:"Cuándo",incWhat:"Incidencia",incState:"Estado",stRes:"Resuelto",stPend:"Pendiente",stClosed:"Cerrado",stRec:"recambio recomendado",prevVisit:"visita anterior",closesPrev:"Cierra un problema de la visita del",resIn:"resuelto en",st:"ESTADO",prio:"PRIORIDAD",pstL:{fit:"Cambiado",urg:"Recomendado · urgente",prev:"Recomendado · preventivo"},pst:{fit:"Cambiado",urg:"Urgente",prev:"Preventivo"},partsFit:"Recambios cambiados",partsRec:"Recambios recomendados",recNote:"Urgente: conviene cambiarlo pronto. Preventivo: para tenerlo en stock o cambiarlo en una parada programada.",photoTag:"[foto]",openDrive:"Abrir en Drive",
+      qty:"CANT.",ref:"REF.",part:"RECAMBIO",ctr:{title:"Contadores de la máquina",read:"Lectura",arr:"Llegada",dep:"Salida",hours:"Horas de máquina",units:"Producto total",date:"Fecha",since:"Desde la visita anterior",during:"Durante la visita",inW:"en",day1:"día",days:"días",perDay:"h/día",perHour:"unidades/h",perMin:"unidades/min",h:"h",u:"unidades",reset:"el contador ha bajado: ¿se ha cambiado o reiniciado?"},incTitle:"Incidencias de esta visita",incWhen:"Cuándo",incWhat:"Incidencia",incState:"Estado",stRes:"Resuelto",stPend:"Pendiente",stClosed:"Cerrado",stRec:"recambio recomendado",prevVisit:"visita anterior",closesPrev:"Cierra un problema de la visita del",resIn:"resuelto en",st:"ESTADO",prio:"PRIORIDAD",pstL:{fit:"Cambiado",urg:"Recomendado · urgente",prev:"Recomendado · preventivo",quo:"Solicitud de cotización"},pst:{fit:"Cambiado",urg:"Urgente",prev:"Preventivo",quo:"Cotización"},partsFit:"Recambios cambiados",partsRec:"Recambios recomendados",recNote:"Urgente: conviene cambiarlo pronto. Preventivo: para tenerlo en stock o cambiarlo en una parada programada.",partsQuo:"Cotización solicitada por el cliente",quoNote:"Recambios de los que el cliente ha pedido el precio.",photoTag:"[foto]",openDrive:"Abrir en Drive",
       voice:"nota de voz",video:"vídeo",photo:"foto",file:"archivo",
       pre:{report:"informe",parts:"recambios"},
       pt:{title:"Pruebas de producción",period:"Período",units:"Unidades",availS:"Disp.",perfS:"Rend.",qualS:"Cal.",rejS:"Rechazo",resultS:"Resultado",summaryNote:"El detalle de cada prueba —paradas, objetivos y observaciones— está en el informe de validación.",test:"Prueba",product:"Producto / formato",nominal:"Velocidad nominal",start:"Inicio",end:"Final",duration:"Duración",plannedStops:"Paradas planificadas",downtime:"Paradas no planificadas",run:"Tiempo en marcha",total:"Unidades totales",rejects:"Unidades rechazadas",good:"Unidades buenas",speedAvg:"Velocidad media",speedRun:"Velocidad en marcha",avail:"Disponibilidad",perf:"Rendimiento",qual:"Calidad",oee:"OEE",rejPct:"Rechazo",indicator:"Indicador",value:"Valor",target:"Objetivo",result:"Resultado",yes:"Cumple",no:"No cumple",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Paradas",kind:"Tipo",cause:"Causa",kinds:{machine:"Máquina",external:"Externa",planned:"Planificada"},notes:"Observaciones",uph:"u/h",upm:"u/min",validation:"Informe de validación",file:"validacion"},
       h:{title:"Historial de la máquina",visits:"visitas",visitsH:"Visitas",sn:"N/S",pending:"Pendientes",pendOther:"Pendiente de otras visitas",closedLater:"Cerrados en una visita posterior",closedOn:"Cerrado el",resolvedSt:"Resuelto",pendingSt:"Pendiente",entries:"entradas",parts:"Recambios montados",archived:"archivada",kOpen:"abiertas",kDone:"resueltas",kUrg:"recambios urgentes",openTitle:"Qué queda abierto",closedHere:"cerrado en esta visita",fromVisit:"de la visita del",allOk:"todo OK",ago:{today:"hoy",d1:"hace 1 día",d:"hace %n días",m1:"hace 1 mes",m:"hace %n meses",y1:"hace 1 año",y:"hace %n años"},rec:"Recambios recomendados",recOn:"recomendado el",fitOn:"cambiado el",printed:"Impreso el"},
-      x:{sSession:"Sesión",sFit:"Cambiados",sRec:"Recomendados",st:"Estado",prio:"Prioridad",sDetail:"Detalle",sSummary:"Resumen",qty:"Cantidad",ref:"Ref.",den:"Denominación",
+      x:{sSession:"Sesión",sFit:"Cambiados",sRec:"Recomendados",sQuo:"Cotización",st:"Estado",prio:"Prioridad",sDetail:"Detalle",sSummary:"Resumen",qty:"Cantidad",ref:"Ref.",den:"Denominación",
          date:"Fecha",sev:"Gravedad",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunto",grup:"Grupo / Plano",
          page:"Página",project:"Proyecto",type:"Tipo",gen:"Generado",lines:"Recambios (líneas)",refs:"Referencias distintas"}},
   en:{title:"Field Service Report",gen:"Generated on",
@@ -6103,12 +6107,12 @@ var RPT={
       time:"Time",entry1:"entry",entryN:"entries",noDate:"No date",ts:"Timestamp",severity:"Severity",tag:"Tag",desc:"Description",att:"Attachments",
       fix:"Outcome",edited:"edited",noEntries:"No entries",photos:"Photos",notes:"General notes",
       sigTech:"Technician signature",sigCli:"Client / Recipient signature",
-      qty:"QTY",ref:"REF.",part:"SPARE PART",ctr:{title:"Machine counters",read:"Reading",arr:"Arrival",dep:"Departure",hours:"Machine hours",units:"Total output",date:"Date",since:"Since the previous visit",during:"During the visit",inW:"in",day1:"day",days:"days",perDay:"h/day",perHour:"units/h",perMin:"units/min",h:"h",u:"units",reset:"the counter went down: replaced or reset?"},incTitle:"Issues on this visit",incWhen:"When",incWhat:"Issue",incState:"Status",stRes:"Resolved",stPend:"Open",stClosed:"Closed",stRec:"spare part recommended",prevVisit:"earlier visit",closesPrev:"Closes an issue from the visit of",resIn:"resolved in",st:"STATUS",prio:"PRIORITY",pstL:{fit:"Replaced",urg:"Recommended · urgent",prev:"Recommended · preventive"},pst:{fit:"Replaced",urg:"Urgent",prev:"Preventive"},partsFit:"Spare parts replaced",partsRec:"Recommended spare parts",recNote:"Urgent: should be replaced soon. Preventive: to keep in stock or replace at a planned stop.",photoTag:"[photo]",openDrive:"Open in Drive",
+      qty:"QTY",ref:"REF.",part:"SPARE PART",ctr:{title:"Machine counters",read:"Reading",arr:"Arrival",dep:"Departure",hours:"Machine hours",units:"Total output",date:"Date",since:"Since the previous visit",during:"During the visit",inW:"in",day1:"day",days:"days",perDay:"h/day",perHour:"units/h",perMin:"units/min",h:"h",u:"units",reset:"the counter went down: replaced or reset?"},incTitle:"Issues on this visit",incWhen:"When",incWhat:"Issue",incState:"Status",stRes:"Resolved",stPend:"Open",stClosed:"Closed",stRec:"spare part recommended",prevVisit:"earlier visit",closesPrev:"Closes an issue from the visit of",resIn:"resolved in",st:"STATUS",prio:"PRIORITY",pstL:{fit:"Replaced",urg:"Recommended · urgent",prev:"Recommended · preventive",quo:"Quotation request"},pst:{fit:"Replaced",urg:"Urgent",prev:"Preventive",quo:"Quotation"},partsFit:"Spare parts replaced",partsRec:"Recommended spare parts",recNote:"Urgent: should be replaced soon. Preventive: to keep in stock or replace at a planned stop.",partsQuo:"Quotation requested by the client",quoNote:"Spare parts the client has asked to be quoted.",photoTag:"[photo]",openDrive:"Open in Drive",
       voice:"voice note",video:"video",photo:"photo",file:"file",
       pre:{report:"report",parts:"spare_parts"},
       pt:{title:"Production tests",period:"Period",units:"Units",availS:"Avail.",perfS:"Perf.",qualS:"Qual.",rejS:"Reject",resultS:"Result",summaryNote:"Each test in full — stops, targets and remarks — is in the validation report.",test:"Test",product:"Product / format",nominal:"Nominal speed",start:"Start",end:"End",duration:"Duration",plannedStops:"Planned stops",downtime:"Unplanned stops",run:"Run time",total:"Total units",rejects:"Rejected units",good:"Good units",speedAvg:"Average speed",speedRun:"Running speed",avail:"Availability",perf:"Performance",qual:"Quality",oee:"OEE",rejPct:"Reject rate",indicator:"Indicator",value:"Value",target:"Target",result:"Result",yes:"Met",no:"Not met",pass:"PASSED",fail:"NOT PASSED",stops:"Stops",kind:"Type",cause:"Cause",kinds:{machine:"Machine",external:"External",planned:"Planned"},notes:"Remarks",uph:"u/h",upm:"u/min",validation:"Validation report",file:"validation"},
       h:{title:"Machine history",visits:"visits",visitsH:"Visits",sn:"S/N",pending:"Open items",pendOther:"Open from other visits",closedLater:"Closed on a later visit",closedOn:"Closed on",resolvedSt:"Resolved",pendingSt:"Open",entries:"entries",parts:"Spare parts fitted",archived:"archived",kOpen:"open",kDone:"resolved",kUrg:"urgent spare parts",openTitle:"Still open",closedHere:"closed on this visit",fromVisit:"from the visit of",allOk:"all OK",ago:{today:"today",d1:"1 day ago",d:"%n days ago",m1:"1 month ago",m:"%n months ago",y1:"1 year ago",y:"%n years ago"},rec:"Recommended spare parts",recOn:"recommended on",fitOn:"replaced on",printed:"Printed on"},
-      x:{sSession:"Session",sFit:"Replaced",sRec:"Recommended",st:"Status",prio:"Priority",sDetail:"Detail",sSummary:"Summary",qty:"Quantity",ref:"Ref.",den:"Designation",
+      x:{sSession:"Session",sFit:"Replaced",sRec:"Recommended",sQuo:"Quotation",st:"Status",prio:"Priority",sDetail:"Detail",sSummary:"Summary",qty:"Quantity",ref:"Ref.",den:"Designation",
          date:"Date",sev:"Severity",tag:"Tag",entry:"Entry",pos:"Pos.",conj:"Assembly",grup:"Group / Drawing",
          page:"Page",project:"Project",type:"Type",gen:"Generated",lines:"Spare parts (lines)",refs:"Distinct references"}}
 };
@@ -6699,6 +6703,7 @@ function mhRender(cur,all,L,forPrint){
   all.forEach(function(x){
     collectSessionParts(x).forEach(function(it){
       var k=(it.part.ref||it.part.denominacio||"?"),ts=String(it.entry.ts),st=partSt(it.part);
+      if(st==="quo")return;
       if(st!=="fit"){
         if(!recs[k]||ts>recs[k].ts)recs[k]={ref:it.part.ref||"",den:it.part.denominacio||"",qty:it.part.cant||"",st:st,ts:ts};
         return;
@@ -7693,7 +7698,7 @@ function incidentRows(s,lang){
   var out=[];
   (s.entries||[]).forEach(function(e){
     if(!e||(e.severity!=="issue"&&e.severity!=="warning"))return;
-    var rec=(e.parts||[]).some(function(p){return partSt(p)!=="fit"});
+    var rec=(e.parts||[]).some(partIsRec);
     out.push({sev:e.severity,ts:e.ts,tag:e.tag||"",text:e.text||"",prev:null,
       st:isResolved(e)?"res":"pend",at:isResolved(e)?(e.fix.ts||""):"",rec:rec});
   });
@@ -7841,7 +7846,7 @@ function pdfIncSection(doc,s,R,lang,y,M,CW,H,ar){
   return doc.lastAutoTable.finalY+7;
 }
 function pdfPartsSection(doc,s,R,y,M,CW,H,ar){
-  var S=partsSummary(s);if(!S.fit.length&&!S.rec.length)return y;
+  var S=partsSummary(s);if(!S.fit.length&&!S.rec.length&&!S.quo.length)return y;
   function block(title,st,list,prio,note){
     if(y>H-40){doc.addPage();y=M}
     var c=PST_RGB[st],o=prio?1:0,cs={};
@@ -7870,6 +7875,7 @@ function pdfPartsSection(doc,s,R,y,M,CW,H,ar){
   }
   if(S.fit.length)block(R.partsFit,"fit",S.fit,false,"");
   if(S.rec.length)block(R.partsRec,"urg",S.rec,true,R.recNote);
+  if(S.quo.length)block(R.partsQuo,"quo",S.quo,false,R.quoNote);
   return y;
 }
 function pdfProdSection(doc,s,R,lang,y,M,CW,H,full){
@@ -9987,9 +9993,10 @@ function summarizeParts(items,bySt){
 function partsSummary(s){
   var items=collectSessionParts(s);
   var fit=summarizeParts(items.filter(function(it){return partSt(it.part)==="fit"}));
-  var rec=summarizeParts(items.filter(function(it){return partSt(it.part)!=="fit"}),true);
+  var rec=summarizeParts(items.filter(function(it){return partIsRec(it.part)}),true);
   rec=rec.filter(function(m){return m.st==="urg"}).concat(rec.filter(function(m){return m.st!=="urg"}));
-  return {fit:fit,rec:rec};
+  var quo=summarizeParts(items.filter(function(it){return partSt(it.part)==="quo"}));
+  return {fit:fit,rec:rec,quo:quo};
 }
 function partQty(m){return m.raw.length?((m.total?m.total+" + ":"")+m.raw.join(" + ")):(m.total||"")}
 var XLSX_MIME="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -10066,6 +10073,7 @@ async function buildXlsxBlob(s,lang,rev){
   X.utils.book_append_sheet(wb,wsI,C.sSession);
   if(items.length){
     if(PS.rec.length)X.utils.book_append_sheet(wb,sumSheet(PS.rec,true),String(C.sRec).slice(0,31));
+    if(PS.quo.length)X.utils.book_append_sheet(wb,sumSheet(PS.quo,false),String(C.sQuo).slice(0,31));
     if(PS.fit.length)X.utils.book_append_sheet(wb,sumSheet(PS.fit,false),String(C.sFit).slice(0,31));
     X.utils.book_append_sheet(wb,wsD,C.sDetail);
   }
@@ -10420,6 +10428,7 @@ async function buildDocxDocument(D,s,lang,rev){
     }
     if(S.fit.length)block(R.partsFit,"fit",S.fit,false,"");
     if(S.rec.length)block(R.partsRec,"urg",S.rec,true,R.recNote);
+    if(S.quo.length)block(R.partsQuo,"quo",S.quo,false,R.quoNote);
   })();
 
   // The production tests: one compact row each, as in the PDF; the full sheet

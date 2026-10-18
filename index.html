@@ -715,6 +715,18 @@ textarea{resize:none;line-height:1.4}
     </div>
   </div>
 
+  <!-- What goes into the project ZIP, ticked per export (2026-10-18). -->
+  <div class="modal-back" id="zipPickBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,440px)">
+      <div class="modal-title">&#128230; Qu&egrave; vols al ZIP del projecte?</div>
+      <div id="zipPickList" style="display:flex;flex-direction:column;gap:7px;margin:4px 0 10px"></div>
+      <div id="zipPickNote" class="ts-note" style="margin-bottom:6px"></div>
+      <div class="modal-actions">
+        <button id="zipPickCancel">Cancel&middot;la</button>
+        <button class="btn-gold" id="zipPickOk">&#128230; Exporta el ZIP</button>
+      </div>
+    </div>
+  </div>
   <div class="modal-back" id="revBack" style="display:none">
     <div class="modal" style="max-width:min(96vw,520px)">
       <div class="modal-title">&#128209; <span id="revTitle">Revisions de l'informe</span></div>
@@ -5234,7 +5246,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 17";
+var APP_VERSION="2026-10-18 · 18";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -8118,7 +8130,7 @@ async function exportRep(s,fmt){
   // over the frozen sheet without showing what was in it and left no way to
   // redo one from the menu at all.
   if(fmt==="timesheet"){openTimesheet();return}
-  if(fmt==="zip"){exportSessionZip(s,"project");return}
+  if(fmt==="zip"){openZipPick(s);return}
   if(fmt==="zipdocx"){exportSessionZip(s,"docx");return}
   if(fmt==="xlsx"&&!collectSessionParts(s).length&&!(s.prodTests||[]).length){alert("Aquesta sessió encara no té recanvis ni proves de producció.\n\nTria els recanvis d'un dibuix o afegeix-los a mà en una entrada.");return}
   // A language the app has no labels for yet has to get them before anything
@@ -10647,8 +10659,49 @@ async function collectDriveFiles(token,folderId,pathPrefix,out){
 //   "docx"    — what you hand someone: the Word report and the media, nothing
 //               else. No session.json, so it deliberately cannot be imported
 //               back and must never be mistaken for an archive.
-async function exportSessionZip(s,kind){
+// ── WHAT GOES INTO THE PROJECT ZIP (2026-10-18) ──────────────────────────────
+// "Choose which files to export to the .zip — I don't always need the .docx or
+// the .xlsx." From the export menu a list comes first, ticked as last time
+// (ZP_KEY). session.json always goes in: it is what makes the ZIP importable.
+// The media and the earlier revisions are the two things nothing can rebuild
+// — so only a ZIP that carries both counts as the complete copy (zipAt) the
+// delete dialog asks for. Archiving and the delete dialog's own "export now"
+// do not ask: they always make the whole ZIP.
+var ZP_KEY="fsl_v6_zippick";
+var ZP_ITEMS=[["pdf","📄 Informe PDF"],["docx","📝 Informe Word (.docx)"],["html","🌐 Informe HTML"],["xlsx","📊 Recanvis (Excel)"],
+  ["val","✅ Informe de validació"],["ts","🕒 Full d'hores"],["media","📷 Fotos, vídeos i notes de veu"],["revs","🗂 Revisions anteriors"],["manual","📚 Manual de recanvis"]];
+function zpGet(){var o={};ZP_ITEMS.forEach(function(it){o[it[0]]=true});try{var v=JSON.parse(localStorage.getItem(ZP_KEY)||"null");if(v)Object.keys(o).forEach(function(k){if(k in v)o[k]=!!v[k]})}catch(e){}return o}
+function zpSet(o){try{localStorage.setItem(ZP_KEY,JSON.stringify(o))}catch(e){}}
+var zpSess=null,zpWired=false;
+function openZipPick(s){
+  zpSess=s;
+  var o=zpGet(),has={val:!!(s.prodTests||[]).length,ts:!!(s.timesheet&&s.timesheet.rows&&s.timesheet.rows.length),manual:!!(s.manualRef&&s.manualRef.pdfId),xlsx:!!collectSessionParts(s).length};
+  var row=function(k,l,on,dis,why){return "<label style=\"display:flex;align-items:center;gap:8px;font-size:13px"+(dis?";opacity:.5":"")+"\"><input type=\"checkbox\" data-zp=\""+k+"\""+(on?" checked":"")+(dis?" disabled":"")+">"+l+(why?" <span style=\"color:var(--tx3);font-size:11px\">("+why+")</span>":"")+"</label>"};
+  $$("zipPickList").innerHTML=row("","🗃 Dades de la visita (per poder-la importar)",true,true,"sempre")
+    +ZP_ITEMS.map(function(it){var k=it[0],no=(k in has)&&!has[k];return row(k,it[1],o[k]&&!no,no,no?"no n'hi ha":"")}).join("");
+  function note(){
+    var m=$$("zipPickList").querySelector("[data-zp=media]").checked,r=$$("zipPickList").querySelector("[data-zp=revs]").checked;
+    $$("zipPickNote").textContent=(m&&r)?"":"Sense la multimèdia o les revisions anteriors, aquest ZIP no compta com a còpia completa per esborrar la visita.";
+  }
+  $$("zipPickList").onchange=note;note();
+  if(!zpWired){zpWired=true;
+    $$("zipPickCancel").addEventListener("click",function(){$$("zipPickBack").style.display="none";zpSess=null});
+    $$("zipPickBack").addEventListener("click",function(e){if(e.target===$$("zipPickBack")){$$("zipPickBack").style.display="none";zpSess=null}});
+    $$("zipPickOk").addEventListener("click",function(){
+      var o=zpGet();
+      $$("zipPickList").querySelectorAll("input[data-zp]").forEach(function(c){var k=c.getAttribute("data-zp");if(k&&!c.disabled)o[k]=c.checked});
+      zpSet(o);
+      $$("zipPickBack").style.display="none";
+      var t=zpSess;zpSess=null;
+      if(t)exportSessionZip(t,"project",o);   // this tap is the gesture the permission prompts need
+    });
+  }
+  $$("zipPickBack").style.display="flex";
+}
+async function exportSessionZip(s,kind,pick){
   if(!s)return;
+  // what to put in; no pick = everything (archiving, the delete dialog)
+  var want=function(k){return !pick||pick[k]!==false};
   s=sessions.find(function(x){return x.id===s.id})||s; // pick up a language just chosen in the menu
   var archive=(kind||"project")==="project";
   if(!isLoggedIn){alert("Primer inicia la sessió amb Google: s'exporten els fitxers guardats a la carpeta de Drive de la sessió.");return}
@@ -10689,26 +10742,28 @@ async function exportSessionZip(s,kind){
     // ZIP always carries one current copy of each — pdf, xlsx, html and docx —
     // in the language chosen for this session's reports.
     expBusy("Informes…");
-    var docxBlob=await buildDocxBlob(R.s,R.lang,R.rev);
-    if(docxBlob)zip.file(P.report+"_"+base+".docx",docxBlob);
-    else if(!archive)throw new Error("no s'ha pogut generar l'informe Word");
+    if(!archive||want("docx")){
+      var docxBlob=await buildDocxBlob(R.s,R.lang,R.rev);
+      if(docxBlob)zip.file(P.report+"_"+base+".docx",docxBlob);
+      else if(!archive)throw new Error("no s'ha pogut generar l'informe Word");
+    }
     if(archive){
-      zip.file(P.report+"_"+base+".html",new Blob([buildReportHTML(R.s,false,R.lang,R.rev)],{type:"text/html;charset=utf-8"}));
-      var pdfBlob=await buildPdfBlob(R.s,R.lang,R.rev); if(pdfBlob)zip.file(P.report+"_"+base+".pdf",pdfBlob);
-      var xlsxBlob=await buildXlsxBlob(R.s,R.lang,R.rev); if(xlsxBlob)zip.file(P.parts+"_"+base+".xlsx",xlsxBlob);
-      if((R.s.prodTests||[]).length){var valBlob=await buildPdfBlob(R.s,R.lang,R.rev,{validation:true});if(valBlob)zip.file(RPT[R.lang].pt.file+"_"+base+".pdf",valBlob)}
+      if(want("html"))zip.file(P.report+"_"+base+".html",new Blob([buildReportHTML(R.s,false,R.lang,R.rev)],{type:"text/html;charset=utf-8"}));
+      if(want("pdf")){var pdfBlob=await buildPdfBlob(R.s,R.lang,R.rev); if(pdfBlob)zip.file(P.report+"_"+base+".pdf",pdfBlob)}
+      if(want("xlsx")){var xlsxBlob=await buildXlsxBlob(R.s,R.lang,R.rev); if(xlsxBlob)zip.file(P.parts+"_"+base+".xlsx",xlsxBlob)}
+      if(want("val")&&(R.s.prodTests||[]).length){var valBlob=await buildPdfBlob(R.s,R.lang,R.rev,{validation:true});if(valBlob)zip.file(RPT[R.lang].pt.file+"_"+base+".pdf",valBlob)}
       // The sheet has its own language and its own words: same treatment here
       // as when it is exported on its own, or the ZIP's copy comes out in the
       // language it was typed in while the loose one is translated.
       var tsS=s;
-      if(s.timesheet&&s.timesheet.rows&&s.timesheet.rows.length){
+      if(want("ts")&&s.timesheet&&s.timesheet.rows&&s.timesheet.rows.length){
         var tsLang=knownLang(s.timesheet.lang)?s.timesheet.lang:"ca";
         if(await ensureLabels(tsLang)){
           var tsT=await localizeTimesheet(s,tsLang);
           if(tsT)tsS=Object.assign({},s,{timesheet:tsT});
         }
       }
-      var tsBlob=await buildTimesheetBlob(tsS); if(tsBlob)zip.file(tsFileName(tsS),tsBlob);
+      if(want("ts")){var tsBlob=await buildTimesheetBlob(tsS); if(tsBlob)zip.file(tsFileName(tsS),tsBlob)}
       // Built too, not copied: Drive only gets a session.json when the technician
       // presses Save, so a session that was never synced had none at all. Always
       // the ORIGINAL texts — this is what gets imported back.
@@ -10725,7 +10780,7 @@ async function exportSessionZip(s,kind){
     // there to begin with — removing an attachment bins the Drive file too
     // (see queueTrash), which is what keeps thrown-out photos out of the pack.
     expBusy("Multimèdia…");
-    var media=files.filter(isSessionMedia),inZip={};
+    var media=want("media")?files.filter(isSessionMedia):[],inZip={};
     for(var i=0;i<media.length;i++){
       var f=media[i];
       var r=await fetch("https://www.googleapis.com/drive/v3/files/"+f.id+"?alt=media",{headers:{Authorization:"Bearer "+token}});
@@ -10739,7 +10794,7 @@ async function exportSessionZip(s,kind){
     // voice note not on Drive comes from the copy the visit keeps; a video
     // that cannot be found is named in a warning when the ZIP is done.
     var lostMedia=[];
-    var allMedia=[];(s.entries||[]).forEach(function(en){entryMedia(en).forEach(function(im){if(im&&im.name)allMedia.push(im)})});
+    var allMedia=[];if(want("media"))(s.entries||[]).forEach(function(en){entryMedia(en).forEach(function(im){if(im&&im.name)allMedia.push(im)})});
     for(var mi=0;mi<allMedia.length;mi++){
       var im=allMedia[mi];
       if(im.driveId&&inZip[im.driveId])continue;
@@ -10763,7 +10818,7 @@ async function exportSessionZip(s,kind){
     // Skipped: session.json, which is written fresh below, and any name the zip
     // already holds — that is the current revision, and the copy built a moment
     // ago beats the copy Drive has from the last export.
-    if(archive){
+    if(archive&&want("revs")){
       var roots=files.filter(function(f){
         return (f.path||"").indexOf("/")<0 && f.name!=="session.json" && !zip.file(f.path);
       });
@@ -10782,7 +10837,7 @@ async function exportSessionZip(s,kind){
     // something, so the drawings and the catalog go in too. Only in the
     // archive: the hand-over pack is the report and the photos, not the
     // machine's manual. A manual that won't download doesn't stop the ZIP.
-    if(archive&&s.manualRef&&s.manualRef.pdfId){
+    if(archive&&want("manual")&&s.manualRef&&s.manualRef.pdfId){
       expBusy("Manual…");
       var mr=s.manualRef,mBase=mr.base||mr.serial||"manual";
       try{
@@ -10811,8 +10866,9 @@ async function exportSessionZip(s,kind){
     lastZipTo=arxOk?"arxiu":"download";
     // Only the archive stamps zipAt: the delete dialog reads it as "a complete
     // copy of this session exists", and the DOCX pack carries no session.json,
-    // so nothing could be restored from it.
-    if(archive){
+    // so nothing could be restored from it. Nor does one without the media or
+    // the earlier revisions — those cannot be rebuilt from session.json.
+    if(archive&&want("media")&&want("revs")){
       var t=now();
       sessions=sessions.map(function(x){return x.id===s.id?Object.assign({},x,{zipAt:t,updatedAt:t,
         zipName:typeof arxOk==="string"?arxOk:"",zipTo:arxOn?"local":(drvArx?"drive":"")}):x});

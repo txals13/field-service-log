@@ -960,6 +960,7 @@ textarea{resize:none;line-height:1.4}
       </div>
       <div id="drawPickHint" style="display:none;font-size:12px;background:var(--gold);color:#000;border-radius:6px;padding:6px 10px;margin-bottom:8px">&#127919; Toca un número de posició al dibuix per afegir aquell recanvi a l'entrada.</div>
       <div id="drawChoices" style="display:none"></div>
+      <div id="drawSets" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
       <div id="drawWrap" style="flex:1;min-height:200px;overflow:auto;background:#0a0b0e;border-radius:6px;touch-action:pan-x pan-y">
         <canvas id="drawCanvas" style="display:block;margin:0 auto"></canvas>
       </div>
@@ -1232,7 +1233,7 @@ function partsBlockHTML(parts){
     var st=partSt(p);
     return "<span class=\"pq\">"+(p.cant?esc(p.cant)+"×":"")+"</span>"
       +"<span class=\"pr\">"+esc(p.ref||"")+"</span>"
-      +"<span class=\"pn\">"+esc(p.denominacio||"")+"</span>"
+      +"<span class=\"pn\">"+(p.set?"&#128230; ":"")+esc(p.denominacio||"")+"</span>"
       +"<span class=\"ps ps-"+st+"\" title=\""+esc(PST_TIP[st])+"\">"+PST_APP[st]+"</span>";
   }).join("")+"</div>";
 }
@@ -2378,7 +2379,7 @@ async function openDrawings(targetPage,pickMode,purpose){
   $$("drawPickHint").style.display=viewerPickMode?"block":"none";
   $$("drawPickHint").innerHTML=(viewerPickPurpose==="text")
     ? "&#127919; Toca un número de posició per escriure'n el nom a la descripció."
-    : "&#127919; Toca un número de posició al dibuix per afegir aquell recanvi a l'entrada.";
+    : "&#127919; Toca un número de posició al dibuix per afegir aquell recanvi a l'entrada, o &#128230; Conjunt sencer per afegir tot el conjunt com una sola línia.";
   // pick-from-edit: hide the edit modal so the drawing is on top (editBack sits
   // above drawBack in the DOM); closeDrawings restores it. Only after the guards
   // above pass, so a failed open never leaves the editor hidden.
@@ -2405,6 +2406,7 @@ function renderViewerPage(n){
   $$("drawPageLbl").textContent="Pàg. "+n+" / "+viewerNumPages;
   var cv=$$("drawCanvas");cv.style.transform=""; // clear any live pinch preview
   var dc=$$("drawChoices");if(dc)dc.style.display="none";
+  renderDrawSets();
   viewerDoc.getPage(n).then(function(pg){
     var wrap=$$("drawWrap");
     var vp0=pg.getViewport({scale:1});
@@ -2543,7 +2545,7 @@ function buildViewerCatalog(cat){
         for(var p=start;p<=s.pmax;p++)pages[p]=1;
         cursor=s.pmax;
       }
-      subgrups.push({name:s.name,grup:s.grup,num:s.num,pages:pages,plist:Object.keys(pages).map(Number).sort(function(a,b){return a-b}),gset:gset,rows:s.rows});
+      subgrups.push({name:s.name,grup:s.grup,num:s.num,pages:pages,plist:Object.keys(pages).map(Number).sort(function(a,b){return a-b}),gset:gset,rows:s.rows,cname:c.name||"",cnum:(c.num||"").trim()});
     });
   })});
   return {subgrups:subgrups,rows:flat};
@@ -2596,9 +2598,11 @@ function attemptPick(clientX,clientY){
 function addResolvedPart(r,qty,st){
   var cant=(qty===undefined||qty===null)?r.cant:String(qty).trim();
   st=PART_STS.indexOf(st)>=0?st:lastPartSt;lastPartSt=st;
-  eParts.push({pos:r.pos,ref:r.ref,cant:cant,denominacio:r.denominacio,conjunt:r.conjunt,grup:r.grup,page:r.page,st:st});
+  var np={pos:r.pos,ref:r.ref,cant:cant,denominacio:r.denominacio,conjunt:r.conjunt,grup:r.grup,page:r.page,st:st};
+  if(r.set)np.set=true;
+  eParts.push(np);
   rEParts();
-  setDrawStatus("✓ Afegit ("+PST_APP[st]+"): Pos "+r.pos+(cant?" ×"+cant:"")+". Toca'n un altre, o tanca per tornar.");
+  setDrawStatus("✓ Afegit ("+PST_APP[st]+"): "+(r.set?"conjunt "+(r.ref||r.denominacio):"Pos "+r.pos)+(cant?" ×"+cant:"")+". Toca'n un altre, o tanca per tornar.");
 }
 // Writes "<denomination> - <reference>" into the description at the caret the
 // field had when picking started, keeping single spaces around it. The edit
@@ -2633,7 +2637,9 @@ function confirmAndAdd(r){
   var ctx=(r.subgrup||r.grup||"")+(r.num?" · Nº "+r.num:"");
   var head=document.createElement("div");
   head.style.cssText="font-size:12px;color:var(--tx2);margin-bottom:8px";
-  head.innerHTML="<strong>Pos "+esc(r.pos)+(r.ref?" · "+esc(r.ref):"")+"</strong> "+esc(r.denominacio||"")
+  head.innerHTML=r.set
+    ?"<strong>&#128230; Conjunt sencer"+(r.ref?" · "+esc(r.ref):"")+"</strong> "+esc(r.denominacio||"")
+    :"<strong>Pos "+esc(r.pos)+(r.ref?" · "+esc(r.ref):"")+"</strong> "+esc(r.denominacio||"")
     +(ctx?" <span style=\"color:var(--tx3)\">("+esc(ctx)+")</span>":"");
   box.appendChild(head);
   var row=document.createElement("div");
@@ -2663,8 +2669,8 @@ function confirmAndAdd(r){
 // Scope a tapped Pos to the SUBGRUP (drawing) that owns the current page — a
 // single drawing's Pos numbering is unique, so this resolves to exactly one
 // part. Never falls back to other drawings' parts.
-function resolvePartByPos(pos){
-  if(!viewerSubgrups.length){setDrawStatus("Catàleg no carregat — en tocar no es trobaran els recanvis.");return}
+// The drawing(s) the page on screen belongs to.
+function viewerOwning(){
   var owning=viewerSubgrups.filter(function(s){return s.pages[viewerPage]});
   if(!owning.length){
     // Marked catalogs often list only the LIST pages, not the drawing sheet the
@@ -2681,6 +2687,11 @@ function resolvePartByPos(pos){
     });
     if(best)owning=[best];
   }
+  return owning;
+}
+function resolvePartByPos(pos){
+  if(!viewerSubgrups.length){setDrawStatus("Catàleg no carregat — en tocar no es trobaran els recanvis.");return}
+  var owning=viewerOwning();
   if(!owning.length){setDrawStatus("Aquesta pàgina no té llista de recanvis al catàleg — obre el full de detall del dibuix.");return}
   var scope=[];owning.forEach(function(s){scope=scope.concat(s.rows)});
   var cand=scope.filter(function(r){return String(r.pos)===String(pos)});
@@ -2689,6 +2700,40 @@ function resolvePartByPos(pos){
   var exact=cand.filter(function(r){return String(r.page)===String(viewerPage)}); // rare tie-break
   if(exact.length===1){confirmAndAdd(exact[0]);return}
   showPickChoices(pos,exact.length?exact:cand,false);
+}
+// ── A WHOLE ASSEMBLY AS ONE PART (2026-10-18) ────────────────────────────────
+// "Spare parts: whole assemblies, with only their name and reference, not the
+// list of pieces." Each drawing of the manual is an assembly with its own
+// reference (sg.num, e.g. "Motorización · ZO-266-00"), and its conjunt has
+// one too. The bar under the hint offers the drawing on screen — and its
+// conjunt, when that has a reference of its own — as ONE line: quantity 1,
+// the reference, the name, no position, `set:true`. Everything downstream
+// (status, reports, Excel, history) treats it as any other part; the app
+// marks it 📦. In "write in the description" mode it writes name - reference.
+function setRowOf(sg,whole){
+  return whole
+    ?{pos:"",ref:sg.cnum,cant:"1",denominacio:cleanConjuntName(sg.cname)||sg.cname||sg.cnum,conjunt:sg.cname,grup:"",page:viewerPage,set:true}
+    :{pos:"",ref:sg.num||"",cant:"1",denominacio:sg.name||sg.num||"",conjunt:sg.cname,grup:sg.grup||"",page:viewerPage,set:true};
+}
+function renderDrawSets(){
+  var bar=$$("drawSets");if(!bar)return;
+  bar.innerHTML="";bar.style.display="none";
+  if(!viewerPickMode||!viewerSubgrups.length)return;
+  var rows=[],seen={};
+  viewerOwning().forEach(function(sg){
+    [setRowOf(sg,false)].concat(sg.cnum&&sg.cnum!==sg.num?[setRowOf(sg,true)]:[]).forEach(function(r){
+      var k=(r.ref||"")+"|"+r.denominacio;if(!(r.ref||r.denominacio)||seen[k])return;seen[k]=1;rows.push(r);
+    });
+  });
+  if(!rows.length)return;
+  rows.forEach(function(r){
+    var b=document.createElement("button");b.className="btn-sm";
+    b.title=viewerPickPurpose==="text"?"Escriu el nom i la referència del conjunt a la descripció":"Afegeix el conjunt sencer com una sola línia (nom i referència, sense la llista de peces)";
+    b.innerHTML="&#128230; Conjunt sencer: <strong>"+esc(r.denominacio)+"</strong>"+(r.ref?" · "+esc(r.ref):"");
+    b.addEventListener("click",function(){confirmAndAdd(r)});
+    bar.appendChild(b);
+  });
+  bar.style.display="flex";
 }
 function showPickChoices(pos,rows,offPage){
   var box=$$("drawChoices");if(!box)return;
@@ -2715,6 +2760,7 @@ function closeDrawings(){
   $$("drawBack").style.display="none";viewerPickMode=false;
   $$("drawPickHint").style.display="none";
   var dc=$$("drawChoices");if(dc)dc.style.display="none";
+  var dsb=$$("drawSets");if(dsb)dsb.style.display="none";
   viewerPickPurpose="part";
   if(pickReturnEdit){
     pickReturnEdit=false;
@@ -3890,7 +3936,7 @@ function rEParts(){
     // live edit, no re-render (that would steal focus mid-typing)
     qi.addEventListener("input",function(){p.cant=this.value.trim()});
     var ref=document.createElement("span");ref.className="pr";ref.textContent=p.ref||"";
-    var nm=document.createElement("span");nm.className="pn";nm.textContent=p.denominacio||"";nm.title=p.denominacio||"";
+    var nm=document.createElement("span");nm.className="pn";nm.textContent=(p.set?"📦 ":"")+(p.denominacio||"");nm.title=p.set?"Conjunt sencer":(p.denominacio||"");
     var ss=document.createElement("select");ss.className="ps-sel ps-"+partSt(p);ss.title="Canviat en aquesta visita, o recomanat";
     PART_STS.forEach(function(st){var o=document.createElement("option");o.value=st;o.textContent=PST_APP[st];ss.appendChild(o)});
     ss.value=partSt(p);
@@ -5136,7 +5182,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 11";
+var APP_VERSION="2026-10-18 · 12";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -7277,7 +7323,7 @@ function histRecord(s,arch){
       var o={id:e.id,ts:e.ts,severity:e.severity,tag:e.tag||"",text:e.text||""};
       if(e.fix)o.fix={severity:e.fix.severity,text:e.fix.text||"",ts:e.fix.ts||""};
       if(e.closes)o.closes={s:e.closes.s,e:e.closes.e};
-      if(e.parts&&e.parts.length)o.parts=e.parts.map(function(p){var q={pos:p.pos||"",ref:p.ref||"",cant:p.cant||"",denominacio:p.denominacio||""};if(p.st)q.st=p.st;return q});
+      if(e.parts&&e.parts.length)o.parts=e.parts.map(function(p){var q={pos:p.pos||"",ref:p.ref||"",cant:p.cant||"",denominacio:p.denominacio||""};if(p.st)q.st=p.st;if(p.set)q.set=true;return q});
       if(e.tr)o.tr=e.tr;
       if(e.trF)o.trF=e.trF;
       return o;

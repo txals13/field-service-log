@@ -1632,6 +1632,18 @@ Now (`syncTick`, `scheduleSync`):
   written into a tab opened synchronously on the tap (so no popup block;
   `document.write` rather than a blob URL, which also works in the installed
   app on Android); anything else still goes to the viewer.
+- **The data file is looked for in two places only** (2026-10-18: "the data
+  file shows up as (1)"): the "(1)" in G: was Drive for desktop's local name
+  (the previous file, being binned, still held the name when the new one was
+  made); on Drive there was one live file with the right name. But
+  `listDataFiles` fell back to searching ALL of Drive when the app's folder
+  had none, and an old June sample file (10 visits) sat in
+  `Field Service Log/data/` — one empty listing and it would have been merged
+  back in. The fallback now looks only at the top of My Drive
+  (`'root' in parents`), where the first versions kept it. The `data/`
+  folder was sent to the Drive trash with the user's OK. Seven earlier data
+  files are in the trash, three of them "[]" (10-11, 10-12, 10-18 20:22):
+  the duplicate merge worked each time; what made a second file is not known.
 - **No manual in the validation report** (2026-10-18): the PDF header's
   "Manual" row is added only when not `V` (validation) — the spare-parts
   manual has nothing to do with a production test. Checked with the real

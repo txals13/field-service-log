@@ -3238,7 +3238,11 @@ async function listDataFiles(token){
   }
   var base="name="+JSON.stringify(DATA_FILE)+" and trashed=false and mimeType="+JSON.stringify("application/json");
   var list=rootId?await q(base+" and "+JSON.stringify(rootId)+" in parents"):[];
-  if(!list.length)list=await q(base);
+  // Not in the app's folder: look only at the top of My Drive, where the very
+  // first versions kept it — never anywhere in Drive (2026-10-18). A search of
+  // all of Drive could pick an old copy in a subfolder (a June sample file sat
+  // in "Field Service Log/data") and merge long-gone visits back in.
+  if(!list.length)list=await q(base+" and 'root' in parents");
   return list;
 }
 async function findDataFile(token){var l=await listDataFiles(token);return l.length?l[0].id:null}
@@ -5372,7 +5376,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 21";
+var APP_VERSION="2026-10-18 · 22";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,

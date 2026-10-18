@@ -5372,7 +5372,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 20";
+var APP_VERSION="2026-10-18 · 21";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -9752,7 +9752,10 @@ async function buildPdfBlob(s,lang,rev,opts){
   // metadata, two columns
   var meta=[[R.client,s.client||"—"],[R.contact,contactLine(s)||"—"],[R.project,s.project||"—"],[R.machine,s.machine||"—"],
             [R.location,s.location||"—"],[R.tech,s.tech||"—"],[R.start,fts(s.createdAt)],
-            [R.status,s.status==="open"?R.open:R.closed],[R.manual,(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||"—"]];
+            [R.status,s.status==="open"?R.open:R.closed]];
+  // The spare-parts manual has nothing to do with a production test: not in
+  // the validation report (2026-10-18).
+  if(!V)meta.push([R.manual,(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||"—"]);
   // Values used to sit at a fixed x, which the widest label ran straight into.
   // pdfMetaBlock measures the labels, starts the values past the longest one,
   // and wraps them.

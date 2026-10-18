@@ -1632,6 +1632,10 @@ Now (`syncTick`, `scheduleSync`):
   written into a tab opened synchronously on the tap (so no popup block;
   `document.write` rather than a blob URL, which also works in the installed
   app on Android); anything else still goes to the viewer.
+- **No manual in the validation report** (2026-10-18): the PDF header's
+  "Manual" row is added only when not `V` (validation) — the spare-parts
+  manual has nothing to do with a production test. Checked with the real
+  P-2026-171: the validation PDF has no manual row, the report keeps it.
 - **Drive links from the app, local links in the ZIP** (2026-10-18: "only when
   the ZIP is archived do the links look locally; working in the app, the
   exports link to Drive — both with the folder layout already set"): the

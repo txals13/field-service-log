@@ -734,6 +734,15 @@ Field Service Log/
     `#fsl-ph-N`, and a "Fotos" section after the parts lists shows them three
     across, 4:3, `object-fit:contain`, with time, file name and, for a video,
     its Drive link. Word has no appendix change (its own was already there).
+- **Rates in u/h or u/min** (2026-10-18): each production test has
+  `rateUnit` ("h" | "min", selector `#ptUnit` beside the nominal), and the
+  nominal is TYPED in it; `ptCalc` turns it into per-hour, so every
+  calculation stays per hour and only the display divides (`rateShow`; labels
+  `pt.upm`). Switching the unit converts the nominal already typed. The Excel
+  sheet uses u/min only if every test of the visit does. The machine counters
+  have `counters.unit` (`#ctrUnit`, "Ritme de producció en"), used by
+  `ctrDeltaText` for the units-per-machine-hour figure (`ctr.perMin`). New
+  tests and readings start in the last unit used (`fsl_v6_rateunit`).
 - **Voice notes in .m4a** (2026-10-17): `pickAudioMime` now tries
   `audio/mp4;codecs=mp4a.40.2` (AAC — opens with a double click anywhere, which
   matters once a note reaches a client in the Word+media ZIP), then

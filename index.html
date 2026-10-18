@@ -2929,7 +2929,16 @@ async function reconcileOutputs(token){
       }
       if(!x.folderId||live[x.folderId])continue;
       var info=await driveFileInfo(token,x.folderId);
-      if(info&&info.trashed)drop[x.id]=1;
+      if(info&&info.trashed){
+        drop[x.id]=1;
+        // A visit whose folder was binned — here, on another device, or by
+        // hand in Drive — is deleted like one deleted in the app: with a note
+        // and its time. Without the note (2026-10-18) the data file, which
+        // still had the visit, put it back at the next sync, every time, and
+        // a folder deleted in Drive could never take its visit with it. A copy
+        // changed after now still wins, as with any deletion.
+        var gm=goneGet();gm[x.id]={f:x.folderId,done:true,at:now()};goneSet(gm);
+      }
       else if(!info)forget[x.id]=1;
       // reachable and not trashed but somewhere else: moved by hand — leave it
     }
@@ -5116,7 +5125,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 8";
+var APP_VERSION="2026-10-18 · 9";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,

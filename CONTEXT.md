@@ -1578,6 +1578,18 @@ Now (`syncTick`, `scheduleSync`):
 - it also runs on `visibilitychange` → visible and on window `focus`
   (throttled to one every 5 s): a phone app's interval does not run while it
   sleeps, so coming back to it waited up to half a minute.
+- **Playing a video from Drive** (2026-10-18: "a window opens and nothing
+  loads"): the player's `src` was Drive with the token in the URL
+  (`driveStreamUrl`, `?access_token=`); a refusal or an undecodable file (HEVC,
+  common in slow motion) left it black and silent. `openDriveVideo(id,name)`
+  fetches `alt=media` with the Authorization header, shows the progress in
+  `#mediaVidSt`, plays an object URL (cached in `vidCache` for the page's
+  life; aborted if the viewer is closed), and always shows `#mediaDrive`
+  ("Obre'l a Drive" — Drive's player transcodes any format). A `<video>` error
+  replaces the black box with that advice. A video still in `fileCache` (just
+  added here) plays straight from memory. `.media-modal` is a column now so
+  the message and the button sit under the video. `driveStreamUrl` remains
+  only for voice notes with no local copy.
 - **Videos come from the gallery, and big files go up in pieces**
   (2026-10-18): the 🎥 buttons (composer, edit, outcome) lost `capture` and
   gained `multiple` — the browser's recorder has no slow motion and leaves no

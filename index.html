@@ -213,7 +213,7 @@ textarea{resize:none;line-height:1.4}
 .field label{display:block;font-size:11px;color:var(--tx2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px;font-weight:600}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
 /* media viewer */
-.media-modal{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;z-index:200;cursor:pointer}
+.media-modal{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;cursor:pointer}
 .media-modal img{max-width:95vw;max-height:90vh;object-fit:contain;border-radius:6px}
 .media-modal video{max-width:95vw;max-height:90vh;border-radius:6px}
 .media-close{position:fixed;top:12px;right:12px;z-index:201;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
@@ -1084,6 +1084,8 @@ textarea{resize:none;line-height:1.4}
     <img id="mediaImg" src="" alt="" style="display:none">
     <video id="mediaVid" controls playsinline style="display:none"></video>
     <div class="media-name" id="mediaName" style="display:none"></div>
+    <div id="mediaVidSt" style="display:none;color:#e5e7eb;font-size:13px;text-align:center;margin-top:10px;max-width:90vw"></div>
+    <a id="mediaDrive" href="#" target="_blank" rel="noopener" class="btn-sm" style="display:none;margin-top:10px;text-decoration:none">&#8599; Obre'l a Drive</a>
   </div>
 </div>
 
@@ -3461,9 +3463,10 @@ function renderLogArea(){
         t.addEventListener("click",function(){
           var img=logImgAt(e,t);if(!img)return;
           if(img.type==="video"){
-            var url=img.driveId?driveStreamUrl(img.driveId):null;
-            if(!url){alert(img.uploadStatus==="err"?"No s'ha pogut pujar el vídeo. Toca la marca ! per tornar-ho a provar.":"El vídeo és a Drive. Inicia la sessió per reproduir-lo.");return}
-            openMedia(url,"video",img.name);
+            var fc=fileCache.get(img);
+            if(fc){openMedia(URL.createObjectURL(fc),"video",img.name);return}   // still in memory here: play it straight
+            if(!img.driveId||!accessToken){alert(img.uploadStatus==="err"?"No s'ha pogut pujar el vídeo. Toca la marca ! per tornar-ho a provar.":"El vídeo és a Drive. Inicia la sessió per reproduir-lo.");return}
+            openDriveVideo(img.driveId,img.name);
           } else openMedia(img.data,"image",img.name);
         });
       });
@@ -5034,7 +5037,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 5";
+var APP_VERSION="2026-10-18 · 6";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -5658,19 +5661,65 @@ $$("nSave").addEventListener("click",function(){
 });
 
 // ── MEDIA VIEWER ──────────────────────────────────────────────────────────────
+// ── A VIDEO FROM DRIVE (2026-10-18) ──────────────────────────────────────────
+// The player used to be pointed at Drive with the access token in the URL
+// (?access_token=…): when Drive would not take it that way, or the browser
+// could not decode the file — HEVC, which phones and tablets record, above
+// all in slow motion — the window stayed black and said nothing. Now the file
+// is fetched with the token in the header, with its progress on screen, and
+// played from memory (kept for the rest of the page's life); "Obre'l a Drive"
+// is always there, because Drive's own player converts any format; and a
+// file this browser cannot play says so and points there.
+var vidCache=new Map(),vidAbort=null;
+async function openDriveVideo(id,name){
+  var st=$$("mediaVidSt"),dl=$$("mediaDrive"),mv=$$("mediaVid");
+  dl.href="https://drive.google.com/file/d/"+encodeURIComponent(id)+"/view";dl.style.display="inline-block";
+  function say(t){st.textContent=t;st.style.display=t?"block":"none"}
+  openMedia("","video",name);mv.style.display="none";
+  if(vidCache.has(id)){mv.src=vidCache.get(id);mv.style.display="block";say("");return}
+  say("Carregant el vídeo…");
+  try{
+    var token=await ensureToken();if(!token)throw new Error("sense sessió de Google");
+    vidAbort=new AbortController();
+    var r=await fetch("https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(id)+"?alt=media",{headers:{Authorization:"Bearer "+token},signal:vidAbort.signal});
+    if(!r.ok)throw new Error("Drive ha respost "+r.status);
+    var total=+r.headers.get("Content-Length")||0,got=0,parts=[];
+    if(r.body&&r.body.getReader){
+      var rd=r.body.getReader();
+      for(;;){var c=await rd.read();if(c.done)break;parts.push(c.value);got+=c.value.length;
+        say("Carregant el vídeo… "+(total?Math.round(got*100/total)+" %":Math.round(got/1048576)+" MB"))}
+    }else parts.push(new Uint8Array(await r.arrayBuffer()));
+    var url=URL.createObjectURL(new Blob(parts,{type:r.headers.get("Content-Type")||"video/mp4"}));
+    vidCache.set(id,url);
+    if($$("mediaModal").style.display==="none")return;      // closed meanwhile
+    mv.src=url;mv.style.display="block";say("");
+  }catch(e){
+    if(e&&e.name==="AbortError")return;
+    say("No s'ha pogut carregar el vídeo ("+((e&&e.message)||e)+"). Obre'l a Drive.");
+  }
+}
+$$("mediaVid").addEventListener("error",function(){
+  if($$("mediaModal").style.display==="none"||!$$("mediaVid").getAttribute("src"))return;
+  var st=$$("mediaVidSt");$$("mediaVid").style.display="none";
+  st.textContent="Aquest navegador no pot reproduir aquest vídeo (sovint és el format HEVC de la càmera lenta). Drive sí: obre'l a Drive.";
+  st.style.display="block";
+});
 function openMedia(src,type,name){
   var mi=$$("mediaImg"),mv=$$("mediaVid"),mn=$$("mediaName");
-  if(type==="video"){mi.style.display="none";mv.src=src;mv.style.display="block"}
+  $$("mediaVidSt").style.display="none";if(type!=="video"||src)$$("mediaDrive").style.display="none";
+  if(type==="video"){mi.style.display="none";if(src){mv.src=src;mv.style.display="block"}}
   else{mv.pause();mv.style.display="none";mi.src=src;mi.style.display="block"}
   mn.textContent=name||"";mn.style.display=name?"block":"none";
   $$("mediaModal").style.display="flex";
 }
 function closeMedia(){
   $$("mediaModal").style.display="none";
+  if(vidAbort){try{vidAbort.abort()}catch(e){}vidAbort=null}
+  $$("mediaVidSt").style.display="none";$$("mediaDrive").style.display="none";
   var mv=$$("mediaVid");mv.pause();mv.removeAttribute("src");mv.load();mv.style.display="none";
   $$("mediaImg").style.display="none";$$("mediaName").style.display="none";
 }
-$$("mediaModal").addEventListener("click",function(e){if(e.target.id!=="mediaVid")closeMedia()});
+$$("mediaModal").addEventListener("click",function(e){if(e.target.id!=="mediaVid"&&e.target.id!=="mediaDrive")closeMedia()});
 $$("mediaVid").addEventListener("click",function(e){e.stopPropagation()});
 $$("mediaClose").addEventListener("click",function(e){e.stopPropagation();closeMedia()});
 

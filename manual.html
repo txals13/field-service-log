@@ -234,13 +234,12 @@
 <p>Les entrades surten en <strong>una sola taula</strong>, amb la capçalera (Hora, Gravetat, Etiqueta, Descripció, Adjunts) a dalt i repetida només quan la taula passa a una pàgina nova. Dins la taula, cada dia és una franja fina amb el dia de la setmana, la data, quantes entrades hi ha i els problemes, avisos, resolts i OK d'aquell dia. Cada entrada porta només l'hora. Una franja de dia mai queda sola a peu de pàgina.</p>
 <p>A la columna <strong>Adjunts</strong> (PDF, Word i HTML) les fotos surten en miniatura, dues per fila, amb el nom del fitxer sencer a sota. Els vídeos <strong>no porten miniatura</strong>: surten només pel nom, com les notes de veu, i només els que són a la carpeta de la visita (un vídeo que no s'ha pogut pujar no hi surt). Les fotos de la resolució («com ha quedat») també hi són. Si una entrada té més de 12 fotos, les que passen surten només pel nom. Al PDF i a l'HTML, l'apartat «Fotos» del final té totes les fotos en gran, senceres i sense deformar, amb l'hora i el nom a sota.</p>
 <h3>Obrir les fotos i els vídeos des de l'informe</h3>
-<p>El nom de cada fitxer (i la foto) és un enllaç, en blau:</p>
+<p>El nom de cada fitxer (i la foto) és un enllaç, en blau, que obre <strong>el fitxer de la mateixa carpeta</strong>, mai el de Drive: a <code>photos/</code>, <code>videos/</code> o <code>audio/</code>, al costat de l'informe. La carpeta de la visita i el ZIP del projecte tenen la mateixa estructura, o sigui que funciona igual des del ZIP descomprimit i des de la carpeta de la visita a l'ordinador (<code>G:\My Drive</code>), <strong>sense connexió</strong>.</p>
 <ul>
-  <li><strong>HTML:</strong> si l'obres des de l'ordinador (el ZIP descomprimit, o la carpeta de la visita a <code>G:\My Drive</code>), obre el fitxer que hi ha al costat, a <code>photos/</code>, <code>videos/</code> o <code>audio/</code>, sense connexió. Si l'obres des de Drive o des de l'app, l'obre a Drive. Al costat de cada vídeo hi ha també <em>↗ Obre a Drive</em>.</li>
-  <li><strong>Word:</strong> el que va dins del ZIP del projecte obre el fitxer del costat (descomprimeix el ZIP abans d'obrir-lo). El que es desa a la carpeta de la visita l'obre a Drive.</li>
-  <li><strong>PDF:</strong> l'obre a Drive. Els visors de PDF de Chrome i Edge no obren fitxers del costat, per això per llegir des del ZIP sense connexió val més l'HTML.</li>
+  <li><strong>HTML i Word:</strong> l'obren directament.</li>
+  <li><strong>PDF:</strong> amb Adobe Acrobat Reader (i la majoria de visors d'escriptori), el visor pregunta si vols obrir el fitxer i l'obre. El visor de PDF de Chrome i Edge no obre fitxers des d'un PDF: si el PDF s'obre amb Edge, fes servir l'HTML o el Word, o obre el PDF amb Acrobat Reader.</li>
 </ul>
-<p>Un informe obert directament dins del ZIP, sense descomprimir-lo, no troba els fitxers del costat: descomprimeix-lo primer.</p>
+<p>Un informe obert directament dins del ZIP, sense descomprimir-lo, no troba els fitxers del costat: descomprimeix-lo primer. Des de Drive al web o al mòbil, els enllaços no funcionen: allà, obre els fitxers des de la carpeta.</p>
 
 <h3>Els noms dels fitxers</h3>
 <p>Porten el client, el número de projecte i la màquina, la revisió i l'idioma. Per exemple:</p>

@@ -221,7 +221,7 @@
   <tr><td>📄 HTML</td><td>Es pot obrir a qualsevol navegador. Té les fotos en miniatura a cada entrada i en gran al final, com el PDF: tocar una miniatura porta a la foto gran. Els vídeos s'obren a Drive amb l'enllaç ↗ Obre a Drive.</td></tr>
   <tr><td>📊 Recanvis (Excel)</td><td>Els recanvis de la visita: un full de recomanats per cotitzar, un de canviats, el detall i les dades de la sessió.</td></tr>
   <tr><td>🧾 Full d'hores…</td><td>Obre el full d'hores per signar (vegeu <a href="#hores">full d'hores</a>).</td></tr>
-  <tr><td>🗄 ZIP del projecte (arxiu)</td><td>Tot: tots els informes, totes les revisions anteriors, les fotos, els vídeos, les notes de veu i les dades de la visita. <strong>És l'única còpia que es pot tornar a importar.</strong></td></tr>
+  <tr><td>🗄 ZIP del projecte (arxiu)</td><td>Tot: tots els informes, totes les revisions anteriors, les fotos, els vídeos, les notes de veu i les dades de la visita. <strong>És l'única còpia que es pot tornar a importar.</strong> Cada foto, vídeo o nota de veu de la visita hi entra encara que ja no sigui a la carpeta (l'app el busca a Drive, també a la paperera). Si en falta algun que ja no es pot trobar, l'app avisa amb el nom del fitxer: no esborris la visita fins que el tinguis.</td></tr>
   <tr><td>📦 ZIP Word + multimèdia</td><td>L'informe Word amb tots els fitxers, per lliurar. No es pot tornar a importar.</td></tr>
 </table></div>
 <p><strong>L'ordre de l'informe</strong>, igual al PDF, al Word i a l'HTML: les dades de la visita, els comptadors de la màquina, les <strong>notes generals</strong> (el resum de la visita, amb una línia per dia si fas servir ✨ Resum per dies), les incidències, el registre per dies, els recanvis canviats i recomanats, les proves de producció i les signatures. Les fotos grans van al final, com a annex, en una pàgina a part.</p>
@@ -379,6 +379,7 @@
   <li><span class="btn">⇧ Importa</span> (a dalt): tria un o diversos ZIP o JSON alhora des del selector de fitxers de l'aparell. Al mòbil i a la tauleta, al selector, obre el menú ☰ i tria <strong>Drive</strong>, i mantén premut el primer fitxer per marcar-ne més.</li>
 </ul>
 <p>Les visites que ja hi són se salten soles, o sigui que no passa res si en marques alguna de repetida. Les fotos i els vídeos del ZIP es tornen a pujar a Drive. Cal tenir la sessió de Google iniciada; si no, els vídeos no es recuperen.</p>
+<p>Si el ZIP no porta algun vídeo, l'app el busca al teu Drive, <strong>també a la paperera</strong>, i si el troba el torna a pujar a la carpeta de la visita. Si una visita importada té vídeos que no es poden reproduir («Aquest vídeo no és a Drive…»), torna a importar el mateix ZIP: la visita no es duplica, només es busquen de nou els vídeos que hi falten.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="ordinador">15. Carpetes</h2>

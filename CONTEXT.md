@@ -1632,6 +1632,27 @@ Now (`syncTick`, `scheduleSync`):
   written into a tab opened synchronously on the tap (so no popup block;
   `document.write` rather than a blob URL, which also works in the installed
   app on Android); anything else still goes to the viewer.
+- **An archive that carries its media, and an import that finds it**
+  (2026-10-18: "after importing a .zip I can't play the videos — it says I
+  have no Drive access"): P-2026-171's archive ZIP was made while its folder's
+  contents sat in the trash (the trash fallback since fixed), so the folder
+  listing was empty and the ZIP went out with no photo, video or voice note —
+  silently, and stamped zipAt. Imported, its videos were set to driveId null
+  ("no file to restore"), and the thumbnail said "sign in to play it".
+  · Export: after the folder's media, every attachment of the visit not yet in
+    the ZIP is fetched by its own id (`driveBlobById`: the trash included); a
+    photo or voice note not on Drive comes from its stored data URL; a video
+    still missing is named in an alert after the ZIP is saved.
+  · Import: a video the ZIP lacks but whose session.json carries a driveId is
+    fetched by that id and uploaded to the new folder. Importing a ZIP over a
+    visit already here now also repairs it: its videos with no driveId (not
+    `err`) are looked for in the ZIP and by the ZIP's id, and the session is
+    replaced so the change is stamped; `importFiles` saves when anything was
+    restored, not only added.
+  · The thumbnail tells "not on Drive — import the ZIP again" from "sign in".
+  Tested in the preview with a real JSZip and a faked Drive (trashed, purged,
+  in-ZIP and outcome videos; the repair path; the export's fallback). The
+  three 171 videos still in the Drive trash are what this recovers.
 - **A deletion reaches every device** (2026-10-18: "P-2026-165 and 140,
   deleted on the computer, are still on the phone but not on the tablet"):
   a deletion travelled only by its Outputs folder (binned → other devices

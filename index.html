@@ -2067,6 +2067,14 @@ function repNote(html,kind){
 // way to retry. It happens most with the camera: the phone hands the app over
 // to the camera app, and what comes back is a page that has been in the
 // background with the connection dropped underneath it.
+// A file this app put on Drive, fetched by its id — from the trash too: Drive
+// still serves a binned file to its owner until the trash is emptied.
+async function driveBlobById(token,id){
+  try{var r=await fetch("https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(id)+"?alt=media",{headers:{Authorization:"Bearer "+token}});return r.ok?await r.blob():null}
+  catch(e){return null}
+}
+function mediaKind(img){return img.type==="video"?"videos":img.type==="audio"?"audio":"photos"}
+function entryMedia(en){return (en.images||[]).concat((en.fix&&en.fix.images)||[])}
 async function uploadMedia(sess,file,kind){
   try{
     var token=await ensureToken();if(!token)return null;
@@ -3526,7 +3534,9 @@ function renderLogArea(){
           if(img.type==="video"){
             var fc=fileCache.get(img);
             if(fc){openMedia(URL.createObjectURL(fc),"video",img.name);return}   // still in memory here: play it straight
-            if(!img.driveId||!accessToken){alert(img.uploadStatus==="err"?"No s'ha pogut pujar el vídeo. Toca la marca ! per tornar-ho a provar.":"El vídeo és a Drive. Inicia la sessió per reproduir-lo.");return}
+            if(!img.driveId||!accessToken){alert(img.uploadStatus==="err"?"No s'ha pogut pujar el vídeo. Toca la marca ! per tornar-ho a provar."
+              :!img.driveId&&isLoggedIn?"Aquest vídeo no és a Drive: la visita es va importar d'un ZIP que no el portava. Torna a importar el ZIP de la visita (⇧ Importa): si el vídeo encara és a Drive, també a la paperera, l'app el recupera."
+              :"El vídeo és a Drive. Inicia la sessió per reproduir-lo.");return}
             openDriveVideo(img.driveId,img.name);
           } else openMedia(img.data,"image",img.name);
         });
@@ -5126,7 +5136,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 10";
+var APP_VERSION="2026-10-18 · 11";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -5851,10 +5861,10 @@ async function importSessionZip(file){
   var list=JSON.parse(await sj.async("string"));
   if(!Array.isArray(list))throw new Error("session.json hauria de contenir una llista de sessions");
 
+  var had={};sessions.forEach(function(x){had[x.id]=x});
   var res=mergeImportedSessions(list);
   saveLocal();renderAll();
   var tally={added:res.added.length,skipped:res.skipped,restored:0,failed:0,noLogin:0};
-  if(!res.added.length)return tally;
 
   // index the media by file name, whichever folder it sits in
   var media={};
@@ -5863,23 +5873,50 @@ async function importSessionZip(file){
     var m=/^(photos|videos|audio)\/(.+)$/.exec(path);
     if(m)media[m[2]]={kind:m[1],entry:entry};
   });
+  // A video the ZIP does not carry is not lost yet (2026-10-18): P-2026-171's
+  // archive went out with no media at all, and imported, its videos were left
+  // with a poster and nothing to play. The visit's session.json still names
+  // each one's Drive id, and on this account that file is often still there —
+  // in the trash at worst. Fetched by that id and uploaded again to this
+  // visit's folder, like the ones in the ZIP.
   var pending=[];
   res.added.forEach(function(sess){
     (sess.entries||[]).forEach(function(en){
       // the outcome's attachments too, not only the entry's own
-      (en.images||[]).concat((en.fix&&en.fix.images)||[]).forEach(function(img){
+      entryMedia(en).forEach(function(img){
         var hit=img.name&&media[img.name];
         if(hit)pending.push({sess:sess,img:img,hit:hit});
-        else if(img.type==="video")img.driveId=null; // no file to restore: keep the poster only
+        else if(img.type==="video"){
+          if(img.driveId)pending.push({sess:sess,img:img,old:img.driveId});
+          img.driveId=null;                     // until it is found: keep the poster only
+        }
+      });
+    });
+  });
+  // The same ZIP imported again over a visit already here: it is not skipped
+  // whole any more — its videos that have nothing to play (the import above,
+  // before this) are looked for again, in the ZIP and on Drive.
+  var fixed={};
+  list.forEach(function(zs){
+    var ls=had[zs.id];if(!ls)return;
+    var zv={};
+    (zs.entries||[]).forEach(function(en){entryMedia(en).forEach(function(im){if(im.type==="video"&&im.name)zv[en.id+"|"+im.name]=im})});
+    (ls.entries||[]).forEach(function(en){
+      entryMedia(en).forEach(function(img){
+        if(img.type!=="video"||img.driveId||img.uploadStatus==="err"||!img.name)return;
+        var hit=media[img.name],zi=zv[en.id+"|"+img.name];
+        if(hit)pending.push({sess:ls,img:img,hit:hit,fix:1});
+        else if(zi&&zi.driveId)pending.push({sess:ls,img:img,old:zi.driveId,fix:1});
       });
     });
   });
 
-  if(!pending.length)return tally;
-  if(!isLoggedIn){
-    res.added.forEach(function(sess){(sess.entries||[]).forEach(function(en){(en.images||[]).concat((en.fix&&en.fix.images)||[]).forEach(function(img){img.driveId=null})})});
+  if(!pending.length){if(res.added.length){saveLocal();renderAll()}return tally}
+  var token=isLoggedIn?await ensureToken():null;
+  if(!token){
+    res.added.forEach(function(sess){(sess.entries||[]).forEach(function(en){entryMedia(en).forEach(function(img){img.driveId=null})})});
     saveLocal();renderAll();
-    tally.noLogin=pending.length;
+    tally.noLogin=pending.filter(function(p){return !p.fix}).length;
     return tally;
   }
 
@@ -5888,13 +5925,16 @@ async function importSessionZip(file){
     var p=pending[i];
     setSyncSt("loading","Restaurant la multimèdia "+(i+1)+"/"+pending.length+"…");
     try{
-      var blob=await p.hit.entry.async("blob");
+      var blob=p.hit?await p.hit.entry.async("blob"):await driveBlobById(token,p.old);
+      if(!blob)throw new Error("no és a Drive");
       var f=new File([blob],p.img.name,{type:mimeForName(p.img.name)});
-      var up=await uploadMedia(p.sess,f,p.hit.kind);
-      if(up){p.img.driveId=up.driveId;p.img.name=up.name;p.img.uploadStatus="ok";okCount++}
+      var up=await uploadMedia(p.sess,f,p.hit?p.hit.kind:"videos");
+      if(up){p.img.driveId=up.driveId;p.img.name=up.name;p.img.uploadStatus="ok";okCount++;if(p.fix)fixed[p.sess.id]=1;try{fileCache.set(p.img,f)}catch(e){}}
       else{p.img.driveId=null;failCount++}
     }catch(err){p.img.driveId=null;failCount++}
   }
+  // a visit repaired in place: a new object, so the change is stamped and synced
+  if(Object.keys(fixed).length)sessions=sessions.map(function(x){return fixed[x.id]?Object.assign({},x):x});
   setSyncSt("ok","");
   saveLocal();renderAll();
   tally.restored=okCount;tally.failed=failCount;
@@ -5942,7 +5982,7 @@ async function importFiles(files){
     }catch(err){bad.push(f.name+": "+((err&&err.message)||err))}
   }
   setSyncSt("ok","");
-  if(sum.added&&isLoggedIn){isDirty=true;await saveToDrive()}
+  if((sum.added||sum.restored)&&isLoggedIn){isDirty=true;await saveToDrive()}
   renderAll();
   var msg="S'han importat "+sum.added+" sessió(ns)"+(files.length>1?" de "+files.length+" fitxers":"")+"."
     +(sum.skipped?"\n"+sum.skipped+" omeses (ja existien).":"");
@@ -10617,12 +10657,31 @@ async function exportSessionZip(s,kind){
     // there to begin with — removing an attachment bins the Drive file too
     // (see queueTrash), which is what keeps thrown-out photos out of the pack.
     expBusy("Multimèdia…");
-    var media=files.filter(isSessionMedia);
+    var media=files.filter(isSessionMedia),inZip={};
     for(var i=0;i<media.length;i++){
       var f=media[i];
       var r=await fetch("https://www.googleapis.com/drive/v3/files/"+f.id+"?alt=media",{headers:{Authorization:"Bearer "+token}});
       if(!r.ok)continue;
-      zip.file(f.path,await r.blob());
+      zip.file(f.path,await r.blob());inZip[f.id]=1;
+    }
+    // …and whatever an entry attaches that the folder did not give (2026-10-18):
+    // P-2026-171's archive went out with no photo or video at all, because the
+    // folder's contents were in the trash at that moment, and nothing said so.
+    // Now each one is fetched by its own id (the trash included); a photo or a
+    // voice note not on Drive comes from the copy the visit keeps; a video
+    // that cannot be found is named in a warning when the ZIP is done.
+    var lostMedia=[];
+    var allMedia=[];(s.entries||[]).forEach(function(en){entryMedia(en).forEach(function(im){if(im&&im.name)allMedia.push(im)})});
+    for(var mi=0;mi<allMedia.length;mi++){
+      var im=allMedia[mi];
+      if(im.driveId&&inZip[im.driveId])continue;
+      var mp=mediaKind(im)+"/"+im.name;
+      if(zip.file(mp))continue;
+      expBusy("Multimèdia "+(mi+1)+"/"+allMedia.length+"…");
+      var mb=im.driveId?await driveBlobById(token,im.driveId):null;
+      if(!mb&&im.type!=="video"&&typeof im.data==="string"&&/^data:/.test(im.data)){try{mb=dataUrlToBlob(im.data)}catch(e){}}
+      if(mb){zip.file(mp,mb);if(im.driveId)inZip[im.driveId]=1}
+      else lostMedia.push(im.name);
     }
     // THE EARLIER REVISIONS. Everything sitting at the folder's root: the
     // reports of Rev. 01, Rev. 02…, each already carrying its number in its
@@ -10691,6 +10750,8 @@ async function exportSessionZip(s,kind){
         zipName:typeof arxOk==="string"?arxOk:"",zipTo:arxOn?"local":(drvArx?"drive":"")}):x});
       saveLocal();isDirty=true;
     }
+    if(lostMedia.length)alert("Atenció: el ZIP no porta "+lostMedia.length+" fitxer(s) que la visita té però que ja no són a Drive:\n· "+lostMedia.join("\n· ")
+      +"\n\nSi els tens en algun altre lloc, afegeix-los a la carpeta de la visita i torna a fer el ZIP abans d'esborrar la visita.");
   }catch(e){alert("No s'ha pogut exportar el ZIP: "+((e&&e.message)||e))}
   finally{expBusy("")}
   // Says WHICH file, because a suffix means the folder now holds more than one

@@ -1632,6 +1632,22 @@ Now (`syncTick`, `scheduleSync`):
   written into a tab opened synchronously on the tap (so no popup block;
   `document.write` rather than a blob URL, which also works in the installed
   app on Android); anything else still goes to the viewer.
+- **…and they open from their own folder, never from Drive** (2026-10-18:
+  "I don't want them opened from Drive; from their own folder, the paths are
+  the same, so they can be checked offline"): every link is `mediaRel` now —
+  `driveView`, `data-drive`, the HTML script, "↗ Obre a Drive" and Word's
+  `{local}` option are gone. HTML and Word link the relative path. The PDF:
+  jsPDF only writes URI actions, and Chrome/Edge's viewer prefixes a
+  scheme-less URI with https://, so `pdfBlobLocal` rewrites the finished file:
+  `pdfLaunchLinks` turns each `/S /URI /URI (photos|videos|audio/…)` into
+  `/S /Launch /F <</Type /Filespec /F (latin-1 name) /UF <UTF-16BE>>>
+  /NewWindow true` and shifts every xref offset after it by the bytes added
+  (and startxref), checking the table's shape first; anything unexpected →
+  the jsPDF original. Acrobat Reader and most desktop viewers follow a Launch
+  (after asking); Edge/Chrome follow nothing. `mediaRel` also encodes
+  ( ) ' ! * so a name like "foto (1).jpg" cannot end the PDF string. Checked
+  with PyMuPDF: not repaired, all 23 xref offsets land on their "N 0 obj",
+  five Launch links with the right names (accents, parentheses).
 - **Videos by name, and files that open from the report** (2026-10-18: "no
   video thumbnails, only the names of the video files in the folder, and open
   in Drive; reading a report from the ZIP, open the videos and photos if

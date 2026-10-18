@@ -1632,6 +1632,13 @@ Now (`syncTick`, `scheduleSync`):
   written into a tab opened synchronously on the tap (so no popup block;
   `document.write` rather than a blob URL, which also works in the installed
   app on Android); anything else still goes to the viewer.
+- **A folder binned in Drive deletes its visit for good** (2026-10-18: "a
+  Celler de l'Albera folder I can't get rid of"): reconcile step 1 dropped a
+  visit whose folder was in the trash but left no gone note, so the data file,
+  which still had it, put it back at the next sync — P-2026-171 kept coming
+  back after its folder was deleted by hand. Now that drop also writes the
+  note (`{f, done:true, at:now}`), so `goneBlocks` keeps the file's copy out of
+  every save; a copy changed after it still wins (`newerThanGone`).
 - **A later edit beats a deletion** (2026-10-18, same incident, the real
   cause): P-2026-171 had been archived and deleted on the computer while the
   user kept working on it on the TABLET. The gone note hid every later copy

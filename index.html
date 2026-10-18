@@ -2749,6 +2749,43 @@ function goneBlocks(m,x){
   return !x.folderId||x.folderId===g.f;
 }
 function goneForget(ids){var m=goneGet(),c=false;(ids||[]).forEach(function(id){if(id in m){delete m[id];c=true}});if(c)goneSet(m)}
+// ── A FOLDER DRIVE WON'T LET US BIN (2026-10-18) ─────────────────────────────
+// The app may only touch files it made itself (scope drive.file). Opening the
+// Word report in Google Docs leaves a Docs copy (.gdoc) in the visit's folder
+// — a file made by Docs, not by us — and from then on the folder cannot be
+// sent to the trash: a visit archived and deleted stayed in Outputs, and its
+// trash retried, and failed, on every sync. Now, when Drive says no, the app
+// bins everything of its own inside the folder (session.json first, so the
+// visit cannot come back; reports, photos, videos, audio), stops retrying, and
+// the sidebar names the folder to delete by hand, with Drive's reason. The
+// note goes away by itself once the folder has left Outputs.
+var LS_LEFT="fsl_v6_leftover";
+function leftGet(){try{return JSON.parse(localStorage.getItem(LS_LEFT)||"{}")||{}}catch(e){return {}}}
+function leftSet(m){try{localStorage.setItem(LS_LEFT,JSON.stringify(m))}catch(e){}}
+async function trashFolderOrContents(token,fid,name){
+  function bin(id){return fetch("https://www.googleapis.com/drive/v3/files/"+id,
+    {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({trashed:true})})}
+  var r=await bin(fid);
+  if(r.ok)return {ok:true};
+  var why="";try{var j=await r.json();why=(j&&j.error&&j.error.message)||""}catch(e){}
+  if(r.status===404)return {ok:true};               // gone already
+  if(r.status!==403)return {ok:false,status:r.status,why:why};   // offline, quota…: try again later
+  // Not allowed: empty it of what is ours. The listing only shows what this
+  // app may see, which is exactly what it may bin.
+  var kids=[];
+  try{
+    var q=JSON.stringify(fid)+" in parents and trashed=false";
+    var lr=await fetch("https://www.googleapis.com/drive/v3/files?q="+encodeURIComponent(q)+"&fields=files(id,name)&pageSize=1000",{headers:{Authorization:"Bearer "+token}});
+    if(!lr.ok)return {ok:false,status:lr.status,why:why};
+    kids=(await lr.json()).files||[];
+  }catch(e){return {ok:false,why:why}}
+  kids.sort(function(a,b){return (b.name==="session.json")-(a.name==="session.json")});
+  var all=true;
+  for(var i=0;i<kids.length;i++){try{var k=await bin(kids[i].id);if(!k.ok)all=false}catch(e){all=false}}
+  if(!all)return {ok:false,status:403,why:why};
+  var m=leftGet();m[fid]={name:name||"",why:why,at:now()};leftSet(m);
+  return {ok:true,leftover:true};
+}
 async function reconcileOutputs(token){
   try{
     var rootId=await getRootId(token);if(!rootId)return;
@@ -2765,15 +2802,15 @@ async function reconcileOutputs(token){
     }while(pt);
     var live={};folders.forEach(function(f){live[f.id]=f});
     lastOutputs=folders.length;
+    (function(){var m=leftGet(),c=false;Object.keys(m).forEach(function(k){if(!live[k]){delete m[k];c=true}});if(c)leftSet(m)})();
     var gone=goneGet(),drop={},forget={},changed=false;
 
     // 0 · deleted here while offline: bin the folder now
     for(var gid in gone){
       var ge=goneEntry(gone,gid),gf=ge.done?"":ge.f;
       if(gf&&live[gf]&&!sessions.some(function(x){return x.id!==gid&&x.folderId===gf})){
-        var tr=await fetch("https://www.googleapis.com/drive/v3/files/"+gf,
-          {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({trashed:true})});
-        if(tr.ok){delete live[gf];goneFolderDone(gid)}
+        var tr=await trashFolderOrContents(token,gf,live[gf].name);
+        if(tr.ok){if(!tr.leftover)delete live[gf];goneFolderDone(gid)}
       }else if(gf&&!live[gf])goneFolderDone(gid);
     }
 
@@ -2891,12 +2928,15 @@ async function refreshDriveInfo(token){
     }catch(e){}
   }
   var el=$$("driveInfo");if(!el)return;
+  var lm=leftGet(),lk=Object.keys(lm);
+  var left=lk.length?"<br><span style=\"color:var(--orange)\" title=\""+esc(lk.map(function(k){return lm[k].why}).filter(Boolean).join(" · "))+"\">⚠ Esborra a mà a Drive (Outputs): "
+    +lk.map(function(k){return "«"+esc(lm[k].name||k)+"»"}).join(", ")+" — hi ha un fitxer que l'app no pot tocar (p. ex. una còpia de Google Docs)</span>":"";
   var pend=pendReps&&pendReps.length?"<br><span style=\"color:var(--orange)\">&#9203; "+pl(pendReps.length,"informe pendent","informes pendents")+" de pujar</span>":"";
-  if(!isLoggedIn){el.innerHTML="Sense entrar a Google: només aquest aparell"+pend;return}
+  if(!isLoggedIn){el.innerHTML="Sense entrar a Google: només aquest aparell"+pend+left;return}
   el.innerHTML="Compte: <strong>"+esc(driveEmail||"?")+"</strong>"
     +(lastDriveCount!=null?"<br>A Drive: "+pl(lastDriveCount,"visita","visites")
       +(lastOutputs!=null?" · "+pl(lastOutputs,"carpeta","carpetes")+" a Outputs":"")
-      +" · "+(lastDriveAt||""):"")+pend;
+      +" · "+(lastDriveAt||""):"")+pend+left;
 }
 // Resolves true when Drive was read (or there was nothing there to read).
 async function loadFromDrive(){
@@ -4927,7 +4967,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 1";
+var APP_VERSION="2026-10-18 · 2";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -5375,9 +5415,8 @@ async function deleteSession(s){
         // photos with it. Found by name, it may be anyone's — same rule.
         if(folderId&&sessions.some(function(x){return x.folderId===folderId}))folderId=null;
         if(folderId){
-          var r=await fetch("https://www.googleapis.com/drive/v3/files/"+folderId,
-            {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({trashed:true})});
-          if(!r.ok)throw new Error("Drive ha respost "+r.status);
+          var tr=await trashFolderOrContents(token,folderId,s.folderName||sessFolderName(s));
+          if(!tr.ok)throw new Error("Drive ha respost "+(tr.status||"?"));
         }
         goneFolderDone(s.id);
         if(folderId&&lastOutputs)lastOutputs--;

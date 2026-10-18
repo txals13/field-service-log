@@ -1578,6 +1578,21 @@ Now (`syncTick`, `scheduleSync`):
 - it also runs on `visibilitychange` → visible and on window `focus`
   (throttled to one every 5 s): a phone app's interval does not run while it
   sleeps, so coming back to it waited up to half a minute.
+- **A visit's folder Drive won't let us bin** (2026-10-18: "the computer isn't
+  refreshing the folders in Outputs"). Seen on the user's data: P-2026-171 was
+  archived and deleted at 12:39; its Outputs folder stayed, and the gone note
+  kept `done:false` through every sync, because the trash PATCH failed. The one
+  thing that folder had and the binned ones did not: an
+  `informe_…_rev01_ca.gdoc`, the copy Google Docs makes when the Word report
+  is opened with Docs — a file this app (scope `drive.file`) may not touch, so
+  it may not trash the folder holding it (not confirmed against the API: the
+  page's token was not to be pulled out to ask). `trashFolderOrContents`, used
+  by `deleteSession` and by step 0 of `reconcileOutputs`: on a 403 it bins
+  every child the app can see (session.json first, so the visit cannot come
+  back), records the folder in `fsl_v6_leftover` with Drive's message, and
+  counts as done; the sidebar line asks for it to be deleted by hand, and the
+  note clears itself once the folder is no longer listed. Any other failure
+  (offline, 5xx) still retries.
 - **…without moving the screen** (2026-10-17: "it moves, I tap the wrong
   thing"). Three causes, three fixes: the "Sincronitzant…" bar sat in the
   flow above everything and pushed the screen down and back up — it is now a

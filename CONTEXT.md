@@ -1632,6 +1632,19 @@ Now (`syncTick`, `scheduleSync`):
   written into a tab opened synchronously on the tap (so no popup block;
   `document.write` rather than a blob URL, which also works in the installed
   app on Android); anything else still goes to the viewer.
+- **A whole assembly as one part** (2026-10-18: "spare parts: whole
+  assemblies, showing only the name and reference, not the list of
+  pieces"): each subgrup of the catalog is one drawing = one assembly with its
+  own reference (`sg.num`), and its conjunt has one too (`c.num`). In pick
+  mode the drawing viewer shows a `#drawSets` bar (`renderDrawSets`, on every
+  page render) with "📦 Conjunt sencer" for the drawing(s) owning the page
+  (`viewerOwning`, factored out of `resolvePartByPos`) and for their conjunt
+  when its reference differs. A tap goes through `confirmAndAdd` like a Pos:
+  `setRowOf` builds `{pos:"", ref, cant:"1", denominacio, conjunt, grup,
+  page, set:true}`; in text mode it writes "name - ref". `set` is kept on the
+  part and in the history record; the app shows 📦 before the name; the
+  reports, Excel and summaries need nothing else (name + ref, no Pos).
+  Tested with the real 180 catalog (pages 3, 13, 15).
 - **An archive that carries its media, and an import that finds it**
   (2026-10-18: "after importing a .zip I can't play the videos — it says I
   have no Drive access"): P-2026-171's archive ZIP was made while its folder's

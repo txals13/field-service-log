@@ -786,6 +786,18 @@ Field Service Log/
   `exRenamePass` (after the save and at every `syncTick`; `driveName`
   remembers what Drive has, so a rename offline is retried). Joining keeps
   the lower number. "/" in a category becomes "-" ("Taxi - VTC").
+- **The tickets in the project ZIP, and renames that cannot happen**
+  (version · 9, from the weak-points review). The ZIP left tiquets/ out:
+  archive + delete, and after the trash's 30 days only session.json's
+  reduced copies (a PDF: page 1 as a picture) were left. Now "💶 Tiquets de
+  les despeses" in the ZIP pick list (`exp`, greyed without expenses): the
+  folder's tiquets/ files, then every expense picture not yet in (Drive by
+  id unless `driveGone`, this device's queue, the visit's data URL), missing
+  ones in the lost-files warning. Without it, a visit with expenses is not a
+  complete copy (`zipAt`). Renames: `exDriveRename` → "ok" | "gone" (404) |
+  "later"; a gone file gets `driveGone` and is skipped (it used to stop every
+  rename behind it at every sync), "later" stops the pass but keeps what was
+  done. Neither path could be run in the preview (both need Google).
 - **The order the papers are shown in** (version · 7, the user: "the card
   slip always on the left and in the thumbnail, the receipt after it, the
   rest after the receipt"): `exShown(x)` sorts voucher → bill/invoice →

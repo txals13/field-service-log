@@ -774,6 +774,18 @@ Field Service Log/
   `invoice` key are gone; an `invoice` already stored is ignored. The `docs`
   type "invoice" stays: an invoice received (a hotel's PDF) counts as the
   receipt.
+- **File names and the counter** (version · 8, the user: "the tickets saved
+  with the project number, the category and the first one with (1), a
+  counter every time we save"; asked: one counter per visit, all of an
+  expense's files share its number and end with what they are). On the first
+  ✓ Desa an expense takes `no` = `exNextNo` (max of `session.exSeq` and every
+  `no`, + 1) and `exSeq` is raised: never reused. `exNameImgs` names every
+  picture "<project or client> <category> (<no>) comprovant|rebut|factura|
+  document|documentació N.jpg|.pdf", in place and `autoName`, at every save.
+  A queued file goes up with it; an uploaded one is renamed by
+  `exRenamePass` (after the save and at every `syncTick`; `driveName`
+  remembers what Drive has, so a rename offline is retried). Joining keeps
+  the lower number. "/" in a category becomes "-" ("Taxi - VTC").
 - **The order the papers are shown in** (version · 7, the user: "the card
   slip always on the left and in the thumbnail, the receipt after it, the
   rest after the receipt"): `exShown(x)` sorts voucher → bill/invoice →

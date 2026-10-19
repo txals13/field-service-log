@@ -3574,6 +3574,7 @@ function syncTick(force){
   flushPendingReports();
   mqFlush();
   exReadPending();
+  exRenamePass();
 }
 function sessSig(){return aid+"#"+sessions.map(function(x){return x.id+":"+sStamp(x)+":"+(x.status||"")}).join("|")}
 function scheduleSync(){
@@ -5509,7 +5510,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-19 · 7";
+var APP_VERSION="2026-10-19 · 8";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -11224,6 +11225,62 @@ function exShown(x){
   return exImgs(x).map(function(m,i){return {m:m,i:i}})
     .sort(function(a,b){return rank(a.m)-rank(b.m)||a.i-b.i}).map(function(o){return o.m});
 }
+// ── file names (version · 8, the user: "the tickets saved with the project
+// number, the category and the first one with (1), a counter every time we
+// save") ──
+// One counter per visit (`session.exSeq`, never goes back, so a deleted
+// expense leaves its number unused). An expense takes the next number the
+// first time it is saved (`x.no`) and keeps it. All its files share it and end
+// with what they are: "P-2026-171 Àpat (1) comprovant.jpg", "… (1) rebut.jpg",
+// "… (1) documentació 1.jpg". Renamed at every save (the category may have
+// changed); on Drive at once, or at the next sync when there is no connection.
+var EX_FILEKIND={voucher:"comprovant",bill:"rebut",invoice:"factura"};
+function exSafe(t){return String(t||"").replace(/[\\\/:*?"<>|#%{}~]+/g,"-").replace(/\s+/g," ").trim()}
+function exBaseName(s,x){return exSafe([s.project||s.client||"Visita",exCatLabel(x.category)||"Despesa","("+x.no+")"].join(" "))}
+function exNameImgs(s,x){
+  if(!x.no)return;
+  var base=exBaseName(s,x),l=exShown(x),tot={},seen={};
+  function kind(m){return m.extra?"documentació":EX_FILEKIND[m.doc]||"document"}
+  l.forEach(function(m){var k=kind(m);tot[k]=(tot[k]||0)+1});
+  l.forEach(function(m){
+    var k=kind(m);seen[k]=(seen[k]||0)+1;
+    var ext=(m.type==="pdf"||/\.pdf$/i.test(m.name||""))?".pdf":".jpg";
+    var nm=base+" "+k+(tot[k]>1||m.extra?" "+seen[k]:"")+ext;
+    // in place: an upload already on its way sees the new name too, and
+    // mediaUploaded renames the Drive copy to it (autoName)
+    if(m.name!==nm){m.name=nm;m.autoName=true}
+  });
+}
+function exNextNo(s){
+  var n=+s.exSeq||0;
+  (s.expenses||[]).forEach(function(e){if(+e.no>n)n=+e.no});
+  return n+1;
+}
+var exRenBusy=false;
+async function exRenamePass(){
+  if(exRenBusy||!isLoggedIn||navigator.onLine===false||tokenStale())return;
+  exRenBusy=true;
+  try{
+    var ch={};
+    for(var i=0;i<sessions.length;i++){
+      var xs=sessions[i].expenses||[];
+      for(var j=0;j<xs.length;j++){
+        var l=exImgs(xs[j]);
+        for(var k=0;k<l.length;k++){
+          var m=l[k];
+          if(!(m.driveId&&m.autoName&&m.name&&m.driveName!==m.name))continue;
+          if(!await driveRename(m.driveId,m.name))return;   // no Drive now: the next sync tries again
+          m.driveName=m.name;ch[sessions[i].id]=1;
+        }
+      }
+    }
+    if(Object.keys(ch).length){
+      sessions=sessions.map(function(x){return ch[x.id]?Object.assign({},x):x});
+      saveLocal();isDirty=true;
+    }
+  }finally{exRenBusy=false}
+}
+function exTitle(x){return (x.no?"("+x.no+") ":"")+(x.merchant||"Tiquet")}
 function exImgs(x){
   var l=(x&&(x.imgs||(x.img?[x.img]:[])))||[];
   l.forEach(function(im){if(im&&!im.id)im.id=uid()});
@@ -11562,6 +11619,7 @@ function exMerge(sessId,billId,voId){
     other:[b.other,v.other].filter(Boolean).join(" · "),
     imgs:exImgs(b).concat(exImgs(v)),notes:[b.notes,v.notes].filter(Boolean).join(" · "),
     hand:[],checked:false,addedAt:String(b.addedAt||"")<=String(v.addedAt||"")?b.addedAt:v.addedAt};
+  var nos=[b.no,v.no].filter(Boolean);if(nos.length)m.no=Math.min.apply(null,nos);
   m.readVals=Object.assign({},b.readVals||{},{total:m.total,currency:m.currency,last4:m.last4,pay:m.pay});
   exSet(sessId,function(l){return l.filter(function(x){return x.id!==voId})});
   exPatch(sessId,billId,m);
@@ -11621,7 +11679,7 @@ function exRender(){
   }).join("");
   $$("exList").innerHTML=sug+l.map(function(x){
     var im=exShown(x)[0]||{},n=exNum(x.total),nim=exImgs(x).length;
-    var sub=[x.date?exDateTxt(x.date)+(x.time?" "+x.time:""):"sense data",exCatLabel(x.category),x.pay?EX_PAY[x.pay]:""].filter(Boolean).join(" · ");
+    var sub=[x.no?"("+x.no+")":"",x.date?exDateTxt(x.date)+(x.time?" "+x.time:""):"sense data",exCatLabel(x.category),x.pay?EX_PAY[x.pay]:""].filter(Boolean).join(" · ");
     var badge=exReading[x.id]?"<span class=\"ex-badge rd\">LLEGINT…</span>":x.checked?"":"<span class=\"ex-badge\">PER REVISAR</span>";
     if(!exReading[x.id])exMissing(x).forEach(function(k){badge+="<span class=\"ex-badge inv\">"+EX_MISS[k][0]+"</span>"});
     return "<button class=\"ex-card\" data-ex=\""+esc(x.id)+"\">"
@@ -11674,7 +11732,7 @@ function openExpense(id){
   xeEdits={};xeTouched={};xeImgId=(exShown(x)[0]||{}).id||null;
   $$("xeCat").innerHTML="<option value=\"\">&mdash;</option>"+EX_CATS.map(function(c){return "<option value=\""+c[0]+"\">"+esc(c[1])+"</option>"}).join("");
   XE_F.forEach(function(f){$$(f[0]).value=x[f[1]]||""});
-  $$("xeTitle").textContent=x.merchant||"Tiquet";
+  $$("xeTitle").textContent=exTitle(x);
   $$("xeImgBox").classList.remove("big");
   xeDoubts();xeCropEnd();xeRenderStrip();xeUpLabel();xeReadLine();
   $$("exBack").style.display="none";
@@ -11690,7 +11748,7 @@ function xeFillRead(all){
   var x=xeEx();if(!x)return;
   XE_F.forEach(function(f){if(f[1]!=="notes"&&(all||!xeTouched[f[1]]))$$(f[0]).value=x[f[1]]||""});
   if(all)xeTouched={};
-  if(!xeTouched.merchant)$$("xeTitle").textContent=x.merchant||"Tiquet";
+  if(!xeTouched.merchant)$$("xeTitle").textContent=exTitle(x);
   xeDoubts();xeReadLine();xeRenderStrip();
 }
 var EX_DOC={bill:"rebut",voucher:"comprovant de la targeta",invoice:"factura (com a rebut)",other:"altre",same:"repetida"};
@@ -11800,8 +11858,17 @@ async function xeSave(){
       p.imgs=l;
     }finally{$$("xeSave").disabled=false}
   }
+  var s=sessions.find(function(o){return o.id===sessId});
+  if(s){
+    p.no=x.no||exNextNo(s);
+    if(!x.no)sessions=sessions.map(function(o){return o.id===sessId?Object.assign({},o,{exSeq:p.no}):o});
+    var named=Object.assign({},x,p);
+    exNameImgs(s,named);
+    p.imgs=exImgs(named).slice();
+  }
   exPatch(sessId,id,p);
   xeClose();
+  exRenamePass();
 }
 // A photo added to this expense goes in at once (it is already in the queue).
 // Another ticket: the expense is read again with it, leaving what was typed

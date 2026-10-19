@@ -384,6 +384,8 @@ textarea{resize:none;line-height:1.4}
 .xe-inv{flex:none;font-size:12.5px;margin-bottom:12px;padding:8px 10px;border-radius:8px;background:var(--orangebg);color:var(--tx1);line-height:1.45}
 .xe-inv label{display:inline-flex;gap:6px;align-items:center;margin-top:4px;font-weight:600;cursor:pointer}
 .xe-doubt{border-color:var(--orange)!important;box-shadow:0 0 0 1px var(--orange)}
+.xe-need{background:var(--redbg)}
+.xe-need .bt{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 .ex-sug{padding:8px 10px;border-radius:10px;border:1px dashed var(--golddim);background:var(--goldbg);margin-bottom:8px;font-size:12.5px;line-height:1.45}
 .ex-sug .bt{display:flex;gap:6px;justify-content:flex-end;margin-top:6px;flex-wrap:wrap}
 .ex-badge.inv{background:var(--redbg);color:var(--red)}
@@ -995,6 +997,7 @@ textarea{resize:none;line-height:1.4}
         <button class="btn-sm" id="xeImgDel" style="display:none" title="Treu aquesta foto de la despesa">&#10005; Treu aquesta foto</button>
         <span id="xeUp" class="xe-up"></span>
       </div>
+      <div id="xeNeed" class="xe-inv xe-need" style="display:none"></div>
       <div id="xeRead" class="xe-read"></div>
       <div id="xeInv" class="xe-inv" style="display:none"></div>
       <div class="pt-grid">
@@ -1003,15 +1006,18 @@ textarea{resize:none;line-height:1.4}
         <div class="field"><label>Categoria</label><select id="xeCat"></select></div>
         <div class="field"><label>NIF / VAT / RFC</label><input type="text" id="xeTaxId" autocomplete="off" spellcheck="false"></div>
         <div class="field pt-wide"><label>Establiment</label><input type="text" id="xeMerchant" autocomplete="off"></div>
-        <div class="field pt-wide"><label>Raó social</label><input type="text" id="xeLegal" autocomplete="off" placeholder="si el tiquet la porta"></div>
+        <div class="field pt-wide"><label>Raó social</label><input type="text" id="xeLegal" autocomplete="off" placeholder="si el rebut la porta"></div>
+        <div class="field pt-wide"><label>Adreça</label><input type="text" id="xeAddr" autocomplete="off"></div>
+        <div class="field"><label>Núm. de tiquet / folio</label><input type="text" id="xeTicketNo" autocomplete="off" spellcheck="false"></div>
         <div class="field"><label>Base imposable</label><input type="text" id="xeBase" inputmode="decimal" autocomplete="off"></div>
         <div class="field"><label>IVA (%)</label><input type="text" id="xeVatRate" inputmode="decimal" autocomplete="off" placeholder="21"></div>
         <div class="field"><label>Quota d'IVA</label><input type="text" id="xeVat" inputmode="decimal" autocomplete="off"></div>
-        <div class="field"><label>Propina</label><input type="text" id="xeTip" inputmode="decimal" autocomplete="off"></div>
-        <div class="field"><label>Total pagat (amb propina)</label><input type="text" id="xeTotal" inputmode="decimal" autocomplete="off" style="font-weight:700"></div>
+        <div class="field"><label>Total (del comprovant)</label><input type="text" id="xeTotal" inputmode="decimal" autocomplete="off" style="font-weight:700"></div>
         <div class="field"><label>Moneda</label><input type="text" id="xeCur" maxlength="3" autocomplete="off" spellcheck="false" style="text-transform:uppercase" placeholder="EUR"></div>
         <div class="field"><label>Pagat amb</label><select id="xePay"><option value="">&mdash;</option><option value="company">Targeta d'empresa</option><option value="personal">Targeta personal</option><option value="cash">Efectiu</option></select></div>
         <div class="field"><label>Targeta acabada en</label><input type="text" id="xeLast4" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="si el tiquet ho diu"></div>
+        <div class="field pt-wide"><label>Concepte</label><input type="text" id="xeConcept" autocomplete="off" placeholder="què es va comprar, segons el rebut"></div>
+        <div class="field pt-wide"><label>Altres dades del rebut</label><input type="text" id="xeOther" autocomplete="off" placeholder="comensals, nits, matrícula, vol…"></div>
         <div class="field pt-wide"><label>Notes</label><input type="text" id="xeNotes" autocomplete="off"></div>
       </div>
       <div class="modal-actions">
@@ -5504,7 +5510,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-19 · 3";
+var APP_VERSION="2026-10-19 · 4";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -11162,7 +11168,11 @@ async function exportSessionZip(s,kind,pick){
 // - Mostly the company card, sometimes the personal one — that one is
 //   refunded, so the list totals it apart. The company card's last four
 //   digits are kept in this browser only (LS_EXLAST4).
-// - The total is what was paid, TIP INCLUDED: that is what goes on the sheet.
+// - Every expense is at least TWO papers: the card slip and the receipt of
+//   what was bought (cash: the receipt alone). The amounts come from the card
+//   slip — what was charged, tip and all, never split out; whatever the
+//   receipt adds (legal name, tax id, address, number, what was bought, the
+//   tax) is kept too, all of it until the company's format is known.
 // - The pictures kept on the visit are the papers as shown — downscaled,
 //   turned, cropped — and those same JPEGs go to the visit's tiquets/ folder
 //   on Drive through the video queue (kind "tiquets"), so a ticket shot
@@ -11176,7 +11186,7 @@ var EX_CATS=[["meal","Àpat"],["hotel","Hotel"],["fuel","Combustible"],["taxi","
   ["parking","Aparcament"],["flight","Vol"],["train","Tren"],["car","Lloguer de cotxe"],["other","Altres"]];
 var EX_PAY={company:"Targeta d'empresa",personal:"Targeta personal",cash:"Efectiu"};
 // what a reading fills, and what a hand edit protects from the next reading
-var EX_FIELDS=["date","time","category","merchant","legalName","taxId","currency","base","vatRate","vat","tip","total","pay","last4"];
+var EX_FIELDS=["date","time","category","merchant","legalName","taxId","address","ticketNo","currency","base","vatRate","vat","total","pay","last4","concept","other"];
 function exOn(){try{return localStorage.getItem(LS_EXON)==="1"}catch(e){return false}}
 function exLast4(){try{return localStorage.getItem(LS_EXLAST4)||""}catch(e){return ""}}
 function exCatLabel(k){var c=EX_CATS.filter(function(x){return x[0]===k})[0];return c?c[1]:""}
@@ -11217,6 +11227,19 @@ function exList(s){
   });
 }
 function exInvoiceDue(x){return !!(x.invoice&&x.invoice.needed&&!x.invoice.done)}
+// What an expense still lacks of its two papers: "rebut" (the receipt of what
+// was bought), "comprovant" (the card slip; not for cash), or, before Gemini
+// has said which picture is which, "doc" while there are fewer than two.
+function exMissing(x){
+  var t=exImgs(x).filter(function(m){return !m.extra}),cash=x.pay==="cash";
+  if(x.rd!=="done")return t.length>=(cash?1:2)?[]:["doc"];
+  var d=t.map(function(m){return m.doc||""}),out=[];
+  if(d.indexOf("bill")<0&&d.indexOf("invoice")<0)out.push("rebut");
+  if(!cash&&d.indexOf("voucher")<0)out.push("comprovant");
+  return out;
+}
+var EX_MISS={rebut:["FALTA REBUT","el rebut de la despesa"],comprovant:["FALTA COMPROVANT","el comprovant de la targeta"],
+  doc:["FALTA UN DOCUMENT","un altre document: el rebut o el comprovant de la targeta"]};
 function exToCheck(s){return ((s&&s.expenses)||[]).filter(function(x){return !x.checked}).length}
 function exChipNote(s){var n=((s&&s.expenses)||[]).length,k=exToCheck(s);return n?pl(n,"tiquet","tiquets")+(k?" · "+k+" per revisar":""):"cap tiquet"}
 function exChipHTML(s){
@@ -11347,7 +11370,7 @@ async function exAddFiles(files){
     var f=files[i],id=uid();
     if(!first)first=id;
     exSet(sessId,function(l){return l.concat([{id:id,addedAt:now(),date:"",time:"",merchant:"",legalName:"",taxId:"",category:"",
-      base:"",vatRate:"",vat:"",tip:"",total:"",currency:cur,pay:"",last4:"",notes:"",checked:false,hand:[],rd:"",
+      address:"",ticketNo:"",concept:"",other:"",base:"",vatRate:"",vat:"",total:"",currency:cur,pay:"",last4:"",notes:"",checked:false,hand:[],rd:"",
       imgs:[{id:uid(),type:exIsPdf(f)?"pdf":"image",data:null,name:"",uploadStatus:"loading"}]}])});
     exRender();
     var img=await exFileImg(sessId,f,files.length>1?" "+(i+1):"");
@@ -11362,21 +11385,26 @@ async function exAddFiles(files){
 // read as one payment. The prompt is in English for the model's sake; what it
 // returns is what is printed. Lessons from the first real tickets (Mexico):
 // "$" was pesos, dates were day-first ("11DIC16"), the card slip carried the
-// tip and the card digits while the bill carried the RFC, and "este no es un
-// comprobante fiscal" meant the invoice had to be asked for within 72 h.
+// amount charged and the card digits while the bill carried the RFC, and
+// "este no es un comprobante fiscal" meant the invoice had to be asked for
+// within 72 h.
 var EX_GEM_MODEL="gemini-3.5-flash",exGemModelOk=true,exReading={},exReadBusy=false;
 var EX_GEM_SYS=["You read photos of receipts, card-terminal slips and invoices for a field service technician's expense report.",
   "All the images given belong to ONE expense: for example a restaurant bill and the card slip of the same payment, or the same paper photographed twice.",
   "Answer with ONE JSON object and nothing else, with these keys:",
-  "date (YYYY-MM-DD), time (HH:MM, 24 h), merchant, legalName, taxId, country, currency, base, vatRate, vat, tip, total, last4, pay, category, docs, invoice, doubt.",
+  "date (YYYY-MM-DD), time (HH:MM, 24 h), merchant, legalName, taxId, address, ticketNo, concept, other, country, currency, base, vatRate, vat, total, last4, pay, category, docs, invoice, doubt.",
+  "The AMOUNTS come from the card slip. Everything else the receipt adds (names, tax id, address, ticket number, what was bought, the tax breakdown) is taken from the receipt.",
   "Rules:",
   "- Only what is printed. Never invent. A field that is not on the paper or cannot be read is \"\" (or null), and a field you had to guess goes in doubt.",
   "- date: day and month order follows the country (Spain, Mexico, Latin America and most of the world: day first; USA: month first). Two-digit years are 20xx. Spanish month abbreviations: ENE FEB MAR ABR MAY JUN JUL AGO SEP OCT NOV DIC.",
   "- currency: ISO 4217 code. A \"$\" is NOT necessarily USD: decide from the country, the address, the tax id format and words such as \"M.N.\", \"pesos\", \"MXN\".",
-  "- total: the amount actually paid, INCLUDING the tip. When there is a card slip, its amount is the total. tip: the tip if printed (propina, tip, pourboire, Trinkgeld, mancia), else \"\".",
+  "- total: when there is a card slip, exactly the amount charged on it, whatever the receipt says. Without a card slip, the receipt's total. Never split out a tip or a service charge.",
   "- Amounts are plain numbers with a dot for decimals, no thousands separator, no currency sign.",
   "- merchant: the trade name a person would say, cleanly written (prefer the bill's name to a truncated card-slip name). legalName: the company's legal name (S.L., S.A., SA de CV, GmbH, Ltd...) if printed. taxId: the tax id (NIF/CIF, RFC, VAT/USt-IdNr...) exactly as printed.",
   "- base, vatRate (percent), vat: only when the paper breaks the tax out.",
+  "- address: the shop's address as printed, on one line. ticketNo: the number of the receipt or invoice (ticket, folio, factura no.).",
+  "- concept: what was bought, short, as the receipt lists it (\"1 Karne chica, 1 guacamole, 1 cerveza\"; \"2 nights, room 214\"; \"45.2 l diesel\").",
+  "- other: any other data printed on the receipt that could matter for an expense report and has no key above (guests, table, nights, plate number, flight number, route...), short; else \"\".",
   "- last4: the last four digits of the payment card, if printed. pay: \"card\", \"cash\" or \"\".",
   "- category: one of meal, hotel, fuel, taxi, transport, toll, parking, flight, train, car, other.",
   "- country: ISO 3166-1 alpha-2.",
@@ -11401,7 +11429,8 @@ function exNormRead(j,n){
   v.category=EX_CATS.some(function(k){return k[0]===j.category})?j.category:"";
   v.merchant=str(j.merchant,80);v.legalName=str(j.legalName,120);v.taxId=str(j.taxId,30);
   v.currency=/^[A-Za-z]{3}$/.test(str(j.currency))?str(j.currency).toUpperCase():"";
-  v.base=amt(j.base);v.vat=amt(j.vat);v.tip=amt(j.tip);v.total=amt(j.total);
+  v.base=amt(j.base);v.vat=amt(j.vat);v.total=amt(j.total);
+  v.address=str(j.address,200);v.ticketNo=str(j.ticketNo,40);v.concept=str(j.concept,300);v.other=str(j.other,300);
   var r=exNum(j.vatRate);v.vatRate=r==null?"":String(+r.toFixed(2)).replace(".",",");
   v.last4=/^\d{4}$/.test(str(j.last4))?str(j.last4):"";
   // the card's digits decide; without the company's digits set, it stays to be picked
@@ -11511,25 +11540,25 @@ function exSuggest(s){
         var bill=ka==="bill"&&kb==="voucher"?a:kb==="bill"&&ka==="voucher"?b:null;if(!bill)continue;
         var vo=bill===a?b:a,tbill=exNum(bill.total),tvo=exNum(vo.total);
         if(tvo<tbill-0.005||tvo>tbill*1.35+0.5||(dt!=null&&dt>20))continue;
-        out.push({kind:"pair",bill:bill,voucher:vo,tip:tvo-tbill});used[a.id]=used[b.id]=1;
+        out.push({kind:"pair",bill:bill,voucher:vo});used[a.id]=used[b.id]=1;
       }
     }
   });
   return out;
 }
-// The bill gives the name, the tax id and the tax; the card slip gives what
-// was paid (tip included) and the card.
+// The card slip gives the amounts (what was charged) and the card; the bill
+// gives everything else it carries — names, tax id, address, number, what
+// was bought, the tax.
 function exMerge(sessId,billId,voId){
   var b=exFind(sessId,billId),v=exFind(sessId,voId);if(!b||!v)return;
-  var tb=exNum(b.total),tv=exNum(v.total),tip=exNum(b.tip);
-  if(tip==null)tip=exNum(v.tip);
-  if(tip==null&&tv!=null&&tb!=null&&tv-tb>0.004)tip=tv-tb;
-  var m={total:v.total||b.total,tip:tip!=null&&tip>0?exIn(tip):"",last4:v.last4||b.last4,pay:v.pay||b.pay,
-    currency:b.currency||v.currency,time:b.time||v.time,date:b.date||v.date,merchant:b.merchant||v.merchant,
+  var m={total:v.total||b.total,currency:v.currency||b.currency,last4:v.last4||b.last4,pay:v.pay||b.pay,
+    time:b.time||v.time,date:b.date||v.date,merchant:b.merchant||v.merchant,
     legalName:b.legalName||v.legalName,taxId:b.taxId||v.taxId,category:b.category||v.category,
+    address:b.address||v.address,ticketNo:b.ticketNo||v.ticketNo,concept:b.concept||v.concept,
+    other:[b.other,v.other].filter(Boolean).join(" · "),
     invoice:b.invoice||v.invoice,imgs:exImgs(b).concat(exImgs(v)),notes:[b.notes,v.notes].filter(Boolean).join(" · "),
     hand:[],checked:false,addedAt:String(b.addedAt||"")<=String(v.addedAt||"")?b.addedAt:v.addedAt};
-  m.readVals=Object.assign({},b.readVals||{},{total:m.total,tip:m.tip,last4:m.last4,pay:m.pay});
+  m.readVals=Object.assign({},b.readVals||{},{total:m.total,currency:m.currency,last4:m.last4,pay:m.pay});
   exSet(sessId,function(l){return l.filter(function(x){return x.id!==voId})});
   exPatch(sessId,billId,m);
 }
@@ -11582,7 +11611,7 @@ function exRender(){
       +esc(exTotTxt(g.keep))+(g.keep.time?", "+esc(g.keep.time):"")+".<div class=\"bt\"><button class=\"btn-sm\" data-sg=\""+i+"\" data-a=\"no\">No ho és</button>"
       +"<button class=\"btn-sm btn-gold\" data-sg=\""+i+"\" data-a=\"drop\">Treu la repetida</button></div></div>";
     return "<div class=\"ex-sug\">&#128279; <b>"+esc(g.bill.merchant||"Tiquet")+"</b> ("+esc(exTotTxt(g.bill))+") i el comprovant de la targeta de <b>"+esc(g.voucher.merchant||"—")
-      +"</b> ("+esc(exTotTxt(g.voucher))+") semblen el mateix pagament"+(g.tip>0.004?", amb "+esc(exFmt(g.tip))+" de propina":"")+"."
+      +"</b> ("+esc(exTotTxt(g.voucher))+") semblen el mateix pagament."
       +"<div class=\"bt\"><button class=\"btn-sm\" data-sg=\""+i+"\" data-a=\"no\">No ho són</button>"
       +"<button class=\"btn-sm btn-gold\" data-sg=\""+i+"\" data-a=\"merge\">Uneix-los</button></div></div>";
   }).join("");
@@ -11590,6 +11619,7 @@ function exRender(){
     var im=exImgs(x)[0]||{},n=exNum(x.total),nim=exImgs(x).length;
     var sub=[x.date?exDateTxt(x.date)+(x.time?" "+x.time:""):"sense data",exCatLabel(x.category),x.pay?EX_PAY[x.pay]:""].filter(Boolean).join(" · ");
     var badge=exReading[x.id]?"<span class=\"ex-badge rd\">LLEGINT…</span>":x.checked?"":"<span class=\"ex-badge\">PER REVISAR</span>";
+    if(!exReading[x.id])exMissing(x).forEach(function(k){badge+="<span class=\"ex-badge inv\">"+EX_MISS[k][0]+"</span>"});
     if(exInvoiceDue(x))badge+="<span class=\"ex-badge inv\">CAL FACTURA</span>";
     return "<button class=\"ex-card\" data-ex=\""+esc(x.id)+"\">"
       +"<span class=\"th\">"+(im.data?"<img src=\""+im.data+"\" alt=\"\">":(im.uploadStatus==="loading"?"<span class=\"spinner\"></span>":im.type==="pdf"?"&#128196;":"&#129534;"))
@@ -11627,7 +11657,8 @@ function wireEx(){
 }
 // ── one expense ──
 var XE_F=[["xeDate","date"],["xeTime","time"],["xeCat","category"],["xeMerchant","merchant"],["xeLegal","legalName"],["xeTaxId","taxId"],
-  ["xeCur","currency"],["xeBase","base"],["xeVatRate","vatRate"],["xeVat","vat"],["xeTip","tip"],["xeTotal","total"],["xePay","pay"],
+  ["xeAddr","address"],["xeTicketNo","ticketNo"],["xeConcept","concept"],["xeOther","other"],
+  ["xeCur","currency"],["xeBase","base"],["xeVatRate","vatRate"],["xeVat","vat"],["xeTotal","total"],["xePay","pay"],
   ["xeLast4","last4"],["xeNotes","notes"]];
 var xeSessId=null,xeId=null,xeImgId=null,xeEdits={},xeTouched={},xeWired=false,xeBox=null,xeDrag=null,xeInvDone=false;
 function xeOpenNow(){var b=$$("xeBack");return !!b&&b.style.display!=="none"}
@@ -11713,6 +11744,13 @@ function xeReadLine(){
     var all=typed&&confirm("Vols que torni a llegir també els camps que has canviat a mà?\n\nD'acord: es tornen a llegir tots.\nCancel·la: els teus es queden com estan.");
     exRead(xeSessId,xeId,all);
   });
+  var miss=exReading[x.id]?[]:exMissing(x),nb=$$("xeNeed");
+  if(miss.length){
+    nb.style.display="";
+    nb.innerHTML="&#9888; <b>Falta "+miss.map(function(k){return esc(EX_MISS[k][1])}).join(" i ")+".</b> Cada despesa porta el comprovant de la targeta i el rebut. Afegeix-lo aquí:"
+      +"<div class=\"bt\">"+(handheld()?"<button class=\"btn-sm btn-gold\" data-add=\"cam\">&#128247; Fotografia'l</button>":"")
+      +"<button class=\"btn-sm"+(handheld()?"":" btn-gold")+"\" data-add=\"file\">&#65291; Imatge o PDF</button></div>";
+  }else{nb.style.display="none";nb.innerHTML=""}
   var inv=x.invoice,ib=$$("xeInv");
   if(inv&&inv.needed){
     ib.style.display="";
@@ -11748,6 +11786,8 @@ function xeClose(){
 }
 async function xeSave(){
   var x=xeEx();if(!x){xeClose();return}
+  var miss=exReading[x.id]?[]:exMissing(Object.assign({},x,{pay:$$("xePay").value}));
+  if(miss.length&&!confirm("A aquesta despesa li falta "+miss.map(function(k){return EX_MISS[k][1]}).join(" i ")+".\n\nVols desar-la igualment?"))return;
   var sessId=xeSessId,id=xeId,p={},rv=x.readVals||{};
   XE_F.forEach(function(f){p[f[1]]=$$(f[0]).value.trim()});
   p.currency=(p.currency||"EUR").toUpperCase();
@@ -11841,6 +11881,10 @@ function wireXe(){
     $$(k).addEventListener("change",function(e){var f=Array.from(e.target.files||[]);e.target.value="";if(f.length)xeAddFiles(f,k==="xeAddDocIn")});
   });
   $$("xeImgKind").addEventListener("click",xeImgToggle);
+  $$("xeNeed").addEventListener("click",function(e){
+    var a=e.target.closest("[data-add]");
+    if(a)$$(a.dataset.add==="cam"?"xeAddCamIn":"xeAddFileIn").click();
+  });
   XE_F.forEach(function(f){
     function t(){xeTouched[f[1]]=true;this.classList.remove("xe-doubt")}
     $$(f[0]).addEventListener("input",t);$$(f[0]).addEventListener("change",t);

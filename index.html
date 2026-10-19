@@ -5509,7 +5509,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-19 · 6";
+var APP_VERSION="2026-10-19 · 7";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -11214,6 +11214,16 @@ function exStamp(){var d=new Date();return tsIso(d)+" "+tsPad2(d.getHours())+"."
 function exIsPdf(f){return f&&(f.type==="application/pdf"||/\.pdf$/i.test(f.name||""))}
 // The pictures of an expense. Phase 1 kept one, as `img`; each picture gets an
 // id of its own so an edit or a removal can name it.
+// The order they are SHOWN in (the user: "the card slip always on the left
+// and in the thumbnail, the receipt after it, anything else after the
+// receipt"): card slip, receipt/invoice, other papers, documentation photos.
+// Only for showing — the stored order is the one the reading's `docs` were
+// matched against. Papers not read yet keep the order they were added in.
+function exShown(x){
+  function rank(m){return m.extra?3:m.doc==="voucher"?0:(m.doc==="bill"||m.doc==="invoice")?1:2}
+  return exImgs(x).map(function(m,i){return {m:m,i:i}})
+    .sort(function(a,b){return rank(a.m)-rank(b.m)||a.i-b.i}).map(function(o){return o.m});
+}
 function exImgs(x){
   var l=(x&&(x.imgs||(x.img?[x.img]:[])))||[];
   l.forEach(function(im){if(im&&!im.id)im.id=uid()});
@@ -11610,7 +11620,7 @@ function exRender(){
       +"<button class=\"btn-sm btn-gold\" data-sg=\""+i+"\" data-a=\"merge\">Uneix-los</button></div></div>";
   }).join("");
   $$("exList").innerHTML=sug+l.map(function(x){
-    var im=exImgs(x)[0]||{},n=exNum(x.total),nim=exImgs(x).length;
+    var im=exShown(x)[0]||{},n=exNum(x.total),nim=exImgs(x).length;
     var sub=[x.date?exDateTxt(x.date)+(x.time?" "+x.time:""):"sense data",exCatLabel(x.category),x.pay?EX_PAY[x.pay]:""].filter(Boolean).join(" · ");
     var badge=exReading[x.id]?"<span class=\"ex-badge rd\">LLEGINT…</span>":x.checked?"":"<span class=\"ex-badge\">PER REVISAR</span>";
     if(!exReading[x.id])exMissing(x).forEach(function(k){badge+="<span class=\"ex-badge inv\">"+EX_MISS[k][0]+"</span>"});
@@ -11656,12 +11666,12 @@ var XE_F=[["xeDate","date"],["xeTime","time"],["xeCat","category"],["xeMerchant"
 var xeSessId=null,xeId=null,xeImgId=null,xeEdits={},xeTouched={},xeWired=false,xeBox=null,xeDrag=null;
 function xeOpenNow(){var b=$$("xeBack");return !!b&&b.style.display!=="none"}
 function xeEx(){return exFind(xeSessId,xeId)}
-function xeImg(){var l=exImgs(xeEx());return l.filter(function(m){return m.id===xeImgId})[0]||l[0]||null}
+function xeImg(){var l=exShown(xeEx());return l.filter(function(m){return m.id===xeImgId})[0]||l[0]||null}
 function openExpense(id){
   var s=exSess();if(!s)return;
   var x=exFind(s.id,id);if(!x)return;
   xeSessId=s.id;xeId=id;wireXe();
-  xeEdits={};xeTouched={};xeImgId=(exImgs(x)[0]||{}).id||null;
+  xeEdits={};xeTouched={};xeImgId=(exShown(x)[0]||{}).id||null;
   $$("xeCat").innerHTML="<option value=\"\">&mdash;</option>"+EX_CATS.map(function(c){return "<option value=\""+c[0]+"\">"+esc(c[1])+"</option>"}).join("");
   XE_F.forEach(function(f){$$(f[0]).value=x[f[1]]||""});
   $$("xeTitle").textContent=x.merchant||"Tiquet";
@@ -11683,11 +11693,11 @@ function xeFillRead(all){
   if(!xeTouched.merchant)$$("xeTitle").textContent=x.merchant||"Tiquet";
   xeDoubts();xeReadLine();xeRenderStrip();
 }
-var EX_DOC={bill:"tiquet",voucher:"comprovant de la targeta",invoice:"factura",other:"altre",same:"repetida"};
+var EX_DOC={bill:"rebut",voucher:"comprovant de la targeta",invoice:"factura (com a rebut)",other:"altre",same:"repetida"};
 function exImgLabel(im){return im.extra?"documentació (no es llegeix)":EX_DOC[im.doc]||""}
 function xeRenderStrip(){
   var x=xeEx();if(!x)return;
-  var l=exImgs(x),hh=handheld(),cur=xeImg();
+  var l=exShown(x),hh=handheld(),cur=xeImg();
   $$("xeStrip").innerHTML=(l.length>1?l.map(function(im){
       var d=xeEdits[im.id]||im.data;
       return "<button class=\"th"+(cur&&cur.id===im.id?" on":"")+"\" data-im=\""+esc(im.id)+"\" title=\""+esc(exImgLabel(im)||im.name||"")+"\">"

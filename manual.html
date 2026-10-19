@@ -349,17 +349,36 @@
   <li><span class="btn">📷 Fotografia el tiquet</span> (al mòbil i la tauleta) obre la càmera. <span class="btn">＋ Imatge o PDF</span> agafa una foto que ja tens o un PDF, per exemple la factura de l'hotel o del vol que t'arriba per correu.</li>
   <li>Amb un sol tiquet, s'obre de seguida per revisar-lo. Si en tries diversos de cop, van a la llista i els obres d'un en un.</li>
 </ul>
+<h3>L'app llegeix el tiquet</h3>
+<p>Cada tiquet nou el llegeix Gemini, amb la mateixa clau que el corrector (<span class="btn">🔑 Clau de Gemini</span>): data, hora, establiment, raó social, NIF o RFC, categoria, imports, propina, moneda i les xifres de la targeta. Mentre llegeix, a la llista surt <strong>LLEGINT…</strong>. Sense connexió o sense clau, el tiquet espera i es llegeix sol més tard.</p>
+<ul>
+  <li>El que llegeix queda <strong>PER REVISAR</strong>. Els camps dels quals no està segur surten en <strong>taronja</strong>. Revisa'ls i prem <span class="btn">✓ Desa</span>.</li>
+  <li>La data és la que hi ha impresa, no la de la foto: un tiquet antic fotografiat avui conserva la seva data.</li>
+  <li>El <strong>total</strong> és el que es va pagar, <strong>propina inclosa</strong>: és el que va al full de despeses.</li>
+  <li>Un símbol «$» no vol dir per força dòlars: la moneda surt del país del tiquet (a Mèxic, pesos).</li>
+  <li><span class="btn">✨ Torna a llegir</span> el torna a llegir. El que has canviat a mà es queda com està, si no és que li dius que també ho torni a llegir.</li>
+</ul>
+<h3>El tiquet i el comprovant de la targeta</h3>
+<p>Sovint una despesa són dos papers: el tiquet del restaurant (amb el nom, l'RFC o NIF i el que has menjat) i el comprovant de la targeta (amb l'import cobrat, la propina i les xifres de la targeta). Fotografia'ls tots dos.</p>
+<ul>
+  <li>Quan l'app troba un tiquet i un comprovant del mateix dia, a pocs minuts l'un de l'altre i amb un import que hi encaixa, a dalt de la llista proposa <span class="btn">Uneix-los</span>. La despesa que en surt té les dues fotos, el nom i l'RFC del tiquet, i el total i la propina del comprovant.</li>
+  <li>Si has fotografiat el mateix paper dues vegades, proposa <span class="btn">Treu la repetida</span>.</li>
+  <li><span class="btn">No ho són</span> / <span class="btn">No ho és</span>: no ho torna a proposar per a aquells dos.</li>
+  <li>Dins d'una despesa també pots afegir-hi una altra foto (<span class="btn">📷 Una altra foto</span> o <span class="btn">＋ Imatge o PDF</span>). Es torna a llegir amb totes les fotos juntes. Les miniatures de dalt canvien de foto, i <span class="btn">✕ Treu aquesta foto</span> en treu una.</li>
+</ul>
+<h3>Tiquets que no són factura</h3>
+<p>Si el tiquet diu que no és un comprovant fiscal o que la factura s'ha de demanar a part (per exemple «este no es un comprobante fiscal» o «solicite su factura»), surt <strong>CAL FACTURA</strong>. A dins hi ha on s'ha de demanar i el termini, si el tiquet el diu (sovint 72 hores). Quan l'hagis demanada, marca <strong>Ja l'he demanada</strong> i desa.</p>
 <h3>Revisar un tiquet</h3>
 <ul>
   <li><span class="btn">⟲ Gira</span> i <span class="btn">Gira ⟳</span> giren la imatge. <span class="btn">✂ Retalla</span> posa un requadre amb quatre cantonades: arrossega-les fins a deixar només el tiquet i prem <span class="btn">✓ Aplica el retall</span>. Toca la imatge per veure-la a mida completa. Un PDF no es gira ni es retalla: <span class="btn">↗ Obre el PDF</span> l'obre sencer.</li>
-  <li>Omple les dades: data, categoria, establiment, NIF, moneda, base, IVA, total, <strong>Pagat amb</strong> i notes. De moment s'escriuen a mà; més endavant les llegirà l'app del tiquet.</li>
-  <li><strong>La data</strong> és la del tiquet. D'una foto, l'app agafa el dia en què la vas fer; d'un PDF, l'has de posar tu.</li>
+  <li>Les dades es poden corregir o escriure a mà: data, hora, categoria, NIF / VAT / RFC, establiment, raó social, base, IVA, propina, total, moneda, <strong>Pagat amb</strong> i notes.</li>
+  <li><strong>La data</strong> és la del tiquet. Si no s'ha pogut llegir, l'app hi posa el dia de la foto; d'un PDF, l'has de posar tu.</li>
   <li><strong>La moneda</strong> és la que diu el tiquet; l'app no converteix res. Un tiquet nou comença amb l'última moneda que has fet servir.</li>
   <li><span class="btn">✓ Desa</span> el marca com a revisat. Els que encara no ho són surten a la llista amb <strong>PER REVISAR</strong>.</li>
   <li><span class="btn">🗑 Elimina</span> treu la despesa; si el tiquet ja era a Drive, va a la paperera de Drive.</li>
 </ul>
 <h3>Targeta d'empresa o personal</h3>
-<p>A sota de la llista, escriu les 4 últimes xifres de la <strong>targeta d'empresa</strong>. Es desen només en aquell aparell. Després, a cada tiquet, si escrius les xifres de la targeta que hi surten a <strong>Targeta acabada en</strong>, l'app tria sola <strong>Pagat amb</strong>: targeta d'empresa si coincideixen, targeta personal si no. El que triïs tu a mà no ho canvia.</p>
+<p>A sota de la llista, escriu les 4 últimes xifres de la <strong>targeta d'empresa</strong>. Es desen només en aquell aparell. Després, a cada tiquet, si escrius les xifres de la targeta que hi surten a <strong>Targeta acabada en</strong>, l'app tria sola <strong>Pagat amb</strong>: targeta d'empresa si coincideixen, targeta personal si no. Quan Gemini llegeix les xifres del comprovant, fa el mateix. El que triïs tu a mà no ho canvia.</p>
 <p>A dalt de la llista hi ha els totals per forma de pagament i per moneda. Els de la targeta personal i l'efectiu surten com a <strong>a retornar</strong>.</p>
 <h3>On es guarden</h3>
 <p>Les despeses van amb la visita: es sincronitzen entre els aparells i van a Drive i al ZIP del projecte dins de les dades de la visita. Cada tiquet es puja a la carpeta <code>tiquets/</code> de la visita. Sense connexió o sense haver entrat a Google, es queda a l'aparell (<strong>⏳</strong>) i es puja sol quan es pot; la barra lateral diu quants tiquets hi ha a la cua. Afegir o canviar una despesa no fa que l'informe de servei es vegi com a modificat: les despeses no hi surten.</p>

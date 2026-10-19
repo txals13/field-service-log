@@ -361,7 +361,8 @@ textarea{resize:none;line-height:1.4}
 .ex-sum{font-size:12.5px;line-height:1.6;margin-bottom:10px}
 .ex-sum:empty{display:none}
 .ex-sum .am{font-family:monospace;font-weight:700}
-.ex-badge{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:20px;margin-left:6px;vertical-align:1px;background:var(--orangebg);color:var(--orange)}
+.ex-badge{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:20px;margin-right:6px;background:var(--orangebg);color:var(--orange)}
+.ex-card .bg{display:block;margin-top:4px}
 .xe-img{position:relative;display:block;flex:none;width:fit-content;max-width:100%;margin:0 auto 8px;overflow:hidden;border-radius:8px;background:var(--bg0);touch-action:none}
 .xe-img img{display:block;max-width:100%;max-height:52vh;user-select:none;-webkit-user-select:none}
 .xe-img.big img{max-height:none}
@@ -371,6 +372,21 @@ textarea{resize:none;line-height:1.4}
 .xe-crop i[data-c="tl"]{left:0;top:0}.xe-crop i[data-c="tr"]{left:100%;top:0}.xe-crop i[data-c="bl"]{left:0;top:100%}.xe-crop i[data-c="br"]{left:100%;top:100%}
 .xe-tools{flex:none;display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:center;margin-bottom:12px}
 .xe-up{font-size:11.5px;color:var(--tx3)}
+.xe-strip{flex:none;display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:center;margin-bottom:8px}
+.xe-strip button.th{width:44px;height:56px;padding:0;border-radius:6px;overflow:hidden;background:var(--bg0);font-size:20px}
+.xe-strip button.th img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+.xe-strip button.th.on{outline:2px solid var(--gold);outline-offset:1px}
+.xe-strip .lb{font-size:11px;color:var(--tx3);width:100%;text-align:center}
+.xe-read{flex:none;font-size:12.5px;margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;text-align:center}
+.xe-read:empty{display:none}
+.xe-inv{flex:none;font-size:12.5px;margin-bottom:12px;padding:8px 10px;border-radius:8px;background:var(--orangebg);color:var(--tx1);line-height:1.45}
+.xe-inv label{display:inline-flex;gap:6px;align-items:center;margin-top:4px;font-weight:600;cursor:pointer}
+.xe-doubt{border-color:var(--orange)!important;box-shadow:0 0 0 1px var(--orange)}
+.ex-sug{padding:8px 10px;border-radius:10px;border:1px dashed var(--golddim);background:var(--goldbg);margin-bottom:8px;font-size:12.5px;line-height:1.45}
+.ex-sug .bt{display:flex;gap:6px;justify-content:flex-end;margin-top:6px;flex-wrap:wrap}
+.ex-badge.inv{background:var(--redbg);color:var(--red)}
+.ex-badge.rd{background:var(--goldbg);color:var(--goldtx)}
+.ex-card .th .n{position:absolute;top:2px;right:2px;font-size:10px;font-weight:700;background:rgba(0,0,0,.65);color:#fff;border-radius:8px;padding:0 5px}
 .pt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
 .pt-wide{grid-column:1/-1}
 .pt-sec{font-size:12px;font-weight:700;letter-spacing:.4px;margin:14px 0 6px}
@@ -956,6 +972,10 @@ textarea{resize:none;line-height:1.4}
   <div class="modal-back" id="xeBack" style="display:none">
     <div class="modal" style="max-width:min(96vw,720px)">
       <div class="modal-title">&#128182; <span id="xeTitle">Despesa</span></div>
+      <!-- the papers of this expense: the bill and the card slip, say -->
+      <div class="xe-strip" id="xeStrip"></div>
+      <input type="file" id="xeAddCamIn" accept="image/*" capture="environment" style="display:none">
+      <input type="file" id="xeAddFileIn" accept="image/*,application/pdf" multiple style="display:none">
       <div class="xe-img" id="xeImgBox">
         <img id="xeImg" alt="">
         <div id="xePdf" class="xe-pdf" style="display:none">&#128196;</div>
@@ -968,18 +988,24 @@ textarea{resize:none;line-height:1.4}
         <button class="btn-sm btn-gold" id="xeCropOk" style="display:none">&#10003; Aplica el retall</button>
         <button class="btn-sm" id="xeCropNo" style="display:none">Cancel&middot;la el retall</button>
         <button class="btn-sm" id="xeOpen" style="display:none">&#8599; Obre el PDF</button>
+        <button class="btn-sm" id="xeImgDel" style="display:none" title="Treu aquesta foto de la despesa">&#10005; Treu aquesta foto</button>
         <span id="xeUp" class="xe-up"></span>
       </div>
+      <div id="xeRead" class="xe-read"></div>
+      <div id="xeInv" class="xe-inv" style="display:none"></div>
       <div class="pt-grid">
         <div class="field"><label>Data</label><input type="date" id="xeDate"></div>
+        <div class="field"><label>Hora</label><input type="time" id="xeTime"></div>
         <div class="field"><label>Categoria</label><select id="xeCat"></select></div>
+        <div class="field"><label>NIF / VAT / RFC</label><input type="text" id="xeTaxId" autocomplete="off" spellcheck="false"></div>
         <div class="field pt-wide"><label>Establiment</label><input type="text" id="xeMerchant" autocomplete="off"></div>
-        <div class="field"><label>NIF / VAT</label><input type="text" id="xeTaxId" autocomplete="off" spellcheck="false"></div>
-        <div class="field"><label>Moneda</label><input type="text" id="xeCur" maxlength="3" autocomplete="off" spellcheck="false" style="text-transform:uppercase" placeholder="EUR"></div>
+        <div class="field pt-wide"><label>Raó social</label><input type="text" id="xeLegal" autocomplete="off" placeholder="si el tiquet la porta"></div>
         <div class="field"><label>Base imposable</label><input type="text" id="xeBase" inputmode="decimal" autocomplete="off"></div>
         <div class="field"><label>IVA (%)</label><input type="text" id="xeVatRate" inputmode="decimal" autocomplete="off" placeholder="21"></div>
         <div class="field"><label>Quota d'IVA</label><input type="text" id="xeVat" inputmode="decimal" autocomplete="off"></div>
-        <div class="field"><label>Total</label><input type="text" id="xeTotal" inputmode="decimal" autocomplete="off" style="font-weight:700"></div>
+        <div class="field"><label>Propina</label><input type="text" id="xeTip" inputmode="decimal" autocomplete="off"></div>
+        <div class="field"><label>Total pagat (amb propina)</label><input type="text" id="xeTotal" inputmode="decimal" autocomplete="off" style="font-weight:700"></div>
+        <div class="field"><label>Moneda</label><input type="text" id="xeCur" maxlength="3" autocomplete="off" spellcheck="false" style="text-transform:uppercase" placeholder="EUR"></div>
         <div class="field"><label>Pagat amb</label><select id="xePay"><option value="">&mdash;</option><option value="company">Targeta d'empresa</option><option value="personal">Targeta personal</option><option value="cash">Efectiu</option></select></div>
         <div class="field"><label>Targeta acabada en</label><input type="text" id="xeLast4" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="si el tiquet ho diu"></div>
         <div class="field pt-wide"><label>Notes</label><input type="text" id="xeNotes" autocomplete="off"></div>
@@ -2244,7 +2270,10 @@ function mqFind(qid){
       if(im)return {sess:sessions[i],img:im};
     }
     var xs=sessions[i].expenses||[];
-    for(var k=0;k<xs.length;k++)if(xs[k].img&&xs[k].img.qid===qid)return {sess:sessions[i],img:xs[k].img};
+    for(var k=0;k<xs.length;k++){
+      var xm=exImgs(xs[k]).find(function(x){return x&&x.qid===qid});
+      if(xm)return {sess:sessions[i],img:xm};
+    }
   }
   return null;
 }
@@ -3535,6 +3564,7 @@ function syncTick(force){
   flushTrash();
   flushPendingReports();
   mqFlush();
+  exReadPending();
 }
 function sessSig(){return aid+"#"+sessions.map(function(x){return x.id+":"+sStamp(x)+":"+(x.status||"")}).join("|")}
 function scheduleSync(){
@@ -3542,7 +3572,7 @@ function scheduleSync(){
   setInterval(function(){syncTick(true)},30000);
   document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")syncTick()});
   window.addEventListener("focus",function(){syncTick()});
-  window.addEventListener("online",function(){flushPendingReports();mqFlush()});
+  window.addEventListener("online",function(){flushPendingReports();mqFlush();exReadPending()});
   document.addEventListener("focusout",function(){
     setTimeout(function(){if(redrawPending&&!hasUnsaved()){redrawPending=false;renderAll()}},0);
   });
@@ -5470,7 +5500,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-19 · 1";
+var APP_VERSION="2026-10-19 · 2";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -7320,7 +7350,7 @@ var GEM_MODEL="gemini-3.5-flash-lite";
 // Read on every call, never cached in a variable: the key modal writes it and
 // the very next correction has to see it, without a reload.
 function gemKey(){try{return localStorage.getItem(LS_GEM)||""}catch(e){return ""}}
-function gemUrl(){return GEM_BASE+GEM_MODEL+":generateContent?key="+encodeURIComponent(gemKey())}
+function gemUrl(model){return GEM_BASE+(model||GEM_MODEL)+":generateContent?key="+encodeURIComponent(gemKey())}
 var GEM_NOKEY="falta la clau de Gemini";
 var GEM_SYS="Ets un corrector de textos tècnics d'informes de servei de camp. "
   +"Corregeix NOMÉS ortografia, accents, puntuació i concordança, en la mateixa llengua en què està escrit el text. "
@@ -7337,13 +7367,15 @@ function gemText(j){
 }
 // One call. Throws with the API's own message, which is what says "not enabled"
 // or "quota" in words worth showing.
-async function gemAsk(sys,input,json){
+// `input` is the text, or the parts themselves (the tickets send images);
+// `model` overrides GEM_MODEL for that one call.
+async function gemAsk(sys,input,json,model){
   if(!gemKey())throw new Error(GEM_NOKEY);
   var cfg={temperature:0};
   if(json)cfg.responseMimeType="application/json";
-  var r=await fetch(gemUrl(),{method:"POST",headers:{"Content-Type":"application/json"},
+  var r=await fetch(gemUrl(model),{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({systemInstruction:{parts:[{text:sys}]},
-      contents:[{role:"user",parts:[{text:input}]}],
+      contents:[{role:"user",parts:Array.isArray(input)?input:[{text:input}]}],
       generationConfig:cfg})});
   var j=null;try{j=await r.json()}catch(e){}
   if(!r.ok){
@@ -11114,10 +11146,10 @@ async function exportSessionZip(s,kind,pick){
 
 // ── EXPENSES (2026-10-19) ────────────────────────────────────────────────────
 // "I have to report all my expenses too… I want to save the manual work."
-// Each visit keeps its tickets in `session.expenses[]`: the picture (a photo,
+// Each visit keeps its tickets in `session.expenses[]`: the pictures (photos,
 // or a PDF from an email) and the fields of the company's expense sheet.
-// Phase 1 is capturing and typing by hand; Gemini reads the tickets in
-// phase 2, and the company's .xlsx comes when the template does.
+// Phase 1 is capturing and typing by hand; phase 2 has Gemini read them; the
+// company's .xlsx comes when the template does.
 // - Behind the sidebar's 💶 Despeses switch, per device (LS_EXON), off by
 //   default: only the user does expenses so far, and the app is going out to
 //   other technicians.
@@ -11126,10 +11158,12 @@ async function exportSessionZip(s,kind,pick){
 // - Mostly the company card, sometimes the personal one — that one is
 //   refunded, so the list totals it apart. The company card's last four
 //   digits are kept in this browser only (LS_EXLAST4).
-// - The picture kept on the visit is the ticket as shown — downscaled, turned,
-//   cropped — and that same JPEG goes to the visit's tiquets/ folder on Drive
-//   through the video queue (kind "tiquets"), so a ticket shot offline waits
-//   on the device. A PDF goes up as it is, its first page drawn as the picture.
+// - The total is what was paid, TIP INCLUDED: that is what goes on the sheet.
+// - The pictures kept on the visit are the papers as shown — downscaled,
+//   turned, cropped — and those same JPEGs go to the visit's tiquets/ folder
+//   on Drive through the video queue (kind "tiquets"), so a ticket shot
+//   offline waits on the device. A PDF goes up as it is, its first page drawn
+//   as the picture.
 // - Saved WITHOUT touching updatedAt: the service report carries no expenses,
 //   and a new ticket must not make a signed report look out of date.
 var LS_EXON="fsl_v6_exon",LS_EXLAST4="fsl_v6_exlast4",LS_EXCUR="fsl_v6_excur";
@@ -11137,6 +11171,8 @@ var EX_MAXDIM=2000,EX_QUALITY=0.85;
 var EX_CATS=[["meal","Àpat"],["hotel","Hotel"],["fuel","Combustible"],["taxi","Taxi / VTC"],["transport","Transport públic"],["toll","Peatge"],
   ["parking","Aparcament"],["flight","Vol"],["train","Tren"],["car","Lloguer de cotxe"],["other","Altres"]];
 var EX_PAY={company:"Targeta d'empresa",personal:"Targeta personal",cash:"Efectiu"};
+// what a reading fills, and what a hand edit protects from the next reading
+var EX_FIELDS=["date","time","category","merchant","legalName","taxId","currency","base","vatRate","vat","tip","total","pay","last4"];
 function exOn(){try{return localStorage.getItem(LS_EXON)==="1"}catch(e){return false}}
 function exLast4(){try{return localStorage.getItem(LS_EXLAST4)||""}catch(e){return ""}}
 function exCatLabel(k){var c=EX_CATS.filter(function(x){return x[0]===k})[0];return c?c[1]:""}
@@ -11159,14 +11195,24 @@ function exNum(v){
   var x=parseFloat(t);return isFinite(x)?x:null;
 }
 function exFmt(n){return n==null?"":n.toLocaleString("ca-ES",{minimumFractionDigits:2,maximumFractionDigits:2})}
+function exIn(n){return n.toFixed(2).replace(".",",")}          // an amount as it goes into a field
 function exDateTxt(d){var m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(d||"");return m?m[3]+"/"+m[2]+"/"+m[1]:""}
 function exStamp(){var d=new Date();return tsIso(d)+" "+tsPad2(d.getHours())+"."+tsPad2(d.getMinutes())+"."+tsPad2(d.getSeconds())}
 function exIsPdf(f){return f&&(f.type==="application/pdf"||/\.pdf$/i.test(f.name||""))}
+// The pictures of an expense. Phase 1 kept one, as `img`; each picture gets an
+// id of its own so an edit or a removal can name it.
+function exImgs(x){
+  var l=(x&&(x.imgs||(x.img?[x.img]:[])))||[];
+  l.forEach(function(im){if(im&&!im.id)im.id=uid()});
+  return l;
+}
 function exList(s){
   return ((s&&s.expenses)||[]).slice().sort(function(a,b){
-    return String(a.date||"9").localeCompare(String(b.date||"9"))||String(a.addedAt||"").localeCompare(String(b.addedAt||""));
+    return String(a.date||"9").localeCompare(String(b.date||"9"))||String(a.time||"").localeCompare(String(b.time||""))
+      ||String(a.addedAt||"").localeCompare(String(b.addedAt||""));
   });
 }
+function exInvoiceDue(x){return !!(x.invoice&&x.invoice.needed&&!x.invoice.done)}
 function exToCheck(s){return ((s&&s.expenses)||[]).filter(function(x){return !x.checked}).length}
 function exChipNote(s){var n=((s&&s.expenses)||[]).length,k=exToCheck(s);return n?pl(n,"tiquet","tiquets")+(k?" · "+k+" per revisar":""):"cap tiquet"}
 function exChipHTML(s){
@@ -11178,13 +11224,28 @@ function exChipHTML(s){
 // ── saving ──
 var exSessId=null,exWired=false;
 function exSess(){return sessions.find(function(x){return x.id===exSessId})}
+function exFind(sessId,id){var s=sessions.find(function(x){return x.id===sessId});return s&&(s.expenses||[]).filter(function(x){return x.id===id})[0]}
 function exSet(sessId,fn){
   sessions=sessions.map(function(x){return x.id!==sessId?x:Object.assign({},x,{expenses:fn((x.expenses||[]).slice())})});
   saveLocal();isDirty=true;
   if(saveTimer)clearTimeout(saveTimer);
   saveTimer=setTimeout(function(){if(isDirty&&isLoggedIn)saveToDrive()},2000);
 }
-function exPatch(sessId,id,patch){exSet(sessId,function(l){return l.map(function(x){return x.id===id?Object.assign({},x,patch):x})})}
+function exPatch(sessId,id,patch){
+  if(patch.imgs)patch.img=undefined;                  // phase 1's single picture becomes the list
+  exSet(sessId,function(l){return l.map(function(x){return x.id===id?Object.assign({},x,patch):x})});
+}
+// A picture leaves for good: out of the queue, or to the Drive trash.
+function exDropImg(sessId,im){
+  if(!im)return;
+  if(im.qid&&!mqActive[im.qid])mqDrop(im.qid);
+  if(im.driveId)queueTrash(sessId,[im.driveId]);
+}
+function exRemove(sessId,id){
+  var x=exFind(sessId,id);if(!x)return;
+  exImgs(x).forEach(function(im){exDropImg(sessId,im)});
+  exSet(sessId,function(l){return l.filter(function(e){return e.id!==id})});
+}
 // ── the picture ──
 // A JPEG no bigger than EX_MAXDIM: small enough to keep on the visit, big
 // enough for a till receipt's small print.
@@ -11205,7 +11266,7 @@ function exPrepImage(file){
     im.src=url;
   });
 }
-// A PDF's first page, drawn: the picture in the list and in the editor.
+// A PDF's first page, drawn: the picture in the list, in the editor and for Gemini.
 async function exPdfPage(file){
   try{
     var lib=await loadPdfjs();
@@ -11239,18 +11300,35 @@ function exTransform(data,op){
     im.src=data;
   });
 }
-// A turned or cropped ticket takes the place of the one waiting to go up, or
-// of the one already on Drive (which goes to the Drive trash, like any
-// attachment taken out of an entry).
+// A file becomes one of an expense's pictures, already waiting in the queue.
+async function exFileImg(sessId,f,suffix){
+  var pdf=exIsPdf(f);
+  var data=pdf?await exPdfPage(f):await exPrepImage(f);
+  var name=pdf?(cleanName(String(f.name||"").replace(/\.pdf$/i,""))||"Tiquet "+exStamp())+".pdf"
+    :"Tiquet "+exStamp()+(suffix||"")+".jpg";
+  var img={id:uid(),type:pdf?"pdf":"image",data:data,name:name,uploadStatus:"queued"};
+  if(!await mqAdd(sessId,img,pdf||!data?f:dataUrlToBlob(data),"tiquets"))img.uploadStatus="err";
+  return img;
+}
+// A photo's date is when it was taken — a stand-in until Gemini reads the
+// printed one, which always wins (an old ticket shot today is not from today).
+async function exPhotoDate(f){
+  if(exIsPdf(f))return "";
+  var ts=await getFileTs(f),d=ts?new Date(ts):new Date();
+  return tsIso(isNaN(d.getTime())?new Date():d);
+}
+// A turned or cropped picture takes the place of the one waiting to go up,
+// or of the one already on Drive (which goes to the Drive trash).
 async function exNewImg(sessId,old,data){
   old=old||{};
-  if(old.qid&&!mqActive[old.qid])await mqDrop(old.qid);
-  if(old.driveId)queueTrash(sessId,[old.driveId]);
-  var img={type:"image",data:data,name:old.name||("Tiquet "+exStamp()+".jpg"),uploadStatus:"queued"};
+  exDropImg(sessId,old);
+  var img={id:old.id||uid(),type:"image",data:data,name:old.name||("Tiquet "+exStamp()+".jpg"),doc:old.doc||"",uploadStatus:"queued"};
   if(!await mqAdd(sessId,img,dataUrlToBlob(data),"tiquets"))img.uploadStatus="err";
   return img;
 }
 // ── adding tickets ──
+// Each file is an expense of its own; the ones that turn out to be the same
+// payment (the bill and the card slip) are offered to be joined once read.
 async function exAddFiles(files){
   var s=exSess();if(!s)return;
   var sessId=s.id,first=null;
@@ -11258,26 +11336,203 @@ async function exAddFiles(files){
   if(!files.length){alert("Tria una foto o un PDF del tiquet.");return}
   var cur;try{cur=localStorage.getItem(LS_EXCUR)||"EUR"}catch(e){cur="EUR"}
   for(var i=0;i<files.length;i++){
-    var f=files[i],pdf=exIsPdf(f),id=uid();
+    var f=files[i],id=uid();
     if(!first)first=id;
-    exSet(sessId,function(l){return l.concat([{id:id,addedAt:now(),date:"",merchant:"",taxId:"",category:"",base:"",vatRate:"",vat:"",
-      total:"",currency:cur,pay:"",payAuto:false,last4:"",notes:"",checked:false,img:{type:pdf?"pdf":"image",data:null,name:"",uploadStatus:"loading"}}])});
+    exSet(sessId,function(l){return l.concat([{id:id,addedAt:now(),date:"",time:"",merchant:"",legalName:"",taxId:"",category:"",
+      base:"",vatRate:"",vat:"",tip:"",total:"",currency:cur,pay:"",last4:"",notes:"",checked:false,hand:[],rd:"",
+      imgs:[{id:uid(),type:exIsPdf(f)?"pdf":"image",data:null,name:"",uploadStatus:"loading"}]}])});
     exRender();
-    var data=pdf?await exPdfPage(f):await exPrepImage(f);
-    // a photo's date is when it was taken; a PDF's is printed inside it
-    var date="";
-    if(!pdf){var ts=await getFileTs(f),d=ts?new Date(ts):new Date();date=tsIso(isNaN(d.getTime())?new Date():d)}
-    var name=pdf?(cleanName(String(f.name||"").replace(/\.pdf$/i,""))||"Tiquet "+exStamp())+".pdf"
-      :"Tiquet "+exStamp()+(files.length>1?" "+(i+1):"")+".jpg";
-    var img={type:pdf?"pdf":"image",data:data,name:name,uploadStatus:"queued"};
-    var blob=pdf||!data?f:dataUrlToBlob(data);
-    if(!await mqAdd(sessId,img,blob,"tiquets"))img.uploadStatus="err";
-    exPatch(sessId,id,{img:img,date:date});
+    var img=await exFileImg(sessId,f,files.length>1?" "+(i+1):"");
+    exPatch(sessId,id,{imgs:[img],date:await exPhotoDate(f),rd:img.data?"pending":""});
     exRender();
+    exReadPending();
   }
   if(files.length===1)openExpense(first);
 }
+// ── reading with Gemini (phase 2) ──
+// The pictures of one expense go together, so the bill and its card slip
+// read as one payment. The prompt is in English for the model's sake; what it
+// returns is what is printed. Lessons from the first real tickets (Mexico):
+// "$" was pesos, dates were day-first ("11DIC16"), the card slip carried the
+// tip and the card digits while the bill carried the RFC, and "este no es un
+// comprobante fiscal" meant the invoice had to be asked for within 72 h.
+var EX_GEM_MODEL="gemini-3.5-flash",exGemModelOk=true,exReading={},exReadBusy=false;
+var EX_GEM_SYS=["You read photos of receipts, card-terminal slips and invoices for a field service technician's expense report.",
+  "All the images given belong to ONE expense: for example a restaurant bill and the card slip of the same payment, or the same paper photographed twice.",
+  "Answer with ONE JSON object and nothing else, with these keys:",
+  "date (YYYY-MM-DD), time (HH:MM, 24 h), merchant, legalName, taxId, country, currency, base, vatRate, vat, tip, total, last4, pay, category, docs, invoice, doubt.",
+  "Rules:",
+  "- Only what is printed. Never invent. A field that is not on the paper or cannot be read is \"\" (or null), and a field you had to guess goes in doubt.",
+  "- date: day and month order follows the country (Spain, Mexico, Latin America and most of the world: day first; USA: month first). Two-digit years are 20xx. Spanish month abbreviations: ENE FEB MAR ABR MAY JUN JUL AGO SEP OCT NOV DIC.",
+  "- currency: ISO 4217 code. A \"$\" is NOT necessarily USD: decide from the country, the address, the tax id format and words such as \"M.N.\", \"pesos\", \"MXN\".",
+  "- total: the amount actually paid, INCLUDING the tip. When there is a card slip, its amount is the total. tip: the tip if printed (propina, tip, pourboire, Trinkgeld, mancia), else \"\".",
+  "- Amounts are plain numbers with a dot for decimals, no thousands separator, no currency sign.",
+  "- merchant: the trade name a person would say, cleanly written (prefer the bill's name to a truncated card-slip name). legalName: the company's legal name (S.L., S.A., SA de CV, GmbH, Ltd...) if printed. taxId: the tax id (NIF/CIF, RFC, VAT/USt-IdNr...) exactly as printed.",
+  "- base, vatRate (percent), vat: only when the paper breaks the tax out.",
+  "- last4: the last four digits of the payment card, if printed. pay: \"card\", \"cash\" or \"\".",
+  "- category: one of meal, hotel, fuel, taxi, transport, toll, parking, flight, train, car, other.",
+  "- country: ISO 3166-1 alpha-2.",
+  "- docs: an array with one entry per image, in order: \"bill\" (an itemised ticket or simplified receipt from the shop), \"voucher\" (a card-terminal slip), \"invoice\" (a full tax invoice with the buyer's details), \"other\", or \"same\" when the image is the same paper as an earlier image.",
+  "- invoice: {\"needed\": true, \"how\": \"...\", \"deadline\": \"...\"} when the paper says it is not a tax invoice or that an invoice has to be requested (\"no es un comprobante fiscal\", \"solicite su factura\", \"factura simplificada\"); how = where to ask for it (web, email, folio or reference), short; deadline = the time limit if printed (\"72 h\"). Otherwise null.",
+  "- doubt: an array with the names of the fields you are not sure about."].join("\n");
+function exTime(t){
+  var m=/(\d{1,2})[:.h](\d{2})(?::\d{2})?\s*([ap])?\.?\s*m?\.?/i.exec(String(t||""));if(!m)return "";
+  var h=+m[1],ap=(m[3]||"").toLowerCase();
+  if(ap==="p"&&h<12)h+=12;if(ap==="a"&&h===12)h=0;
+  return h<24?tsPad2(h)+":"+m[2]:"";
+}
+// What came back, checked field by field: anything malformed is left empty.
+function exNormRead(j,n){
+  if(Array.isArray(j))j=j[0];
+  j=j&&typeof j==="object"?j:{};
+  function str(v,max){return v==null?"":String(v).trim().slice(0,max||120)}
+  function amt(v){var x=exNum(v);return x==null?"":exIn(x)}
+  var v={},c=exLast4();
+  v.date=/^\d{4}-\d\d-\d\d$/.test(str(j.date))?str(j.date):"";
+  v.time=exTime(j.time);
+  v.category=EX_CATS.some(function(k){return k[0]===j.category})?j.category:"";
+  v.merchant=str(j.merchant,80);v.legalName=str(j.legalName,120);v.taxId=str(j.taxId,30);
+  v.currency=/^[A-Za-z]{3}$/.test(str(j.currency))?str(j.currency).toUpperCase():"";
+  v.base=amt(j.base);v.vat=amt(j.vat);v.tip=amt(j.tip);v.total=amt(j.total);
+  var r=exNum(j.vatRate);v.vatRate=r==null?"":String(+r.toFixed(2)).replace(".",",");
+  v.last4=/^\d{4}$/.test(str(j.last4))?str(j.last4):"";
+  // the card's digits decide; without the company's digits set, it stays to be picked
+  v.pay=v.last4&&c.length===4?(v.last4===c?"company":"personal"):str(j.pay)==="cash"?"cash":"";
+  v.country=/^[A-Za-z]{2}$/.test(str(j.country))?str(j.country).toUpperCase():"";
+  var docs=Array.isArray(j.docs)?j.docs:[];v.docs=[];
+  for(var i=0;i<n;i++)v.docs.push(["bill","voucher","invoice","other","same"].indexOf(docs[i])>=0?docs[i]:"");
+  var inv=j.invoice&&typeof j.invoice==="object"?j.invoice:null;
+  v.invoice=inv&&inv.needed===true?{needed:true,how:str(inv.how,200),deadline:str(inv.deadline,40)}:null;
+  v.doubt=(Array.isArray(j.doubt)?j.doubt:[]).filter(function(f){return EX_FIELDS.indexOf(f)>=0});
+  return v;
+}
+async function exGemRead(imgs){
+  var parts=[{text:"Images: "+imgs.length+"."}];
+  imgs.forEach(function(im){
+    var m=/^data:([^;,]+);base64,(.*)$/.exec(im.data||"");
+    if(m)parts.push({inline_data:{mime_type:m[1],data:m[2]}});
+  });
+  if(parts.length<2)throw new Error("no hi ha cap imatge per llegir");
+  var out,model=exGemModelOk?EX_GEM_MODEL:GEM_MODEL;
+  try{out=await gemAsk(EX_GEM_SYS,parts,true,model)}
+  catch(e){
+    // a model this key does not have: the one the corrector uses, from then on
+    var m=String((e&&e.message)||e);
+    if(model===GEM_MODEL||m===GEM_NOKEY||!/not found|not supported|unknown|404|is not available/i.test(m))throw e;
+    exGemModelOk=false;model=GEM_MODEL;
+    out=await gemAsk(EX_GEM_SYS,parts,true,model);
+  }
+  var j;
+  try{j=JSON.parse(String(out).replace(/^\s*```(?:json)?/i,"").replace(/```\s*$/,""))}catch(e){throw new Error("la resposta no es pot llegir")}
+  var v=exNormRead(j,imgs.length);v.model=model;
+  return v;
+}
+// Reads one expense. `all`: the fields typed by hand are read again too.
+async function exRead(sessId,id,all){
+  var x=exFind(sessId,id);if(!x||exReading[id])return;
+  var imgs=exImgs(x).filter(function(im){return im.data});
+  if(!imgs.length){exPatch(sessId,id,{rd:"err",rdErr:"no hi ha cap imatge per llegir"});exRefresh();return}
+  exReading[id]=1;exRefresh();
+  try{
+    var v=await exGemRead(imgs);
+    exApplyRead(sessId,id,v,all);
+  }catch(e){
+    var m=String((e&&e.message)||e);
+    exPatch(sessId,id,m===GEM_NOKEY?{rd:"pending"}:{rd:"err",rdErr:m});
+  }finally{delete exReading[id];exRefresh()}
+}
+function exApplyRead(sessId,id,v,all){
+  var x=exFind(sessId,id);if(!x)return;
+  var hand=all?[]:(x.hand||[]),p={readVals:v,read:{at:now(),model:v.model,doubt:v.doubt},rd:"done",rdErr:"",checked:false};
+  EX_FIELDS.forEach(function(f){if(hand.indexOf(f)<0)p[f]=v[f]||(f==="currency"?x.currency:"")});
+  if(all)p.hand=[];
+  p.country=v.country;
+  p.invoice=v.invoice?Object.assign({},v.invoice,{done:!!(x.invoice&&x.invoice.done)}):null;
+  var imgs=exImgs(x),k=0;
+  imgs.forEach(function(im){if(im.data)im.doc=v.docs[k++]||""});
+  p.imgs=imgs.slice();
+  exPatch(sessId,id,p);
+  if(xeOpenNow()&&xeId===id)xeFillRead(all);
+}
+// Everything waiting to be read, one at a time, as long as there is a key
+// and a connection: right after a ticket is added, at every sync, and when
+// the connection comes back.
+async function exReadPending(){
+  if(exReadBusy||!gemKey()||navigator.onLine===false)return;
+  exReadBusy=true;
+  try{
+    for(;;){
+      var nx=null;
+      sessions.some(function(s){
+        var x=(s.expenses||[]).filter(function(e){return e.rd==="pending"&&!exReading[e.id]})[0];
+        if(x)nx={s:s.id,x:x.id};
+        return !!x;
+      });
+      if(!nx)break;
+      await exRead(nx.s,nx.x,false);
+      var still=exFind(nx.s,nx.x);if(still&&still.rd==="pending")break;   // the key went: wait for the next time
+    }
+  }finally{exReadBusy=false}
+}
+// ── the same payment twice: join, or drop the repeated photo ──
+function exMin(x){var m=/^(\d\d):(\d\d)/.exec(x.time||"");return m?(+m[1])*60+(+m[2]):null}
+function exDocs(x){return exImgs(x).map(function(m){return m.doc||""})}
+function exKind(x){
+  var d=exDocs(x),v=d.indexOf("voucher")>=0,b=d.indexOf("bill")>=0||d.indexOf("invoice")>=0;
+  return v&&b?"both":v?"voucher":b?"bill":"";
+}
+function exSuggest(s){
+  var l=exList(s).filter(function(x){return x.rd==="done"&&!exReading[x.id]&&x.date&&exNum(x.total)!=null});
+  var out=[],used={};
+  function no(a,b){return (a.noPair||[]).indexOf(b.id)>=0||(b.noPair||[]).indexOf(a.id)>=0}
+  function eq(a,b){return String(a||"").toLowerCase().replace(/[^a-z0-9]/g,"")===String(b||"").toLowerCase().replace(/[^a-z0-9]/g,"")}
+  // the same paper twice first: joining the pair is clearer once they are gone
+  [true,false].forEach(function(dupPass){
+    for(var i=0;i<l.length;i++)for(var j=i+1;j<l.length;j++){
+      var a=l[i],b=l[j];
+      if(used[a.id]||used[b.id]||a.date!==b.date||no(a,b))continue;
+      if(a.currency&&b.currency&&a.currency!==b.currency)continue;
+      var ta=exNum(a.total),tb=exNum(b.total),ma=exMin(a),mb=exMin(b),dt=ma!=null&&mb!=null?Math.abs(ma-mb):null;
+      var ka=exKind(a),kb=exKind(b);
+      if(dupPass){
+        if(Math.abs(ta-tb)<0.005&&(dt==null||dt<=2)&&(ka&&ka===kb||!ka&&!kb&&eq(a.merchant,b.merchant))){
+          var keep=String(a.addedAt||"")<=String(b.addedAt||"")?a:b;
+          out.push({kind:"dup",keep:keep,drop:keep===a?b:a});used[a.id]=used[b.id]=1;
+        }
+      }else{
+        var bill=ka==="bill"&&kb==="voucher"?a:kb==="bill"&&ka==="voucher"?b:null;if(!bill)continue;
+        var vo=bill===a?b:a,tbill=exNum(bill.total),tvo=exNum(vo.total);
+        if(tvo<tbill-0.005||tvo>tbill*1.35+0.5||(dt!=null&&dt>20))continue;
+        out.push({kind:"pair",bill:bill,voucher:vo,tip:tvo-tbill});used[a.id]=used[b.id]=1;
+      }
+    }
+  });
+  return out;
+}
+// The bill gives the name, the tax id and the tax; the card slip gives what
+// was paid (tip included) and the card.
+function exMerge(sessId,billId,voId){
+  var b=exFind(sessId,billId),v=exFind(sessId,voId);if(!b||!v)return;
+  var tb=exNum(b.total),tv=exNum(v.total),tip=exNum(b.tip);
+  if(tip==null)tip=exNum(v.tip);
+  if(tip==null&&tv!=null&&tb!=null&&tv-tb>0.004)tip=tv-tb;
+  var m={total:v.total||b.total,tip:tip!=null&&tip>0?exIn(tip):"",last4:v.last4||b.last4,pay:v.pay||b.pay,
+    currency:b.currency||v.currency,time:b.time||v.time,date:b.date||v.date,merchant:b.merchant||v.merchant,
+    legalName:b.legalName||v.legalName,taxId:b.taxId||v.taxId,category:b.category||v.category,
+    invoice:b.invoice||v.invoice,imgs:exImgs(b).concat(exImgs(v)),notes:[b.notes,v.notes].filter(Boolean).join(" · "),
+    hand:[],checked:false,addedAt:String(b.addedAt||"")<=String(v.addedAt||"")?b.addedAt:v.addedAt};
+  m.readVals=Object.assign({},b.readVals||{},{total:m.total,tip:m.tip,last4:m.last4,pay:m.pay});
+  exSet(sessId,function(l){return l.filter(function(x){return x.id!==voId})});
+  exPatch(sessId,billId,m);
+}
+function exNoPair(sessId,aId,bId){
+  exSet(sessId,function(l){return l.map(function(x){
+    var o=x.id===aId?bId:x.id===bId?aId:null;
+    return o?Object.assign({},x,{noPair:(x.noPair||[]).concat([o])}):x;
+  })});
+}
 // ── the list ──
+var exSugs=[];
 function openExpenses(){
   var a=sessions.find(function(x){return x.id===aid});if(!a)return;
   exSessId=a.id;wireEx();
@@ -11286,20 +11541,22 @@ function openExpenses(){
   $$("exCam").style.display=hh?"":"none";
   $$("exFile").classList.toggle("btn-gold",!hh);
   exRender();$$("exBack").style.display="flex";
+  exReadPending();
 }
 function exOpenNow(){var b=$$("exBack");return !!b&&b.style.display!=="none"}
-// After the queue has sent something: the ⏳ become ✓ where they are on screen.
-function exRefresh(){if(exOpenNow())exRender();if(xeOpenNow())xeUpLabel()}
+// After the queue or a reading: what is on screen catches up.
+function exRefresh(){if(exOpenNow())exRender();if(xeOpenNow()){xeUpLabel();xeReadLine();xeRenderStrip()}}
 function exUpIcon(im){
   var st=!im?"":im.driveId?"ok":im.uploadStatus==="queued"?"queued":im.uploadStatus==="loading"?"loading":im.uploadStatus==="err"?"err":"";
   return st?"<span class=\"thumb-up "+st+"\">"+(st==="ok"?"&#10003;":st==="queued"?"&#9203;":st==="err"?"!":"")+"</span>":"";
 }
+function exTotTxt(x){var n=exNum(x.total);return n!=null?exFmt(n)+" "+(x.currency||"EUR").toUpperCase():""}
 function exRender(){
   var s=exSess();if(!s)return;
   var l=exList(s);
   $$("exTitle").textContent="Despeses · "+(s.client||"");
   $$("exNote").textContent=l.length?"Toca un tiquet per revisar-lo o completar-lo."
-    :"Encara no n'hi ha cap. Fotografia cada tiquet el mateix dia: el paper tèrmic s'esborra. La foto es desa a la visita i es puja a la carpeta tiquets/ de Drive.";
+    :"Encara no n'hi ha cap. Fotografia cada tiquet el mateix dia: el paper tèrmic s'esborra. La foto es desa a la visita, Gemini la llegeix i es puja a la carpeta tiquets/ de Drive.";
   // totals by way of paying and by currency: nothing is converted
   var tot={};
   l.forEach(function(x){
@@ -11311,14 +11568,27 @@ function exRender(){
     return "<div>"+esc(k?EX_PAY[k]:"Sense dir com es va pagar")+(k==="personal"||k==="cash"?" <span style=\"color:var(--tx3)\">(a retornar)</span>":"")+": "
       +Object.keys(tot[k]).sort().map(function(c){return "<span class=\"am\">"+esc(exFmt(tot[k][c])+" "+c)+"</span>"}).join(" · ")+"</div>";
   }).join("");
-  $$("exList").innerHTML=l.map(function(x){
-    var im=x.img||{},n=exNum(x.total);
-    var sub=[x.date?exDateTxt(x.date):"sense data",exCatLabel(x.category),x.pay?EX_PAY[x.pay]:""].filter(Boolean).join(" · ");
+  exSugs=exSuggest(s);
+  var sug=exSugs.map(function(g,i){
+    if(g.kind==="dup")return "<div class=\"ex-sug\">&#128196; Sembla el mateix paper fotografiat dues vegades: <b>"+esc(g.keep.merchant||"tiquet")+"</b>, "
+      +esc(exTotTxt(g.keep))+(g.keep.time?", "+esc(g.keep.time):"")+".<div class=\"bt\"><button class=\"btn-sm\" data-sg=\""+i+"\" data-a=\"no\">No ho és</button>"
+      +"<button class=\"btn-sm btn-gold\" data-sg=\""+i+"\" data-a=\"drop\">Treu la repetida</button></div></div>";
+    return "<div class=\"ex-sug\">&#128279; <b>"+esc(g.bill.merchant||"Tiquet")+"</b> ("+esc(exTotTxt(g.bill))+") i el comprovant de la targeta de <b>"+esc(g.voucher.merchant||"—")
+      +"</b> ("+esc(exTotTxt(g.voucher))+") semblen el mateix pagament"+(g.tip>0.004?", amb "+esc(exFmt(g.tip))+" de propina":"")+"."
+      +"<div class=\"bt\"><button class=\"btn-sm\" data-sg=\""+i+"\" data-a=\"no\">No ho són</button>"
+      +"<button class=\"btn-sm btn-gold\" data-sg=\""+i+"\" data-a=\"merge\">Uneix-los</button></div></div>";
+  }).join("");
+  $$("exList").innerHTML=sug+l.map(function(x){
+    var im=exImgs(x)[0]||{},n=exNum(x.total),nim=exImgs(x).length;
+    var sub=[x.date?exDateTxt(x.date)+(x.time?" "+x.time:""):"sense data",exCatLabel(x.category),x.pay?EX_PAY[x.pay]:""].filter(Boolean).join(" · ");
+    var badge=exReading[x.id]?"<span class=\"ex-badge rd\">LLEGINT…</span>":x.checked?"":"<span class=\"ex-badge\">PER REVISAR</span>";
+    if(exInvoiceDue(x))badge+="<span class=\"ex-badge inv\">CAL FACTURA</span>";
     return "<button class=\"ex-card\" data-ex=\""+esc(x.id)+"\">"
-      +"<span class=\"th\">"+(im.data?"<img src=\""+im.data+"\" alt=\"\">":(im.uploadStatus==="loading"?"<span class=\"spinner\"></span>":im.type==="pdf"?"&#128196;":"&#129534;"))+exUpIcon(im)+"</span>"
-      +"<span class=\"bd\"><span class=\"t\">"+esc(x.merchant||"Tiquet sense llegir")+(x.checked?"":"<span class=\"ex-badge\">PER REVISAR</span>")+"</span>"
-      +"<span class=\"s\">"+esc(sub)+"</span></span>"
-      +"<span class=\"am\">"+(n!=null?esc(exFmt(n)+" "+(x.currency||"EUR").toUpperCase()):"&mdash;")+"</span></button>";
+      +"<span class=\"th\">"+(im.data?"<img src=\""+im.data+"\" alt=\"\">":(im.uploadStatus==="loading"?"<span class=\"spinner\"></span>":im.type==="pdf"?"&#128196;":"&#129534;"))
+      +exUpIcon(im)+(nim>1?"<span class=\"n\">"+nim+"</span>":"")+"</span>"
+      +"<span class=\"bd\"><span class=\"t\">"+esc(x.merchant||(exReading[x.id]?"Llegint el tiquet…":"Tiquet sense llegir"))+"</span>"
+      +"<span class=\"s\">"+esc(sub)+"</span>"+(badge?"<span class=\"bg\">"+badge+"</span>":"")+"</span>"
+      +"<span class=\"am\">"+(n!=null?esc(exTotTxt(x)):"&mdash;")+"</span></button>";
   }).join("");
 }
 function wireEx(){
@@ -11331,48 +11601,111 @@ function wireEx(){
   ["exCamIn","exFileIn"].forEach(function(k){
     $$(k).addEventListener("change",function(e){var f=Array.from(e.target.files||[]);e.target.value="";if(f.length)exAddFiles(f)});
   });
-  $$("exList").addEventListener("click",function(e){var b=e.target.closest("[data-ex]");if(b)openExpense(b.dataset.ex)});
+  $$("exList").addEventListener("click",function(e){
+    var g=e.target.closest("[data-sg]");
+    if(g){
+      var sg=exSugs[+g.dataset.sg],s=exSess();if(!sg||!s)return;
+      if(g.dataset.a==="drop")exRemove(s.id,sg.drop.id);
+      else if(g.dataset.a==="merge")exMerge(s.id,sg.bill.id,sg.voucher.id);
+      else exNoPair(s.id,(sg.keep||sg.bill).id,(sg.drop||sg.voucher).id);
+      exRender();return;
+    }
+    var b=e.target.closest("[data-ex]");if(b)openExpense(b.dataset.ex);
+  });
   $$("exLast4").addEventListener("input",function(){
     var v=this.value.replace(/\D/g,"").slice(0,4);if(v!==this.value)this.value=v;
     try{localStorage.setItem(LS_EXLAST4,v)}catch(e){}
   });
 }
-// ── one ticket ──
-var XE_F=[["xeDate","date"],["xeCat","category"],["xeMerchant","merchant"],["xeTaxId","taxId"],["xeCur","currency"],["xeBase","base"],
-  ["xeVatRate","vatRate"],["xeVat","vat"],["xeTotal","total"],["xePay","pay"],["xeLast4","last4"],["xeNotes","notes"]];
-var xeSessId=null,xeId=null,xeDraft=null,xeWired=false,xeBox=null,xePayHand=false,xeDrag=null;
+// ── one expense ──
+var XE_F=[["xeDate","date"],["xeTime","time"],["xeCat","category"],["xeMerchant","merchant"],["xeLegal","legalName"],["xeTaxId","taxId"],
+  ["xeCur","currency"],["xeBase","base"],["xeVatRate","vatRate"],["xeVat","vat"],["xeTip","tip"],["xeTotal","total"],["xePay","pay"],
+  ["xeLast4","last4"],["xeNotes","notes"]];
+var xeSessId=null,xeId=null,xeImgId=null,xeEdits={},xeTouched={},xeWired=false,xeBox=null,xeDrag=null,xeInvDone=false;
 function xeOpenNow(){var b=$$("xeBack");return !!b&&b.style.display!=="none"}
-function xeEx(){var s=sessions.find(function(x){return x.id===xeSessId});return s&&(s.expenses||[]).filter(function(x){return x.id===xeId})[0]}
+function xeEx(){return exFind(xeSessId,xeId)}
+function xeImg(){var l=exImgs(xeEx());return l.filter(function(m){return m.id===xeImgId})[0]||l[0]||null}
 function openExpense(id){
   var s=exSess();if(!s)return;
-  var x=(s.expenses||[]).filter(function(e){return e.id===id})[0];if(!x)return;
+  var x=exFind(s.id,id);if(!x)return;
   xeSessId=s.id;xeId=id;wireXe();
-  xeDraft={data:(x.img||{}).data||null,changed:false};
-  // "pagat amb" set by the card digits follows them; one picked by hand stays
-  xePayHand=!!x.pay&&!x.payAuto;
+  xeEdits={};xeTouched={};xeImgId=(exImgs(x)[0]||{}).id||null;
+  xeInvDone=!!(x.invoice&&x.invoice.done);
   $$("xeCat").innerHTML="<option value=\"\">&mdash;</option>"+EX_CATS.map(function(c){return "<option value=\""+c[0]+"\">"+esc(c[1])+"</option>"}).join("");
   XE_F.forEach(function(f){$$(f[0]).value=x[f[1]]||""});
   $$("xeTitle").textContent=x.merchant||"Tiquet";
   $$("xeImgBox").classList.remove("big");
-  xeCropEnd();xeUpLabel();
+  xeDoubts();xeCropEnd();xeRenderStrip();xeUpLabel();xeReadLine();
   $$("exBack").style.display="none";
   $$("xeBack").style.display="flex";
 }
+// The fields Gemini was unsure of, in orange, until they are touched.
+function xeDoubts(){
+  var x=xeEx(),d=(x&&x.read&&x.read.doubt)||[],hand=(x&&x.hand)||[];
+  XE_F.forEach(function(f){$$(f[0]).classList.toggle("xe-doubt",d.indexOf(f[1])>=0&&hand.indexOf(f[1])<0&&!xeTouched[f[1]])});
+}
+// A reading that lands while the expense is open fills what was not touched here.
+function xeFillRead(all){
+  var x=xeEx();if(!x)return;
+  XE_F.forEach(function(f){if(f[1]!=="notes"&&(all||!xeTouched[f[1]]))$$(f[0]).value=x[f[1]]||""});
+  if(all)xeTouched={};
+  if(!xeTouched.merchant)$$("xeTitle").textContent=x.merchant||"Tiquet";
+  xeDoubts();xeReadLine();xeRenderStrip();
+}
+var EX_DOC={bill:"tiquet",voucher:"comprovant de la targeta",invoice:"factura",other:"altre",same:"repetida"};
+function xeRenderStrip(){
+  var x=xeEx();if(!x)return;
+  var l=exImgs(x),hh=handheld(),cur=xeImg();
+  $$("xeStrip").innerHTML=(l.length>1?l.map(function(im){
+      var d=xeEdits[im.id]||im.data;
+      return "<button class=\"th"+(cur&&cur.id===im.id?" on":"")+"\" data-im=\""+esc(im.id)+"\" title=\""+esc(EX_DOC[im.doc]||im.name||"")+"\">"
+        +(d?"<img src=\""+d+"\" alt=\"\">":im.type==="pdf"?"&#128196;":"&#129534;")+"</button>";
+    }).join(""):"")
+    +(hh?"<button class=\"btn-sm\" data-add=\"cam\" title=\"Fes una altra foto d'aquesta despesa: el comprovant de la targeta, per exemple\">&#128247; Una altra foto</button>":"")
+    +"<button class=\"btn-sm\" data-add=\"file\" title=\"Afegeix una imatge o un PDF a aquesta despesa\">&#65291; Imatge o PDF</button>"
+    +(cur&&cur.doc&&EX_DOC[cur.doc]?"<div class=\"lb\">"+esc(EX_DOC[cur.doc].charAt(0).toUpperCase()+EX_DOC[cur.doc].slice(1))+(l.length>1?" · "+(l.indexOf(cur)+1)+" de "+l.length:"")+"</div>":"");
+}
 function xeShowImg(){
-  var x=xeEx(),im=(x&&x.img)||{},d=xeDraft&&xeDraft.data,pdf=im.type==="pdf",I=$$("xeImg");
+  var im=xeImg()||{},d=xeEdits[im.id]||im.data,pdf=im.type==="pdf",I=$$("xeImg"),n=exImgs(xeEx()).length;
   if(d){I.src=d;I.style.display=""}else{I.removeAttribute("src");I.style.display="none"}
   $$("xePdf").style.display=d?"none":"";
   $$("xePdf").innerHTML=pdf?"&#128196;":"&#129534;";
   ["xeRotL","xeRotR","xeCropBtn"].forEach(function(k){$$(k).style.display=d&&!pdf&&!xeBox?"":"none"});
   $$("xeOpen").style.display=pdf&&!xeBox?"":"none";
+  $$("xeImgDel").style.display=n>1&&!xeBox?"":"none";
 }
 function xeUpLabel(){
-  var x=xeEx(),im=(x&&x.img)||{};
-  $$("xeUp").innerHTML=xeDraft&&xeDraft.changed?"La imatge nova es pujarà a Drive en desar."
+  var im=xeImg()||{};
+  $$("xeUp").innerHTML=xeEdits[im.id]?"La imatge nova es pujarà a Drive en desar."
     :im.driveId?"&#10003; A Drive, a la carpeta tiquets/"
     :im.uploadStatus==="queued"?(mqHere[im.qid]?"&#9203; A la cua: es pujarà a Drive quan hi hagi connexió i hagis entrat a Google":"&#9203; Pendent de pujar a Drive des de l'aparell on el vas afegir")
     :im.uploadStatus==="loading"?"Preparant la imatge&hellip;"
-    :im.uploadStatus==="err"?"&#9888; No s'ha pogut guardar per pujar-lo a Drive; la imatge és a la visita":"";
+    :im.uploadStatus==="err"?"&#9888; No s'ha pogut guardar per pujar-la a Drive; la imatge és a la visita":"";
+}
+function xeReadLine(){
+  var x=xeEx();if(!x)return;
+  var el=$$("xeRead"),btn=function(t){return " <button class=\"btn-sm\" id=\"xeReadBtn\">"+t+"</button>"};
+  if(exReading[x.id])el.innerHTML="<span class=\"spinner\"></span> Gemini està llegint el tiquet&hellip;";
+  else if(x.rd==="done")el.innerHTML="&#10024; Llegit amb Gemini. "+((x.read&&x.read.doubt&&x.read.doubt.length)?"Revisa sobretot els camps en taronja.":"Revisa-ho i desa.")+btn("&#10024; Torna a llegir");
+  else if(x.rd==="err")el.innerHTML="&#9888; No s'ha pogut llegir: "+esc(x.rdErr||"error")+"."+btn("Torna-ho a provar");
+  else if(x.rd==="pending"&&!gemKey())el.innerHTML="Per llegir-lo sol cal la clau de Gemini."+btn("&#128273; Clau de Gemini");
+  else if(x.rd==="pending")el.innerHTML=navigator.onLine===false?"Es llegirà sol quan hi hagi connexió.":"<span class=\"spinner\"></span> A punt de llegir&hellip;";
+  else el.innerHTML=exImgs(x).some(function(m){return m.data})?btn("&#10024; Llegeix el tiquet amb Gemini"):"";
+  var b=$$("xeReadBtn");
+  if(b)b.addEventListener("click",function(){
+    if(!gemKey()){openGemKey("Per llegir els tiquets cal la clau de Gemini. Escriu-la aquí i torna-ho a provar.");return}
+    var e=xeEx();if(!e)return;
+    var typed=(e.hand||[]).length||Object.keys(xeTouched).some(function(k){return xeTouched[k]&&k!=="notes"});
+    var all=typed&&confirm("Vols que torni a llegir també els camps que has canviat a mà?\n\nD'acord: es tornen a llegir tots.\nCancel·la: els teus es queden com estan.");
+    exRead(xeSessId,xeId,all);
+  });
+  var inv=x.invoice,ib=$$("xeInv");
+  if(inv&&inv.needed){
+    ib.style.display="";
+    ib.innerHTML="&#9888; <b>Aquest tiquet no és una factura.</b> "+(inv.how?"Per demanar-la: "+esc(inv.how)+". ":"")+(inv.deadline?"Termini: <b>"+esc(inv.deadline)+"</b>.":"")
+      +"<br><label><input type=\"checkbox\" id=\"xeInvDone\""+(xeInvDone?" checked":"")+"> Ja l'he demanada</label>";
+    $$("xeInvDone").addEventListener("change",function(){xeInvDone=this.checked});
+  }else{ib.style.display="none";ib.innerHTML=""}
 }
 // ── cropping: a box over the picture, its four corners dragged ──
 function xeCropDraw(){var b=xeBox,c=$$("xeCrop");c.style.left=b.x*100+"%";c.style.top=b.y*100+"%";c.style.width=b.w*100+"%";c.style.height=b.h*100+"%"}
@@ -11388,44 +11721,74 @@ function xeCropEnd(){
   xeShowImg();
 }
 async function xeApply(op){
-  if(!xeDraft||!xeDraft.data)return;
-  var d=await exTransform(xeDraft.data,op);
-  if(d){xeDraft.data=d;xeDraft.changed=true}
-  xeCropEnd();xeUpLabel();
+  var im=xeImg();if(!im)return;
+  var src=xeEdits[im.id]||im.data;if(!src)return;
+  var d=await exTransform(src,op);
+  if(d)xeEdits[im.id]=d;
+  xeCropEnd();xeUpLabel();xeRenderStrip();
 }
 function xeClose(){
-  $$("xeBack").style.display="none";xeBox=null;xeId=null;xeDraft=null;
+  $$("xeBack").style.display="none";xeBox=null;xeId=null;xeEdits={};xeTouched={};
   if(exSess()){exRender();$$("exBack").style.display="flex"}
   mqFlush();
 }
 async function xeSave(){
   var x=xeEx();if(!x){xeClose();return}
-  var sessId=xeSessId,id=xeId,p={};
+  var sessId=xeSessId,id=xeId,p={},rv=x.readVals||{};
   XE_F.forEach(function(f){p[f[1]]=$$(f[0]).value.trim()});
   p.currency=(p.currency||"EUR").toUpperCase();
-  p.payAuto=!!p.pay&&!xePayHand;
-  p.checked=true;
+  // typed here and different from what was read: the next reading leaves it alone
+  var hand=(x.hand||[]).slice();
+  EX_FIELDS.forEach(function(f){if(xeTouched[f]&&p[f]!==(rv[f]||"")&&hand.indexOf(f)<0)hand.push(f)});
+  p.hand=hand;p.checked=true;
+  if(x.invoice)p.invoice=Object.assign({},x.invoice,{done:xeInvDone});
   try{localStorage.setItem(LS_EXCUR,p.currency)}catch(e){}
-  if(xeDraft&&xeDraft.changed&&xeDraft.data){
+  var ids=Object.keys(xeEdits);
+  if(ids.length){
     $$("xeSave").disabled=true;
-    try{p.img=await exNewImg(sessId,x.img,xeDraft.data)}finally{$$("xeSave").disabled=false}
+    try{
+      var l=exImgs(x).slice();
+      for(var i=0;i<l.length;i++)if(xeEdits[l[i].id])l[i]=await exNewImg(sessId,l[i],xeEdits[l[i].id]);
+      p.imgs=l;
+    }finally{$$("xeSave").disabled=false}
   }
   exPatch(sessId,id,p);
   xeClose();
 }
+// A photo added to this expense goes in at once (it is already in the queue);
+// the expense is read again with it, leaving what was typed by hand.
+async function xeAddFiles(files){
+  var x=xeEx();if(!x)return;
+  var sessId=xeSessId,id=xeId;
+  files=files.filter(function(f){return /^image\//.test(f.type||"")||exIsPdf(f)});
+  if(!files.length)return;
+  for(var i=0;i<files.length;i++){
+    var img=await exFileImg(sessId,files[i]," "+(exImgs(exFind(sessId,id)).length+1));
+    var cur=exFind(sessId,id);if(!cur)return;
+    exPatch(sessId,id,{imgs:exImgs(cur).concat([img]),rd:"pending"});
+    xeImgId=img.id;
+  }
+  xeRenderStrip();xeShowImg();xeUpLabel();xeReadLine();
+  exReadPending();
+}
+function xeImgRemove(){
+  var x=xeEx(),im=xeImg();if(!x||!im||exImgs(x).length<2)return;
+  if(!confirm("Vols treure aquesta foto de la despesa?"+(im.driveId?"\n\nAnirà a la paperera de Drive.":"")))return;
+  exDropImg(xeSessId,im);delete xeEdits[im.id];
+  exPatch(xeSessId,xeId,{imgs:exImgs(x).filter(function(m){return m.id!==im.id})});
+  xeImgId=null;xeRenderStrip();xeShowImg();xeUpLabel();
+}
 function xeDelete(){
   var x=xeEx();if(!x)return;
-  var im=x.img||{};
-  if(!confirm("Vols eliminar aquesta despesa?"+(im.driveId?"\n\nEl tiquet anirà a la paperera de Drive.":"")))return;
-  if(im.qid&&!mqActive[im.qid])mqDrop(im.qid);
-  if(im.driveId)queueTrash(xeSessId,[im.driveId]);
-  exSet(xeSessId,function(l){return l.filter(function(e){return e.id!==xeId})});
+  var up=exImgs(x).some(function(m){return m.driveId});
+  if(!confirm("Vols eliminar aquesta despesa?"+(up?"\n\nEls tiquets aniran a la paperera de Drive.":"")))return;
+  exRemove(xeSessId,xeId);
   xeClose();
 }
 function wireXe(){
   if(xeWired)return;xeWired=true;
   $$("xeCancel").addEventListener("click",function(){
-    if(xeDraft&&xeDraft.changed&&!confirm("Vols descartar els canvis de la imatge?"))return;
+    if(Object.keys(xeEdits).length&&!confirm("Vols descartar els canvis de la imatge?"))return;
     xeClose();
   });
   $$("xeSave").addEventListener("click",xeSave);
@@ -11435,10 +11798,24 @@ function wireXe(){
   $$("xeCropBtn").addEventListener("click",xeCropStart);
   $$("xeCropNo").addEventListener("click",xeCropEnd);
   $$("xeCropOk").addEventListener("click",function(){if(xeBox)xeApply({crop:xeBox})});
+  $$("xeImgDel").addEventListener("click",xeImgRemove);
+  $$("xeStrip").addEventListener("click",function(e){
+    var t=e.target.closest("[data-im]");
+    if(t){if(xeBox)xeCropEnd();xeImgId=t.dataset.im;$$("xeImgBox").classList.remove("big");xeRenderStrip();xeShowImg();xeUpLabel();return}
+    var a=e.target.closest("[data-add]");
+    if(a)$$(a.dataset.add==="cam"?"xeAddCamIn":"xeAddFileIn").click();
+  });
+  ["xeAddCamIn","xeAddFileIn"].forEach(function(k){
+    $$(k).addEventListener("change",function(e){var f=Array.from(e.target.files||[]);e.target.value="";if(f.length)xeAddFiles(f)});
+  });
+  XE_F.forEach(function(f){
+    function t(){xeTouched[f[1]]=true;this.classList.remove("xe-doubt")}
+    $$(f[0]).addEventListener("input",t);$$(f[0]).addEventListener("change",t);
+  });
   // a tap on the picture shows it at full size, to read the small print
   $$("xeImg").addEventListener("click",function(){if(!xeBox)$$("xeImgBox").classList.toggle("big")});
   $$("xeOpen").addEventListener("click",async function(){
-    var x=xeEx(),im=(x&&x.img)||{};
+    var im=xeImg()||{};
     if(im.driveId){window.open("https://drive.google.com/file/d/"+encodeURIComponent(im.driveId)+"/view","_blank","noopener");return}
     var w=window.open("","_blank");                       // now, while the tap still counts
     var b=im.qid?await mqBlob(im.qid):null;
@@ -11461,14 +11838,13 @@ function wireXe(){
     xeBox={x:x1,y:y1,w:x2-x1,h:y2-y1};xeCropDraw();
   });
   ["pointerup","pointercancel"].forEach(function(t){document.addEventListener(t,function(){xeDrag=null})});
-  // the card's last digits pick "pagat amb", unless it was picked by hand
+  // the card's last digits pick "pagat amb", unless it was picked here by hand
   $$("xeLast4").addEventListener("input",function(){
     var v=this.value.replace(/\D/g,"").slice(0,4);if(v!==this.value)this.value=v;
     var c=exLast4();
-    if(xePayHand||v.length!==4||c.length!==4)return;
+    if(xeTouched.pay||v.length!==4||c.length!==4)return;
     $$("xePay").value=v===c?"company":"personal";
   });
-  $$("xePay").addEventListener("change",function(){xePayHand=!!this.value});
 }
 
 // ── CLOSE DROPDOWNS ───────────────────────────────────────────────────────────

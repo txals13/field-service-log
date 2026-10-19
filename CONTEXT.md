@@ -706,6 +706,46 @@ Field Service Log/
   everything, delete drops the queue item, switch off hides it, phone layout.
   **Not tested**: the real upload to Drive (needs a sign-in) and a phone camera.
 
+## Expenses — phase 2: Gemini reads the tickets (2026-10-19)
+- **Several pictures per expense**: `expense.imgs[]` (phase 1's single `img`
+  is read through `exImgs`, which also gives every picture an `id`; any write
+  replaces it with `imgs`). Each picture may carry `doc`: bill | voucher |
+  invoice | other | same. `mqFind` looks through `exImgs`.
+- **The reading** (`exRead` → `exGemRead` → `exNormRead` → `exApplyRead`): all
+  of an expense's pictures in ONE call (`gemAsk` now takes parts and a model),
+  JSON out, every field checked (malformed → empty). Model `EX_GEM_MODEL`
+  ("gemini-3.5-flash"); if the key does not have it (not found / 404) it
+  falls back to `GEM_MODEL` for the rest of the page. **Untested against the
+  real API** — the user's key is only in their browser; the pipeline was
+  tested with a stubbed fetch fed the values read by hand from the user's 11
+  Mexican tickets.
+- **The user's rules in the prompt** (`EX_GEM_SYS`): the total is what was paid
+  INCLUDING the tip (it goes on the sheet with it); "$" is not USD — the
+  country decides (their tickets: pesos); dates day-first outside the USA,
+  Spanish month abbreviations; the printed date beats the photo's EXIF date.
+- `rd`: "" (never read) | "pending" (waits for key + connection) | "done" |
+  "err" (+ `rdErr`); in flight = `exReading[id]`, never stored.
+  `exReadPending` reads them one at a time — after a capture, at every
+  `syncTick`, on `online`, when the list opens.
+- **Hand edits survive a re-read**: on ✓ Desa, a field touched in the editor
+  and different from `readVals` goes into `hand[]`; a reading fills the
+  others. "✨ Torna a llegir" asks whether to read the hand ones too. A reading
+  that lands with the editor open fills only the untouched inputs. Fields
+  the model doubts (`read.doubt`) are orange until touched.
+- **Joining** (`exSuggest`, shown on top of the list): "the same paper twice"
+  = same date and total, ±2 min, same kind → "Treu la repetida" (drops the
+  later one, its pictures leave the queue / go to the Drive trash); a bill
+  and a card voucher of the same date, ±20 min, voucher between the bill and
+  bill × 1.35 → "Uneix-los" (`exMerge`: name, legal name, tax id, tax and
+  invoice from the bill; total, tip, card and pay from the voucher; tip =
+  voucher − bill if not printed; both pictures). "No ho són" stores `noPair`.
+  On the user's samples: 11 photos → 5 repeats dropped → 3 pairs joined → 3
+  expenses (163,90 / 320,00 / 178,20 MXN), all on the company card.
+- **Invoice to ask for**: `invoice:{needed, how, deadline, done}` when the
+  paper says it is not a tax invoice; "CAL FACTURA" in the list until "Ja l'he
+  demanada" is ticked in the editor.
+- New editor fields: Hora, Raó social, Propina; "NIF / VAT / RFC".
+
 ## Session types
 | Type | Abbr | Color |
 |------|------|-------|

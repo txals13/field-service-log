@@ -5510,7 +5510,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-19 · 8";
+var APP_VERSION="2026-10-19 · 9";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -10940,19 +10940,20 @@ async function collectDriveFiles(token,folderId,pathPrefix,out){
 // do not ask: they always make the whole ZIP.
 var ZP_KEY="fsl_v6_zippick";
 var ZP_ITEMS=[["pdf","📄 Informe PDF"],["docx","📝 Informe Word (.docx)"],["html","🌐 Informe HTML"],["xlsx","📊 Recanvis (Excel)"],
-  ["val","✅ Informe de validació"],["ts","🕒 Full d'hores"],["media","📷 Fotos, vídeos i notes de veu"],["revs","🗂 Revisions anteriors"],["manual","📚 Manual de recanvis"]];
+  ["val","✅ Informe de validació"],["ts","🕒 Full d'hores"],["media","📷 Fotos, vídeos i notes de veu"],["exp","💶 Tiquets de les despeses"],["revs","🗂 Revisions anteriors"],["manual","📚 Manual de recanvis"]];
 function zpGet(){var o={};ZP_ITEMS.forEach(function(it){o[it[0]]=true});try{var v=JSON.parse(localStorage.getItem(ZP_KEY)||"null");if(v)Object.keys(o).forEach(function(k){if(k in v)o[k]=!!v[k]})}catch(e){}return o}
 function zpSet(o){try{localStorage.setItem(ZP_KEY,JSON.stringify(o))}catch(e){}}
 var zpSess=null,zpWired=false;
 function openZipPick(s){
   zpSess=s;
-  var o=zpGet(),has={val:!!(s.prodTests||[]).length,ts:!!(s.timesheet&&s.timesheet.rows&&s.timesheet.rows.length),manual:!!(s.manualRef&&s.manualRef.pdfId),xlsx:!!collectSessionParts(s).length};
+  var o=zpGet(),has={val:!!(s.prodTests||[]).length,ts:!!(s.timesheet&&s.timesheet.rows&&s.timesheet.rows.length),manual:!!(s.manualRef&&s.manualRef.pdfId),xlsx:!!collectSessionParts(s).length,exp:!!(s.expenses||[]).length};
   var row=function(k,l,on,dis,why){return "<label style=\"display:flex;align-items:center;gap:8px;font-size:13px"+(dis?";opacity:.5":"")+"\"><input type=\"checkbox\" data-zp=\""+k+"\""+(on?" checked":"")+(dis?" disabled":"")+">"+l+(why?" <span style=\"color:var(--tx3);font-size:11px\">("+why+")</span>":"")+"</label>"};
   $$("zipPickList").innerHTML=row("","🗃 Dades de la visita (per poder-la importar)",true,true,"sempre")
     +ZP_ITEMS.map(function(it){var k=it[0],no=(k in has)&&!has[k];return row(k,it[1],o[k]&&!no,no,no?"no n'hi ha":"")}).join("");
   function note(){
     var m=$$("zipPickList").querySelector("[data-zp=media]").checked,r=$$("zipPickList").querySelector("[data-zp=revs]").checked;
-    $$("zipPickNote").textContent=(m&&r)?"":"Sense la multimèdia o les revisions anteriors, aquest ZIP no compta com a còpia completa per esborrar la visita.";
+    var xb=$$("zipPickList").querySelector("[data-zp=exp]"),x=!xb||xb.disabled||xb.checked;
+    $$("zipPickNote").textContent=(m&&r&&x)?"":"Sense la multimèdia, els tiquets o les revisions anteriors, aquest ZIP no compta com a còpia completa per esborrar la visita.";
   }
   $$("zipPickList").onchange=note;note();
   if(!zpWired){zpWired=true;
@@ -11077,6 +11078,36 @@ async function exportSessionZip(s,kind,pick){
       if(mb){zip.file(mp,mb);if(im.driveId)inZip[im.driveId]=1}
       else lostMedia.push(im.name);
     }
+    // THE EXPENSES' TICKETS (2026-10-19). Until now the ZIP left the tiquets/
+    // folder out: archive a visit, delete it, and after the Drive trash's 30
+    // days only the reduced copies inside session.json were left — of a PDF,
+    // just its first page as a picture. Now the whole folder goes in, and then
+    // every picture an expense names that the folder did not give: from Drive
+    // by its id, from this device's upload queue (taken offline, not up yet),
+    // or from the copy the visit keeps.
+    if(archive&&want("exp")&&(s.expenses||[]).length){
+      expBusy("Tiquets…");
+      var tk=files.filter(function(f){return /^tiquets\//i.test(f.path||"")});
+      for(var ti=0;ti<tk.length;ti++){
+        try{
+          var tr=await fetch("https://www.googleapis.com/drive/v3/files/"+tk[ti].id+"?alt=media",{headers:{Authorization:"Bearer "+token}});
+          if(tr.ok){zip.file(tk[ti].path,await tr.blob());inZip[tk[ti].id]=1}
+        }catch(e){}
+      }
+      var allTk=[];(s.expenses||[]).forEach(function(x){exImgs(x).forEach(function(im){if(im&&im.name)allTk.push(im)})});
+      for(var tj=0;tj<allTk.length;tj++){
+        var ti2=allTk[tj];
+        if(ti2.driveId&&inZip[ti2.driveId])continue;
+        var tp="tiquets/"+ti2.name;
+        if(zip.file(tp))continue;
+        expBusy("Tiquets "+(tj+1)+"/"+allTk.length+"…");
+        var tb=ti2.driveId&&!ti2.driveGone?await driveBlobById(token,ti2.driveId):null;
+        if(!tb&&ti2.qid)tb=await mqBlob(ti2.qid);
+        if(!tb&&typeof ti2.data==="string"&&/^data:/.test(ti2.data)){try{tb=dataUrlToBlob(ti2.data)}catch(e){}}
+        if(tb){zip.file(tp,tb);if(ti2.driveId)inZip[ti2.driveId]=1}
+        else lostMedia.push(ti2.name);
+      }
+    }
     // THE EARLIER REVISIONS. Everything sitting at the folder's root: the
     // reports of Rev. 01, Rev. 02…, each already carrying its number in its
     // name, plus anything dropped in there by hand.
@@ -11139,7 +11170,7 @@ async function exportSessionZip(s,kind,pick){
     // copy of this session exists", and the DOCX pack carries no session.json,
     // so nothing could be restored from it. Nor does one without the media or
     // the earlier revisions — those cannot be rebuilt from session.json.
-    if(archive&&want("media")&&want("revs")){
+    if(archive&&want("media")&&want("revs")&&(want("exp")||!(s.expenses||[]).length)){
       var t=now();
       sessions=sessions.map(function(x){return x.id===s.id?Object.assign({},x,{zipAt:t,updatedAt:t,
         zipName:typeof arxOk==="string"?arxOk:"",zipTo:arxOn?"local":(drvArx?"drive":"")}):x});
@@ -11256,21 +11287,37 @@ function exNextNo(s){
   (s.expenses||[]).forEach(function(e){if(+e.no>n)n=+e.no});
   return n+1;
 }
+// "ok", "gone" (Drive answers 404: deleted for good, or this app can no longer
+// see it — nothing to rename, ever) or "later" (no connection, no token,
+// Drive busy: tried again at the next sync). Never asks to sign in.
+async function exDriveRename(driveId,name){
+  var token=await getToken();if(!token)return "later";
+  try{
+    var r=await fetch("https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(driveId)+"?fields=id",{method:"PATCH",
+      headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({name:name})});
+    return r.ok?"ok":r.status===404?"gone":"later";
+  }catch(e){return "later"}
+}
 var exRenBusy=false;
 async function exRenamePass(){
   if(exRenBusy||!isLoggedIn||navigator.onLine===false||tokenStale())return;
   exRenBusy=true;
   try{
     var ch={};
+    pass:
     for(var i=0;i<sessions.length;i++){
       var xs=sessions[i].expenses||[];
       for(var j=0;j<xs.length;j++){
         var l=exImgs(xs[j]);
         for(var k=0;k<l.length;k++){
           var m=l[k];
-          if(!(m.driveId&&m.autoName&&m.name&&m.driveName!==m.name))continue;
-          if(!await driveRename(m.driveId,m.name))return;   // no Drive now: the next sync tries again
-          m.driveName=m.name;ch[sessions[i].id]=1;
+          if(!(m.driveId&&m.autoName&&m.name&&m.driveName!==m.name&&!m.driveGone))continue;
+          var r=await exDriveRename(m.driveId,m.name);
+          if(r==="later")break pass;                       // no Drive now: the next sync tries again (what was done is kept)
+          // a file that is no longer there is left out from now on, and does
+          // not hold up the renames of all the others behind it
+          if(r==="gone")m.driveGone=true;else m.driveName=m.name;
+          ch[sessions[i].id]=1;
         }
       }
     }
@@ -11782,6 +11829,7 @@ function xeShowImg(){
 function xeUpLabel(){
   var im=xeImg()||{};
   $$("xeUp").innerHTML=xeEdits[im.id]?"La imatge nova es pujarà a Drive en desar."
+    :im.driveId&&im.driveGone?"&#9888; Aquest fitxer ja no és a Drive (s'hi va esborrar); la imatge es conserva a la visita"
     :im.driveId?"&#10003; A Drive, a la carpeta tiquets/"
     :im.uploadStatus==="queued"?(mqHere[im.qid]?"&#9203; A la cua: es pujarà a Drive quan hi hagi connexió i hagis entrat a Google":"&#9203; Pendent de pujar a Drive des de l'aparell on el vas afegir")
     :im.uploadStatus==="loading"?"Preparant la imatge&hellip;"

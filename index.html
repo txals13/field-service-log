@@ -349,6 +349,28 @@ textarea{resize:none;line-height:1.4}
 .pt-live{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:10px;border:1px solid var(--br);border-radius:10px;background:var(--bg0)}
 .pt-clock{font-family:monospace;font-size:15px;font-weight:700;color:var(--green)}
 .pt-clock.stop{color:var(--orange)}
+/* expenses */
+.ex-card{display:flex;gap:10px;align-items:center;width:100%;text-align:left;white-space:normal;margin-bottom:8px;padding:8px 10px;border-radius:10px;background:var(--bg2)}
+.ex-card .th{width:46px;height:58px;flex:none;border-radius:6px;background:var(--bg0) center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:22px;position:relative}
+.ex-card .th .thumb-up{bottom:2px;left:2px}
+.ex-card .bd{flex:1;min-width:0}
+.ex-card .th img{width:100%;height:100%;object-fit:cover;object-position:top;border-radius:6px}
+.ex-card .t{display:block;font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ex-card .s{display:block;font-size:12px;color:var(--tx3);margin-top:2px}
+.ex-card .am{font-family:monospace;font-size:14px;font-weight:700;white-space:nowrap}
+.ex-sum{font-size:12.5px;line-height:1.6;margin-bottom:10px}
+.ex-sum:empty{display:none}
+.ex-sum .am{font-family:monospace;font-weight:700}
+.ex-badge{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:20px;margin-left:6px;vertical-align:1px;background:var(--orangebg);color:var(--orange)}
+.xe-img{position:relative;display:block;flex:none;width:fit-content;max-width:100%;margin:0 auto 8px;overflow:hidden;border-radius:8px;background:var(--bg0);touch-action:none}
+.xe-img img{display:block;max-width:100%;max-height:52vh;user-select:none;-webkit-user-select:none}
+.xe-img.big img{max-height:none}
+.xe-pdf{width:160px;height:120px;display:flex;align-items:center;justify-content:center;font-size:40px}
+.xe-crop{position:absolute;border:2px solid var(--gold);box-shadow:0 0 0 9999px rgba(0,0,0,.55)}
+.xe-crop i{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:var(--gold);border:2px solid #fff;touch-action:none}
+.xe-crop i[data-c="tl"]{left:0;top:0}.xe-crop i[data-c="tr"]{left:100%;top:0}.xe-crop i[data-c="bl"]{left:0;top:100%}.xe-crop i[data-c="br"]{left:100%;top:100%}
+.xe-tools{flex:none;display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:center;margin-bottom:12px}
+.xe-up{font-size:11.5px;color:var(--tx3)}
 .pt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
 .pt-wide{grid-column:1/-1}
 .pt-sec{font-size:12px;font-weight:700;letter-spacing:.4px;margin:14px 0 6px}
@@ -384,7 +406,7 @@ textarea{resize:none;line-height:1.4}
 @media(min-width:701px){
   body.m2 .m2-dk{display:inline-flex;align-items:center}
   body.m2 .sv #btnEditSess,body.m2 .sv #btnClose,body.m2 .sv #btnReopen,body.m2 .sv #btnSync,body.m2 .sv #btnSessSync{display:none}
-  body.m2 .sv #manualChip,body.m2 .sv #drawingsChip,body.m2 .sv #mhChip,body.m2 .sv #folChip,body.m2 .sv #tsChip,body.m2 .sv #pdChip{display:none}
+  body.m2 .sv #manualChip,body.m2 .sv #drawingsChip,body.m2 .sv #mhChip,body.m2 .sv #folChip,body.m2 .sv #tsChip,body.m2 .sv #pdChip,body.m2 .sv #exChip{display:none}
   body.m2 .sv .s-hdr-top{gap:10px}
   body.m2 .sv .s-hdr-top>span:nth-child(2){font-size:16px}
   body.m2 .sv .exp-wrap{margin-left:auto}
@@ -546,6 +568,7 @@ textarea{resize:none;line-height:1.4}
           <button id="m2Out">Surt de Google</button>
         </div>
         <button class="btn-g btn-sm" id="btnM2" style="width:100%;font-size:12px;margin-bottom:6px" title="Prova el disseny nou: al mòbil, pantalla neta amb tres botons a baix; a l'ordinador, comptadors a dalt i un sol menú «Més». Es pot tornar enrere quan vulguis.">&#129514; Disseny nou: no</button>
+        <button class="btn-g btn-sm" id="btnExOn" style="width:100%;font-size:12px;margin-bottom:6px" title="Mostra el mòdul de despeses: fotografia els tiquets de cada visita. Es recorda en aquest aparell; amagat, les despeses que ja hi ha no s'esborren.">&#128182; Despeses: no</button>
         <div id="appVer" style="font-size:10.5px;color:var(--tx3);text-align:center;margin-bottom:2px;font-family:monospace">&mdash;</div>
         <div id="driveInfo" style="font-size:10.5px;color:var(--tx3);text-align:center;margin-bottom:6px;line-height:1.4"></div>
         <button class="btn-g btn-sm" id="btnCamCopy" style="display:none;width:100%;font-size:12px;margin-bottom:6px" title="Cada foto feta amb 📷 també es desa a Baixades del telèfon, amb el client i el projecte al nom">&#128247; Còpia de les fotos al telèfon: no</button>
@@ -906,6 +929,65 @@ textarea{resize:none;line-height:1.4}
       </div>
       <div class="modal-actions">
         <button id="fsaCancel">Tanca</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Expenses (2026-10-19): the visit's tickets, photographed or picked as a
+       file. Only with the sidebar's 💶 Despeses switch on. -->
+  <div class="modal-back" id="exBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,640px)">
+      <div class="modal-title">&#128182; <span id="exTitle">Despeses</span></div>
+      <div id="exNote" class="ts-note" style="margin-bottom:8px">&mdash;</div>
+      <div id="exSum" class="ex-sum"></div>
+      <div id="exList"></div>
+      <div class="field" style="margin-top:12px;margin-bottom:4px"><label>Targeta d'empresa acabada en</label><input type="text" id="exLast4" inputmode="numeric" maxlength="4" placeholder="4 xifres" autocomplete="off" style="max-width:110px"></div>
+      <div class="ts-note">Es desa només en aquest aparell. Un tiquet que porti aquestes xifres queda marcat com a targeta d'empresa; si en porta unes altres, com a targeta personal.</div>
+      <input type="file" id="exCamIn" accept="image/*" capture="environment" style="display:none">
+      <input type="file" id="exFileIn" accept="image/*,application/pdf" multiple style="display:none">
+      <div class="modal-actions" style="flex-wrap:wrap">
+        <button id="exClose">Tanca</button>
+        <button id="exFile">&#65291; Imatge o PDF</button>
+        <button class="btn-gold cap-only" id="exCam" style="display:none">&#128247; Fotografia el tiquet</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-back" id="xeBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,720px)">
+      <div class="modal-title">&#128182; <span id="xeTitle">Despesa</span></div>
+      <div class="xe-img" id="xeImgBox">
+        <img id="xeImg" alt="">
+        <div id="xePdf" class="xe-pdf" style="display:none">&#128196;</div>
+        <div id="xeCrop" class="xe-crop" style="display:none"><i data-c="tl"></i><i data-c="tr"></i><i data-c="bl"></i><i data-c="br"></i></div>
+      </div>
+      <div class="xe-tools">
+        <button class="btn-sm" id="xeRotL" title="Gira a l'esquerra">&#10226; Gira</button>
+        <button class="btn-sm" id="xeRotR" title="Gira a la dreta">Gira &#10227;</button>
+        <button class="btn-sm" id="xeCropBtn" title="Arrossega les cantonades per deixar només el tiquet">&#9986; Retalla</button>
+        <button class="btn-sm btn-gold" id="xeCropOk" style="display:none">&#10003; Aplica el retall</button>
+        <button class="btn-sm" id="xeCropNo" style="display:none">Cancel&middot;la el retall</button>
+        <button class="btn-sm" id="xeOpen" style="display:none">&#8599; Obre el PDF</button>
+        <span id="xeUp" class="xe-up"></span>
+      </div>
+      <div class="pt-grid">
+        <div class="field"><label>Data</label><input type="date" id="xeDate"></div>
+        <div class="field"><label>Categoria</label><select id="xeCat"></select></div>
+        <div class="field pt-wide"><label>Establiment</label><input type="text" id="xeMerchant" autocomplete="off"></div>
+        <div class="field"><label>NIF / VAT</label><input type="text" id="xeTaxId" autocomplete="off" spellcheck="false"></div>
+        <div class="field"><label>Moneda</label><input type="text" id="xeCur" maxlength="3" autocomplete="off" spellcheck="false" style="text-transform:uppercase" placeholder="EUR"></div>
+        <div class="field"><label>Base imposable</label><input type="text" id="xeBase" inputmode="decimal" autocomplete="off"></div>
+        <div class="field"><label>IVA (%)</label><input type="text" id="xeVatRate" inputmode="decimal" autocomplete="off" placeholder="21"></div>
+        <div class="field"><label>Quota d'IVA</label><input type="text" id="xeVat" inputmode="decimal" autocomplete="off"></div>
+        <div class="field"><label>Total</label><input type="text" id="xeTotal" inputmode="decimal" autocomplete="off" style="font-weight:700"></div>
+        <div class="field"><label>Pagat amb</label><select id="xePay"><option value="">&mdash;</option><option value="company">Targeta d'empresa</option><option value="personal">Targeta personal</option><option value="cash">Efectiu</option></select></div>
+        <div class="field"><label>Targeta acabada en</label><input type="text" id="xeLast4" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="si el tiquet ho diu"></div>
+        <div class="field pt-wide"><label>Notes</label><input type="text" id="xeNotes" autocomplete="off"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-danger" id="xeDel" style="margin-right:auto">&#128465; Elimina</button>
+        <button id="xeCancel">Cancel&middot;la</button>
+        <button class="btn-gold" id="xeSave">&#10003; Desa</button>
       </div>
     </div>
   </div>
@@ -2124,16 +2206,21 @@ async function saveReport(sess,blob,fname,mime){
 // — a sync can swap the visit for a copy made before the upload finished, and
 // that copy is then given the id too. A queued video whose entry is not found
 // for a day (the entry was never saved, or the video was taken out) is dropped.
-var MQ_KEY="mediaQueue",mqBusy=false,mqN=0,mqActive={};
+var MQ_KEY="mediaQueue",mqBusy=false,mqN=0,mqNT=0,mqActive={};
 async function mqList(){try{var v=idb?await idbGet(idb,MQ_KEY):null;return Array.isArray(v)?v:[]}catch(e){return[]}}
 function mqWaiting(l){return l.filter(function(x){return !x.done}).length}
-async function mqSave(l){try{if(idb)await idbSet(idb,MQ_KEY,l)}catch(e){}mqN=mqWaiting(l);refreshDriveInfo()}
-async function mqAdd(sessId,img,file){
+// Tickets (2026-10-19) ride the same queue, kind "tiquets", and are counted apart.
+// mqHere: what is waiting in THIS device's queue, so a ticket can say whether
+// it goes up from here or from the device it was added on.
+var mqHere={};
+function mqCount(l){mqN=mqWaiting(l);mqNT=l.filter(function(x){return !x.done&&x.kind==="tiquets"}).length;mqHere={};l.forEach(function(x){if(!x.done)mqHere[x.qid]=1})}
+async function mqSave(l){try{if(idb)await idbSet(idb,MQ_KEY,l)}catch(e){}mqCount(l);refreshDriveInfo()}
+async function mqAdd(sessId,img,file,kind){
   if(!idb)return false;
   img.qid=img.qid||uid();
   try{await idbSet(idb,"mq:"+img.qid,file)}catch(e){delete img.qid;return false}
   var l=(await mqList()).filter(function(x){return x.qid!==img.qid});
-  l.push({qid:img.qid,sessId:sessId,name:file.name||img.name||"video.mp4",mime:file.type||"video/mp4",at:now()});
+  l.push({qid:img.qid,sessId:sessId,kind:kind||"videos",name:img.name||file.name||"video.mp4",mime:file.type||"video/mp4",at:now()});
   await mqSave(l);
   try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}   // ask the browser not to clear it
   return true;
@@ -2147,7 +2234,7 @@ async function mqDrop(qid){
 // Uploaded: the file leaves, the Drive id stays with the entry until used.
 async function mqDone(qid,r){
   await idbDel(idb,"mq:"+qid);
-  await mqSave((await mqList()).map(function(x){return x.qid===qid?{qid:qid,sessId:x.sessId,at:x.at,done:{driveId:r.driveId,name:r.name}}:x}));
+  await mqSave((await mqList()).map(function(x){return x.qid===qid?{qid:qid,sessId:x.sessId,kind:x.kind,at:x.at,done:{driveId:r.driveId,name:r.name}}:x}));
 }
 function mqFind(qid){
   for(var i=0;i<sessions.length;i++){
@@ -2156,15 +2243,17 @@ function mqFind(qid){
       var im=entryMedia(es[j]).find(function(x){return x&&x.qid===qid});
       if(im)return {sess:sessions[i],img:im};
     }
+    var xs=sessions[i].expenses||[];
+    for(var k=0;k<xs.length;k++)if(xs[k].img&&xs[k].img.qid===qid)return {sess:sessions[i],img:xs[k].img};
   }
   return null;
 }
 // Upload one queued video (the file from the queue); true when it is on Drive.
-async function mqUpload(sess,img,file){
+async function mqUpload(sess,img,file,kind){
   var q=img.qid;if(!q||mqActive[q])return false;
   mqActive[q]=1;
   try{
-    var r=await uploadMedia(sess,file,"videos");
+    var r=await uploadMedia(sess,file,kind||"videos");
     if(!r)return false;
     mediaUploaded(img,r);delete img.qid;await mqDone(q,r);
     return true;
@@ -2172,7 +2261,7 @@ async function mqUpload(sess,img,file){
 }
 async function mqFlush(){
   if(mqBusy||!idb||!isLoggedIn||navigator.onLine===false||tokenStale())return;
-  var l=await mqList();mqN=mqWaiting(l);if(!l.length)return;
+  var l=await mqList();mqCount(l);if(!l.length)return;
   mqBusy=true;
   try{
     var done=0,changed={};
@@ -2189,15 +2278,16 @@ async function mqFlush(){
       var b=await mqBlob(it.qid);
       if(!b){await mqDrop(it.qid);delete f.img.qid;f.img.uploadStatus="err";changed[f.sess.id]=1;continue}
       var file;try{file=new File([b],f.img.name||it.name,{type:it.mime||b.type||"video/mp4"})}catch(e){file=b}
-      if(await mqUpload(f.sess,f.img,file)){done++;changed[f.sess.id]=1}
+      if(await mqUpload(f.sess,f.img,file,it.kind)){done++;changed[f.sess.id]=1}
     }
     if(Object.keys(changed).length){
       // new objects, so the change is stamped and goes to Drive with the next save
       sessions=sessions.map(function(x){return changed[x.id]?Object.assign({},x):x});
       isDirty=true;saveLocal();
       if(hasUnsaved())renderSidebar();else renderAll();
+      exRefresh();
     }
-    if(done)repNote("&#10003; "+pl(done,"vídeo de la cua pujat","vídeos de la cua pujats")+" a la carpeta del projecte","ok");
+    if(done)repNote("&#10003; "+pl(done,"fitxer de la cua pujat","fitxers de la cua pujats")+" a la carpeta del projecte","ok");
   }finally{mqBusy=false}
 }
 async function flushPendingReports(){
@@ -3280,7 +3370,8 @@ async function refreshDriveInfo(token){
   var left=lk.length?"<br><span style=\"color:var(--orange)\" title=\""+esc(lk.map(function(k){return lm[k].why}).filter(Boolean).join(" · "))+"\">⚠ Esborra a mà a Drive (Outputs): "
     +lk.map(function(k){return "«"+esc(lm[k].name||k)+"»"}).join(", ")+" — hi ha un fitxer que l'app no pot tocar (p. ex. una còpia de Google Docs)</span>":"";
   var pend=pendReps&&pendReps.length?"<br><span style=\"color:var(--orange)\">&#9203; "+pl(pendReps.length,"informe pendent","informes pendents")+" de pujar</span>":"";
-  if(mqN)pend+="<br><span style=\"color:var(--orange)\">&#9203; "+pl(mqN,"vídeo a la cua","vídeos a la cua")+" per pujar</span>";
+  if(mqN-mqNT)pend+="<br><span style=\"color:var(--orange)\">&#9203; "+pl(mqN-mqNT,"vídeo a la cua","vídeos a la cua")+" per pujar</span>";
+  if(mqNT)pend+="<br><span style=\"color:var(--orange)\">&#9203; "+pl(mqNT,"tiquet a la cua","tiquets a la cua")+" per pujar</span>";
   if(!isLoggedIn){el.innerHTML="Sense entrar a Google: només aquest aparell"+pend+left;return}
   el.innerHTML="Compte: <strong>"+esc(driveEmail||"?")+"</strong>"
     +(lastDriveCount!=null?"<br>A Drive: "+pl(lastDriveCount,"visita","visites")
@@ -3898,6 +3989,7 @@ function renderContent(){
     +tsChipHTML(active)
     +ctrChipHTML(active)
     +prodChipHTML(active)
+    +exChipHTML(active)
     +"</div></div>"
     // filter
     +"<div class=\"filter-row\">"
@@ -3976,6 +4068,7 @@ function renderContent(){
   var fChip=$$("folChip");if(fChip)fChip.addEventListener("click",openFolder);
   var hChip=$$("mhChip");if(hChip)hChip.addEventListener("click",openMachineHistory);
   var pdC=$$("pdChip");if(pdC)pdC.addEventListener("click",function(){openProdList()});
+  var exC=$$("exChip");if(exC)exC.addEventListener("click",function(){openExpenses()});
   var ctC=$$("ctrChip");if(ctC)ctC.addEventListener("click",openCounters);
   var btnC=$$("btnClose");if(btnC)btnC.addEventListener("click",function(){if(confirm("Vols tancar aquesta sessió? La pots reobrir més endavant.")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"closed",closedAt:now()}):s});scheduleSave();renderAll()}});
   var btnR=$$("btnReopen");if(btnR)btnR.addEventListener("click",function(){if(confirm("Vols reobrir aquesta sessió?")){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"open",closedAt:null}):s});scheduleSave();renderAll()}});
@@ -5338,6 +5431,7 @@ function openM2More(){
     ["VISITA",[
       it("&#9201;","Comptadors de la màquina",ctrLast(a)?"":"sense lectures",function(){openCounters()}),
       it("&#128200;","Proves de producció",prodChipNote(a),function(){openProdList()}),
+      exOn()?it("&#128182;","Despeses",exChipNote(a),function(){openExpenses()}):null,
       mh>1?it("&#128220;","Historial de la màquina",mh+" visites"+(m2Pending(a)?" · "+pl(m2Pending(a),"pendent","pendents"):""),function(){openMachineHistory()}):null,
       $$("folChip")?it("&#128451;","Carpeta de Drive","",click("folChip")):null,
       $$("manualChip")?it("&#128218;","Manual de recanvis",/Vincula/.test($$("manualChip").textContent)?"sense vincular":"",click("manualChip")):null,
@@ -5376,7 +5470,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-18 · 22";
+var APP_VERSION="2026-10-19 · 1";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -11018,6 +11112,365 @@ async function exportSessionZip(s,kind,pick){
   if(arxOk){expBusy("\ud83d\uddc4 "+(arxOk===zipName?(drvArx?"Desat a Drive":"Desat a la carpeta d'arxiu"):"Desat com a "+arxOk));setTimeout(function(){expBusy("")},4000)}
 }
 
+// ── EXPENSES (2026-10-19) ────────────────────────────────────────────────────
+// "I have to report all my expenses too… I want to save the manual work."
+// Each visit keeps its tickets in `session.expenses[]`: the picture (a photo,
+// or a PDF from an email) and the fields of the company's expense sheet.
+// Phase 1 is capturing and typing by hand; Gemini reads the tickets in
+// phase 2, and the company's .xlsx comes when the template does.
+// - Behind the sidebar's 💶 Despeses switch, per device (LS_EXON), off by
+//   default: only the user does expenses so far, and the app is going out to
+//   other technicians.
+// - The ticket's own date is the expense's date. A trip runs from the first
+//   clock-in to the last clock-out, travel included.
+// - Mostly the company card, sometimes the personal one — that one is
+//   refunded, so the list totals it apart. The company card's last four
+//   digits are kept in this browser only (LS_EXLAST4).
+// - The picture kept on the visit is the ticket as shown — downscaled, turned,
+//   cropped — and that same JPEG goes to the visit's tiquets/ folder on Drive
+//   through the video queue (kind "tiquets"), so a ticket shot offline waits
+//   on the device. A PDF goes up as it is, its first page drawn as the picture.
+// - Saved WITHOUT touching updatedAt: the service report carries no expenses,
+//   and a new ticket must not make a signed report look out of date.
+var LS_EXON="fsl_v6_exon",LS_EXLAST4="fsl_v6_exlast4",LS_EXCUR="fsl_v6_excur";
+var EX_MAXDIM=2000,EX_QUALITY=0.85;
+var EX_CATS=[["meal","Àpat"],["hotel","Hotel"],["fuel","Combustible"],["taxi","Taxi / VTC"],["transport","Transport públic"],["toll","Peatge"],
+  ["parking","Aparcament"],["flight","Vol"],["train","Tren"],["car","Lloguer de cotxe"],["other","Altres"]];
+var EX_PAY={company:"Targeta d'empresa",personal:"Targeta personal",cash:"Efectiu"};
+function exOn(){try{return localStorage.getItem(LS_EXON)==="1"}catch(e){return false}}
+function exLast4(){try{return localStorage.getItem(LS_EXLAST4)||""}catch(e){return ""}}
+function exCatLabel(k){var c=EX_CATS.filter(function(x){return x[0]===k})[0];return c?c[1]:""}
+function exLabel(){var b=$$("btnExOn");if(b)b.innerHTML="&#128182; Despeses: "+(exOn()?"sí":"no")}
+exLabel();
+$$("btnExOn").addEventListener("click",function(){
+  try{localStorage.setItem(LS_EXON,exOn()?"0":"1")}catch(e){}
+  exLabel();renderAll();
+});
+// Amounts as typed or printed: "12,50", "1.234,56", "1,234.56" — the last
+// separator is the decimal one, unless it is the only one and has three
+// digits after it ("1.234": thousands).
+function exNum(v){
+  var t=String(v==null?"":v).replace(/[^\d.,-]/g,"");if(!t)return null;
+  var i=Math.max(t.lastIndexOf(","),t.lastIndexOf("."));
+  if(i>=0){
+    var dec=t.slice(i+1),one=(t.match(/[.,]/g)||[]).length===1;
+    t=one&&dec.length===3?t.replace(/[.,]/g,""):t.slice(0,i).replace(/[.,]/g,"")+"."+dec;
+  }
+  var x=parseFloat(t);return isFinite(x)?x:null;
+}
+function exFmt(n){return n==null?"":n.toLocaleString("ca-ES",{minimumFractionDigits:2,maximumFractionDigits:2})}
+function exDateTxt(d){var m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(d||"");return m?m[3]+"/"+m[2]+"/"+m[1]:""}
+function exStamp(){var d=new Date();return tsIso(d)+" "+tsPad2(d.getHours())+"."+tsPad2(d.getMinutes())+"."+tsPad2(d.getSeconds())}
+function exIsPdf(f){return f&&(f.type==="application/pdf"||/\.pdf$/i.test(f.name||""))}
+function exList(s){
+  return ((s&&s.expenses)||[]).slice().sort(function(a,b){
+    return String(a.date||"9").localeCompare(String(b.date||"9"))||String(a.addedAt||"").localeCompare(String(b.addedAt||""));
+  });
+}
+function exToCheck(s){return ((s&&s.expenses)||[]).filter(function(x){return !x.checked}).length}
+function exChipNote(s){var n=((s&&s.expenses)||[]).length,k=exToCheck(s);return n?pl(n,"tiquet","tiquets")+(k?" · "+k+" per revisar":""):"cap tiquet"}
+function exChipHTML(s){
+  if(!exOn()||!s)return "";
+  var n=(s.expenses||[]).length,k=exToCheck(s);
+  return "<span id=\"exChip\" style=\"cursor:pointer"+(n?"":";color:var(--tx3)")+"\" title=\"Els tiquets de les despeses d'aquesta visita\">&#128182; "
+    +(n?pl(n,"despesa","despeses")+(k?" · "+k+" per revisar":""):"Despeses")+"</span>";
+}
+// ── saving ──
+var exSessId=null,exWired=false;
+function exSess(){return sessions.find(function(x){return x.id===exSessId})}
+function exSet(sessId,fn){
+  sessions=sessions.map(function(x){return x.id!==sessId?x:Object.assign({},x,{expenses:fn((x.expenses||[]).slice())})});
+  saveLocal();isDirty=true;
+  if(saveTimer)clearTimeout(saveTimer);
+  saveTimer=setTimeout(function(){if(isDirty&&isLoggedIn)saveToDrive()},2000);
+}
+function exPatch(sessId,id,patch){exSet(sessId,function(l){return l.map(function(x){return x.id===id?Object.assign({},x,patch):x})})}
+// ── the picture ──
+// A JPEG no bigger than EX_MAXDIM: small enough to keep on the visit, big
+// enough for a till receipt's small print.
+function exPrepImage(file){
+  return new Promise(function(res){
+    var url=URL.createObjectURL(file),im=new Image();
+    im.onload=function(){
+      var out=null;
+      try{
+        var w=im.naturalWidth,h=im.naturalHeight,sc=Math.min(1,EX_MAXDIM/Math.max(w,h,1));
+        var c=document.createElement("canvas");c.width=Math.max(1,Math.round(w*sc));c.height=Math.max(1,Math.round(h*sc));
+        c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+        out=c.toDataURL("image/jpeg",EX_QUALITY);
+      }catch(e){}
+      URL.revokeObjectURL(url);res(out);
+    };
+    im.onerror=function(){URL.revokeObjectURL(url);res(null)};
+    im.src=url;
+  });
+}
+// A PDF's first page, drawn: the picture in the list and in the editor.
+async function exPdfPage(file){
+  try{
+    var lib=await loadPdfjs();
+    var doc=await lib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+    var pg=await doc.getPage(1),v0=pg.getViewport({scale:1});
+    var v=pg.getViewport({scale:Math.min(3,EX_MAXDIM/Math.max(v0.width,v0.height))});
+    var c=document.createElement("canvas");c.width=Math.round(v.width);c.height=Math.round(v.height);
+    var ctx=c.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,c.width,c.height);
+    await pg.render({canvasContext:ctx,viewport:v}).promise;
+    try{doc.destroy()}catch(e){}
+    return c.toDataURL("image/jpeg",EX_QUALITY);
+  }catch(e){return null}
+}
+// Turned a quarter (rot 1 = clockwise, -1 = back) or cut to a box given in
+// fractions of the picture.
+function exTransform(data,op){
+  return new Promise(function(res){
+    var im=new Image();
+    im.onload=function(){
+      try{
+        var w=im.naturalWidth,h=im.naturalHeight,c=document.createElement("canvas"),x=c.getContext("2d");
+        if(op.rot){c.width=h;c.height=w;x.translate(h/2,w/2);x.rotate(op.rot*Math.PI/2);x.drawImage(im,-w/2,-h/2)}
+        else{
+          var b=op.crop,sx=Math.round(b.x*w),sy=Math.round(b.y*h),sw=Math.max(1,Math.round(b.w*w)),sh=Math.max(1,Math.round(b.h*h));
+          c.width=sw;c.height=sh;x.drawImage(im,sx,sy,sw,sh,0,0,sw,sh);
+        }
+        res(c.toDataURL("image/jpeg",EX_QUALITY));
+      }catch(e){res(null)}
+    };
+    im.onerror=function(){res(null)};
+    im.src=data;
+  });
+}
+// A turned or cropped ticket takes the place of the one waiting to go up, or
+// of the one already on Drive (which goes to the Drive trash, like any
+// attachment taken out of an entry).
+async function exNewImg(sessId,old,data){
+  old=old||{};
+  if(old.qid&&!mqActive[old.qid])await mqDrop(old.qid);
+  if(old.driveId)queueTrash(sessId,[old.driveId]);
+  var img={type:"image",data:data,name:old.name||("Tiquet "+exStamp()+".jpg"),uploadStatus:"queued"};
+  if(!await mqAdd(sessId,img,dataUrlToBlob(data),"tiquets"))img.uploadStatus="err";
+  return img;
+}
+// ── adding tickets ──
+async function exAddFiles(files){
+  var s=exSess();if(!s)return;
+  var sessId=s.id,first=null;
+  files=files.filter(function(f){return /^image\//.test(f.type||"")||exIsPdf(f)});
+  if(!files.length){alert("Tria una foto o un PDF del tiquet.");return}
+  var cur;try{cur=localStorage.getItem(LS_EXCUR)||"EUR"}catch(e){cur="EUR"}
+  for(var i=0;i<files.length;i++){
+    var f=files[i],pdf=exIsPdf(f),id=uid();
+    if(!first)first=id;
+    exSet(sessId,function(l){return l.concat([{id:id,addedAt:now(),date:"",merchant:"",taxId:"",category:"",base:"",vatRate:"",vat:"",
+      total:"",currency:cur,pay:"",payAuto:false,last4:"",notes:"",checked:false,img:{type:pdf?"pdf":"image",data:null,name:"",uploadStatus:"loading"}}])});
+    exRender();
+    var data=pdf?await exPdfPage(f):await exPrepImage(f);
+    // a photo's date is when it was taken; a PDF's is printed inside it
+    var date="";
+    if(!pdf){var ts=await getFileTs(f),d=ts?new Date(ts):new Date();date=tsIso(isNaN(d.getTime())?new Date():d)}
+    var name=pdf?(cleanName(String(f.name||"").replace(/\.pdf$/i,""))||"Tiquet "+exStamp())+".pdf"
+      :"Tiquet "+exStamp()+(files.length>1?" "+(i+1):"")+".jpg";
+    var img={type:pdf?"pdf":"image",data:data,name:name,uploadStatus:"queued"};
+    var blob=pdf||!data?f:dataUrlToBlob(data);
+    if(!await mqAdd(sessId,img,blob,"tiquets"))img.uploadStatus="err";
+    exPatch(sessId,id,{img:img,date:date});
+    exRender();
+  }
+  if(files.length===1)openExpense(first);
+}
+// ── the list ──
+function openExpenses(){
+  var a=sessions.find(function(x){return x.id===aid});if(!a)return;
+  exSessId=a.id;wireEx();
+  $$("exLast4").value=exLast4();
+  var hh=handheld();
+  $$("exCam").style.display=hh?"":"none";
+  $$("exFile").classList.toggle("btn-gold",!hh);
+  exRender();$$("exBack").style.display="flex";
+}
+function exOpenNow(){var b=$$("exBack");return !!b&&b.style.display!=="none"}
+// After the queue has sent something: the ⏳ become ✓ where they are on screen.
+function exRefresh(){if(exOpenNow())exRender();if(xeOpenNow())xeUpLabel()}
+function exUpIcon(im){
+  var st=!im?"":im.driveId?"ok":im.uploadStatus==="queued"?"queued":im.uploadStatus==="loading"?"loading":im.uploadStatus==="err"?"err":"";
+  return st?"<span class=\"thumb-up "+st+"\">"+(st==="ok"?"&#10003;":st==="queued"?"&#9203;":st==="err"?"!":"")+"</span>":"";
+}
+function exRender(){
+  var s=exSess();if(!s)return;
+  var l=exList(s);
+  $$("exTitle").textContent="Despeses · "+(s.client||"");
+  $$("exNote").textContent=l.length?"Toca un tiquet per revisar-lo o completar-lo."
+    :"Encara no n'hi ha cap. Fotografia cada tiquet el mateix dia: el paper tèrmic s'esborra. La foto es desa a la visita i es puja a la carpeta tiquets/ de Drive.";
+  // totals by way of paying and by currency: nothing is converted
+  var tot={};
+  l.forEach(function(x){
+    var n=exNum(x.total);if(n==null)return;
+    var k=x.pay||"",c=(x.currency||"EUR").toUpperCase();
+    tot[k]=tot[k]||{};tot[k][c]=(tot[k][c]||0)+n;
+  });
+  $$("exSum").innerHTML=["company","personal","cash",""].filter(function(k){return tot[k]}).map(function(k){
+    return "<div>"+esc(k?EX_PAY[k]:"Sense dir com es va pagar")+(k==="personal"||k==="cash"?" <span style=\"color:var(--tx3)\">(a retornar)</span>":"")+": "
+      +Object.keys(tot[k]).sort().map(function(c){return "<span class=\"am\">"+esc(exFmt(tot[k][c])+" "+c)+"</span>"}).join(" · ")+"</div>";
+  }).join("");
+  $$("exList").innerHTML=l.map(function(x){
+    var im=x.img||{},n=exNum(x.total);
+    var sub=[x.date?exDateTxt(x.date):"sense data",exCatLabel(x.category),x.pay?EX_PAY[x.pay]:""].filter(Boolean).join(" · ");
+    return "<button class=\"ex-card\" data-ex=\""+esc(x.id)+"\">"
+      +"<span class=\"th\">"+(im.data?"<img src=\""+im.data+"\" alt=\"\">":(im.uploadStatus==="loading"?"<span class=\"spinner\"></span>":im.type==="pdf"?"&#128196;":"&#129534;"))+exUpIcon(im)+"</span>"
+      +"<span class=\"bd\"><span class=\"t\">"+esc(x.merchant||"Tiquet sense llegir")+(x.checked?"":"<span class=\"ex-badge\">PER REVISAR</span>")+"</span>"
+      +"<span class=\"s\">"+esc(sub)+"</span></span>"
+      +"<span class=\"am\">"+(n!=null?esc(exFmt(n)+" "+(x.currency||"EUR").toUpperCase()):"&mdash;")+"</span></button>";
+  }).join("");
+}
+function wireEx(){
+  if(exWired)return;exWired=true;
+  function close(){$$("exBack").style.display="none";mqFlush();renderAll()}
+  $$("exClose").addEventListener("click",close);
+  $$("exBack").addEventListener("click",function(e){if(e.target===$$("exBack"))close()});
+  $$("exCam").addEventListener("click",function(){$$("exCamIn").click()});
+  $$("exFile").addEventListener("click",function(){$$("exFileIn").click()});
+  ["exCamIn","exFileIn"].forEach(function(k){
+    $$(k).addEventListener("change",function(e){var f=Array.from(e.target.files||[]);e.target.value="";if(f.length)exAddFiles(f)});
+  });
+  $$("exList").addEventListener("click",function(e){var b=e.target.closest("[data-ex]");if(b)openExpense(b.dataset.ex)});
+  $$("exLast4").addEventListener("input",function(){
+    var v=this.value.replace(/\D/g,"").slice(0,4);if(v!==this.value)this.value=v;
+    try{localStorage.setItem(LS_EXLAST4,v)}catch(e){}
+  });
+}
+// ── one ticket ──
+var XE_F=[["xeDate","date"],["xeCat","category"],["xeMerchant","merchant"],["xeTaxId","taxId"],["xeCur","currency"],["xeBase","base"],
+  ["xeVatRate","vatRate"],["xeVat","vat"],["xeTotal","total"],["xePay","pay"],["xeLast4","last4"],["xeNotes","notes"]];
+var xeSessId=null,xeId=null,xeDraft=null,xeWired=false,xeBox=null,xePayHand=false,xeDrag=null;
+function xeOpenNow(){var b=$$("xeBack");return !!b&&b.style.display!=="none"}
+function xeEx(){var s=sessions.find(function(x){return x.id===xeSessId});return s&&(s.expenses||[]).filter(function(x){return x.id===xeId})[0]}
+function openExpense(id){
+  var s=exSess();if(!s)return;
+  var x=(s.expenses||[]).filter(function(e){return e.id===id})[0];if(!x)return;
+  xeSessId=s.id;xeId=id;wireXe();
+  xeDraft={data:(x.img||{}).data||null,changed:false};
+  // "pagat amb" set by the card digits follows them; one picked by hand stays
+  xePayHand=!!x.pay&&!x.payAuto;
+  $$("xeCat").innerHTML="<option value=\"\">&mdash;</option>"+EX_CATS.map(function(c){return "<option value=\""+c[0]+"\">"+esc(c[1])+"</option>"}).join("");
+  XE_F.forEach(function(f){$$(f[0]).value=x[f[1]]||""});
+  $$("xeTitle").textContent=x.merchant||"Tiquet";
+  $$("xeImgBox").classList.remove("big");
+  xeCropEnd();xeUpLabel();
+  $$("exBack").style.display="none";
+  $$("xeBack").style.display="flex";
+}
+function xeShowImg(){
+  var x=xeEx(),im=(x&&x.img)||{},d=xeDraft&&xeDraft.data,pdf=im.type==="pdf",I=$$("xeImg");
+  if(d){I.src=d;I.style.display=""}else{I.removeAttribute("src");I.style.display="none"}
+  $$("xePdf").style.display=d?"none":"";
+  $$("xePdf").innerHTML=pdf?"&#128196;":"&#129534;";
+  ["xeRotL","xeRotR","xeCropBtn"].forEach(function(k){$$(k).style.display=d&&!pdf&&!xeBox?"":"none"});
+  $$("xeOpen").style.display=pdf&&!xeBox?"":"none";
+}
+function xeUpLabel(){
+  var x=xeEx(),im=(x&&x.img)||{};
+  $$("xeUp").innerHTML=xeDraft&&xeDraft.changed?"La imatge nova es pujarà a Drive en desar."
+    :im.driveId?"&#10003; A Drive, a la carpeta tiquets/"
+    :im.uploadStatus==="queued"?(mqHere[im.qid]?"&#9203; A la cua: es pujarà a Drive quan hi hagi connexió i hagis entrat a Google":"&#9203; Pendent de pujar a Drive des de l'aparell on el vas afegir")
+    :im.uploadStatus==="loading"?"Preparant la imatge&hellip;"
+    :im.uploadStatus==="err"?"&#9888; No s'ha pogut guardar per pujar-lo a Drive; la imatge és a la visita":"";
+}
+// ── cropping: a box over the picture, its four corners dragged ──
+function xeCropDraw(){var b=xeBox,c=$$("xeCrop");c.style.left=b.x*100+"%";c.style.top=b.y*100+"%";c.style.width=b.w*100+"%";c.style.height=b.h*100+"%"}
+function xeCropStart(){
+  $$("xeImgBox").classList.remove("big");
+  xeBox={x:.05,y:.05,w:.9,h:.9};xeCropDraw();
+  $$("xeCrop").style.display="";$$("xeCropOk").style.display="";$$("xeCropNo").style.display="";
+  xeShowImg();
+}
+function xeCropEnd(){
+  xeBox=null;xeDrag=null;
+  $$("xeCrop").style.display="none";$$("xeCropOk").style.display="none";$$("xeCropNo").style.display="none";
+  xeShowImg();
+}
+async function xeApply(op){
+  if(!xeDraft||!xeDraft.data)return;
+  var d=await exTransform(xeDraft.data,op);
+  if(d){xeDraft.data=d;xeDraft.changed=true}
+  xeCropEnd();xeUpLabel();
+}
+function xeClose(){
+  $$("xeBack").style.display="none";xeBox=null;xeId=null;xeDraft=null;
+  if(exSess()){exRender();$$("exBack").style.display="flex"}
+  mqFlush();
+}
+async function xeSave(){
+  var x=xeEx();if(!x){xeClose();return}
+  var sessId=xeSessId,id=xeId,p={};
+  XE_F.forEach(function(f){p[f[1]]=$$(f[0]).value.trim()});
+  p.currency=(p.currency||"EUR").toUpperCase();
+  p.payAuto=!!p.pay&&!xePayHand;
+  p.checked=true;
+  try{localStorage.setItem(LS_EXCUR,p.currency)}catch(e){}
+  if(xeDraft&&xeDraft.changed&&xeDraft.data){
+    $$("xeSave").disabled=true;
+    try{p.img=await exNewImg(sessId,x.img,xeDraft.data)}finally{$$("xeSave").disabled=false}
+  }
+  exPatch(sessId,id,p);
+  xeClose();
+}
+function xeDelete(){
+  var x=xeEx();if(!x)return;
+  var im=x.img||{};
+  if(!confirm("Vols eliminar aquesta despesa?"+(im.driveId?"\n\nEl tiquet anirà a la paperera de Drive.":"")))return;
+  if(im.qid&&!mqActive[im.qid])mqDrop(im.qid);
+  if(im.driveId)queueTrash(xeSessId,[im.driveId]);
+  exSet(xeSessId,function(l){return l.filter(function(e){return e.id!==xeId})});
+  xeClose();
+}
+function wireXe(){
+  if(xeWired)return;xeWired=true;
+  $$("xeCancel").addEventListener("click",function(){
+    if(xeDraft&&xeDraft.changed&&!confirm("Vols descartar els canvis de la imatge?"))return;
+    xeClose();
+  });
+  $$("xeSave").addEventListener("click",xeSave);
+  $$("xeDel").addEventListener("click",xeDelete);
+  $$("xeRotL").addEventListener("click",function(){xeApply({rot:-1})});
+  $$("xeRotR").addEventListener("click",function(){xeApply({rot:1})});
+  $$("xeCropBtn").addEventListener("click",xeCropStart);
+  $$("xeCropNo").addEventListener("click",xeCropEnd);
+  $$("xeCropOk").addEventListener("click",function(){if(xeBox)xeApply({crop:xeBox})});
+  // a tap on the picture shows it at full size, to read the small print
+  $$("xeImg").addEventListener("click",function(){if(!xeBox)$$("xeImgBox").classList.toggle("big")});
+  $$("xeOpen").addEventListener("click",async function(){
+    var x=xeEx(),im=(x&&x.img)||{};
+    if(im.driveId){window.open("https://drive.google.com/file/d/"+encodeURIComponent(im.driveId)+"/view","_blank","noopener");return}
+    var w=window.open("","_blank");                       // now, while the tap still counts
+    var b=im.qid?await mqBlob(im.qid):null;
+    if(!b){if(w)w.close();alert("Aquest PDF és a l'aparell on el vas afegir. Es podrà obrir des d'aquí quan s'hagi pujat a Drive.");return}
+    var u=URL.createObjectURL(b.type?b:new Blob([b],{type:"application/pdf"}));
+    if(w)w.location=u;else window.open(u,"_blank");
+  });
+  $$("xeCrop").addEventListener("pointerdown",function(e){
+    var h=e.target.closest("i[data-c]");if(!h||!xeBox)return;
+    e.preventDefault();xeDrag=h.dataset.c;
+    try{h.setPointerCapture(e.pointerId)}catch(_){}
+  });
+  document.addEventListener("pointermove",function(e){
+    if(!xeDrag||!xeBox)return;
+    var r=$$("xeImg").getBoundingClientRect();if(!r.width||!r.height)return;
+    var px=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),py=Math.min(1,Math.max(0,(e.clientY-r.top)/r.height));
+    var b=xeBox,x1=b.x,y1=b.y,x2=b.x+b.w,y2=b.y+b.h,M=.06;
+    if(xeDrag[1]==="l")x1=Math.min(px,x2-M);else x2=Math.max(px,x1+M);
+    if(xeDrag[0]==="t")y1=Math.min(py,y2-M);else y2=Math.max(py,y1+M);
+    xeBox={x:x1,y:y1,w:x2-x1,h:y2-y1};xeCropDraw();
+  });
+  ["pointerup","pointercancel"].forEach(function(t){document.addEventListener(t,function(){xeDrag=null})});
+  // the card's last digits pick "pagat amb", unless it was picked by hand
+  $$("xeLast4").addEventListener("input",function(){
+    var v=this.value.replace(/\D/g,"").slice(0,4);if(v!==this.value)this.value=v;
+    var c=exLast4();
+    if(xePayHand||v.length!==4||c.length!==4)return;
+    $$("xePay").value=v===c?"company":"personal";
+  });
+  $$("xePay").addEventListener("change",function(){xePayHand=!!this.value});
+}
+
 // ── CLOSE DROPDOWNS ───────────────────────────────────────────────────────────
 document.addEventListener("click",function(){var m=$$("expMenu");if(m)m.style.display="none"});
 
@@ -11037,7 +11490,7 @@ $$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><di
   markSeen();
   outDirLoad();arxDirLoad();
   pendLoad().then(function(){refreshDriveInfo()});
-  mqList().then(function(l){mqN=mqWaiting(l);refreshDriveInfo()});
+  mqList().then(function(l){mqCount(l);refreshDriveInfo()});
   histLoad();   // reports still waiting to go up        // idb is open by now; nothing waits on this
   labelsLoad();                     // so a language translated earlier is ready offline
   if(loadTok()&&accessToken&&Date.now()<tokenExp){

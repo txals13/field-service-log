@@ -5509,7 +5509,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-19 · 5";
+var APP_VERSION="2026-10-19 · 6";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -11817,7 +11817,8 @@ function xeImgRemove(){
   if(!confirm("Vols treure aquesta foto de la despesa?"+(im.driveId?"\n\nAnirà a la paperera de Drive.":"")))return;
   exDropImg(xeSessId,im);delete xeEdits[im.id];
   exPatch(xeSessId,xeId,{imgs:exImgs(x).filter(function(m){return m.id!==im.id})});
-  xeImgId=null;xeRenderStrip();xeShowImg();xeUpLabel();
+  // xeReadLine too: it draws the "Falta…" box, and the paper just removed may be the one that is now missing
+  xeImgId=null;xeRenderStrip();xeShowImg();xeUpLabel();xeReadLine();
 }
 // A picture added on the wrong button: a ticket becomes documentation (what
 // was read stays), or documentation becomes a ticket (and is read).

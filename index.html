@@ -376,6 +376,8 @@ textarea{resize:none;line-height:1.4}
 .xe-strip button.th{width:44px;height:56px;padding:0;border-radius:6px;overflow:hidden;background:var(--bg0);font-size:20px}
 .xe-strip button.th img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
 .xe-strip button.th.on{outline:2px solid var(--gold);outline-offset:1px}
+.xe-strip button.th{position:relative}
+.xe-strip button.th .x{position:absolute;bottom:1px;right:1px;font-size:11px;line-height:1;background:rgba(0,0,0,.65);border-radius:6px;padding:1px 2px}
 .xe-strip .lb{font-size:11px;color:var(--tx3);width:100%;text-align:center}
 .xe-read{flex:none;font-size:12.5px;margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;text-align:center}
 .xe-read:empty{display:none}
@@ -976,6 +978,7 @@ textarea{resize:none;line-height:1.4}
       <div class="xe-strip" id="xeStrip"></div>
       <input type="file" id="xeAddCamIn" accept="image/*" capture="environment" style="display:none">
       <input type="file" id="xeAddFileIn" accept="image/*,application/pdf" multiple style="display:none">
+      <input type="file" id="xeAddDocIn" accept="image/*" multiple style="display:none">
       <div class="xe-img" id="xeImgBox">
         <img id="xeImg" alt="">
         <div id="xePdf" class="xe-pdf" style="display:none">&#128196;</div>
@@ -988,6 +991,7 @@ textarea{resize:none;line-height:1.4}
         <button class="btn-sm btn-gold" id="xeCropOk" style="display:none">&#10003; Aplica el retall</button>
         <button class="btn-sm" id="xeCropNo" style="display:none">Cancel&middot;la el retall</button>
         <button class="btn-sm" id="xeOpen" style="display:none">&#8599; Obre el PDF</button>
+        <button class="btn-sm" id="xeImgKind" style="display:none"></button>
         <button class="btn-sm" id="xeImgDel" style="display:none" title="Treu aquesta foto de la despesa">&#10005; Treu aquesta foto</button>
         <span id="xeUp" class="xe-up"></span>
       </div>
@@ -5500,7 +5504,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-19 · 2";
+var APP_VERSION="2026-10-19 · 3";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -11301,12 +11305,15 @@ function exTransform(data,op){
   });
 }
 // A file becomes one of an expense's pictures, already waiting in the queue.
-async function exFileImg(sessId,f,suffix){
+// `extra`: a photo that documents the expense (the meal, the room, the
+// parking sign...) — kept, sent to Drive, never given to Gemini.
+async function exFileImg(sessId,f,suffix,extra){
   var pdf=exIsPdf(f);
   var data=pdf?await exPdfPage(f):await exPrepImage(f);
   var name=pdf?(cleanName(String(f.name||"").replace(/\.pdf$/i,""))||"Tiquet "+exStamp())+".pdf"
-    :"Tiquet "+exStamp()+(suffix||"")+".jpg";
+    :(extra?"Documentació ":"Tiquet ")+exStamp()+(suffix||"")+".jpg";
   var img={id:uid(),type:pdf?"pdf":"image",data:data,name:name,uploadStatus:"queued"};
+  if(extra)img.extra=true;
   if(!await mqAdd(sessId,img,pdf||!data?f:dataUrlToBlob(data),"tiquets"))img.uploadStatus="err";
   return img;
 }
@@ -11323,6 +11330,7 @@ async function exNewImg(sessId,old,data){
   old=old||{};
   exDropImg(sessId,old);
   var img={id:old.id||uid(),type:"image",data:data,name:old.name||("Tiquet "+exStamp()+".jpg"),doc:old.doc||"",uploadStatus:"queued"};
+  if(old.extra)img.extra=true;
   if(!await mqAdd(sessId,img,dataUrlToBlob(data),"tiquets"))img.uploadStatus="err";
   return img;
 }
@@ -11430,8 +11438,8 @@ async function exGemRead(imgs){
 // Reads one expense. `all`: the fields typed by hand are read again too.
 async function exRead(sessId,id,all){
   var x=exFind(sessId,id);if(!x||exReading[id])return;
-  var imgs=exImgs(x).filter(function(im){return im.data});
-  if(!imgs.length){exPatch(sessId,id,{rd:"err",rdErr:"no hi ha cap imatge per llegir"});exRefresh();return}
+  var imgs=exImgs(x).filter(function(im){return im.data&&!im.extra});    // documentation photos are not read
+  if(!imgs.length){exPatch(sessId,id,{rd:"err",rdErr:"no hi ha cap tiquet per llegir"});exRefresh();return}
   exReading[id]=1;exRefresh();
   try{
     var v=await exGemRead(imgs);
@@ -11449,7 +11457,7 @@ function exApplyRead(sessId,id,v,all){
   p.country=v.country;
   p.invoice=v.invoice?Object.assign({},v.invoice,{done:!!(x.invoice&&x.invoice.done)}):null;
   var imgs=exImgs(x),k=0;
-  imgs.forEach(function(im){if(im.data)im.doc=v.docs[k++]||""});
+  imgs.forEach(function(im){if(im.data&&!im.extra)im.doc=v.docs[k++]||""});
   p.imgs=imgs.slice();
   exPatch(sessId,id,p);
   if(xeOpenNow()&&xeId===id)xeFillRead(all);
@@ -11653,17 +11661,19 @@ function xeFillRead(all){
   xeDoubts();xeReadLine();xeRenderStrip();
 }
 var EX_DOC={bill:"tiquet",voucher:"comprovant de la targeta",invoice:"factura",other:"altre",same:"repetida"};
+function exImgLabel(im){return im.extra?"documentació (no es llegeix)":EX_DOC[im.doc]||""}
 function xeRenderStrip(){
   var x=xeEx();if(!x)return;
   var l=exImgs(x),hh=handheld(),cur=xeImg();
   $$("xeStrip").innerHTML=(l.length>1?l.map(function(im){
       var d=xeEdits[im.id]||im.data;
-      return "<button class=\"th"+(cur&&cur.id===im.id?" on":"")+"\" data-im=\""+esc(im.id)+"\" title=\""+esc(EX_DOC[im.doc]||im.name||"")+"\">"
-        +(d?"<img src=\""+d+"\" alt=\"\">":im.type==="pdf"?"&#128196;":"&#129534;")+"</button>";
+      return "<button class=\"th"+(cur&&cur.id===im.id?" on":"")+"\" data-im=\""+esc(im.id)+"\" title=\""+esc(exImgLabel(im)||im.name||"")+"\">"
+        +(d?"<img src=\""+d+"\" alt=\"\">":im.type==="pdf"?"&#128196;":"&#129534;")+(im.extra?"<span class=\"x\">&#128206;</span>":"")+"</button>";
     }).join(""):"")
-    +(hh?"<button class=\"btn-sm\" data-add=\"cam\" title=\"Fes una altra foto d'aquesta despesa: el comprovant de la targeta, per exemple\">&#128247; Una altra foto</button>":"")
-    +"<button class=\"btn-sm\" data-add=\"file\" title=\"Afegeix una imatge o un PDF a aquesta despesa\">&#65291; Imatge o PDF</button>"
-    +(cur&&cur.doc&&EX_DOC[cur.doc]?"<div class=\"lb\">"+esc(EX_DOC[cur.doc].charAt(0).toUpperCase()+EX_DOC[cur.doc].slice(1))+(l.length>1?" · "+(l.indexOf(cur)+1)+" de "+l.length:"")+"</div>":"");
+    +(hh?"<button class=\"btn-sm\" data-add=\"cam\" title=\"Fotografia un altre paper d'aquesta despesa, el comprovant de la targeta per exemple: es torna a llegir\">&#128247; Un altre tiquet</button>":"")
+    +"<button class=\"btn-sm\" data-add=\"file\" title=\"Afegeix un altre tiquet, en imatge o PDF: es torna a llegir\">&#65291; Tiquet (imatge o PDF)</button>"
+    +"<button class=\"btn-sm\" data-add=\"doc\" title=\"Fotos que documenten la despesa (el menjar, l'habitació, el cartell de l'aparcament...): es guarden amb la despesa i van a Drive, però no es llegeixen\">&#128206; Fotos de documentació</button>"
+    +(cur&&exImgLabel(cur)?"<div class=\"lb\">"+esc(exImgLabel(cur).charAt(0).toUpperCase()+exImgLabel(cur).slice(1))+(l.length>1?" · "+(l.indexOf(cur)+1)+" de "+l.length:"")+"</div>":"");
 }
 function xeShowImg(){
   var im=xeImg()||{},d=xeEdits[im.id]||im.data,pdf=im.type==="pdf",I=$$("xeImg"),n=exImgs(xeEx()).length;
@@ -11673,6 +11683,10 @@ function xeShowImg(){
   ["xeRotL","xeRotR","xeCropBtn"].forEach(function(k){$$(k).style.display=d&&!pdf&&!xeBox?"":"none"});
   $$("xeOpen").style.display=pdf&&!xeBox?"":"none";
   $$("xeImgDel").style.display=n>1&&!xeBox?"":"none";
+  var k=$$("xeImgKind");
+  k.style.display=d&&!pdf&&n>1&&!xeBox?"":"none";
+  k.innerHTML=im.extra?"&#129534; És un tiquet: llegeix-la":"&#128206; Passa-la a documentació";
+  k.title=im.extra?"Gemini la llegirà amb els altres tiquets d'aquesta despesa":"Es queda com a foto de documentació: no es llegeix";
 }
 function xeUpLabel(){
   var im=xeImg()||{};
@@ -11690,7 +11704,7 @@ function xeReadLine(){
   else if(x.rd==="err")el.innerHTML="&#9888; No s'ha pogut llegir: "+esc(x.rdErr||"error")+"."+btn("Torna-ho a provar");
   else if(x.rd==="pending"&&!gemKey())el.innerHTML="Per llegir-lo sol cal la clau de Gemini."+btn("&#128273; Clau de Gemini");
   else if(x.rd==="pending")el.innerHTML=navigator.onLine===false?"Es llegirà sol quan hi hagi connexió.":"<span class=\"spinner\"></span> A punt de llegir&hellip;";
-  else el.innerHTML=exImgs(x).some(function(m){return m.data})?btn("&#10024; Llegeix el tiquet amb Gemini"):"";
+  else el.innerHTML=exImgs(x).some(function(m){return m.data&&!m.extra})?btn("&#10024; Llegeix el tiquet amb Gemini"):"";
   var b=$$("xeReadBtn");
   if(b)b.addEventListener("click",function(){
     if(!gemKey()){openGemKey("Per llegir els tiquets cal la clau de Gemini. Escriu-la aquí i torna-ho a provar.");return}
@@ -11755,17 +11769,20 @@ async function xeSave(){
   exPatch(sessId,id,p);
   xeClose();
 }
-// A photo added to this expense goes in at once (it is already in the queue);
-// the expense is read again with it, leaving what was typed by hand.
-async function xeAddFiles(files){
+// A photo added to this expense goes in at once (it is already in the queue).
+// Another ticket: the expense is read again with it, leaving what was typed
+// by hand. A documentation photo (`extra`): kept as it is, nothing is read.
+async function xeAddFiles(files,extra){
   var x=xeEx();if(!x)return;
   var sessId=xeSessId,id=xeId;
-  files=files.filter(function(f){return /^image\//.test(f.type||"")||exIsPdf(f)});
+  files=files.filter(function(f){return /^image\//.test(f.type||"")||(!extra&&exIsPdf(f))});
   if(!files.length)return;
   for(var i=0;i<files.length;i++){
-    var img=await exFileImg(sessId,files[i]," "+(exImgs(exFind(sessId,id)).length+1));
+    var img=await exFileImg(sessId,files[i]," "+(exImgs(exFind(sessId,id)).length+1),extra);
     var cur=exFind(sessId,id);if(!cur)return;
-    exPatch(sessId,id,{imgs:exImgs(cur).concat([img]),rd:"pending"});
+    var p={imgs:exImgs(cur).concat([img])};
+    if(!extra)p.rd="pending";
+    exPatch(sessId,id,p);
     xeImgId=img.id;
   }
   xeRenderStrip();xeShowImg();xeUpLabel();xeReadLine();
@@ -11777,6 +11794,21 @@ function xeImgRemove(){
   exDropImg(xeSessId,im);delete xeEdits[im.id];
   exPatch(xeSessId,xeId,{imgs:exImgs(x).filter(function(m){return m.id!==im.id})});
   xeImgId=null;xeRenderStrip();xeShowImg();xeUpLabel();
+}
+// A picture added on the wrong button: a ticket becomes documentation (what
+// was read stays), or documentation becomes a ticket (and is read).
+function xeImgToggle(){
+  var x=xeEx(),im=xeImg();if(!x||!im)return;
+  var toTicket=!!im.extra,l=exImgs(x).map(function(m){
+    if(m.id!==im.id)return m;
+    var c=Object.assign({},m);
+    if(toTicket)delete c.extra;else{c.extra=true;c.doc=""}
+    return c;
+  });
+  var p={imgs:l};if(toTicket)p.rd="pending";
+  exPatch(xeSessId,xeId,p);
+  xeRenderStrip();xeShowImg();xeReadLine();
+  if(toTicket)exReadPending();
 }
 function xeDelete(){
   var x=xeEx();if(!x)return;
@@ -11803,11 +11835,12 @@ function wireXe(){
     var t=e.target.closest("[data-im]");
     if(t){if(xeBox)xeCropEnd();xeImgId=t.dataset.im;$$("xeImgBox").classList.remove("big");xeRenderStrip();xeShowImg();xeUpLabel();return}
     var a=e.target.closest("[data-add]");
-    if(a)$$(a.dataset.add==="cam"?"xeAddCamIn":"xeAddFileIn").click();
+    if(a)$$(a.dataset.add==="cam"?"xeAddCamIn":a.dataset.add==="doc"?"xeAddDocIn":"xeAddFileIn").click();
   });
-  ["xeAddCamIn","xeAddFileIn"].forEach(function(k){
-    $$(k).addEventListener("change",function(e){var f=Array.from(e.target.files||[]);e.target.value="";if(f.length)xeAddFiles(f)});
+  ["xeAddCamIn","xeAddFileIn","xeAddDocIn"].forEach(function(k){
+    $$(k).addEventListener("change",function(e){var f=Array.from(e.target.files||[]);e.target.value="";if(f.length)xeAddFiles(f,k==="xeAddDocIn")});
   });
+  $$("xeImgKind").addEventListener("click",xeImgToggle);
   XE_F.forEach(function(f){
     function t(){xeTouched[f[1]]=true;this.classList.remove("xe-doubt")}
     $$(f[0]).addEventListener("input",t);$$(f[0]).addEventListener("change",t);

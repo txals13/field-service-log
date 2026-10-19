@@ -745,6 +745,15 @@ Field Service Log/
   paper says it is not a tax invoice; "CAL FACTURA" in the list until "Ja l'he
   demanada" is ticked in the editor.
 - New editor fields: Hora, Raó social, Propina; "NIF / VAT / RFC".
+- **Documentation photos** (2026-10-19, version · 3: "after Gemini has read
+  the ticket, add other photos to document it all"): a picture with
+  `extra:true` — "📎 Fotos de documentació" in the editor (`#xeAddDocIn`,
+  images only, several at once, no `capture` so the phone offers camera or
+  gallery). Named "Documentació …", queued to tiquets/ like the rest, never
+  sent to Gemini (`exRead` filters them out, `exApplyRead` gives `doc` only
+  to the read ones) and adding one does not set `rd` to pending. 📎 on the
+  thumbnail; `#xeImgKind` moves a picture between ticket and documentation
+  (to ticket → read again).
 
 ## Session types
 | Type | Abbr | Color |

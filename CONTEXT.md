@@ -774,6 +774,12 @@ Field Service Log/
   `invoice` key are gone; an `invoice` already stored is ignored. The `docs`
   type "invoice" stays: an invoice received (a hotel's PDF) counts as the
   receipt.
+- **The order the papers are shown in** (version · 7, the user: "the card
+  slip always on the left and in the thumbnail, the receipt after it, the
+  rest after the receipt"): `exShown(x)` sorts voucher → bill/invoice →
+  other → documentation, stable, for the editor's strip, the picture opened
+  first and the list's thumbnail. The STORED order is untouched: the
+  reading's `docs` are matched to it. In the strip a bill is called "rebut".
 
 ## Session types
 | Type | Abbr | Color |

@@ -999,7 +999,6 @@ textarea{resize:none;line-height:1.4}
       </div>
       <div id="xeNeed" class="xe-inv xe-need" style="display:none"></div>
       <div id="xeRead" class="xe-read"></div>
-      <div id="xeInv" class="xe-inv" style="display:none"></div>
       <div class="pt-grid">
         <div class="field"><label>Data</label><input type="date" id="xeDate"></div>
         <div class="field"><label>Hora</label><input type="time" id="xeTime"></div>
@@ -5510,7 +5509,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-19 · 4";
+var APP_VERSION="2026-10-19 · 5";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -11226,7 +11225,6 @@ function exList(s){
       ||String(a.addedAt||"").localeCompare(String(b.addedAt||""));
   });
 }
-function exInvoiceDue(x){return !!(x.invoice&&x.invoice.needed&&!x.invoice.done)}
 // What an expense still lacks of its two papers: "rebut" (the receipt of what
 // was bought), "comprovant" (the card slip; not for cash), or, before Gemini
 // has said which picture is which, "doc" while there are fewer than two.
@@ -11385,14 +11383,14 @@ async function exAddFiles(files){
 // read as one payment. The prompt is in English for the model's sake; what it
 // returns is what is printed. Lessons from the first real tickets (Mexico):
 // "$" was pesos, dates were day-first ("11DIC16"), the card slip carried the
-// amount charged and the card digits while the bill carried the RFC, and
-// "este no es un comprobante fiscal" meant the invoice had to be asked for
-// within 72 h.
+// amount charged and the card digits while the bill carried the RFC. (The
+// "este no es un comprobante fiscal" flag was dropped: the user needs no
+// invoices, only the receipts and the card slips.)
 var EX_GEM_MODEL="gemini-3.5-flash",exGemModelOk=true,exReading={},exReadBusy=false;
 var EX_GEM_SYS=["You read photos of receipts, card-terminal slips and invoices for a field service technician's expense report.",
   "All the images given belong to ONE expense: for example a restaurant bill and the card slip of the same payment, or the same paper photographed twice.",
   "Answer with ONE JSON object and nothing else, with these keys:",
-  "date (YYYY-MM-DD), time (HH:MM, 24 h), merchant, legalName, taxId, address, ticketNo, concept, other, country, currency, base, vatRate, vat, total, last4, pay, category, docs, invoice, doubt.",
+  "date (YYYY-MM-DD), time (HH:MM, 24 h), merchant, legalName, taxId, address, ticketNo, concept, other, country, currency, base, vatRate, vat, total, last4, pay, category, docs, doubt.",
   "The AMOUNTS come from the card slip. Everything else the receipt adds (names, tax id, address, ticket number, what was bought, the tax breakdown) is taken from the receipt.",
   "Rules:",
   "- Only what is printed. Never invent. A field that is not on the paper or cannot be read is \"\" (or null), and a field you had to guess goes in doubt.",
@@ -11409,7 +11407,6 @@ var EX_GEM_SYS=["You read photos of receipts, card-terminal slips and invoices f
   "- category: one of meal, hotel, fuel, taxi, transport, toll, parking, flight, train, car, other.",
   "- country: ISO 3166-1 alpha-2.",
   "- docs: an array with one entry per image, in order: \"bill\" (an itemised ticket or simplified receipt from the shop), \"voucher\" (a card-terminal slip), \"invoice\" (a full tax invoice with the buyer's details), \"other\", or \"same\" when the image is the same paper as an earlier image.",
-  "- invoice: {\"needed\": true, \"how\": \"...\", \"deadline\": \"...\"} when the paper says it is not a tax invoice or that an invoice has to be requested (\"no es un comprobante fiscal\", \"solicite su factura\", \"factura simplificada\"); how = where to ask for it (web, email, folio or reference), short; deadline = the time limit if printed (\"72 h\"). Otherwise null.",
   "- doubt: an array with the names of the fields you are not sure about."].join("\n");
 function exTime(t){
   var m=/(\d{1,2})[:.h](\d{2})(?::\d{2})?\s*([ap])?\.?\s*m?\.?/i.exec(String(t||""));if(!m)return "";
@@ -11438,8 +11435,6 @@ function exNormRead(j,n){
   v.country=/^[A-Za-z]{2}$/.test(str(j.country))?str(j.country).toUpperCase():"";
   var docs=Array.isArray(j.docs)?j.docs:[];v.docs=[];
   for(var i=0;i<n;i++)v.docs.push(["bill","voucher","invoice","other","same"].indexOf(docs[i])>=0?docs[i]:"");
-  var inv=j.invoice&&typeof j.invoice==="object"?j.invoice:null;
-  v.invoice=inv&&inv.needed===true?{needed:true,how:str(inv.how,200),deadline:str(inv.deadline,40)}:null;
   v.doubt=(Array.isArray(j.doubt)?j.doubt:[]).filter(function(f){return EX_FIELDS.indexOf(f)>=0});
   return v;
 }
@@ -11484,7 +11479,6 @@ function exApplyRead(sessId,id,v,all){
   EX_FIELDS.forEach(function(f){if(hand.indexOf(f)<0)p[f]=v[f]||(f==="currency"?x.currency:"")});
   if(all)p.hand=[];
   p.country=v.country;
-  p.invoice=v.invoice?Object.assign({},v.invoice,{done:!!(x.invoice&&x.invoice.done)}):null;
   var imgs=exImgs(x),k=0;
   imgs.forEach(function(im){if(im.data&&!im.extra)im.doc=v.docs[k++]||""});
   p.imgs=imgs.slice();
@@ -11556,7 +11550,7 @@ function exMerge(sessId,billId,voId){
     legalName:b.legalName||v.legalName,taxId:b.taxId||v.taxId,category:b.category||v.category,
     address:b.address||v.address,ticketNo:b.ticketNo||v.ticketNo,concept:b.concept||v.concept,
     other:[b.other,v.other].filter(Boolean).join(" · "),
-    invoice:b.invoice||v.invoice,imgs:exImgs(b).concat(exImgs(v)),notes:[b.notes,v.notes].filter(Boolean).join(" · "),
+    imgs:exImgs(b).concat(exImgs(v)),notes:[b.notes,v.notes].filter(Boolean).join(" · "),
     hand:[],checked:false,addedAt:String(b.addedAt||"")<=String(v.addedAt||"")?b.addedAt:v.addedAt};
   m.readVals=Object.assign({},b.readVals||{},{total:m.total,currency:m.currency,last4:m.last4,pay:m.pay});
   exSet(sessId,function(l){return l.filter(function(x){return x.id!==voId})});
@@ -11620,7 +11614,6 @@ function exRender(){
     var sub=[x.date?exDateTxt(x.date)+(x.time?" "+x.time:""):"sense data",exCatLabel(x.category),x.pay?EX_PAY[x.pay]:""].filter(Boolean).join(" · ");
     var badge=exReading[x.id]?"<span class=\"ex-badge rd\">LLEGINT…</span>":x.checked?"":"<span class=\"ex-badge\">PER REVISAR</span>";
     if(!exReading[x.id])exMissing(x).forEach(function(k){badge+="<span class=\"ex-badge inv\">"+EX_MISS[k][0]+"</span>"});
-    if(exInvoiceDue(x))badge+="<span class=\"ex-badge inv\">CAL FACTURA</span>";
     return "<button class=\"ex-card\" data-ex=\""+esc(x.id)+"\">"
       +"<span class=\"th\">"+(im.data?"<img src=\""+im.data+"\" alt=\"\">":(im.uploadStatus==="loading"?"<span class=\"spinner\"></span>":im.type==="pdf"?"&#128196;":"&#129534;"))
       +exUpIcon(im)+(nim>1?"<span class=\"n\">"+nim+"</span>":"")+"</span>"
@@ -11660,7 +11653,7 @@ var XE_F=[["xeDate","date"],["xeTime","time"],["xeCat","category"],["xeMerchant"
   ["xeAddr","address"],["xeTicketNo","ticketNo"],["xeConcept","concept"],["xeOther","other"],
   ["xeCur","currency"],["xeBase","base"],["xeVatRate","vatRate"],["xeVat","vat"],["xeTotal","total"],["xePay","pay"],
   ["xeLast4","last4"],["xeNotes","notes"]];
-var xeSessId=null,xeId=null,xeImgId=null,xeEdits={},xeTouched={},xeWired=false,xeBox=null,xeDrag=null,xeInvDone=false;
+var xeSessId=null,xeId=null,xeImgId=null,xeEdits={},xeTouched={},xeWired=false,xeBox=null,xeDrag=null;
 function xeOpenNow(){var b=$$("xeBack");return !!b&&b.style.display!=="none"}
 function xeEx(){return exFind(xeSessId,xeId)}
 function xeImg(){var l=exImgs(xeEx());return l.filter(function(m){return m.id===xeImgId})[0]||l[0]||null}
@@ -11669,7 +11662,6 @@ function openExpense(id){
   var x=exFind(s.id,id);if(!x)return;
   xeSessId=s.id;xeId=id;wireXe();
   xeEdits={};xeTouched={};xeImgId=(exImgs(x)[0]||{}).id||null;
-  xeInvDone=!!(x.invoice&&x.invoice.done);
   $$("xeCat").innerHTML="<option value=\"\">&mdash;</option>"+EX_CATS.map(function(c){return "<option value=\""+c[0]+"\">"+esc(c[1])+"</option>"}).join("");
   XE_F.forEach(function(f){$$(f[0]).value=x[f[1]]||""});
   $$("xeTitle").textContent=x.merchant||"Tiquet";
@@ -11751,13 +11743,6 @@ function xeReadLine(){
       +"<div class=\"bt\">"+(handheld()?"<button class=\"btn-sm btn-gold\" data-add=\"cam\">&#128247; Fotografia'l</button>":"")
       +"<button class=\"btn-sm"+(handheld()?"":" btn-gold")+"\" data-add=\"file\">&#65291; Imatge o PDF</button></div>";
   }else{nb.style.display="none";nb.innerHTML=""}
-  var inv=x.invoice,ib=$$("xeInv");
-  if(inv&&inv.needed){
-    ib.style.display="";
-    ib.innerHTML="&#9888; <b>Aquest tiquet no és una factura.</b> "+(inv.how?"Per demanar-la: "+esc(inv.how)+". ":"")+(inv.deadline?"Termini: <b>"+esc(inv.deadline)+"</b>.":"")
-      +"<br><label><input type=\"checkbox\" id=\"xeInvDone\""+(xeInvDone?" checked":"")+"> Ja l'he demanada</label>";
-    $$("xeInvDone").addEventListener("change",function(){xeInvDone=this.checked});
-  }else{ib.style.display="none";ib.innerHTML=""}
 }
 // ── cropping: a box over the picture, its four corners dragged ──
 function xeCropDraw(){var b=xeBox,c=$$("xeCrop");c.style.left=b.x*100+"%";c.style.top=b.y*100+"%";c.style.width=b.w*100+"%";c.style.height=b.h*100+"%"}
@@ -11795,7 +11780,6 @@ async function xeSave(){
   var hand=(x.hand||[]).slice();
   EX_FIELDS.forEach(function(f){if(xeTouched[f]&&p[f]!==(rv[f]||"")&&hand.indexOf(f)<0)hand.push(f)});
   p.hand=hand;p.checked=true;
-  if(x.invoice)p.invoice=Object.assign({},x.invoice,{done:xeInvDone});
   try{localStorage.setItem(LS_EXCUR,p.currency)}catch(e){}
   var ids=Object.keys(xeEdits);
   if(ids.length){

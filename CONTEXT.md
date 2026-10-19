@@ -768,6 +768,12 @@ Field Service Log/
   while fewer than two non-documentation pictures → red badges in the list,
   a red box with the add buttons in the editor (`#xeNeed`), and a confirm on
   ✓ Desa.
+- **No invoice flag** (2026-10-19, version · 5, the user: "I won't need
+  invoices, in principle only the receipts and the card slips"): the
+  "CAL FACTURA" badge, the editor's box, "Ja l'he demanada" and the prompt's
+  `invoice` key are gone; an `invoice` already stored is ignored. The `docs`
+  type "invoice" stays: an invoice received (a hotel's PDF) counts as the
+  receipt.
 
 ## Session types
 | Type | Abbr | Color |

@@ -754,6 +754,20 @@ Field Service Log/
   to the read ones) and adding one does not set `rd` to pending. 📎 on the
   thumbnail; `#xeImgKind` moves a picture between ticket and documentation
   (to ticket → read again).
+- **Two papers per expense, amounts from the card slip, no tip** (2026-10-19,
+  version · 4, the user: "take the tip detail out; always at least 2
+  documents per expense, the card slip and the receipt; the amounts from the
+  card slip, and any new data on the receipt captured too, at least until I
+  know the final format"). The tip field and every tip calculation are gone
+  (old `tip` values stay in the data, unused). The prompt says the amounts
+  come from the card slip, exactly as charged, never split. New fields read
+  from the receipt: `address`, `ticketNo`, `concept` (what was bought),
+  `other` (guests, nights, plate, flight… whatever has no field); `exMerge`
+  takes them from the bill. `exMissing(x)`: "rebut" (no bill/invoice),
+  "comprovant" (no voucher, unless pay is cash), or "doc" before reading
+  while fewer than two non-documentation pictures → red badges in the list,
+  a red box with the add buttons in the editor (`#xeNeed`), and a confirm on
+  ✓ Desa.
 
 ## Session types
 | Type | Abbr | Color |

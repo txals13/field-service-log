@@ -71,6 +71,7 @@
     <li><a href="#idiomes">Idiomes i traducció</a></li>
     <li><a href="#hores">Full d'hores</a></li>
     <li><a href="#proves">Proves de producció</a></li>
+    <li><a href="#despeses">Despeses</a></li>
     <li><a href="#historial">Historial de la màquina</a></li>
     <li><a href="#tancar">Tancar, reobrir i esborrar</a></li>
     <li><a href="#arxiu">Arxivar i tornar a carregar</a></li>
@@ -340,7 +341,31 @@
 <p>El nom de les proves, les causes i les observacions surten tal com les escrius: no es tradueixen.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
-<h2 id="historial">12. Historial de la màquina</h2>
+<h2 id="despeses">12. Despeses</h2>
+<p>Els tiquets i les factures de les despeses de cada visita: els fotografies el mateix dia (el paper tèrmic s'esborra) i en queden la imatge i les dades per al full de despeses.</p>
+<div class="warn"><p>Encara està en proves i va amagat. Per veure'l: a la barra lateral (<span class="btn">☰</span>), <span class="btn">💶 Despeses: no</span> i passa a <span class="btn">💶 Despeses: sí</span>. Es recorda a cada aparell. Si l'amagues, les despeses que ja hi ha no s'esborren.</p></div>
+<ul>
+  <li><strong>On és:</strong> a la capçalera de la visita, <span class="btn">💶 Despeses</span> (o <span class="btn">⋮ Més › Despeses</span> amb el disseny nou).</li>
+  <li><span class="btn">📷 Fotografia el tiquet</span> (al mòbil i la tauleta) obre la càmera. <span class="btn">＋ Imatge o PDF</span> agafa una foto que ja tens o un PDF, per exemple la factura de l'hotel o del vol que t'arriba per correu.</li>
+  <li>Amb un sol tiquet, s'obre de seguida per revisar-lo. Si en tries diversos de cop, van a la llista i els obres d'un en un.</li>
+</ul>
+<h3>Revisar un tiquet</h3>
+<ul>
+  <li><span class="btn">⟲ Gira</span> i <span class="btn">Gira ⟳</span> giren la imatge. <span class="btn">✂ Retalla</span> posa un requadre amb quatre cantonades: arrossega-les fins a deixar només el tiquet i prem <span class="btn">✓ Aplica el retall</span>. Toca la imatge per veure-la a mida completa. Un PDF no es gira ni es retalla: <span class="btn">↗ Obre el PDF</span> l'obre sencer.</li>
+  <li>Omple les dades: data, categoria, establiment, NIF, moneda, base, IVA, total, <strong>Pagat amb</strong> i notes. De moment s'escriuen a mà; més endavant les llegirà l'app del tiquet.</li>
+  <li><strong>La data</strong> és la del tiquet. D'una foto, l'app agafa el dia en què la vas fer; d'un PDF, l'has de posar tu.</li>
+  <li><strong>La moneda</strong> és la que diu el tiquet; l'app no converteix res. Un tiquet nou comença amb l'última moneda que has fet servir.</li>
+  <li><span class="btn">✓ Desa</span> el marca com a revisat. Els que encara no ho són surten a la llista amb <strong>PER REVISAR</strong>.</li>
+  <li><span class="btn">🗑 Elimina</span> treu la despesa; si el tiquet ja era a Drive, va a la paperera de Drive.</li>
+</ul>
+<h3>Targeta d'empresa o personal</h3>
+<p>A sota de la llista, escriu les 4 últimes xifres de la <strong>targeta d'empresa</strong>. Es desen només en aquell aparell. Després, a cada tiquet, si escrius les xifres de la targeta que hi surten a <strong>Targeta acabada en</strong>, l'app tria sola <strong>Pagat amb</strong>: targeta d'empresa si coincideixen, targeta personal si no. El que triïs tu a mà no ho canvia.</p>
+<p>A dalt de la llista hi ha els totals per forma de pagament i per moneda. Els de la targeta personal i l'efectiu surten com a <strong>a retornar</strong>.</p>
+<h3>On es guarden</h3>
+<p>Les despeses van amb la visita: es sincronitzen entre els aparells i van a Drive i al ZIP del projecte dins de les dades de la visita. Cada tiquet es puja a la carpeta <code>tiquets/</code> de la visita. Sense connexió o sense haver entrat a Google, es queda a l'aparell (<strong>⏳</strong>) i es puja sol quan es pot; la barra lateral diu quants tiquets hi ha a la cua. Afegir o canviar una despesa no fa que l'informe de servei es vegi com a modificat: les despeses no hi surten.</p>
+
+<!-- ───────────────────────────────────────────────────────────── -->
+<h2 id="historial">13. Historial de la màquina</h2>
 <p>Quan una màquina té més d'una visita, a la capçalera surt <span class="btn">📜 N visites</span>. Si n'hi ha de pendents d'altres visites, també ho diu en taronja. Obre l'historial:</p>
 <ul>
   <li><strong>El resum de dalt</strong>: quantes visites hi ha hagut, quantes incidències queden obertes, quantes s'han resolt i quants recanvis urgents falten per canviar.</li>
@@ -365,7 +390,7 @@
 <p>S'imprimeix en <strong>l'idioma de l'informe de la visita oberta</strong>, i el botó diu quin és quan no és català («🖨 Imprimeix · English»). Les incidències de totes les visites es tradueixen amb la mateixa memòria de traduccions que els informes. En paper, la llista de pendents inclou també la visita oberta.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
-<h2 id="tancar">13. Tancar, reobrir i esborrar</h2>
+<h2 id="tancar">14. Tancar, reobrir i esborrar</h2>
 <ul>
   <li><span class="btn">■ Tanca</span>: la visita queda tancada i ja no s'hi poden afegir ni editar entrades. Es pot exportar igual.</li>
   <li><span class="btn">↺ Reobre</span>: la torna a obrir.</li>
@@ -374,7 +399,7 @@
 <p>En esborrar una visita, la seva carpeta de Drive va a la paperera de Drive, d'on es pot recuperar durant 30 dies. Si una altra visita fa servir la mateixa carpeta, no s'hi envia.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
-<h2 id="arxiu">14. Arxivar i tornar a carregar</h2>
+<h2 id="arxiu">15. Arxivar i tornar a carregar</h2>
 <p>El <strong>ZIP del projecte</strong> és la còpia completa d'una visita. Amb ell, una visita esborrada es pot tornar a carregar sencera, amb fotos i vídeos, en aquest compte o en un altre.</p>
 
 <h3>Arxivar diverses visites de cop</h3>
@@ -399,7 +424,7 @@
 <p>Si el ZIP no porta algun vídeo, l'app el busca al teu Drive, <strong>també a la paperera</strong>, i si el troba el torna a pujar a la carpeta de la visita. Si una visita importada té vídeos que no es poden reproduir («Aquest vídeo no és a Drive…»), torna a importar el mateix ZIP: la visita no es duplica, només es busquen de nou els vídeos que hi falten.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
-<h2 id="ordinador">15. Carpetes</h2>
+<h2 id="ordinador">16. Carpetes</h2>
 <p>Barra lateral › <span class="btn">📁 Carpetes</span>. Hi ha dues coses:</p>
 <h3>On es desa el ZIP del projecte</h3>
 <ul>
@@ -411,7 +436,7 @@
 <p>Només a Chrome i Edge d'ordinador, amb Drive per a escriptori. Tria <code>G:\My Drive\Field Service Log\Outputs</code> i el diàleg d'afegir fotos s'obrirà directament a la carpeta de la visita. La lletra de la unitat pot ser una altra, i «My Drive» pot dir-se «La meva unitat». Tria <strong>Outputs</strong> i no la carpeta d'una visita.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
-<h2 id="drive">16. Drive i sincronització</h2>
+<h2 id="drive">17. Drive i sincronització</h2>
 <p>A dalt, l'indicador diu si estàs sincronitzat amb Drive o treballes en local. L'app sincronitza sola cada 30 segons, i no ho fa mentre estàs escrivint.</p>
 <p>La sincronització automàtica <strong>no mou la pantalla</strong>: no mostra cap barra mentre treballa, i si de Drive no arriba res de nou, la pantalla no es toca. Si arriben canvis, el registre es queda a la mateixa altura on el tenies (o al final, si ja hi eres). Els avisos de les tasques que tu engegues (arxivar, importar…) surten en una etiqueta flotant a dalt que no empeny res i que deixa passar els tocs.</p>
 <ul>
@@ -427,7 +452,7 @@
   Manuals/                         ← els manuals de recanvis
   Outputs/
     CLIENT_PROJECTE_MÀQUINA/       ← una carpeta per visita
-      photos/  videos/  audio/
+      photos/  videos/  audio/  tiquets/
       informe_…_rev01_ca.pdf …     ← els informes de cada revisió
   Arxiu/                           ← els ZIP del projecte (via Drive per a escriptori)</pre>
 <p>Cada visita té la seva pròpia carpeta. Si dues visites tenen el mateix client, projecte i màquina, la segona es diu <code>…_2</code>.</p>
@@ -441,7 +466,7 @@
 </ul>
 
 <!-- ───────────────────────────────────────────────────────────── -->
-<h2 id="dispositius">17. Mòbil, tauleta i ordinador</h2>
+<h2 id="dispositius">18. Mòbil, tauleta i ordinador</h2>
 <div class="scroll"><table>
   <tr><th></th><th>Mòbil / tauleta</th><th>Ordinador</th></tr>
   <tr><td>Fotos i vídeos</td><td>📷 càmera, 🎥 vídeo, 🖼 galeria</td><td>📷 obre una carpeta</td></tr>
@@ -453,7 +478,7 @@
 </table></div>
 
 <!-- ───────────────────────────────────────────────────────────── -->
-<h2 id="problemes">18. Problemes freqüents</h2>
+<h2 id="problemes">19. Problemes freqüents</h2>
 <h3>No veig els canvis d'una versió nova</h3>
 <p>A l'ordinador, <code>Ctrl+Shift+R</code>. Al mòbil, tanca l'app del tot i torna-la a obrir. Si l'app instal·lada tarda a agafar la versió nova, desinstal·la-la i torna-la a instal·lar.</p>
 <h3>La connexió amb Google es manté sola</h3>
@@ -461,7 +486,7 @@
 <h3>«Reconnecta» en vermell</h3>
 <p>Només surt si no s'ha pogut renovar el permís (per exemple, si has tancat la sessió de Google al navegador). Prem <span class="btn">Reconnecta</span>; no es perd res, perquè tot està desat al dispositiu.</p>
 <h3>L'emmagatzematge és gairebé ple</h3>
-<p>Surt una barra amb <span class="btn">⇩ Descarrega una còpia</span>. Arxiva i esborra les visites acabades (<a href="#arxiu">apartat 14</a>) per alliberar espai.</p>
+<p>Surt una barra amb <span class="btn">⇩ Descarrega una còpia</span>. Arxiva i esborra les visites acabades (<a href="#arxiu">apartat 15</a>) per alliberar espai.</p>
 <h3>No es pot traduir o corregir</h3>
 <p>Comprova que hi hagi la <a href="#comencar">clau de Gemini</a> en aquest dispositiu i que hi hagi connexió. Un informe es pot generar igualment amb els textos tal com els vas escriure.</p>
 <h3>Al selector de la tauleta els ZIP surten grisos</h3>

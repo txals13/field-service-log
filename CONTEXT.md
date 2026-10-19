@@ -654,6 +654,58 @@ Field Service Log/
   table's shape, so translated tables for other languages are fetched again
   once. Test names, causes and notes are not translated.
 
+## Expenses (2026-10-19) — phase 1 of the expenses module
+- **What it is for.** The user reports every expense of a trip on a company
+  .xlsx (template not in hand yet). Phase 1 (this): capture the tickets and
+  type their data. Phase 2: Gemini reads the ticket. Phase 3: review warnings
+  (duplicates, dates outside the trip, a card that is not the company's).
+  Phase 5: fill the company template (ExcelJS, which keeps the styles —
+  SheetJS 0.18 drops them) plus a numbered PDF of the tickets, and a
+  "Despeses" item in the ZIP pick list.
+- **The user's rules.** Mostly the company card, some on the personal card
+  (refunded, so totalled apart). Real expenses only: no per diems, no
+  mileage. The ticket's own date is the expense's date; a trip runs from the
+  first clock-in to the last clock-out, travel included. Currencies are kept
+  as printed — no conversion for now. Only the user for now.
+- **Behind a switch**: sidebar › 💶 Despeses (`#btnExOn`,
+  `localStorage['fsl_v6_exon']`), per device, off by default, so the
+  technicians the app is going out to don't see it. Off hides the chip and
+  the Més item; the data stays.
+- **`session.expenses[]`**: `{id, addedAt, date (YYYY-MM-DD), merchant, taxId,
+  category (EX_CATS key), base, vatRate, vat, total, currency, pay
+  (company|personal|cash|""), payAuto, last4, notes, checked, img:{type
+  image|pdf, data (JPEG data URL), name, uploadStatus, qid, driveId}}`.
+  Amounts kept as typed; `exNum` reads "12,50", "1.234,56" and "1,234.56".
+- **Saved without touching `updatedAt`** (`exSet`: saveLocal + isDirty + the
+  2 s Drive save, like the report language): the service report carries no
+  expenses, and a new ticket must not make a signed report look changed.
+  `modAt` is still stamped (new session object), so merges keep it.
+- **The picture**: a photo is redrawn as a JPEG of at most 2000 px
+  (`EX_MAXDIM`, quality 0.85); a PDF's first page is drawn with pdf.js
+  (`exPdfPage`). Turning and cropping (`exTransform`, a box with four
+  draggable corners, `#xeCrop`) work on that JPEG. The same JPEG — not the
+  camera original — is what goes to Drive; a PDF goes up as it is.
+- **Upload through the video queue**, kind `"tiquets"` → the visit's
+  `tiquets/` folder: `mqAdd(sessId,img,blob,kind)`, `mqUpload(…,kind)`,
+  `mqFind` also looks in `expenses[].img`. A turned/cropped ticket gets a new
+  queue item; the old one is dropped, or sent to the Drive trash if it was
+  already up (`exNewImg`). The sidebar counts videos and tickets apart
+  (`mqNT`); `mqHere` tells a ticket waiting on this device from one waiting
+  on another. Uploads start when the dialogs close and at every sync.
+- **The company card's last four digits** (`fsl_v6_exlast4`) are kept in
+  this browser only. In the editor, typing the ticket's digits sets "Pagat
+  amb" (company if they match, personal if not) unless it was picked by hand
+  (`payAuto`).
+- UI: chip `#exChip` (hidden on the wide new layout, in Més there), list
+  `#exBack` (totals by way of paying × currency, cards sorted by date, "PER
+  REVISAR" until saved once), editor `#xeBack`. On the phone the dialog is a
+  flex column, so the picture box needs `flex:none` or it collapses to 0 px.
+- **Tested in the preview** (2026-10-19): photo → editor with the EXIF date,
+  crop and turn (one queue item left, the cropped one), card digits →
+  company / personal, PDF first page drawn, totals apart, reload keeps
+  everything, delete drops the queue item, switch off hides it, phone layout.
+  **Not tested**: the real upload to Drive (needs a sign-in) and a phone camera.
+
 ## Session types
 | Type | Abbr | Color |
 |------|------|-------|

@@ -391,6 +391,14 @@
 <h3>Targeta d'empresa o personal</h3>
 <p>A sota de la llista, escriu les 4 últimes xifres de la <strong>targeta d'empresa</strong>. Es desen només en aquell aparell. Després, a cada tiquet, si escrius les xifres de la targeta que hi surten a <strong>Targeta acabada en</strong>, l'app tria sola <strong>Pagat amb</strong>: targeta d'empresa si coincideixen, targeta personal si no. Quan Gemini llegeix les xifres del comprovant, fa el mateix. El que triïs tu a mà no ho canvia.</p>
 <p>A dalt de la llista hi ha els totals per forma de pagament i per moneda. Els de la targeta personal i l'efectiu surten com a <strong>a retornar</strong>.</p>
+<h3>Els noms dels fitxers</h3>
+<p>Cada despesa té un número dins de la visita: la primera que deses és la <strong>(1)</strong>, la següent la <strong>(2)</strong>, i així endavant. El número surt a la llista i al títol de la fitxa, i ja no canvia. Si esborres una despesa, el seu número no es torna a fer servir.</p>
+<p>Tots els fitxers d'una despesa porten el número de projecte, la categoria, el número de la despesa i quin paper són:</p>
+<pre style="background:var(--bg2);border:1px solid var(--br);border-radius:8px;padding:12px;overflow-x:auto;font-size:13px;color:var(--tx)">P-2026-171 Àpat (1) comprovant.jpg
+P-2026-171 Àpat (1) rebut.jpg
+P-2026-171 Àpat (1) documentació 1.jpg
+P-2026-171 Taxi - VTC (2) comprovant.jpg</pre>
+<p>Els noms es posen cada cop que deses la despesa, de manera que si en canvies la categoria, els fitxers també canvien de nom. A Drive es canvien de seguida, o a la sincronització següent si no hi ha connexió. Si la visita no té número de projecte, hi va el nom del client.</p>
 <h3>On es guarden</h3>
 <p>Les despeses van amb la visita: es sincronitzen entre els aparells i van a Drive i al ZIP del projecte dins de les dades de la visita. Cada tiquet es puja a la carpeta <code>tiquets/</code> de la visita. Sense connexió o sense haver entrat a Google, es queda a l'aparell (<strong>⏳</strong>) i es puja sol quan es pot; la barra lateral diu quants tiquets hi ha a la cua. Afegir o canviar una despesa no fa que l'informe de servei es vegi com a modificat: les despeses no hi surten.</p>
 

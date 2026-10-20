@@ -998,6 +998,7 @@ textarea{resize:none;line-height:1.4}
         <span id="xeUp" class="xe-up"></span>
       </div>
       <div id="xeNeed" class="xe-inv xe-need" style="display:none"></div>
+      <div id="xeWarn" class="xe-inv" style="display:none"></div>
       <div id="xeRead" class="xe-read"></div>
       <div class="pt-grid">
         <div class="field"><label>Data</label><input type="date" id="xeDate"></div>
@@ -5517,7 +5518,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-20 · 1";
+var APP_VERSION="2026-10-20 · 2";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -11110,6 +11111,7 @@ async function exportSessionZip(s,kind,pick){
         expBusy("Tiquets "+(tj+1)+"/"+allTk.length+"…");
         var tb=ti2.driveId&&!ti2.driveGone?await driveBlobById(token,ti2.driveId):null;
         if(!tb&&ti2.qid)tb=await mqBlob(ti2.qid);
+        if(!tb&&ti2.type==="pdf")tb=await exPdfOrig(ti2,false);
         if(!tb){var tfd=await exFull(ti2,false);if(tfd){try{tb=dataUrlToBlob(tfd)}catch(e){}}}
         if(tb){zip.file(tp,tb);if(ti2.driveId)inZip[ti2.driveId]=1}
         else lostMedia.push(ti2.name);
@@ -11397,8 +11399,44 @@ function exDropImg(sessId,im){
   if(!im)return;
   if(im.qid&&!mqActive[im.qid])mqDrop(im.qid);
   if(im.driveId)queueTrash(sessId,[im.driveId]);
-  if(im.id){exMemDrop(im.id);try{if(idb)idbDel(idb,"exi:"+im.id)}catch(e){}}
+  if(im.id){exMemDrop(im.id);try{if(idb){idbDel(idb,"exi:"+im.id);idbDel(idb,"exp:"+im.id)}}catch(e){}}
 }
+// ── the card check (version 2026-10-20 · 2) ──────────────────────────────────
+// The expenses go to the visit (the project) they are added to, and that is
+// all: the trip check against the timesheet and the calendar's clock-ins was
+// tried and dropped the same day (the user: "simpler — I put the expenses on
+// each project and that's it; no calendar, no clock-ins, no warning for an
+// expense outside the trip"). What stays: an expense marked "company card"
+// whose ticket shows other digits. Each warning: [badge, sentence].
+function exWarns(x){
+  var out=[],c=exLast4();
+  if(x.pay==="company"&&x.last4&&c.length===4&&x.last4!==c)
+    out.push(["TARGETA DIFERENT","El tiquet diu targeta acabada en "+x.last4+", però la d'empresa acaba en "+c+". Comprova «Pagat amb»."]);
+  return out;
+}
+// ── a PDF goes to Gemini whole (version 2026-10-20 · 2) ──────────────────────
+// A hotel's or an airline's invoice often has its total on page 2, and Gemini
+// used to see only page 1, drawn as a picture. The original PDF is kept in
+// IndexedDB ("exp:<id>"); otherwise it comes from the upload queue or from
+// Drive. A PDF too big to send (over 15 MB) is read from its first page, as
+// before.
+async function exPdfOrig(im,dl){
+  if(!im||im.type!=="pdf")return null;
+  var b=null;
+  try{b=idb?await idbGet(idb,"exp:"+im.id):null}catch(e){}
+  if(!b&&im.qid)b=await mqBlob(im.qid);
+  if(!b&&dl!==false&&im.driveId&&!im.driveGone&&isLoggedIn&&navigator.onLine!==false){
+    var t=await getToken();
+    if(t){b=await driveBlobById(t,im.driveId);if(b)try{if(idb)await idbSet(idb,"exp:"+im.id,b)}catch(e){}}
+  }
+  return b||null;
+}
+async function exPdfData(im){
+  var b=await exPdfOrig(im);
+  if(!b||b.size>15*1024*1024)return null;
+  return await readAsDataURL(b.type==="application/pdf"?b:new Blob([b],{type:"application/pdf"}));
+}
+
 // ── where the pictures live (version · 10) ───────────────────────────────────
 // The weak-points review: every ticket used to keep its whole JPEG (up to
 // 2000 px, 300–600 KB as a data URL) inside the visit, and every visit
@@ -11581,7 +11619,9 @@ async function exPdfPage(file){
     var v=pg.getViewport({scale:Math.min(3,EX_MAXDIM/Math.max(v0.width,v0.height))});
     var c=document.createElement("canvas");c.width=Math.round(v.width);c.height=Math.round(v.height);
     var ctx=c.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,c.width,c.height);
-    await pg.render({canvasContext:ctx,viewport:v}).promise;
+    // intent "print": drawn in one go, not frame by frame — a page hidden in the
+    // background (the phone switched to another app) would otherwise wait for ever
+    await pg.render({canvasContext:ctx,viewport:v,intent:"print"}).promise;
     try{doc.destroy()}catch(e){}
     return c.toDataURL("image/jpeg",EX_QUALITY);
   }catch(e){return null}
@@ -11617,6 +11657,7 @@ async function exFileImg(sessId,f,suffix,extra){
   var img={id:uid(),type:pdf?"pdf":"image",name:name,uploadStatus:"queued"};
   if(extra)img.extra=true;
   await exStore(img,data);
+  if(pdf)try{if(idb)await idbSet(idb,"exp:"+img.id,f)}catch(e){}   // the whole PDF, for Gemini
   if(!await mqAdd(sessId,img,pdf||!data?f:dataUrlToBlob(data),"tiquets"))img.uploadStatus="err";
   return img;
 }
@@ -11692,6 +11733,7 @@ var EX_GEM_SYS=["You read photos of receipts, card-terminal slips and invoices f
   "- category: one of meal, hotel, fuel, taxi, transport, toll, parking, flight, train, car, other.",
   "- country: ISO 3166-1 alpha-2.",
   "- docs: an array with one entry per image, in order: \"bill\" (an itemised ticket or simplified receipt from the shop), \"voucher\" (a card-terminal slip), \"invoice\" (a full tax invoice with the buyer's details), \"other\", or \"same\" when the image is the same paper as an earlier image.",
+  "- A PDF is ONE paper however many pages it has: one docs entry, and read all of its pages (an invoice's total is often on the last one).",
   "- doubt: an array with the names of the fields you are not sure about."].join("\n");
 function exTime(t){
   var m=/(\d{1,2})[:.h](\d{2})(?::\d{2})?\s*([ap])?\.?\s*m?\.?/i.exec(String(t||""));if(!m)return "";
@@ -11754,7 +11796,11 @@ async function exRead(sessId,id,all){
   try{
     // the whole pictures: from this device, or from Drive
     var datas=[],ids=[];
-    for(var i=0;i<imgs.length;i++){var d=await exFull(imgs[i]);if(d){datas.push(d);ids.push(imgs[i].id)}}
+    for(var i=0;i<imgs.length;i++){
+      var d=imgs[i].type==="pdf"?await exPdfData(imgs[i]):null;   // a PDF whole, every page
+      if(!d)d=await exFull(imgs[i]);
+      if(d){datas.push(d);ids.push(imgs[i].id)}
+    }
     if(!datas.length){exReadLater[id]=Date.now();return}   // still on the device that took them, not up yet
     var v=await exGemRead(datas);
     exApplyRead(sessId,id,v,all,ids);
@@ -11880,8 +11926,9 @@ function exRender(){
   var s=exSess();if(!s)return;
   var l=exList(s);
   $$("exTitle").textContent="Despeses · "+(s.client||"");
-  $$("exNote").textContent=l.length?"Toca un tiquet per revisar-lo o completar-lo."
-    :"Encara no n'hi ha cap. Fotografia cada tiquet el mateix dia: el paper tèrmic s'esborra. La foto es desa a la visita, Gemini la llegeix i es puja a la carpeta tiquets/ de Drive.";
+  $$("exNote").textContent=(l.length?"Toca un tiquet per revisar-lo o completar-lo."
+    :"Encara no n'hi ha cap. Fotografia cada tiquet el mateix dia: el paper tèrmic s'esborra. La foto es desa a la visita, Gemini la llegeix i es puja a la carpeta tiquets/ de Drive.")
+    +(!exLast4()&&l.some(function(x){return x.last4})?" Escriu les 4 xifres de la targeta d'empresa per comprovar les targetes.":"");
   // totals by way of paying and by currency: nothing is converted
   var tot={};
   l.forEach(function(x){
@@ -11908,6 +11955,7 @@ function exRender(){
     var sub=[x.no?"("+x.no+")":"",x.date?exDateTxt(x.date)+(x.time?" "+x.time:""):"sense data",exCatLabel(x.category),x.pay?EX_PAY[x.pay]:""].filter(Boolean).join(" · ");
     var badge=exReading[x.id]?"<span class=\"ex-badge rd\">LLEGINT…</span>":x.checked?"":"<span class=\"ex-badge\">PER REVISAR</span>";
     if(!exReading[x.id])exMissing(x).forEach(function(k){badge+="<span class=\"ex-badge inv\">"+EX_MISS[k][0]+"</span>"});
+    exWarns(x).forEach(function(w){badge+="<span class=\"ex-badge\">"+w[0]+"</span>"});
     return "<button class=\"ex-card\" data-ex=\""+esc(x.id)+"\">"
       +"<span class=\"th\">"+((im.th||im.data)?"<img src=\""+(im.th||im.data)+"\" alt=\"\">":(im.uploadStatus==="loading"?"<span class=\"spinner\"></span>":im.type==="pdf"?"&#128196;":"&#129534;"))
       +exUpIcon(im)+(nim>1?"<span class=\"n\">"+nim+"</span>":"")+"</span>"
@@ -12045,6 +12093,10 @@ function xeReadLine(){
       +"<div class=\"bt\">"+(handheld()?"<button class=\"btn-sm btn-gold\" data-add=\"cam\">&#128247; Fotografia'l</button>":"")
       +"<button class=\"btn-sm"+(handheld()?"":" btn-gold")+"\" data-add=\"file\">&#65291; Imatge o PDF</button></div>";
   }else{nb.style.display="none";nb.innerHTML=""}
+  // what the form says now, so a card being corrected is judged as typed
+  var wb=$$("xeWarn"),ws=exWarns(Object.assign({},x,{pay:$$("xePay").value,last4:$$("xeLast4").value}));
+  if(ws.length){wb.style.display="";wb.innerHTML=ws.map(function(w){return "&#9888; "+esc(w[1])}).join("<br>")}
+  else{wb.style.display="none";wb.innerHTML=""}
 }
 // ── cropping: a box over the picture, its four corners dragged ──
 function xeCropDraw(){var b=xeBox,c=$$("xeCrop");c.style.left=b.x*100+"%";c.style.top=b.y*100+"%";c.style.width=b.w*100+"%";c.style.height=b.h*100+"%"}
@@ -12184,7 +12236,7 @@ function wireXe(){
     if(a)$$(a.dataset.add==="cam"?"xeAddCamIn":"xeAddFileIn").click();
   });
   XE_F.forEach(function(f){
-    function t(){xeTouched[f[1]]=true;this.classList.remove("xe-doubt")}
+    function t(){xeTouched[f[1]]=true;this.classList.remove("xe-doubt");if(f[1]==="pay")xeReadLine()}
     $$(f[0]).addEventListener("input",t);$$(f[0]).addEventListener("change",t);
   });
   // a tap on the picture shows it at full size, to read the small print
@@ -12217,8 +12269,8 @@ function wireXe(){
   $$("xeLast4").addEventListener("input",function(){
     var v=this.value.replace(/\D/g,"").slice(0,4);if(v!==this.value)this.value=v;
     var c=exLast4();
-    if(xeTouched.pay||v.length!==4||c.length!==4)return;
-    $$("xePay").value=v===c?"company":"personal";
+    if(!(xeTouched.pay||v.length!==4||c.length!==4))$$("xePay").value=v===c?"company":"personal";
+    xeReadLine();                       // the card warning follows what is typed
   });
 }
 

@@ -833,6 +833,29 @@ Field Service Log/
   - A device still on version · 9 neither stamps nor writes tombstones, so
     during the changeover an expense it deletes can come back from another
     copy.
+- **Card warning; whole PDFs to Gemini** (version 2026-10-20 · 2).
+  - **No trip check.** A check of the ticket's date against the trip (the
+    visit's timesheet, else the calendar's EST/NAC days) was built and
+    dropped the same day. The user: "simpler — I put the expenses on each
+    project and that's it; no calendar, no clock-ins, no warning for an
+    expense outside the trip". An expense belongs to the visit it is added
+    to. Do not bring the calendar back into the expenses.
+  - `exWarns(x)` → only "TARGETA DIFERENT" (pay = company but `last4` is not
+    the company's). It is an orange badge in the list and `#xeWarn` in the
+    editor, judged on the form's current pay/last4 and refreshed as they are
+    edited. It never blocks ✓ Desa.
+  - Whole PDFs: `exFileImg` keeps the original in IndexedDB "exp:<id>".
+    `exPdfOrig` (IndexedDB, then the queue, then Drive) and `exPdfData`
+    (≤ 15 MB) send it to Gemini as application/pdf; otherwise page 1 as
+    before. The prompt adds "a PDF is ONE paper; read all its pages". The
+    ZIP's fallback prefers the original PDF.
+  - Found while testing: pdf.js rendering with the default intent waits for
+    animation frames, so in a hidden page (the phone switched to another
+    app) a PDF stayed "loading" for ever. `exPdfPage` now renders with
+    intent "print".
+  - Tested in the preview: the card warning (1111 with company), and a
+    2-page PDF sent as application/pdf with its original kept, counting as
+    the receipt.
 - **The order the papers are shown in** (version · 7, the user: "the card
   slip always on the left and in the thumbnail, the receipt after it, the
   rest after the receipt"): `exShown(x)` sorts voucher → bill/invoice →

@@ -3380,8 +3380,11 @@ function mergeSessionLists(a,b){
   (a||[]).concat(b||[]).forEach(function(x){
     if(!x||!x.id)return;
     var cur=byId[x.id];
-    // later stamp wins; on a tie the later list (this device's) wins
-    if(!cur||sStamp(x)>=sStamp(cur))byId[x.id]=x;
+    if(!cur){byId[x.id]=x;return}
+    // later stamp wins; on a tie the later list (this device's) wins — and
+    // the expenses of both copies are kept, one by one (exMergeVisit)
+    var win=sStamp(x)>=sStamp(cur)?x:cur;
+    byId[x.id]=exMergeVisit(win,win===x?cur:x);
   });
   return Object.keys(byId).map(function(k){return byId[k]});
 }
@@ -3451,7 +3454,10 @@ async function loadFromDrive(){
     var localById={};sessions.forEach(function(s){localById[s.id]=s});
     var ahead=false;
     var merged=data.map(function(rs){var ls=localById[rs.id];
-      if(ls&&sStamp(ls)>sStamp(rs)){ahead=true;return ls}return rs});
+      if(!ls)return rs;
+      var win=sStamp(ls)>sStamp(rs)?ls:rs,m=exMergeVisit(win,win===ls?rs:ls);
+      if(m!==rs)ahead=true;            // newer here, or expenses Drive lacks: put it back up
+      return m});
     var remIds=new Set(data.map(function(s){return s.id}));
     var onlyHere=sessions.filter(function(s){return !remIds.has(s.id)});
     sessions=orderSessions(merged.concat(onlyHere));
@@ -3481,6 +3487,7 @@ async function loadFromDrive(){
     setSyncSt("ok","Sincronitzat ✓");
     histSchedule();
     setTimeout(renamePass,0);
+    setTimeout(exMigrate,0);         // pictures another device still keeps inside the visit
     return true;
   }catch(e){setSyncSt("error","Sense connexió (dades locals)");return false}
 }
@@ -5510,7 +5517,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-19 · 9";
+var APP_VERSION="2026-10-20 · 1";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -11103,7 +11110,7 @@ async function exportSessionZip(s,kind,pick){
         expBusy("Tiquets "+(tj+1)+"/"+allTk.length+"…");
         var tb=ti2.driveId&&!ti2.driveGone?await driveBlobById(token,ti2.driveId):null;
         if(!tb&&ti2.qid)tb=await mqBlob(ti2.qid);
-        if(!tb&&typeof ti2.data==="string"&&/^data:/.test(ti2.data)){try{tb=dataUrlToBlob(ti2.data)}catch(e){}}
+        if(!tb){var tfd=await exFull(ti2,false);if(tfd){try{tb=dataUrlToBlob(tfd)}catch(e){}}}
         if(tb){zip.file(tp,tb);if(ti2.driveId)inZip[ti2.driveId]=1}
         else lostMedia.push(ti2.name);
       }
@@ -11365,7 +11372,18 @@ var exSessId=null,exWired=false;
 function exSess(){return sessions.find(function(x){return x.id===exSessId})}
 function exFind(sessId,id){var s=sessions.find(function(x){return x.id===sessId});return s&&(s.expenses||[]).filter(function(x){return x.id===id})[0]}
 function exSet(sessId,fn){
-  sessions=sessions.map(function(x){return x.id!==sessId?x:Object.assign({},x,{expenses:fn((x.expenses||[]).slice())})});
+  sessions=sessions.map(function(x){
+    if(x.id!==sessId)return x;
+    // every expense that changed gets `xAt`, every one removed a tombstone:
+    // that is what lets two devices' copies of the visit merge one by one
+    var prev=x.expenses||[],had={},keep={},t=now();
+    prev.forEach(function(e){had[e.id]=e});
+    var next=fn(prev.slice()).map(function(e){return had[e.id]===e?e:Object.assign({},e,{xAt:t})});
+    next.forEach(function(e){keep[e.id]=1});
+    var gone=(x.exGone||[]).slice();
+    prev.forEach(function(e){if(!keep[e.id])gone.push({id:e.id,at:t})});
+    return Object.assign({},x,{expenses:next,exGone:gone});
+  });
   saveLocal();isDirty=true;
   if(saveTimer)clearTimeout(saveTimer);
   saveTimer=setTimeout(function(){if(isDirty&&isLoggedIn)saveToDrive()},2000);
@@ -11379,7 +11397,156 @@ function exDropImg(sessId,im){
   if(!im)return;
   if(im.qid&&!mqActive[im.qid])mqDrop(im.qid);
   if(im.driveId)queueTrash(sessId,[im.driveId]);
+  if(im.id){exMemDrop(im.id);try{if(idb)idbDel(idb,"exi:"+im.id)}catch(e){}}
 }
+// ── where the pictures live (version · 10) ───────────────────────────────────
+// The weak-points review: every ticket used to keep its whole JPEG (up to
+// 2000 px, 300–600 KB as a data URL) inside the visit, and every visit
+// travels in ONE Drive file that is read and written about every 30 s — a
+// trip of 30 expenses added 30–50 MB to it. Now the visit keeps only a
+// thumbnail (`im.th`, EX_THUMB px, a few KB); the whole picture is kept in
+// this device's IndexedDB ("exi:<id>") and on Drive (tiquets/, through the
+// queue). `exFull` finds it: this page's memory, IndexedDB, the upload queue,
+// and last Drive (then kept in IndexedDB). A picture whose IndexedDB copy
+// could not be written keeps `im.data` as before, so nothing is ever lost.
+// Pictures from before (`im.data`) are moved by `exMigrate`, at start-up and
+// after every load from Drive (another device may still be on an old version).
+var EX_THUMB=320,exFullMem={},exFullKeys=[];
+function exThumb(data){
+  return new Promise(function(res){
+    var im=new Image();
+    im.onload=function(){
+      try{
+        var w=im.naturalWidth,h=im.naturalHeight,sc=Math.min(1,EX_THUMB/Math.max(w,h,1));
+        var c=document.createElement("canvas");c.width=Math.max(1,Math.round(w*sc));c.height=Math.max(1,Math.round(h*sc));
+        c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+        res(c.toDataURL("image/jpeg",0.7));
+      }catch(e){res(null)}
+    };
+    im.onerror=function(){res(null)};
+    im.src=data;
+  });
+}
+function exMemPut(id,d){
+  if(!id||!d)return;
+  if(!exFullMem[id])exFullKeys.push(id);
+  exFullMem[id]=d;
+  while(exFullKeys.length>10)delete exFullMem[exFullKeys.shift()];   // a few at a time: they are big
+}
+function exMemDrop(id){delete exFullMem[id];exFullKeys=exFullKeys.filter(function(k){return k!==id})}
+// A new picture's whole JPEG goes to IndexedDB, the visit keeps the thumbnail.
+async function exStore(img,data){
+  if(!data)return img;
+  exMemPut(img.id,data);
+  try{
+    if(!idb)throw 0;
+    await idbSet(idb,"exi:"+img.id,data);
+    img.th=await exThumb(data);
+    if(!img.th)throw 0;
+    delete img.data;
+  }catch(e){img.data=data}
+  return img;
+}
+async function exBlobData(im,b){
+  if(!b)return null;
+  if(im.type==="pdf"||b.type==="application/pdf")return await exPdfPage(b);
+  return await readAsDataURL(b);
+}
+// The whole picture, from wherever it is. `dl` false: never from Drive.
+async function exFull(im,dl){
+  if(!im)return null;
+  if(typeof im.data==="string"&&/^data:/.test(im.data))return im.data;
+  if(exFullMem[im.id])return exFullMem[im.id];
+  var d=null;
+  try{d=idb?await idbGet(idb,"exi:"+im.id):null}catch(e){}
+  if(!d&&im.qid)d=await exBlobData(im,await mqBlob(im.qid));
+  if(!d&&dl!==false&&im.driveId&&!im.driveGone&&isLoggedIn&&navigator.onLine!==false){
+    var t=await getToken();
+    if(t){
+      d=await exBlobData(im,await driveBlobById(t,im.driveId));
+      if(d)try{if(idb)await idbSet(idb,"exi:"+im.id,d)}catch(e){}
+    }
+  }
+  if(d)exMemPut(im.id,d);
+  return d||null;
+}
+var exMigBusy=false;
+async function exMigrate(){
+  if(exMigBusy||!idb)return;
+  exMigBusy=true;
+  try{
+    var ch={};
+    for(var i=0;i<sessions.length;i++){
+      var xs=sessions[i].expenses||[];
+      for(var j=0;j<xs.length;j++){
+        var l=exImgs(xs[j]);
+        for(var k=0;k<l.length;k++){
+          var m=l[k],d=m.data;
+          if(typeof d!=="string"||!/^data:/.test(d))continue;
+          try{if(!await idbGet(idb,"exi:"+m.id))await idbSet(idb,"exi:"+m.id,d)}catch(e){continue}
+          if(!m.th)m.th=await exThumb(d);
+          if(!m.th)continue;                 // no thumbnail: better to keep the picture as it was
+          delete m.data;ch[sessions[i].id]=1;
+        }
+      }
+    }
+    if(Object.keys(ch).length){
+      // new objects: stamped, so this lighter copy is the one that goes to Drive
+      sessions=sessions.map(function(x){return ch[x.id]?Object.assign({},x):x});
+      saveLocal();isDirty=true;
+      if(saveTimer)clearTimeout(saveTimer);
+      saveTimer=setTimeout(function(){if(isDirty&&isLoggedIn)saveToDrive()},2000);
+    }
+  }finally{exMigBusy=false}
+}
+// ── two devices, one visit: the expenses merge one by one (version · 10) ─────
+// A sync used to keep the newer copy of a WHOLE visit: a ticket shot on the
+// phone while the computer edited the same visit could vanish. Now each
+// expense carries `xAt` (stamped by exSet whenever it changes) and the merge
+// keeps, per expense, the copy with the later stamp; removed expenses leave a
+// tombstone in `session.exGone` ({id, at}) so they do not come back. A
+// removal always wins. `exSeq` takes the higher of the two.
+function exMergeVisit(w,o){
+  if(!o||!w||w===o)return w;
+  var we=w.expenses||[],oe=o.expenses||[],wg=w.exGone||[],og=o.exGone||[];
+  if(!we.length&&!oe.length&&!wg.length&&!og.length)return w;
+  var gone={},goneL=[];
+  wg.concat(og).forEach(function(g){
+    if(!g||!g.id)return;
+    if(!(g.id in gone)){gone[g.id]=g.at||"";goneL.push(g)}
+  });
+  var by={},order=[];
+  we.concat(oe).forEach(function(x){
+    if(!x||!x.id)return;
+    var c=by[x.id];
+    if(!c){by[x.id]=x;order.push(x.id)}
+    else if(String(x.xAt||"")>String(c.xAt||""))by[x.id]=x;     // on a tie the winning visit's copy stays
+  });
+  var list=order.map(function(id){return by[id]}).filter(function(x){return !(x.id in gone)});
+  var seq=Math.max(+w.exSeq||0,+o.exSeq||0);
+  var out=Object.assign({},w,{expenses:list,exGone:goneL.slice(-500),exSeq:seq||w.exSeq});
+  exDedupNos(out);
+  var ol=out.expenses;   // after the renumbering, which may have replaced some
+  var same=ol.length===we.length&&ol.every(function(x,i){return x===we[i]})&&goneL.length===wg.length&&(out.exSeq||0)===(w.exSeq||0);
+  return same?w:out;
+}
+// Two devices may have given the same number before they met: the one given
+// later (`noAt`, then the id, so every device decides the same) takes the next
+// free number, and its files are renamed (on Drive by exRenamePass).
+function exDedupNos(s){
+  var l=s.expenses||[],seen={},seq=+s.exSeq||0,ch=false;
+  l.forEach(function(e){if(+e.no>seq)seq=+e.no});
+  l.filter(function(e){return e.no}).sort(function(a,b){
+    return String(a.noAt||"").localeCompare(String(b.noAt||""))||String(a.id).localeCompare(String(b.id));
+  }).forEach(function(e){
+    if(!seen[e.no]){seen[e.no]=1;return}
+    var n=++seq,c=Object.assign({},e,{no:n});
+    exNameImgs(s,c);seen[n]=1;ch=true;
+    l=l.map(function(x){return x===e?c:x});
+  });
+  if(ch){s.expenses=l;s.exSeq=seq}
+}
+
 function exRemove(sessId,id){
   var x=exFind(sessId,id);if(!x)return;
   exImgs(x).forEach(function(im){exDropImg(sessId,im)});
@@ -11447,8 +11614,9 @@ async function exFileImg(sessId,f,suffix,extra){
   var data=pdf?await exPdfPage(f):await exPrepImage(f);
   var name=pdf?(cleanName(String(f.name||"").replace(/\.pdf$/i,""))||"Tiquet "+exStamp())+".pdf"
     :(extra?"Documentació ":"Tiquet ")+exStamp()+(suffix||"")+".jpg";
-  var img={id:uid(),type:pdf?"pdf":"image",data:data,name:name,uploadStatus:"queued"};
+  var img={id:uid(),type:pdf?"pdf":"image",name:name,uploadStatus:"queued"};
   if(extra)img.extra=true;
+  await exStore(img,data);
   if(!await mqAdd(sessId,img,pdf||!data?f:dataUrlToBlob(data),"tiquets"))img.uploadStatus="err";
   return img;
 }
@@ -11464,8 +11632,11 @@ async function exPhotoDate(f){
 async function exNewImg(sessId,old,data){
   old=old||{};
   exDropImg(sessId,old);
-  var img={id:old.id||uid(),type:"image",data:data,name:old.name||("Tiquet "+exStamp()+".jpg"),doc:old.doc||"",uploadStatus:"queued"};
+  // a NEW id: the old one's IndexedDB copy is being deleted as this one is written
+  var img={id:uid(),type:"image",name:old.name||("Tiquet "+exStamp()+".jpg"),doc:old.doc||"",uploadStatus:"queued"};
   if(old.extra)img.extra=true;
+  if(old.autoName)img.autoName=true;
+  await exStore(img,data);
   if(!await mqAdd(sessId,img,dataUrlToBlob(data),"tiquets"))img.uploadStatus="err";
   return img;
 }
@@ -11486,7 +11657,7 @@ async function exAddFiles(files){
       imgs:[{id:uid(),type:exIsPdf(f)?"pdf":"image",data:null,name:"",uploadStatus:"loading"}]}])});
     exRender();
     var img=await exFileImg(sessId,f,files.length>1?" "+(i+1):"");
-    exPatch(sessId,id,{imgs:[img],date:await exPhotoDate(f),rd:img.data?"pending":""});
+    exPatch(sessId,id,{imgs:[img],date:await exPhotoDate(f),rd:(img.th||img.data)?"pending":""});
     exRender();
     exReadPending();
   }
@@ -11552,10 +11723,11 @@ function exNormRead(j,n){
   v.doubt=(Array.isArray(j.doubt)?j.doubt:[]).filter(function(f){return EX_FIELDS.indexOf(f)>=0});
   return v;
 }
-async function exGemRead(imgs){
-  var parts=[{text:"Images: "+imgs.length+"."}];
-  imgs.forEach(function(im){
-    var m=/^data:([^;,]+);base64,(.*)$/.exec(im.data||"");
+// `datas`: the whole pictures, as data URLs, in the order of the expense's papers
+async function exGemRead(datas){
+  var parts=[{text:"Images: "+datas.length+"."}];
+  datas.forEach(function(d){
+    var m=/^data:([^;,]+);base64,(.*)$/.exec(d||"");
     if(m)parts.push({inline_data:{mime_type:m[1],data:m[2]}});
   });
   if(parts.length<2)throw new Error("no hi ha cap imatge per llegir");
@@ -11570,31 +11742,35 @@ async function exGemRead(imgs){
   }
   var j;
   try{j=JSON.parse(String(out).replace(/^\s*```(?:json)?/i,"").replace(/```\s*$/,""))}catch(e){throw new Error("la resposta no es pot llegir")}
-  var v=exNormRead(j,imgs.length);v.model=model;
+  var v=exNormRead(j,datas.length);v.model=model;
   return v;
 }
 // Reads one expense. `all`: the fields typed by hand are read again too.
 async function exRead(sessId,id,all){
   var x=exFind(sessId,id);if(!x||exReading[id])return;
-  var imgs=exImgs(x).filter(function(im){return im.data&&!im.extra});    // documentation photos are not read
+  var imgs=exImgs(x).filter(function(im){return !im.extra});    // documentation photos are not read
   if(!imgs.length){exPatch(sessId,id,{rd:"err",rdErr:"no hi ha cap tiquet per llegir"});exRefresh();return}
   exReading[id]=1;exRefresh();
   try{
-    var v=await exGemRead(imgs);
-    exApplyRead(sessId,id,v,all);
+    // the whole pictures: from this device, or from Drive
+    var datas=[],ids=[];
+    for(var i=0;i<imgs.length;i++){var d=await exFull(imgs[i]);if(d){datas.push(d);ids.push(imgs[i].id)}}
+    if(!datas.length){exReadLater[id]=Date.now();return}   // still on the device that took them, not up yet
+    var v=await exGemRead(datas);
+    exApplyRead(sessId,id,v,all,ids);
   }catch(e){
     var m=String((e&&e.message)||e);
     exPatch(sessId,id,m===GEM_NOKEY?{rd:"pending"}:{rd:"err",rdErr:m});
   }finally{delete exReading[id];exRefresh()}
 }
-function exApplyRead(sessId,id,v,all){
+function exApplyRead(sessId,id,v,all,ids){
   var x=exFind(sessId,id);if(!x)return;
   var hand=all?[]:(x.hand||[]),p={readVals:v,read:{at:now(),model:v.model,doubt:v.doubt},rd:"done",rdErr:"",checked:false};
   EX_FIELDS.forEach(function(f){if(hand.indexOf(f)<0)p[f]=v[f]||(f==="currency"?x.currency:"")});
   if(all)p.hand=[];
   p.country=v.country;
   var imgs=exImgs(x),k=0;
-  imgs.forEach(function(im){if(im.data&&!im.extra)im.doc=v.docs[k++]||""});
+  imgs.forEach(function(im){var at=(ids||[]).indexOf(im.id);if(at>=0)im.doc=v.docs[at]||""});
   p.imgs=imgs.slice();
   exPatch(sessId,id,p);
   if(xeOpenNow()&&xeId===id)xeFillRead(all);
@@ -11602,20 +11778,23 @@ function exApplyRead(sessId,id,v,all){
 // Everything waiting to be read, one at a time, as long as there is a key
 // and a connection: right after a ticket is added, at every sync, and when
 // the connection comes back.
+// exReadLater: expenses whose pictures are not on this device nor on Drive
+// yet — looked at again two minutes later, not in a loop.
+var exReadLater={};
 async function exReadPending(){
   if(exReadBusy||!gemKey()||navigator.onLine===false)return;
   exReadBusy=true;
   try{
     for(;;){
-      var nx=null;
+      var nx=null,tnow=Date.now();
       sessions.some(function(s){
-        var x=(s.expenses||[]).filter(function(e){return e.rd==="pending"&&!exReading[e.id]})[0];
+        var x=(s.expenses||[]).filter(function(e){return e.rd==="pending"&&!exReading[e.id]&&!(exReadLater[e.id]&&tnow-exReadLater[e.id]<12e4)})[0];
         if(x)nx={s:s.id,x:x.id};
         return !!x;
       });
       if(!nx)break;
       await exRead(nx.s,nx.x,false);
-      var still=exFind(nx.s,nx.x);if(still&&still.rd==="pending")break;   // the key went: wait for the next time
+      var still=exFind(nx.s,nx.x);if(still&&still.rd==="pending"&&!exReadLater[nx.x])break;   // the key went: wait for the next time
     }
   }finally{exReadBusy=false}
 }
@@ -11730,7 +11909,7 @@ function exRender(){
     var badge=exReading[x.id]?"<span class=\"ex-badge rd\">LLEGINT…</span>":x.checked?"":"<span class=\"ex-badge\">PER REVISAR</span>";
     if(!exReading[x.id])exMissing(x).forEach(function(k){badge+="<span class=\"ex-badge inv\">"+EX_MISS[k][0]+"</span>"});
     return "<button class=\"ex-card\" data-ex=\""+esc(x.id)+"\">"
-      +"<span class=\"th\">"+(im.data?"<img src=\""+im.data+"\" alt=\"\">":(im.uploadStatus==="loading"?"<span class=\"spinner\"></span>":im.type==="pdf"?"&#128196;":"&#129534;"))
+      +"<span class=\"th\">"+((im.th||im.data)?"<img src=\""+(im.th||im.data)+"\" alt=\"\">":(im.uploadStatus==="loading"?"<span class=\"spinner\"></span>":im.type==="pdf"?"&#128196;":"&#129534;"))
       +exUpIcon(im)+(nim>1?"<span class=\"n\">"+nim+"</span>":"")+"</span>"
       +"<span class=\"bd\"><span class=\"t\">"+esc(x.merchant||(exReading[x.id]?"Llegint el tiquet…":"Tiquet sense llegir"))+"</span>"
       +"<span class=\"s\">"+esc(sub)+"</span>"+(badge?"<span class=\"bg\">"+badge+"</span>":"")+"</span>"
@@ -11804,7 +11983,7 @@ function xeRenderStrip(){
   var x=xeEx();if(!x)return;
   var l=exShown(x),hh=handheld(),cur=xeImg();
   $$("xeStrip").innerHTML=(l.length>1?l.map(function(im){
-      var d=xeEdits[im.id]||im.data;
+      var d=xeEdits[im.id]||im.th||im.data;
       return "<button class=\"th"+(cur&&cur.id===im.id?" on":"")+"\" data-im=\""+esc(im.id)+"\" title=\""+esc(exImgLabel(im)||im.name||"")+"\">"
         +(d?"<img src=\""+d+"\" alt=\"\">":im.type==="pdf"?"&#128196;":"&#129534;")+(im.extra?"<span class=\"x\">&#128206;</span>":"")+"</button>";
     }).join(""):"")
@@ -11814,8 +11993,15 @@ function xeRenderStrip(){
     +(cur&&exImgLabel(cur)?"<div class=\"lb\">"+esc(exImgLabel(cur).charAt(0).toUpperCase()+exImgLabel(cur).slice(1))+(l.length>1?" · "+(l.indexOf(cur)+1)+" de "+l.length:"")+"</div>":"");
 }
 function xeShowImg(){
-  var im=xeImg()||{},d=xeEdits[im.id]||im.data,pdf=im.type==="pdf",I=$$("xeImg"),n=exImgs(xeEx()).length;
+  var im=xeImg()||{},d=xeEdits[im.id]||exFullMem[im.id]||im.data||im.th,pdf=im.type==="pdf",I=$$("xeImg"),n=exImgs(xeEx()).length;
   if(d){I.src=d;I.style.display=""}else{I.removeAttribute("src");I.style.display="none"}
+  // the thumbnail first; the whole picture as soon as it is found
+  if(im.id&&!xeEdits[im.id]&&!exFullMem[im.id]&&!im.data){
+    var want=im.id;
+    exFull(im).then(function(full){
+      if(full&&xeOpenNow()&&(xeImg()||{}).id===want&&!xeEdits[want]){I.src=full;I.style.display="";$$("xePdf").style.display="none"}
+    });
+  }
   $$("xePdf").style.display=d?"none":"";
   $$("xePdf").innerHTML=pdf?"&#128196;":"&#129534;";
   ["xeRotL","xeRotR","xeCropBtn"].forEach(function(k){$$(k).style.display=d&&!pdf&&!xeBox?"":"none"});
@@ -11843,7 +12029,7 @@ function xeReadLine(){
   else if(x.rd==="err")el.innerHTML="&#9888; No s'ha pogut llegir: "+esc(x.rdErr||"error")+"."+btn("Torna-ho a provar");
   else if(x.rd==="pending"&&!gemKey())el.innerHTML="Per llegir-lo sol cal la clau de Gemini."+btn("&#128273; Clau de Gemini");
   else if(x.rd==="pending")el.innerHTML=navigator.onLine===false?"Es llegirà sol quan hi hagi connexió.":"<span class=\"spinner\"></span> A punt de llegir&hellip;";
-  else el.innerHTML=exImgs(x).some(function(m){return m.data&&!m.extra})?btn("&#10024; Llegeix el tiquet amb Gemini"):"";
+  else el.innerHTML=exImgs(x).some(function(m){return (m.th||m.data)&&!m.extra})?btn("&#10024; Llegeix el tiquet amb Gemini"):"";
   var b=$$("xeReadBtn");
   if(b)b.addEventListener("click",function(){
     if(!gemKey()){openGemKey("Per llegir els tiquets cal la clau de Gemini. Escriu-la aquí i torna-ho a provar.");return}
@@ -11875,7 +12061,8 @@ function xeCropEnd(){
 }
 async function xeApply(op){
   var im=xeImg();if(!im)return;
-  var src=xeEdits[im.id]||im.data;if(!src)return;
+  var src=xeEdits[im.id]||await exFull(im);
+  if(!src){alert("La imatge sencera encara no és en aquest aparell ni a Drive. Es podrà girar o retallar quan s'hagi pujat.");return}
   var d=await exTransform(src,op);
   if(d)xeEdits[im.id]=d;
   xeCropEnd();xeUpLabel();xeRenderStrip();
@@ -11909,6 +12096,7 @@ async function xeSave(){
   var s=sessions.find(function(o){return o.id===sessId});
   if(s){
     p.no=x.no||exNextNo(s);
+    if(!x.no)p.noAt=now();
     if(!x.no)sessions=sessions.map(function(o){return o.id===sessId?Object.assign({},o,{exSeq:p.no}):o});
     var named=Object.assign({},x,p);
     exNameImgs(s,named);
@@ -12054,7 +12242,8 @@ $$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><di
   outDirLoad();arxDirLoad();
   pendLoad().then(function(){refreshDriveInfo()});
   mqList().then(function(l){mqCount(l);refreshDriveInfo()});
-  histLoad();   // reports still waiting to go up        // idb is open by now; nothing waits on this
+  histLoad();   // reports still waiting to go up
+  setTimeout(exMigrate,1500);       // tickets from before version · 10: whole pictures out of the visit        // idb is open by now; nothing waits on this
   labelsLoad();                     // so a language translated earlier is ready offline
   if(loadTok()&&accessToken&&Date.now()<tokenExp){
     isLoggedIn=true;

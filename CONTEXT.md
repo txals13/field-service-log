@@ -798,6 +798,41 @@ Field Service Log/
   "later"; a gone file gets `driveGone` and is skipped (it used to stop every
   rename behind it at every sync), "later" stops the pass but keeps what was
   done. Neither path could be run in the preview (both need Google).
+- **Pictures out of the synced data, expenses merged one by one** (version
+  2026-10-20 · 1; weak points 2 and 5 of the review).
+  - Each picture keeps only `im.th` (a 320 px JPEG thumbnail, ~15–19 KB) in
+    the visit. The whole JPEG is in IndexedDB "exi:<id>" (`exStore`) and on
+    Drive. `exFull(im,dl)` looks in this page's memory (10 kept), then
+    IndexedDB, the upload queue, and Drive by `driveId` (cached after; a
+    PDF's page 1 is drawn again).
+  - `im.data` remains only when IndexedDB could not be written.
+  - `exMigrate` (start-up and after every load) moves old data URLs out.
+  - Measured: a test visit with 5 tickets went from 2,511,050 to 86,712 bytes.
+  - Reading sends the whole pictures (`exGemRead(datas)`, docs matched by id).
+    With none available yet, the expense waits 2 min (`exReadLater`).
+  - The editor shows the thumbnail, then the whole picture.
+  - Crop and rotate fetch the whole picture, and `exNewImg` gives the result
+    a NEW id (the old IndexedDB copy is deleted as the new one is written).
+  - The ZIP's fallback uses `exFull(im,false)`.
+  - `exSet` stamps `xAt` on every changed expense and writes tombstones
+    `session.exGone` ({id, at}, the last 500) for removed ones.
+  - `exMergeVisit(winner, other)`, called from `mergeSessionLists` and from
+    `loadFromDrive`'s merge (which marks the visit "ahead" when the result
+    differs from Drive's copy): per expense the later `xAt` wins (ties: the
+    winning visit), a tombstone always wins, `exSeq` takes the max.
+  - `exDedupNos`: a number given twice goes, for the one given later
+    (`noAt`, then id, so every device decides the same), to the next free
+    number, and its files are renamed.
+  - Tested by running the real functions, extracted from index.html, on two
+    copies of one visit:
+    - the phone's new expense was kept and so was its edit;
+    - the PC's deletion stayed;
+    - a duplicate (3) became (4) and was renamed;
+    - the result was the same both ways;
+    - identical copies came back unchanged.
+  - A device still on version · 9 neither stamps nor writes tombstones, so
+    during the changeover an expense it deletes can come back from another
+    copy.
 - **The order the papers are shown in** (version · 7, the user: "the card
   slip always on the left and in the thumbnail, the receipt after it, the
   rest after the receipt"): `exShown(x)` sorts voucher → bill/invoice →

@@ -5528,7 +5528,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-22 · 2";
+var APP_VERSION="2026-10-22 · 3";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -11482,7 +11482,11 @@ async function exBuildXlsx(s){
   var l=exList(s);if(!l.length)return null;
   var X=await loadXlsxLib();if(!X)return null;
   function num(v){var n=exNum(v);return n==null?"":n}
-  function dt(d){var m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(d||"");return m?new Date(Date.UTC(+m[1],+m[2]-1,+m[3])):""}
+  // The date as Excel's own day number with a date format. Written as a date
+  // cell (t="d", ISO text inside), it read back fine in SheetJS but showed
+  // EMPTY in the user's viewer — Drive's preview, Google Sheets and mobile
+  // Excel do not all take it. Counted in UTC, so no time zone moves the day.
+  function dt(d){var m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(d||"");return m?Math.round((Date.UTC(+m[1],+m[2]-1,+m[3])-Date.UTC(1899,11,30))/864e5):""}
   var rows=[["Núm.","Data","Hora","Categoria","Establiment","Raó social","NIF / VAT / RFC","Adreça","Núm. de tiquet / folio","Concepte",
     "Base imposable","IVA (%)","Quota d'IVA","Total","Moneda","Pagat amb","Targeta acabada en","Altres dades del rebut","Notes","Documents","Revisat"]];
   l.forEach(function(x){
@@ -11490,10 +11494,10 @@ async function exBuildXlsx(s){
       num(x.base),num(x.vatRate),num(x.vat),num(x.total),(x.currency||"EUR").toUpperCase(),x.pay?EX_PAY[x.pay]:"",x.last4||"",x.other||"",x.notes||"",
       exShown(x).map(function(m){return m.name}).filter(Boolean).join("; "),x.checked?"Sí":"No"]);
   });
-  var ws=X.utils.aoa_to_sheet(rows,{cellDates:true});
-  ws["!cols"]=autoCols(rows.map(function(r){return r.map(function(v){return v instanceof Date?"00/00/0000":v})}),6,48);   // a Date would be measured as its long text
+  var ws=X.utils.aoa_to_sheet(rows);
+  ws["!cols"]=autoCols(rows.map(function(r,ri){return r.map(function(v,ci){return ri&&ci===1&&v!==""?"00/00/0000":v})}),6,48);   // a day number is shorter than the date it shows
   for(var r=1;r<rows.length;r++){
-    var dc=ws[X.utils.encode_cell({r:r,c:1})];if(dc&&dc.t==="d")dc.z="dd/mm/yyyy";
+    var dc=ws[X.utils.encode_cell({r:r,c:1})];if(dc&&dc.t==="n")dc.z="dd/mm/yyyy";
     [10,12,13].forEach(function(k){var a=ws[X.utils.encode_cell({r:r,c:k})];if(a&&a.t==="n")a.z="#,##0.00"});
   }
   var S=exSummary(l),cs=S.cs;
@@ -11511,7 +11515,7 @@ async function exBuildXlsx(s){
   var wb=X.utils.book_new();
   X.utils.book_append_sheet(wb,ws,"Despeses");
   X.utils.book_append_sheet(wb,wr,"Resum");
-  return new Blob([X.write(wb,{bookType:"xlsx",type:"array",cellDates:true})],{type:XLSX_MIME});
+  return new Blob([X.write(wb,{bookType:"xlsx",type:"array"})],{type:XLSX_MIME});
 }
 
 // ── a PDF goes to Gemini whole (version 2026-10-20 · 2) ──────────────────────

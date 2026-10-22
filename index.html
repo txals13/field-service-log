@@ -5528,7 +5528,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-22 · 3";
+var APP_VERSION="2026-10-22 · 4";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -10951,13 +10951,14 @@ async function collectDriveFiles(token,folderId,pathPrefix,out){
 // ── WHAT GOES INTO THE PROJECT ZIP (2026-10-18) ──────────────────────────────
 // "Choose which files to export to the .zip — I don't always need the .docx or
 // the .xlsx." From the export menu a list comes first, ticked as last time
-// (ZP_KEY). session.json always goes in: it is what makes the ZIP importable.
+// (ZP_KEY). session.json too is a choice (2026-10-22: "the company I send it
+// to doesn't need it"); without it the ZIP cannot be imported back.
 // The media and the earlier revisions are the two things nothing can rebuild
-// — so only a ZIP that carries both counts as the complete copy (zipAt) the
-// delete dialog asks for. Archiving and the delete dialog's own "export now"
+// — so only a ZIP that carries both, and session.json, counts as the complete
+// copy (zipAt) the delete dialog asks for. Archiving and the delete dialog's own "export now"
 // do not ask: they always make the whole ZIP.
 var ZP_KEY="fsl_v6_zippick";
-var ZP_ITEMS=[["pdf","📄 Informe PDF"],["docx","📝 Informe Word (.docx)"],["html","🌐 Informe HTML"],["xlsx","📊 Recanvis (Excel)"],
+var ZP_ITEMS=[["json","🗃 Dades de la visita (session.json, per poder-la tornar a importar)"],["pdf","📄 Informe PDF"],["docx","📝 Informe Word (.docx)"],["html","🌐 Informe HTML"],["xlsx","📊 Recanvis (Excel)"],
   ["val","✅ Informe de validació"],["ts","🕒 Full d'hores"],["media","📷 Fotos, vídeos i notes de veu"],["exp","💶 Tiquets de les despeses"],["revs","🗂 Revisions anteriors"],["manual","📚 Manual de recanvis"]];
 function zpGet(){var o={};ZP_ITEMS.forEach(function(it){o[it[0]]=true});try{var v=JSON.parse(localStorage.getItem(ZP_KEY)||"null");if(v)Object.keys(o).forEach(function(k){if(k in v)o[k]=!!v[k]})}catch(e){}return o}
 function zpSet(o){try{localStorage.setItem(ZP_KEY,JSON.stringify(o))}catch(e){}}
@@ -10966,12 +10967,13 @@ function openZipPick(s){
   zpSess=s;
   var o=zpGet(),has={val:!!(s.prodTests||[]).length,ts:!!(s.timesheet&&s.timesheet.rows&&s.timesheet.rows.length),manual:!!(s.manualRef&&s.manualRef.pdfId),xlsx:!!collectSessionParts(s).length,exp:!!(s.expenses||[]).length};
   var row=function(k,l,on,dis,why){return "<label style=\"display:flex;align-items:center;gap:8px;font-size:13px"+(dis?";opacity:.5":"")+"\"><input type=\"checkbox\" data-zp=\""+k+"\""+(on?" checked":"")+(dis?" disabled":"")+">"+l+(why?" <span style=\"color:var(--tx3);font-size:11px\">("+why+")</span>":"")+"</label>"};
-  $$("zipPickList").innerHTML=row("","🗃 Dades de la visita (per poder-la importar)",true,true,"sempre")
-    +ZP_ITEMS.map(function(it){var k=it[0],no=(k in has)&&!has[k];return row(k,it[1],o[k]&&!no,no,no?"no n'hi ha":"")}).join("");
+  $$("zipPickList").innerHTML=ZP_ITEMS.map(function(it){var k=it[0],no=(k in has)&&!has[k];return row(k,it[1],o[k]&&!no,no,no?"no n'hi ha":"")}).join("");
   function note(){
     var m=$$("zipPickList").querySelector("[data-zp=media]").checked,r=$$("zipPickList").querySelector("[data-zp=revs]").checked;
     var xb=$$("zipPickList").querySelector("[data-zp=exp]"),x=!xb||xb.disabled||xb.checked;
-    $$("zipPickNote").textContent=(m&&r&&x)?"":"Sense la multimèdia, els tiquets o les revisions anteriors, aquest ZIP no compta com a còpia completa per esborrar la visita.";
+    var j=$$("zipPickList").querySelector("[data-zp=json]").checked;
+    $$("zipPickNote").textContent=!j?"Sense les dades de la visita, aquest ZIP no es pot tornar a importar ni compta com a còpia completa per esborrar la visita."
+      :(m&&r&&x)?"":"Sense la multimèdia, els tiquets o les revisions anteriors, aquest ZIP no compta com a còpia completa per esborrar la visita.";
   }
   $$("zipPickList").onchange=note;note();
   if(!zpWired){zpWired=true;
@@ -11057,7 +11059,7 @@ async function exportSessionZip(s,kind,pick){
       // Built too, not copied: Drive only gets a session.json when the technician
       // presses Save, so a session that was never synced had none at all. Always
       // the ORIGINAL texts — this is what gets imported back.
-      zip.file("session.json",new Blob([sessionToJson(s)],{type:"application/json;charset=utf-8"}));
+      if(want("json"))zip.file("session.json",new Blob([sessionToJson(s)],{type:"application/json;charset=utf-8"}));
     }
 
     // From Drive take only the media subfolders (photos/, videos/, audio/):
@@ -11190,8 +11192,9 @@ async function exportSessionZip(s,kind,pick){
     // Only the archive stamps zipAt: the delete dialog reads it as "a complete
     // copy of this session exists", and the DOCX pack carries no session.json,
     // so nothing could be restored from it. Nor does one without the media or
-    // the earlier revisions — those cannot be rebuilt from session.json.
-    if(archive&&want("media")&&want("revs")&&(want("exp")||!(s.expenses||[]).length)){
+    // the earlier revisions — those cannot be rebuilt from session.json — nor,
+    // of course, one without session.json.
+    if(archive&&want("json")&&want("media")&&want("revs")&&(want("exp")||!(s.expenses||[]).length)){
       var t=now();
       sessions=sessions.map(function(x){return x.id===s.id?Object.assign({},x,{zipAt:t,updatedAt:t,
         zipName:typeof arxOk==="string"?arxOk:"",zipTo:arxOn?"local":(drvArx?"drive":"")}):x});

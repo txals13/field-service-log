@@ -1926,6 +1926,17 @@ Now (`syncTick`, `scheduleSync`):
   preview (offline pick → ⏳, kept across a reload, played from IndexedDB)
   and in a sandbox (failed upload stays queued; upload once, blob gone, list
   cleared; the stale-copy race; the one-day clean-up).
+- **session.json is a choice too** (version 2026-10-22 · 4, the user: "I want
+  to choose whether session.json goes into the zip; the company I send it to
+  doesn't need it").
+  - `ZP_ITEMS` gets `json` first, ticked by default (a key missing from the
+    stored choice reads as true); the fixed "always" row is gone.
+  - `exportSessionZip` writes session.json only when `want("json")`, and
+    zipAt needs it as well as the media, the receipts and the revisions —
+    without it the ZIP cannot be imported, so it is no copy to delete by.
+  - The picker's note says so when it is unticked. Archiving and the delete
+    dialog still make the whole ZIP (no pick).
+  - Tested in the preview: the row, the two notes, the choice remembered.
 - **Choosing what goes into the project ZIP** (2026-10-18: "choose which files
   to export to the .zip, I don't always need the .docx or the .xlsx"): the
   menu's ZIP opens `#zipPickBack` (`openZipPick`) — PDF, Word, HTML, Excel,

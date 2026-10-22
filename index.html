@@ -976,6 +976,7 @@ textarea{resize:none;line-height:1.4}
       <input type="file" id="exFileIn" accept="image/*,application/pdf" multiple style="display:none">
       <div class="modal-actions" style="flex-wrap:wrap">
         <button id="exClose">Tanca</button>
+        <button id="exXlsx" style="display:none" title="Un Excel amb una fila per despesa i un full de resum, a la carpeta del projecte">&#128202; Excel</button>
         <button id="exFile">&#65291; Imatge o PDF</button>
         <button class="btn-gold cap-only" id="exCam" style="display:none">&#128247; Fotografia el tiquet</button>
       </div>
@@ -5527,7 +5528,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-22 · 1";
+var APP_VERSION="2026-10-22 · 2";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -11125,6 +11126,8 @@ async function exportSessionZip(s,kind,pick){
         if(tb){zip.file(tp,tb);if(ti2.driveId)inZip[ti2.driveId]=1}
         else lostMedia.push(ti2.name);
       }
+      // and the expenses themselves, readable without the app
+      try{var exX=await exBuildXlsx(s);if(exX)zip.file(exXlsxName(s),exX)}catch(e){}
     }
     // THE EARLIER REVISIONS. Everything sitting at the folder's root: the
     // reports of Rev. 01, Rev. 02…, each already carrying its number in its
@@ -11423,6 +11426,94 @@ function exWarns(x){
     out.push(["TARGETA DIFERENT","El tiquet diu targeta acabada en "+x.last4+", però la d'empresa acaba en "+c+". Comprova «Pagat amb»."]);
   return out;
 }
+// ── half-made expenses (version 2026-10-22 · 2) ──────────────────────────────
+// Adding a ticket makes the expense first (an empty picture, "loading") and
+// prepares the picture after. An app closed in between (a call, a flat
+// battery) left "Tiquet sense llegir" with no picture for good. Every expense
+// being prepared is listed in this device's localStorage (LS_EXWIP) until its
+// picture is in; at start-up the ones still listed lose their empty pictures,
+// and an expense left with nothing at all is removed. Only this device's own:
+// another device may be preparing one at this very moment, and its empty
+// picture is synced too.
+var LS_EXWIP="fsl_v6_exwip";
+function exWipGet(){try{var v=JSON.parse(localStorage.getItem(LS_EXWIP)||"[]");return Array.isArray(v)?v:[]}catch(e){return []}}
+function exWipSet(l){try{localStorage.setItem(LS_EXWIP,JSON.stringify(l))}catch(e){}}
+function exWipAdd(sessId,id){var l=exWipGet();l.push({s:sessId,id:id,at:now()});exWipSet(l)}
+function exWipDone(id){exWipSet(exWipGet().filter(function(w){return w.id!==id}))}
+function exBare(im){return !!im&&im.uploadStatus==="loading"&&!im.th&&!im.data&&!im.qid&&!im.driveId}
+function exWipClean(){
+  var l=exWipGet();if(!l.length)return;
+  l.forEach(function(w){
+    var x=exFind(w.s,w.id);if(!x)return;
+    var all=exImgs(x),keep=all.filter(function(im){return !exBare(im)});
+    if(keep.length===all.length)return;
+    var typed=!!x.notes||EX_FIELDS.some(function(f){return f!=="currency"&&f!=="date"&&x[f]});
+    if(!keep.length&&!typed)exRemove(w.s,w.id);
+    else exPatch(w.s,w.id,{imgs:keep});
+  });
+  exWipSet([]);
+}
+// ── the summary, shared by the list and the Excel ──
+// One sum per currency, nothing converted; by category (in EX_CATS order,
+// "Sense categoria" last, with how many), the total, and by way of paying.
+function exSummary(l){
+  var cur={},cat={},pay={},tot={},nNo=0;
+  l.forEach(function(x){
+    var n=exNum(x.total);if(n==null){nNo++;return}
+    var c=(x.currency||"EUR").toUpperCase(),k=x.category||"",pk=x.pay||"";
+    cur[c]=1;
+    cat[k]=cat[k]||{n:0};cat[k][c]=(cat[k][c]||0)+n;cat[k].n++;
+    pay[pk]=pay[pk]||{};pay[pk][c]=(pay[pk][c]||0)+n;
+    tot[c]=(tot[c]||0)+n;
+  });
+  return {cs:Object.keys(cur).sort(),cat:cat,pay:pay,tot:tot,nNo:nNo,
+    cats:EX_CATS.map(function(c){return c[0]}).concat([""]).filter(function(k){return cat[k]}),
+    pays:["company","personal","cash",""].filter(function(k){return pay[k]})};
+}
+function exPayLabel(k){return (k?EX_PAY[k]:"Sense dir com es va pagar")+(k==="personal"||k==="cash"?" (a retornar)":"")}
+// ── the expenses as an Excel (version 2026-10-22 · 2) ────────────────────────
+// Until the company's template arrives: a sheet with one row per expense and
+// every field read or typed (dates as dates, amounts as numbers), and a
+// summary sheet. When the template comes, filling it is mapping these
+// columns. Saved like every report — to the visit's folder on Drive, or
+// waiting on the device — and put in the project ZIP with the tickets.
+function exXlsxName(s){return exSafe((s.project||s.client||"Visita")+" despeses")+".xlsx"}
+async function exBuildXlsx(s){
+  var l=exList(s);if(!l.length)return null;
+  var X=await loadXlsxLib();if(!X)return null;
+  function num(v){var n=exNum(v);return n==null?"":n}
+  function dt(d){var m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(d||"");return m?new Date(Date.UTC(+m[1],+m[2]-1,+m[3])):""}
+  var rows=[["Núm.","Data","Hora","Categoria","Establiment","Raó social","NIF / VAT / RFC","Adreça","Núm. de tiquet / folio","Concepte",
+    "Base imposable","IVA (%)","Quota d'IVA","Total","Moneda","Pagat amb","Targeta acabada en","Altres dades del rebut","Notes","Documents","Revisat"]];
+  l.forEach(function(x){
+    rows.push([x.no||"",dt(x.date),x.time||"",exCatLabel(x.category),x.merchant||"",x.legalName||"",x.taxId||"",x.address||"",x.ticketNo||"",x.concept||"",
+      num(x.base),num(x.vatRate),num(x.vat),num(x.total),(x.currency||"EUR").toUpperCase(),x.pay?EX_PAY[x.pay]:"",x.last4||"",x.other||"",x.notes||"",
+      exShown(x).map(function(m){return m.name}).filter(Boolean).join("; "),x.checked?"Sí":"No"]);
+  });
+  var ws=X.utils.aoa_to_sheet(rows,{cellDates:true});
+  ws["!cols"]=autoCols(rows.map(function(r){return r.map(function(v){return v instanceof Date?"00/00/0000":v})}),6,48);   // a Date would be measured as its long text
+  for(var r=1;r<rows.length;r++){
+    var dc=ws[X.utils.encode_cell({r:r,c:1})];if(dc&&dc.t==="d")dc.z="dd/mm/yyyy";
+    [10,12,13].forEach(function(k){var a=ws[X.utils.encode_cell({r:r,c:k})];if(a&&a.t==="n")a.z="#,##0.00"});
+  }
+  var S=exSummary(l),cs=S.cs;
+  function vals(o){return cs.map(function(c){return o[c]!=null?Math.round(o[c]*100)/100:""})}
+  var sum=[["Despeses · "+(s.client||"")],["Projecte",s.project||""],["Màquina",s.machine||""],["Tècnic",s.tech||""],["Exportat",fts(now())],
+    ["Cada moneda té la seva suma: no es converteix res."],[],
+    ["Per categoria"].concat(cs)];
+  S.cats.forEach(function(k){sum.push([(k?exCatLabel(k):"Sense categoria")+" ("+S.cat[k].n+")"].concat(vals(S.cat[k])))});
+  sum.push(["Total"].concat(vals(S.tot)),[],["Per forma de pagament"].concat(cs));
+  S.pays.forEach(function(k){sum.push([exPayLabel(k)].concat(vals(S.pay[k])))});
+  if(S.nNo)sum.push([],[pl(S.nNo,"despesa","despeses")+" encara sense import: no hi compten."]);
+  var wr=X.utils.aoa_to_sheet(sum);
+  wr["!cols"]=[{wch:34}].concat(cs.map(function(){return {wch:14}}));
+  for(var rr=0;rr<sum.length;rr++)for(var cc=1;cc<=cs.length;cc++){var b=wr[X.utils.encode_cell({r:rr,c:cc})];if(b&&b.t==="n")b.z="#,##0.00"}
+  var wb=X.utils.book_new();
+  X.utils.book_append_sheet(wb,ws,"Despeses");
+  X.utils.book_append_sheet(wb,wr,"Resum");
+  return new Blob([X.write(wb,{bookType:"xlsx",type:"array",cellDates:true})],{type:XLSX_MIME});
+}
+
 // ── a PDF goes to Gemini whole (version 2026-10-20 · 2) ──────────────────────
 // A hotel's or an airline's invoice often has its total on page 2, and Gemini
 // used to see only page 1, drawn as a picture. The original PDF is kept in
@@ -11702,12 +11793,14 @@ async function exAddFiles(files){
   for(var i=0;i<files.length;i++){
     var f=files[i],id=uid();
     if(!first)first=id;
+    exWipAdd(sessId,id);
     exSet(sessId,function(l){return l.concat([{id:id,addedAt:now(),date:"",time:"",merchant:"",legalName:"",taxId:"",category:"",
       address:"",ticketNo:"",concept:"",other:"",base:"",vatRate:"",vat:"",total:"",currency:cur,pay:"",last4:"",notes:"",checked:false,hand:[],rd:"",
       imgs:[{id:uid(),type:exIsPdf(f)?"pdf":"image",data:null,name:"",uploadStatus:"loading"}]}])});
     exRender();
     var img=await exFileImg(sessId,f,files.length>1?" "+(i+1):"");
     exPatch(sessId,id,{imgs:[img],date:await exPhotoDate(f),rd:(img.th||img.data)?"pending":""});
+    exWipDone(id);
     exRender();
     exReadPending();
   }
@@ -11944,20 +12037,10 @@ function exRender(){
   // By category (in the categories' own order, how many expenses each), the
   // total, then by way of paying, with what is to be refunded. Expenses with
   // no amount yet are counted apart, below.
-  var cur={},cat={},pay={},tot={},nNo=0;
-  l.forEach(function(x){
-    var n=exNum(x.total);if(n==null){nNo++;return}
-    var c=(x.currency||"EUR").toUpperCase(),k=x.category||"",pk=x.pay||"";
-    cur[c]=1;
-    cat[k]=cat[k]||{n:0};cat[k][c]=(cat[k][c]||0)+n;cat[k].n++;
-    pay[pk]=pay[pk]||{};pay[pk][c]=(pay[pk][c]||0)+n;
-    tot[c]=(tot[c]||0)+n;
-  });
-  var cs=Object.keys(cur).sort(),html="";
+  var S=exSummary(l),cs=S.cs,cat=S.cat,pay=S.pay,tot=S.tot,nNo=S.nNo,html="";
   function cells(o){return cs.map(function(c){return "<td class=\"am\">"+(o[c]!=null?esc(exFmt(o[c])):"")+"</td>"}).join("")}
   if(cs.length){
-    var cats=EX_CATS.map(function(c){return c[0]}).concat([""]).filter(function(k){return cat[k]});
-    var pays=["company","personal","cash",""].filter(function(k){return pay[k]});
+    var cats=S.cats,pays=S.pays;
     html="<table class=\"ex-tab\"><thead><tr><th>Per categoria</th>"+cs.map(function(c){return "<th class=\"am\">"+esc(c)+"</th>"}).join("")+"</tr></thead><tbody>"
       +cats.map(function(k){return "<tr><td>"+esc(k?exCatLabel(k):"Sense categoria")+" <span class=\"n\">("+cat[k].n+")</span></td>"+cells(cat[k])+"</tr>"}).join("")
       +"<tr class=\"tot\"><td>Total</td>"+cells(tot)+"</tr>"
@@ -11967,6 +12050,7 @@ function exRender(){
   }
   if(nNo)html+="<div class=\"ex-sum-no\">"+esc(pl(nNo,"despesa","despeses"))+" encara sense import: no hi compten.</div>";
   $$("exSum").innerHTML=html;
+  $$("exXlsx").style.display=l.length?"":"none";
   exSugs=exSuggest(s);
   var sug=exSugs.map(function(g,i){
     if(g.kind==="dup")return "<div class=\"ex-sug\">&#128196; Sembla el mateix paper fotografiat dues vegades: <b>"+esc(g.keep.merchant||"tiquet")+"</b>, "
@@ -11998,6 +12082,18 @@ function wireEx(){
   $$("exBack").addEventListener("click",function(e){if(e.target===$$("exBack"))close()});
   $$("exCam").addEventListener("click",function(){$$("exCamIn").click()});
   $$("exFile").addEventListener("click",function(){$$("exFileIn").click()});
+  $$("exXlsx").addEventListener("click",async function(){
+    var b=this,s=exSess();if(!s||b.disabled)return;
+    b.disabled=true;var was=b.innerHTML;b.innerHTML="Preparant&hellip;";
+    try{
+      var blob=await exBuildXlsx(s);
+      if(!blob){alert("No s'ha pogut fer l'Excel: no hi ha despeses o no s'ha pogut carregar la llibreria (cal connexió el primer cop).");return}
+      var ok=await saveReport(s,blob,exXlsxName(s),XLSX_MIME);
+      b.innerHTML=ok?"&#10003; Desat a Drive":"&#9203; Es pujarà a Drive";
+      setTimeout(function(){b.innerHTML=was},3500);
+      return;
+    }finally{b.disabled=false;if(b.innerHTML==="Preparant&hellip;"||/Preparant/.test(b.innerHTML))b.innerHTML=was}
+  });
   ["exCamIn","exFileIn"].forEach(function(k){
     $$(k).addEventListener("change",function(e){var f=Array.from(e.target.files||[]);e.target.value="";if(f.length)exAddFiles(f)});
   });
@@ -12322,6 +12418,7 @@ $$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><di
   pendLoad().then(function(){refreshDriveInfo()});
   mqList().then(function(l){mqCount(l);refreshDriveInfo()});
   histLoad();   // reports still waiting to go up
+  exWipClean();                     // tickets left half-made when the app was closed
   setTimeout(exMigrate,1500);       // tickets from before version · 10: whole pictures out of the visit        // idb is open by now; nothing waits on this
   labelsLoad();                     // so a language translated earlier is ready offline
   if(loadTok()&&accessToken&&Date.now()<tokenExp){

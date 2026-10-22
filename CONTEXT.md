@@ -833,6 +833,29 @@ Field Service Log/
   - A device still on version · 9 neither stamps nor writes tombstones, so
     during the changeover an expense it deletes can come back from another
     copy.
+- **Half-made expenses and the provisional Excel** (version 2026-10-22 · 2).
+  - `exAddFiles` lists each expense it starts in localStorage
+    `fsl_v6_exwip` (`exWipAdd`) and takes it off once its picture is in
+    (`exWipDone`). `exWipClean` (at start-up, before `exMigrate`) strips those
+    still listed of their bare "loading" pictures (`exBare`: no th, data,
+    qid or driveId), and removes, with a tombstone, the ones left with
+    nothing typed. It only acts on this device's list: another device's
+    placeholder, mid-capture, is synced too and must not be touched. Tested:
+    this device's half-made one went, the "other device's" stayed.
+  - `exSummary(l)` is shared by the list's table and the Excel.
+  - `exBuildXlsx(s)` (SheetJS through `loadXlsxLib`) has two sheets:
+    - "Despeses": one row per expense, every field; dates as real dates
+      (dd/mm/yyyy); base, VAT and total as numbers; the documents' names;
+      revisat;
+    - "Resum": the visit's header, then by category, the total and by way of
+      paying, one column per currency.
+  - The file name is `exXlsxName` = "<project> despeses.xlsx".
+  - "📊 Excel" in the list (`#exXlsx`, only with expenses) saves it with
+    `saveReport` (the visit's folder, or waiting on the device).
+  - The project ZIP adds it (with "exp"), at the root.
+  - Tested: the file read back with SheetJS (headers, a date cell of type d,
+    a numeric total, the summary matching the screen). The ZIP part needs
+    Google and was not run.
 - **The summary in the list** (version 2026-10-22 · 1, the user: "the
   summary by category too, then the total; with different currencies and no
   conversion, different sums"). `#exSum` is one `.ex-tab` table with one

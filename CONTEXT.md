@@ -833,6 +833,15 @@ Field Service Log/
   - A device still on version · 9 neither stamps nor writes tombstones, so
     during the changeover an expense it deletes can come back from another
     copy.
+- **The summary in the list** (version 2026-10-22 · 1, the user: "the
+  summary by category too, then the total; with different currencies and no
+  conversion, different sums"). `#exSum` is one `.ex-tab` table with one
+  column per currency (sorted), nothing converted. Rows: by category, in
+  EX_CATS order, with "Sense categoria" last and the count in brackets; the
+  Total; then a "Per forma de pagament" section (company / personal / cash /
+  unknown; personal and cash marked "a retornar"). Expenses without a parsed
+  total are left out and counted below the table. Checked in the preview at
+  desktop and phone width with EUR + MXN.
 - **Card warning; whole PDFs to Gemini** (version 2026-10-20 · 2).
   - **No trip check.** A check of the ticket's date against the trip (the
     visit's timesheet, else the calendar's EST/NAC days) was built and

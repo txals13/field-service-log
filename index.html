@@ -361,6 +361,15 @@ textarea{resize:none;line-height:1.4}
 .ex-sum{font-size:12.5px;line-height:1.6;margin-bottom:10px}
 .ex-sum:empty{display:none}
 .ex-sum .am{font-family:monospace;font-weight:700}
+.ex-tab{width:100%;border-collapse:collapse;font-size:12.5px}
+.ex-tab th{text-align:left;font-size:11px;color:var(--tx3);font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:2px 6px 3px 0;border-bottom:1px solid var(--br)}
+.ex-tab td{padding:3px 6px 3px 0;line-height:1.35}
+.ex-tab .am{text-align:right;white-space:nowrap;padding-right:0;padding-left:10px}
+.ex-tab td.am{font-weight:600}
+.ex-tab tr.tot td{font-weight:700;border-top:1px solid var(--br2);padding-top:5px}
+.ex-tab tr.sec td{padding-top:12px;font-size:11px;color:var(--tx3);font-weight:700;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--br)}
+.ex-tab .n{color:var(--tx3);font-weight:400}
+.ex-sum-no{font-size:11.5px;color:var(--tx3);margin-top:6px}
 .ex-badge{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:20px;margin-right:6px;background:var(--orangebg);color:var(--orange)}
 .ex-card .bg{display:block;margin-top:4px}
 .xe-img{position:relative;display:block;flex:none;width:fit-content;max-width:100%;margin:0 auto 8px;overflow:hidden;border-radius:8px;background:var(--bg0);touch-action:none}
@@ -5518,7 +5527,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-20 · 2";
+var APP_VERSION="2026-10-22 · 1";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -11929,17 +11938,35 @@ function exRender(){
   $$("exNote").textContent=(l.length?"Toca un tiquet per revisar-lo o completar-lo."
     :"Encara no n'hi ha cap. Fotografia cada tiquet el mateix dia: el paper tèrmic s'esborra. La foto es desa a la visita, Gemini la llegeix i es puja a la carpeta tiquets/ de Drive.")
     +(!exLast4()&&l.some(function(x){return x.last4})?" Escriu les 4 xifres de la targeta d'empresa per comprovar les targetes.":"");
-  // totals by way of paying and by currency: nothing is converted
-  var tot={};
+  // The summary (version 2026-10-22 · 1, the user: "the summary by category
+  // too, then the total; with different currencies and no conversion,
+  // different sums"): one table, one column per currency, nothing converted.
+  // By category (in the categories' own order, how many expenses each), the
+  // total, then by way of paying, with what is to be refunded. Expenses with
+  // no amount yet are counted apart, below.
+  var cur={},cat={},pay={},tot={},nNo=0;
   l.forEach(function(x){
-    var n=exNum(x.total);if(n==null)return;
-    var k=x.pay||"",c=(x.currency||"EUR").toUpperCase();
-    tot[k]=tot[k]||{};tot[k][c]=(tot[k][c]||0)+n;
+    var n=exNum(x.total);if(n==null){nNo++;return}
+    var c=(x.currency||"EUR").toUpperCase(),k=x.category||"",pk=x.pay||"";
+    cur[c]=1;
+    cat[k]=cat[k]||{n:0};cat[k][c]=(cat[k][c]||0)+n;cat[k].n++;
+    pay[pk]=pay[pk]||{};pay[pk][c]=(pay[pk][c]||0)+n;
+    tot[c]=(tot[c]||0)+n;
   });
-  $$("exSum").innerHTML=["company","personal","cash",""].filter(function(k){return tot[k]}).map(function(k){
-    return "<div>"+esc(k?EX_PAY[k]:"Sense dir com es va pagar")+(k==="personal"||k==="cash"?" <span style=\"color:var(--tx3)\">(a retornar)</span>":"")+": "
-      +Object.keys(tot[k]).sort().map(function(c){return "<span class=\"am\">"+esc(exFmt(tot[k][c])+" "+c)+"</span>"}).join(" · ")+"</div>";
-  }).join("");
+  var cs=Object.keys(cur).sort(),html="";
+  function cells(o){return cs.map(function(c){return "<td class=\"am\">"+(o[c]!=null?esc(exFmt(o[c])):"")+"</td>"}).join("")}
+  if(cs.length){
+    var cats=EX_CATS.map(function(c){return c[0]}).concat([""]).filter(function(k){return cat[k]});
+    var pays=["company","personal","cash",""].filter(function(k){return pay[k]});
+    html="<table class=\"ex-tab\"><thead><tr><th>Per categoria</th>"+cs.map(function(c){return "<th class=\"am\">"+esc(c)+"</th>"}).join("")+"</tr></thead><tbody>"
+      +cats.map(function(k){return "<tr><td>"+esc(k?exCatLabel(k):"Sense categoria")+" <span class=\"n\">("+cat[k].n+")</span></td>"+cells(cat[k])+"</tr>"}).join("")
+      +"<tr class=\"tot\"><td>Total</td>"+cells(tot)+"</tr>"
+      +"<tr class=\"sec\"><td colspan=\""+(cs.length+1)+"\">Per forma de pagament</td></tr>"
+      +pays.map(function(k){return "<tr><td>"+esc(k?EX_PAY[k]:"Sense dir com es va pagar")+(k==="personal"||k==="cash"?" <span class=\"n\">(a retornar)</span>":"")+"</td>"+cells(pay[k])+"</tr>"}).join("")
+      +"</tbody></table>";
+  }
+  if(nNo)html+="<div class=\"ex-sum-no\">"+esc(pl(nNo,"despesa","despeses"))+" encara sense import: no hi compten.</div>";
+  $$("exSum").innerHTML=html;
   exSugs=exSuggest(s);
   var sug=exSugs.map(function(g,i){
     if(g.kind==="dup")return "<div class=\"ex-sug\">&#128196; Sembla el mateix paper fotografiat dues vegades: <b>"+esc(g.keep.merchant||"tiquet")+"</b>, "

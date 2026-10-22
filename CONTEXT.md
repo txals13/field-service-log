@@ -844,9 +844,12 @@ Field Service Log/
     this device's half-made one went, the "other device's" stayed.
   - `exSummary(l)` is shared by the list's table and the Excel.
   - `exBuildXlsx(s)` (SheetJS through `loadXlsxLib`) has two sheets:
-    - "Despeses": one row per expense, every field; dates as real dates
-      (dd/mm/yyyy); base, VAT and total as numbers; the documents' names;
-      revisat;
+    - "Despeses": one row per expense, every field; base, VAT and total as
+      numbers; the documents' names; revisat. Dates are Excel day numbers
+      with a dd/mm/yyyy format, counted in UTC so no time zone moves the
+      day (version · 3). Version · 2 wrote them as date cells (t="d", ISO
+      text): SheetJS read them back fine, but in the user's viewer the
+      "Data" column was EMPTY. Keep the day number;
     - "Resum": the visit's header, then by category, the total and by way of
       paying, one column per currency.
   - The file name is `exXlsxName` = "<project> despeses.xlsx".

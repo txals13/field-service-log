@@ -222,9 +222,9 @@
 <p><span class="btn">↓ Informe ▾</span>, a la capçalera de la visita, té tots els formats:</p>
 <div class="scroll"><table>
   <tr><th>Opció</th><th>Què fa</th></tr>
-  <tr><td>📄 PDF</td><td>L'informe complet. A la columna Adjunts de cada entrada hi ha les fotos en miniatura i els noms dels vídeos i les notes de veu; les fotos surten també en gran en un annex al final.</td></tr>
+  <tr><td>📄 PDF</td><td>L'informe complet. A la columna Adjunts de cada entrada hi ha els noms dels fitxers; les fotos surten en gran en un annex al final.</td></tr>
   <tr><td>📄 Word (DOCX)</td><td>El mateix informe, editable. Té la mateixa forma que el PDF.</td></tr>
-  <tr><td>📄 HTML</td><td>Es pot obrir a qualsevol navegador. Com el PDF: les miniatures i els noms a cada entrada i les fotos en gran al final.</td></tr>
+  <tr><td>📄 HTML</td><td>Es pot obrir a qualsevol navegador. Com el PDF: els noms dels fitxers a cada entrada i les fotos en gran al final.</td></tr>
   <tr><td>📊 Recanvis (Excel)</td><td>Els recanvis de la visita: un full de recomanats per cotitzar, un de canviats, el detall i les dades de la sessió.</td></tr>
   <tr><td>🧾 Full d'hores…</td><td>Obre el full d'hores per signar (vegeu <a href="#hores">full d'hores</a>).</td></tr>
   <tr><td>🗄 ZIP del projecte (arxiu)</td><td>Tot: tots els informes, totes les revisions anteriors, les fotos, els vídeos, les notes de veu i les dades de la visita. <strong>És l'única còpia que es pot tornar a importar.</strong> Cada foto, vídeo o nota de veu de la visita hi entra encara que ja no sigui a la carpeta (l'app el busca a Drive, també a la paperera). Si en falta algun que ja no es pot trobar, l'app avisa amb el nom del fitxer: no esborris la visita fins que el tinguis.</td></tr>
@@ -236,9 +236,13 @@
 <p><strong>Al registre</strong>, el bloc «Com ha quedat» d'una incidència resolta diu també quant va trigar a resoldre's («resolt en 2 h 28 min»). Una entrada que tanca un problema d'una visita anterior porta un requadre gris amb aquell problema: la data i el projecte de la visita, la gravetat i el text com es va escriure (traduït, si l'informe va en un altre idioma).</p>
 <p>Les entrades surten en <strong>una sola taula</strong>, amb la capçalera (Hora, Gravetat, Etiqueta, Descripció, Adjunts) a dalt i repetida només quan la taula passa a una pàgina nova. Cada dia va en una <strong>caixa pròpia</strong>, separada de les altres per una mica d'aire, amb una franja que diu el dia de la setmana, la data, quantes entrades hi ha i els problemes, avisos, resolts i OK d'aquell dia. Cada entrada porta només l'hora. Si la visita dura <strong>més d'una setmana</strong>, cada setmana comença amb una franja taronja («Setmana 39 · 21/09/2026 – 27/09/2026 · 4 dies · 4 entrades»); en una visita d'una sola setmana, aquesta franja no hi surt. Una franja de dia (o de setmana) mai queda sola a peu de pàgina.</p>
 <p><strong>L'aspecte</strong>: les capçaleres de les taules són gris clar amb el text en majúscules petites, i cada títol d'apartat porta una ratlla de color a l'esquerra. Les signatures van just després de l'últim apartat, i les fotos grans surten en una pàgina nova, com a <strong>Annex · Fotos</strong>, amb el projecte, la revisió i quantes fotos hi ha.</p>
-<p>A la columna <strong>Adjunts</strong> (PDF, Word i HTML) les fotos surten en <strong>miniatura</strong>, dues per fila, amb el nom a sota; els vídeos (amb <code>»</code> davant) i les notes de veu (amb <code>•</code>) surten només pel nom, sense miniatura. Les fotos de la resolució («com ha quedat») també hi són. Dels vídeos, només hi surten els que són a la carpeta de la visita (un vídeo que no s'ha pogut pujar no hi surt). L'apartat «Fotos» del final té totes les fotos en gran, senceres i sense deformar, amb l'hora i el nom a sota.</p>
+<p>A la columna <strong>Adjunts</strong> (PDF, Word i HTML) hi ha <strong>només els noms</strong> dels fitxers, un per línia, sense miniatures: les fotos pel nom, els vídeos amb <code>»</code> davant i les notes de veu amb <code>•</code>. Les fotos de la resolució («com ha quedat») també hi són. Dels vídeos, només hi surten els que són a la carpeta de la visita (un vídeo que no s'ha pogut pujar no hi surt). L'apartat «Fotos» del final té totes les fotos en gran, senceres i sense deformar, amb l'hora i el nom a sota.</p>
 <h3>Obrir les fotos i els vídeos des de l'informe</h3>
-<p><strong>Tocar una foto obre el fitxer original</strong>: la miniatura de la columna Adjunts, el nom que té a sota (en blau) o la foto gran de l'annex. El nom d'un vídeo o d'una nota de veu també obre el fitxer.</p>
+<p>Els noms de la columna Adjunts són enllaços, en blau:</p>
+<ul>
+  <li>El nom d'una <strong>foto</strong> porta a la seva foto en gran, a l'apartat «Fotos» del final. <strong>Clicant aquella foto</strong> (o el nom que té a sota) s'obre el fitxer original.</li>
+  <li>El nom d'un <strong>vídeo</strong> o d'una <strong>nota de veu</strong> obre el fitxer directament.</li>
+</ul>
 <p>On s'obre el fitxer depèn d'on és l'informe:</p>
 <ul>
   <li><strong>Els informes que exportes des de l'app</strong> (els que van a la carpeta de la visita): l'obren a <strong>Drive</strong>, des de qualsevol lloc (ordinador, mòbil, Drive al web).</li>
@@ -269,7 +273,7 @@
 <h3>Revisar i signar l'informe o el full d'hores</h3>
 <p><span class="btn">Revisa i signa</span> és la primera opció de <span class="btn">↓ Informe</span> (i, al disseny nou, la primera de la llista). Si la visita té full d'hores, primer tries quin document vols: <strong>📄 Informe</strong> o <strong>🕒 Full d'hores</strong> (al costat de cada un diu si ja està signat). Si no en té, s'obre directament l'informe.</p>
 <ul>
-  <li><strong>Informe:</strong> surt sencer a pantalla, en l'idioma del client, tal com el rebrà, per ensenyar-l'hi i explicar-l'hi. Tocar una foto l'obre a Drive.</li>
+  <li><strong>Informe:</strong> surt sencer a pantalla, en l'idioma del client, tal com el rebrà, per ensenyar-l'hi i explicar-l'hi. Els noms de les fotos et porten a la foto gran del final.</li>
   <li><strong>Full d'hores:</strong> surt tal com sortirà en PDF, amb la data de signatura, que es posa sola el dia que es signa. El full es continua podent signar també des del seu formulari, com sempre.</li>
 </ul>
 <p>Al final hi ha els dos requadres per signar amb el dit o el llapis: tècnic i client. El nom del client ja ve posat amb la persona de contacte, i el pots canviar. Quan acabeu:</p>

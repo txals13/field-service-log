@@ -1926,22 +1926,12 @@ Now (`syncTick`, `scheduleSync`):
   preview (offline pick → ⏳, kept across a reload, played from IndexedDB)
   and in a sandbox (failed upload stays queued; upload once, blob gone, list
   cleared; the stale-copy race; the one-day clean-up).
-- **Photo thumbnails back, each a link to the photo** (version 2026-10-23 · 7,
-  the user: "going back on one thing about the thumbnails: touching a photo
-  or a thumbnail opens the link, on Drive or in the device's folder"; asked
-  which, they chose photo thumbnails, videos by name).
-  - `attHasPics`, `imgSize`, `ATT_TW/GAP/MAX` and the thumbnail layouts came
-    back from the version before 8165131 (PDF `attL` + its `didDrawCell`,
-    Word's two-across table with `dims`, HTML's 100px grid), now with
-    `mediaHref(im,local)`: the thumbnail and its name open the photo —
-    Drive in the app's exports, the file beside it in the ZIP's copies (PDF
-    Launch actions). The appendix photo does the same.
-  - The jump from a photo's name to the appendix is gone (`toShot`,
-    `shotOf`, `shotLink`, Word's InternalHyperlink/Bookmark): every link
-    opens the file now.
-  - Checked with the two-week P-2026-140 copy: PDF thumbnails with Drive
-    links on page 1 and the annex, HTML 6 images and file links, Word 4
-    pictures inside hyperlinks, no internal anchors.
+- **Thumbnails tried again and dropped** (version 2026-10-23 · 8): b7a29be
+  (· 7) brought the photo thumbnails back into the Adjunts column; the user
+  undid it the same day ("I got confused: it would be worse when the report
+  has to be printed"). The three files are back as they were at b578a0f
+  (· 6): names only, a photo's name jumps to the annex, the annex photo opens
+  the file. Only the version number moved on, so devices reload.
 - **The report's new look: A · 1 · X** (version 2026-10-23 · 6, the user: "I
   don't like the thick black titles; more room between the signatures and
   the photos; maybe the days set apart, showing which week they're in when

@@ -1926,6 +1926,36 @@ Now (`syncTick`, `scheduleSync`):
   preview (offline pick → ⏳, kept across a reload, played from IndexedDB)
   and in a sandbox (failed upload stays queued; upload once, blob gone, list
   cleared; the stale-copy race; the one-day clean-up).
+- **Review and sign** (version 2026-10-23 · 1, the user: "first I want to see
+  the report, to show it and explain it a little, and if they agree, sign it
+  in that same view; then generate it with the signatures. The hours the
+  same. Unsigned, I still want to generate them").
+  - One screen, `#pvBack` (replaces the report's old `#rsBack` box and the
+    timesheet form's own pads): the document in a scrolling view, then the
+    two pads, "Desa la signatura" and "Desa i genera el PDF".
+  - Report (`openReportSign`, from ↓ Informe › Revisa i signa… and the new
+    layout's menu): same gates as an export (`ensureLabels`,
+    `ensureRevision` — the signature belongs to the revision), then
+    `reportSession` and `buildReportHTML` into a srcdoc iframe; its own
+    `.sig` block hidden; the iframe grows to the report's height so one
+    scroll runs to the pads; a click on an in-report anchor (photo name →
+    appendix) scrolls the outer view. Saved with `setRevSign`.
+  - Timesheet (`openTsSign`, from the form's "👁 Revisa i signa", which
+    commits first): its PDF (`localizeTimesheet` + `buildTimesheetBlob`)
+    drawn page by page with pdf.js; the sign date row is shown, filled with
+    today on the first ink unless typed. Saved onto `s.timesheet` with
+    saveLocal (not scheduleSave: signing does not mark the visit edited).
+    With the calendar not loaded, a sheet already saved is opened as is.
+  - `tsCommit` no longer reads pads: the signatures stay with the sheet
+    unless rows, remarks, columns or language changed — then a confirm, and
+    they are cleared.
+  - `tsInitPad` draws a stored signature at its own proportions, centred
+    (it was stretched to the pad, and re-saved distorted).
+  - Exports never needed a signature and still don't.
+  - Tested in the preview with the real P-2026-140: the report shown and
+    scrolled to the pads, signed, PDF with both new signatures; the sheet
+    shown as its PDF, signed by the client only, PDF with that signature and
+    "Data: 23/10/26" under it.
 - **session.json is a choice too** (version 2026-10-22 · 4, the user: "I want
   to choose whether session.json goes into the zip; the company I send it to
   doesn't need it").

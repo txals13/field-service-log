@@ -270,7 +270,6 @@ textarea{resize:none;line-height:1.4}
 .pv-modal{max-width:min(98vw,1100px);width:98vw;height:94vh;max-height:94vh;display:flex;flex-direction:column;padding:12px}
 .pv-scroll{flex:1;overflow:auto;position:relative;border:1px solid var(--br);border-radius:8px;background:#e5e7eb;-webkit-overflow-scrolling:touch}
 #pvDoc iframe{display:block;width:100%;border:0;background:#fff}
-.pv-part{font-size:15px;font-weight:700;padding:12px 14px;background:var(--bg1);border-bottom:1px solid var(--br);color:var(--tx)}
 #pvDoc .pv-pages canvas{display:block;width:100%;max-width:900px;height:auto;margin:12px auto;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.25)}
 .pv-sign{background:var(--bg1);border-top:3px solid var(--gold);padding:14px}
 .pv-pads{display:grid;grid-template-columns:1fr;gap:12px}
@@ -753,6 +752,17 @@ textarea{resize:none;line-height:1.4}
     </div>
   </div>
 
+  <!-- Review and sign: which document (2026-10-23) -->
+  <div class="modal-back" id="pvPickBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,380px)">
+      <div class="modal-title">&#128065; Revisa i signa</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin:4px 0 6px">
+        <button class="btn-gold" id="pvPickRep" style="text-align:left;padding:12px 14px;font-size:14px">&#128196; Informe <span id="pvPickRepSt" style="font-weight:400;opacity:.8"></span></button>
+        <button id="pvPickTs" style="text-align:left;padding:12px 14px;font-size:14px">&#128339; Full d'hores <span id="pvPickTsSt" style="font-weight:400;opacity:.8"></span></button>
+      </div>
+      <div class="modal-actions"><button id="pvPickCancel">Cancel&middot;la</button></div>
+    </div>
+  </div>
   <!-- Review and sign (2026-10-23): the document as the client gets it, and
        the two signature pads at the end of it, in one scrolling view. -->
   <div class="modal-back" id="pvBack" style="display:none">
@@ -4015,12 +4025,12 @@ function renderContent(){
     +"<div class=\"exp-wrap\"><button class=\"btn-sm\" id=\"btnExp\">&#8595; Informe &#9662;</button>"
     +"<div class=\"exp-menu\" id=\"expMenu\">"
     +"<div class=\"m2-flx m2-sheet-hdr\" style=\"padding:12px 16px\"><span>&#8595; Informe</span><b style=\"font-size:20px;color:var(--tx3)\">&#10005;</b></div>"
+    +"<div class=\"exp-rev\"><span>"+(revSign(active)?"&#9997; Informe signat":"Informe sense signar")+"</span>"
+    +"<button data-sign=\"1\" title=\"Mostra l'informe o el full d'hores per ensenyar-lo, i signa'l al final\">Revisa i signa…</button></div>"
     +"<div class=\"exp-rev\"><span>"+(curRev(active)
         ?"Revisió "+revNo(curRev(active).n).replace("Rev. ","")+" · "+dmy(curRev(active).date)
         :"Encara sense revisió")+"</span>"
     +"<button data-rev=\"1\" title=\"Revisions de l'informe: consulta-les, corregeix la data de la vigent o emet-ne una de nova\">Revisions…</button></div>"
-    +"<div class=\"exp-rev\"><span>"+(revSign(active)?"&#9997; Signat":"Sense signar")+"</span>"
-    +"<button data-sign=\"1\" title=\"Mostra l'informe per ensenyar-lo i signa'l al final: la signatura queda lligada a aquesta revisió i surt al PDF, al Word i a l'HTML\">Revisa i signa…</button></div>"
     +langRowHTML("Idioma de l'informe","",reportLang(active),"lang")
     +langRowHTML("Escrit en","L'idioma en què has escrit les entrades. Si és el mateix que el de l'informe, no s'envia res a traduir.",writeLang(active),"wlang")
     +(CHIP_LANGS.indexOf(reportLang(active))<0&&RPT[reportLang(active)]
@@ -4160,7 +4170,7 @@ function renderContent(){
       }
       if(e.target.closest("[data-rev]")){$$("expMenu").style.display="none";openRevisions();return}
       if(e.target.closest("[data-lbl]")){$$("expMenu").style.display="none";openLabels(reportLang(active));return}
-      if(e.target.closest("[data-sign]")){$$("expMenu").style.display="none";openReportSign();return}
+      if(e.target.closest("[data-sign]")){$$("expMenu").style.display="none";openReviewSign();return}
       var f=e.target.dataset.fmt;if(f){$$("expMenu").style.display="none";exportRep(active,f)}
     });
   }
@@ -5475,6 +5485,7 @@ function openM2More(){
   function click(id){return function(){var b=$$(id);if(b)b.click()}}
   var secs=[
     ["INFORME",[
+      it("&#9997;","Revisa i signa",[revSign(a)?"informe signat":"",tsSigned(a)?"full signat":""].filter(Boolean).join(" · "),function(){openReviewSign()}),
       it("&#8595;","Informe i exportació",(r?revNo(r.n):"sense revisió")+" · "+reportLang(a).toUpperCase(),function(){
         // under whichever button is on screen: Més on the computer, the hidden
         // ↓ Informe only on the phone, where the menu fills the screen anyway
@@ -5482,7 +5493,6 @@ function openM2More(){
         if(!anc||!anc.offsetParent)anc=$$("btnExp");
         openExpMenu(anc,m);m2Show("exp");
       }),
-      it("&#9997;","Revisa i signa l'informe",revSign(a)?"signat":"",function(){openReportSign()}),
       it("&#129534;","Full d'hores","",function(){openTimesheet()})
     ]],
     ["VISITA",[
@@ -5527,7 +5537,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-23 · 2";
+var APP_VERSION="2026-10-23 · 3";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -6796,6 +6806,10 @@ function setRevSign(id,n,sign){
 // pages with its pads and sign date. "Desa les signatures" keeps them (the
 // report's on its revision, the sheet's on the sheet); "Desa i genera el PDF"
 // makes the PDFs as well. Every export still works without signing.
+// Then (2026-10-23, "I want to reach the report and the hours separately:
+// on Revisa i signa, a choice of report or timesheet"): a visit with a
+// timesheet asks which one first (openReviewSign), and the screen shows that
+// one document, with its pads.
 var pv={sid:null,rev:null,parts:[]},pvWired=false;
 function pvClose(){$$("pvBack").style.display="none";$$("pvDoc").innerHTML="";pv.sid=null;pv.rev=null;pv.parts=[]}
 function pvWire(){
@@ -6803,16 +6817,11 @@ function pvWire(){
   $$("pvCancel").addEventListener("click",pvClose);
   $$("pvSave").addEventListener("click",function(){if(pvCommit())pvClose()});
   $$("pvGen").addEventListener("click",function(){
-    var id=pv.sid,hasTs=pv.parts.some(function(x){return x.kind==="ts"});
+    var id=pv.sid,ts=pv.parts.some(function(x){return x.kind==="ts"});
     if(!pvCommit())return;
     pvClose();
-    // one after the other: two reports saved at once could trip over the
-    // offline queue, each reading it before the other wrote it
-    (async function(){
-      var s=sessions.find(function(x){return x.id===id});if(!s)return;
-      if(hasTs)await exportTimesheet(s);
-      s=sessions.find(function(x){return x.id===id});if(s)exportRep(s,"pdf");
-    })();
+    var s=sessions.find(function(x){return x.id===id});if(!s)return;
+    if(ts)exportTimesheet(s);else exportRep(s,"pdf");
   });
 }
 // The pads under one document: names, the two pads, and for the sheet its
@@ -6833,7 +6842,6 @@ function pvPadsEl(kind,s,g,note){
   if(k==="ts")box.querySelector("#pvDate_ts").value=tsSignDate(g);
   return box;
 }
-function pvPartTitle(t){var h=document.createElement("div");h.className="pv-part";h.textContent=t;return h}
 function pvInitPads(){
   pv.parts.forEach(function(pt){
     var k=pt.kind;pt.pads={};pt.dateHand=false;
@@ -6883,59 +6891,72 @@ async function pvRenderPdf(blob,box){
     box.innerHTML="<div class=\"ts-note\" style=\"padding:16px\">No s'ha pogut mostrar ("+esc((e&&e.message)||String(e))+"). Pots signar igualment: el PDF sortirà igual.</div>";
   }
 }
-async function openReportSign(){
+function tsSigned(s){var T=s&&s.timesheet;return !!(T&&(T.techSig||T.cliSig))}
+// "Revisa i signa": the report straight away, or — when the visit has a
+// timesheet — a choice of the two.
+function openReviewSign(){
   var s=sessions.find(function(x){return x.id===aid});if(!s)return;
-  if(!await ensureLabels(reportLang(s)))return;      // same gates as an export
-  var rev=await ensureRevision(s);if(!rev)return;    // a signature needs a revision to belong to
-  s=sessions.find(function(x){return x.id===aid})||s;
-  renderContent();
-  var R=null,T0=s.timesheet,tsBlob=null;
-  var hasTs=!!(T0&&T0.rows&&T0.rows.length);
-  expBusy("Preparant l'informe…");
-  try{
-    R=await reportSession(s);
-    if(hasTs){
-      var tl=(T0.lang&&knownLang(T0.lang))?T0.lang:"ca";
-      if(await ensureLabels(tl)){
-        var T=await localizeTimesheet(s,tl);
-        if(T)tsBlob=await buildTimesheetBlob(Object.assign({},s,{timesheet:T}));
-      }
-    }
-  }catch(e){R=R||null}finally{expBusy("")}
-  if(!R)return;
-  R.rev=rev;
+  var T=s.timesheet;
+  if(!(T&&T.rows&&T.rows.length)){openReview("rep");return}
+  $$("pvPickRepSt").textContent=revSign(s)?"· signat":"· sense signar";
+  $$("pvPickTsSt").textContent=tsSigned(s)?"· signat":"· sense signar";
+  if(!openReviewSign.wired){openReviewSign.wired=true;
+    function close(){$$("pvPickBack").style.display="none"}
+    $$("pvPickCancel").addEventListener("click",close);
+    $$("pvPickBack").addEventListener("click",function(e){if(e.target===$$("pvPickBack"))close()});
+    $$("pvPickRep").addEventListener("click",function(){close();openReview("rep")});
+    $$("pvPickTs").addEventListener("click",function(){close();openReview("ts")});
+  }
+  $$("pvPickBack").style.display="flex";
+}
+async function openReview(kind){
+  var s=sessions.find(function(x){return x.id===aid});if(!s)return;
+  var R=null,rev=null,blob=null,T0=s.timesheet;
+  if(kind==="ts"){
+    var tl=(T0.lang&&knownLang(T0.lang))?T0.lang:"ca";
+    if(!await ensureLabels(tl))return;
+    expBusy("Preparant el full…");
+    try{var T=await localizeTimesheet(s,tl);if(T)blob=await buildTimesheetBlob(Object.assign({},s,{timesheet:T}))}catch(e){blob=null}
+    finally{expBusy("")}
+  } else {
+    if(!await ensureLabels(reportLang(s)))return;    // same gates as an export
+    rev=await ensureRevision(s);if(!rev)return;      // a signature needs a revision to belong to
+    s=sessions.find(function(x){return x.id===aid})||s;
+    renderContent();
+    expBusy("Preparant l'informe…");
+    try{R=await reportSession(s)}catch(e){R=null}finally{expBusy("")}
+    if(!R)return;
+    R.rev=rev;
+  }
   pvWire();
   pv.sid=s.id;pv.rev=rev;pv.parts=[];
   var doc=$$("pvDoc");doc.innerHTML="";
-  $$("pvTitle").textContent=hasTs?"Informe i full d'hores":"Informe · "+revNo(rev.n);
-  // the report, then its pads
-  doc.appendChild(pvPartTitle("📄 Informe · "+revNo(rev.n)));
+  $$("pvGen").innerHTML="&#128196; Desa i genera el PDF";
+  $$("pvSave").innerHTML="&#9997; Desa la signatura";
+  if(kind==="ts"){
+    $$("pvTitle").textContent="Full d'hores";
+    var pages=document.createElement("div");pages.className="pv-pages";
+    doc.appendChild(pages);
+    doc.appendChild(pvPadsEl("ts",s,T0,"Si després canvies els dies, es torna a signar."));
+    pv.parts.push({kind:"ts",g:T0});
+    if(blob)pvRenderPdf(blob,pages);
+    else pages.innerHTML="<div class=\"ts-note\" style=\"padding:16px\">No s'ha pogut preparar el full (cal la llibreria PDF: comprova la connexió). Pots signar igualment.</div>";
+    pvShow();
+    return;
+  }
+  $$("pvTitle").textContent="Informe · "+revNo(rev.n);
   var fr=document.createElement("iframe");fr.setAttribute("title","Informe");
   doc.appendChild(fr);
   var gR=revSign(s,rev)||{};
   doc.appendChild(pvPadsEl("rep",s,gR,"Queda lligada a la "+revNo(rev.n)+": si se n'emet una de nova, es torna a signar."));
   pv.parts.push({kind:"rep",g:gR});
-  // then the timesheet, and its pads
-  if(hasTs){
-    doc.appendChild(pvPartTitle("🕒 Full d'hores"));
-    var pages=document.createElement("div");pages.className="pv-pages";
-    doc.appendChild(pages);
-    doc.appendChild(pvPadsEl("ts",s,T0,"Si després canvies els dies, es torna a signar al full d'hores."));
-    pv.parts.push({kind:"ts",g:T0});
-    if(tsBlob)pvRenderPdf(tsBlob,pages);
-    else pages.innerHTML="<div class=\"ts-note\" style=\"padding:16px\">No s'ha pogut preparar el full (cal la llibreria PDF: comprova la connexió). Pots signar igualment.</div>";
-  }
-  $$("pvGen").innerHTML=hasTs?"&#128196; Desa i genera els PDF":"&#128196; Desa i genera el PDF";
-  $$("pvBack").style.display="flex";
-  $$("pvScroll").scrollTop=0;
-  // after the box has a size, or the canvases come up 0×0
-  setTimeout(pvInitPads,40);
+  pvShow();
   fr.addEventListener("load",function(){
     var d=fr.contentDocument;if(!d)return;
     var st=d.createElement("style");
     st.textContent=".sig{display:none!important}body{margin-top:16px!important;margin-bottom:16px!important}";
     d.head.appendChild(st);
-    // as tall as the report, so the one scroll runs on through the pads
+    // as tall as the report, so the one scroll runs on to the pads
     function fit(){fr.style.height=(d.documentElement.scrollHeight+4)+"px"}
     fit();setTimeout(fit,300);setTimeout(fit,1200);
     Array.prototype.forEach.call(d.images,function(im){if(!im.complete)im.addEventListener("load",fit)});
@@ -6948,6 +6969,11 @@ async function openReportSign(){
     });
   });
   fr.srcdoc=buildReportHTML(R.s,false,R.lang,rev);
+}
+function pvShow(){
+  $$("pvBack").style.display="flex";
+  $$("pvScroll").scrollTop=0;
+  setTimeout(pvInitPads,40);   // after the box has a size, or the canvases come up 0×0
 }
 // The client's contact as one line. Not translated, for the same reason the
 // client and the machine aren't: it is a person's name and the title they go

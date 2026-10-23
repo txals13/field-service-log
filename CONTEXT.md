@@ -1926,6 +1926,19 @@ Now (`syncTick`, `scheduleSync`):
   preview (offline pick → ⏳, kept across a reload, played from IndexedDB)
   and in a sandbox (failed upload stays queued; upload once, blob gone, list
   cleared; the stale-copy race; the one-day clean-up).
+- **…one document at a time, chosen first; first in the list** (version
+  2026-10-23 · 3, the user: "on Revisa i signa I want to choose report or
+  timesheet, each on its own; Revisa i signa first in the list").
+  - `openReviewSign`: a visit with a timesheet gets `#pvPickBack` (📄 Informe
+    / 🕒 Full d'hores, each with "signat" / "sense signar"); without one, the
+    report opens straight away. `openReview(kind)` builds that one document
+    with its pads (`pvShow`); "Desa i genera el PDF" makes that document's PDF.
+    `pvPartTitle` is gone.
+  - The entry is "Revisa i signa" and comes first: the top row of the
+    ↓ Informe menu (above Revisions…), and the first item of the new
+    layout's list, noting "informe signat · full signat" (`tsSigned`).
+  - Tested in the preview with P-2026-140: the chooser from both menus,
+    each document alone with its own pads.
 - **…the same entry for the hours; the timesheet form as it was** (version
   2026-10-23 · 2, the user: "Revisa i signa l'informe should also review and
   sign the hours; the timesheet must stay as before").

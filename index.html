@@ -5499,7 +5499,7 @@ function openM2More(){
       it("&#9201;","Comptadors de la màquina",ctrLast(a)?"":"sense lectures",function(){openCounters()}),
       it("&#128200;","Proves de producció",prodChipNote(a),function(){openProdList()}),
       exOn()?it("&#128182;","Despeses",exChipNote(a),function(){openExpenses()}):null,
-      mh>1?it("&#128220;","Historial de la màquina",mh+" visites"+(m2Pending(a)?" · "+pl(m2Pending(a),"pendent","pendents"):""),function(){openMachineHistory()}):null,
+      mh?it("&#128220;","Historial de la màquina",(mh>1?mh+" visites":"només aquesta visita")+(m2Pending(a)?" · "+pl(m2Pending(a),"pendent","pendents"):""),function(){openMachineHistory()}):null,
       $$("folChip")?it("&#128451;","Carpeta de Drive","",click("folChip")):null,
       $$("manualChip")?it("&#128218;","Manual de recanvis",/Vincula/.test($$("manualChip").textContent)?"sense vincular":"",click("manualChip")):null,
       $$("drawingsChip")?it("&#128208;","Dibuixos","",click("drawingsChip")):null,
@@ -5537,7 +5537,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-23 · 4";
+var APP_VERSION="2026-10-23 · 5";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -7056,13 +7056,16 @@ function openEntries(sess,closed){
     return !(closed&&closed[sess.id+"|"+e.id]);
   });
 }
+// Shown whenever the visit names its machine, a first visit too (2026-10-23:
+// "I can't find the incidents report" — with one visit the chip was hidden,
+// and the history with it).
 function mhChipHTML(sess){
   var all=machineSessions(sess);
-  if(all.length<2)return "";
+  if(!all.length)return "";
   var closed=closedRefs(all),open=0;
   all.forEach(function(x){if(x.id!==sess.id)open+=openEntries(x,closed).length});
-  return "<span id=\"mhChip\" style=\"cursor:pointer\" title=\"Totes les visites a aquesta màquina: què es va fer i què va quedar obert\">&#128220; "
-    +all.length+" visites"+(open?" · <span style=\"color:var(--orange)\">"+open+" pendent"+(open>1?"s":"")+"</span>":"")+"</span>";
+  return "<span id=\"mhChip\" style=\"cursor:pointer\" title=\"Historial de la màquina: totes les visites, les incidències, què es va fer i què va quedar obert\">&#128220; Historial"
+    +(all.length>1?" · "+all.length+" visites":"")+(open?" · <span style=\"color:var(--orange)\">"+open+" pendent"+(open>1?"s":"")+"</span>":"")+"</span>";
 }
 var mhWired=false,mhOldTitle=null;
 function wireMh(){

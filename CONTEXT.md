@@ -1926,6 +1926,15 @@ Now (`syncTick`, `scheduleSync`):
   preview (offline pick → ⏳, kept across a reload, played from IndexedDB)
   and in a sandbox (failed upload stays queued; upload once, blob gone, list
   cleared; the stale-copy race; the one-day clean-up).
+- **The machine history from the first visit** (version 2026-10-23 · 5, the
+  user: "I can't find the incidents report", meaning the machine history):
+  its chip in the header and the new layout's list item only appeared with
+  two visits or more, so a machine's first visit had no way to it.
+  `mhChipHTML` now shows "📜 Historial" (+ "· N visites" when more than one,
+  + the pending count) whenever `machineSessions` finds the visit — i.e.
+  when it names its machine; the m2 item likewise ("només aquesta visita").
+  Checked in the preview with P-2026-140 (its machine's only visit): chip
+  shown, history opens with its open item and recommended part.
 - **No ZIP inside the archive ZIP** (version 2026-10-23 · 4): the earlier
   revisions step copied every file at the folder's root, and the "Word +
   multimèdia" pack saved there (31 MB) rode along in A.V_12345_1111's

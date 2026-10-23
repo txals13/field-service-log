@@ -5537,7 +5537,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-23 · 3";
+var APP_VERSION="2026-10-23 · 4";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -11290,12 +11290,14 @@ async function exportSessionZip(s,kind,pick){
     // is the PDF that was sent. Without this the archive was born missing the
     // documents that had already been handed over.
     //
-    // Skipped: session.json, which is written fresh below, and any name the zip
+    // Skipped: session.json, which is written fresh below; any name the zip
     // already holds — that is the current revision, and the copy built a moment
-    // ago beats the copy Drive has from the last export.
+    // ago beats the copy Drive has from the last export; and any other ZIP
+    // (2026-10-23): the "Word + multimèdia" pack saved in the folder carried
+    // every photo and video a second time, 31 MB of a 73 MB archive.
     if(archive&&want("revs")){
       var roots=files.filter(function(f){
-        return (f.path||"").indexOf("/")<0 && f.name!=="session.json" && !zip.file(f.path);
+        return (f.path||"").indexOf("/")<0 && f.name!=="session.json" && !/\.zip$/i.test(f.name||"") && !zip.file(f.path);
       });
       for(var ri=0;ri<roots.length;ri++){
         expBusy("Revisions anteriors "+(ri+1)+"/"+roots.length+"…");

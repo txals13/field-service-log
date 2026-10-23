@@ -1926,6 +1926,11 @@ Now (`syncTick`, `scheduleSync`):
   preview (offline pick → ⏳, kept across a reload, played from IndexedDB)
   and in a sandbox (failed upload stays queued; upload once, blob gone, list
   cleared; the stale-copy race; the one-day clean-up).
+- **No ZIP inside the archive ZIP** (version 2026-10-23 · 4): the earlier
+  revisions step copied every file at the folder's root, and the "Word +
+  multimèdia" pack saved there (31 MB) rode along in A.V_12345_1111's
+  archive (73 MB, photos and videos twice). Root files ending in .zip are
+  skipped now.
 - **…one document at a time, chosen first; first in the list** (version
   2026-10-23 · 3, the user: "on Revisa i signa I want to choose report or
   timesheet, each on its own; Revisa i signa first in the list").

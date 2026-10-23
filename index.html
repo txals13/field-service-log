@@ -1473,7 +1473,7 @@ function partsSummaryHTML(s,R){
   var td="padding:5px 6px;border:1px solid #e5e7eb;font-size:12px";
   function block(title,col,list,prio,note){
     var head=(prio?[R.prio]:[]).concat([R.qty,R.ref,R.part]);
-    return "<h2 style=\"font-size:17px;margin:30px 0 6px;border-bottom:2px solid #"+col+";padding-bottom:6px\">"+esc(title)+"</h2>"
+    return repH2(title,col)
       +"<table><thead><tr>"+head.map(function(h,i){return "<th style=\"font-size:10px;padding:6px"+(i===(prio?1:0)?";text-align:right":"")+"\">"+esc(h)+"</th>"}).join("")+"</tr></thead><tbody>"
       +list.map(function(m){
         return "<tr>"
@@ -5537,7 +5537,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-23 · 5";
+var APP_VERSION="2026-10-23 · 6";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -6422,7 +6422,7 @@ var RPT={
       start:"Inici",status:"Estat",manual:"Manual",open:"Oberta",closed:"Tancada",
       issues:"Problemes",warnings:"Avisos",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resolt",resN:"resolts",resolved:"Resolts",
       time:"Hora",entry1:"entrada",entryN:"entrades",noDate:"Sense data",ts:"Data i hora",severity:"Gravetat",tag:"Etiqueta",desc:"Descripció",att:"Adjunts",
-      fix:"Com ha quedat",edited:"editat",noEntries:"Sense entrades",photos:"Fotos",notes:"Notes generals",
+      fix:"Com ha quedat",edited:"editat",noEntries:"Sense entrades",photos:"Fotos",annex:"Annex",week:"Setmana",notes:"Notes generals",
       sigTech:"Signatura del tècnic",sigCli:"Signatura del client / receptor",
       qty:"QT.",ref:"REF.",part:"RECANVI",ctr:{title:"Comptadors de la màquina",read:"Lectura",arr:"Arribada",dep:"Sortida",hours:"Hores de màquina",units:"Producte total",date:"Data",since:"Des de la visita anterior",during:"Durant la visita",inW:"en",day1:"dia",days:"dies",perDay:"h/dia",perHour:"unitats/h",perMin:"unitats/min",h:"h",u:"unitats",reset:"el comptador ha baixat: s'ha canviat o reiniciat?"},incTitle:"Incidències d'aquesta visita",incWhen:"Quan",incWhat:"Incidència",incState:"Estat",stRes:"Resolt",stPend:"Pendent",stClosed:"Tancat",stRec:"recanvi recomanat",prevVisit:"visita anterior",closesPrev:"Tanca un problema de la visita del",resIn:"resolt en",st:"ESTAT",prio:"PRIORITAT",pstL:{fit:"Canviat",urg:"Recomanat · urgent",prev:"Recomanat · preventiu",quo:"Petició de cotització"},pst:{fit:"Canviat",urg:"Urgent",prev:"Preventiu",quo:"Cotització"},partsFit:"Recanvis canviats",partsRec:"Recanvis recomanats",recNote:"Urgent: convé canviar-lo aviat. Preventiu: per tenir-ne en estoc o canviar-lo en una parada programada.",partsQuo:"Cotització demanada pel client",quoNote:"Recanvis dels quals el client ha demanat el preu.",photoTag:"[foto]",openDrive:"Obre a Drive",
       voice:"nota de veu",video:"vídeo",photo:"foto",file:"fitxer",
@@ -6439,7 +6439,7 @@ var RPT={
       start:"Inicio",status:"Estado",manual:"Manual",open:"Abierta",closed:"Cerrada",
       issues:"Problemas",warnings:"Avisos",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resuelto",resN:"resueltos",resolved:"Resueltos",
       time:"Hora",entry1:"entrada",entryN:"entradas",noDate:"Sin fecha",ts:"Fecha y hora",severity:"Gravedad",tag:"Etiqueta",desc:"Descripción",att:"Adjuntos",
-      fix:"Cómo ha quedado",edited:"editado",noEntries:"Sin entradas",photos:"Fotos",notes:"Notas generales",
+      fix:"Cómo ha quedado",edited:"editado",noEntries:"Sin entradas",photos:"Fotos",annex:"Anexo",week:"Semana",notes:"Notas generales",
       sigTech:"Firma del técnico",sigCli:"Firma del cliente / receptor",
       qty:"CANT.",ref:"REF.",part:"RECAMBIO",ctr:{title:"Contadores de la máquina",read:"Lectura",arr:"Llegada",dep:"Salida",hours:"Horas de máquina",units:"Producto total",date:"Fecha",since:"Desde la visita anterior",during:"Durante la visita",inW:"en",day1:"día",days:"días",perDay:"h/día",perHour:"unidades/h",perMin:"unidades/min",h:"h",u:"unidades",reset:"el contador ha bajado: ¿se ha cambiado o reiniciado?"},incTitle:"Incidencias de esta visita",incWhen:"Cuándo",incWhat:"Incidencia",incState:"Estado",stRes:"Resuelto",stPend:"Pendiente",stClosed:"Cerrado",stRec:"recambio recomendado",prevVisit:"visita anterior",closesPrev:"Cierra un problema de la visita del",resIn:"resuelto en",st:"ESTADO",prio:"PRIORIDAD",pstL:{fit:"Cambiado",urg:"Recomendado · urgente",prev:"Recomendado · preventivo",quo:"Solicitud de cotización"},pst:{fit:"Cambiado",urg:"Urgente",prev:"Preventivo",quo:"Cotización"},partsFit:"Recambios cambiados",partsRec:"Recambios recomendados",recNote:"Urgente: conviene cambiarlo pronto. Preventivo: para tenerlo en stock o cambiarlo en una parada programada.",partsQuo:"Cotización solicitada por el cliente",quoNote:"Recambios de los que el cliente ha pedido el precio.",photoTag:"[foto]",openDrive:"Abrir en Drive",
       voice:"nota de voz",video:"vídeo",photo:"foto",file:"archivo",
@@ -6456,7 +6456,7 @@ var RPT={
       start:"Start",status:"Status",manual:"Manual",open:"Open",closed:"Closed",
       issues:"Issues",warnings:"Warnings",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resolved",resN:"resolved",resolved:"Resolved",
       time:"Time",entry1:"entry",entryN:"entries",noDate:"No date",ts:"Timestamp",severity:"Severity",tag:"Tag",desc:"Description",att:"Attachments",
-      fix:"Outcome",edited:"edited",noEntries:"No entries",photos:"Photos",notes:"General notes",
+      fix:"Outcome",edited:"edited",noEntries:"No entries",photos:"Photos",annex:"Annex",week:"Week",notes:"General notes",
       sigTech:"Technician signature",sigCli:"Client / Recipient signature",
       qty:"QTY",ref:"REF.",part:"SPARE PART",ctr:{title:"Machine counters",read:"Reading",arr:"Arrival",dep:"Departure",hours:"Machine hours",units:"Total output",date:"Date",since:"Since the previous visit",during:"During the visit",inW:"in",day1:"day",days:"days",perDay:"h/day",perHour:"units/h",perMin:"units/min",h:"h",u:"units",reset:"the counter went down: replaced or reset?"},incTitle:"Issues on this visit",incWhen:"When",incWhat:"Issue",incState:"Status",stRes:"Resolved",stPend:"Open",stClosed:"Closed",stRec:"spare part recommended",prevVisit:"earlier visit",closesPrev:"Closes an issue from the visit of",resIn:"resolved in",st:"STATUS",prio:"PRIORITY",pstL:{fit:"Replaced",urg:"Recommended · urgent",prev:"Recommended · preventive",quo:"Quotation request"},pst:{fit:"Replaced",urg:"Urgent",prev:"Preventive",quo:"Quotation"},partsFit:"Spare parts replaced",partsRec:"Recommended spare parts",recNote:"Urgent: should be replaced soon. Preventive: to keep in stock or replace at a planned stop.",partsQuo:"Quotation requested by the client",quoNote:"Spare parts the client has asked to be quoted.",photoTag:"[photo]",openDrive:"Open in Drive",
       voice:"voice note",video:"video",photo:"photo",file:"file",
@@ -7760,6 +7760,42 @@ function dayKeyOf(ts){
   return d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate());
 }
 // Entries are already in time order, so each day is one run of indices.
+// ── THE REPORT'S LOOK (2026-10-23, the user chose "A, 1, X") ─────────────────
+// A: no more solid black: table headings light grey with small grey capitals,
+//    section titles lighter, with a colour bar on the left instead of a rule
+//    under them (pdfLightHeads, pdfH2, repH2, the Word hdrCell/wordH2).
+// 1: each day its own box, with air between them; when the visit runs over
+//    more than one week, an orange band opens each week ("Setmana 39 ·
+//    22/09/2026 – 28/09/2026 · 4 dies · 5 entrades").
+// X: the signatures follow the last section instead of sinking to the foot of
+//    a page; the photos are an annex, always on a new page.
+// ISO week of a "YYYY-MM-DD" day: its number and its Monday.
+function isoWeek(dk){
+  var d=new Date(String(dk||"")+"T00:00:00Z");if(isNaN(d))return null;
+  var wd=(d.getUTCDay()+6)%7,mon=new Date(d.getTime()-wd*864e5);
+  var th=new Date(mon.getTime()+3*864e5),y=th.getUTCFullYear(),j4=new Date(Date.UTC(y,0,4));
+  var w=1+Math.round(((th-j4)/864e5-3+((j4.getUTCDay()+6)%7))/7);
+  return {y:y,w:w,mon:mon.toISOString().slice(0,10),sun:new Date(mon.getTime()+6*864e5).toISOString().slice(0,10)};
+}
+// For each day group, the week band to draw before it (or null). Only when
+// the days span more than one week: a one-week visit gets no bands.
+function weekBands(groups,entries,R){
+  var wk=groups.map(function(g){return isoWeek(g.key)});
+  var keys={};wk.forEach(function(w){if(w)keys[w.y+"-"+w.w]=1});
+  if(Object.keys(keys).length<2)return groups.map(function(){return null});
+  var out=[],last=null;
+  groups.forEach(function(g,i){
+    var w=wk[i],k=w?w.y+"-"+w.w:"";
+    if(!w||k===last){out.push(null);return}
+    last=k;
+    var days=0,ents=0;
+    groups.forEach(function(h,j){var v=wk[j];if(v&&v.y+"-"+v.w===k){days++;ents+=h.idx.length}});
+    var C=R.ctr||{};
+    out.push({title:(R.week||"Week")+" "+w.w+" · "+dmy(w.mon)+" – "+dmy(w.sun),
+      sum:days+" "+(days===1?(C.day1||"day"):(C.days||"days"))+" · "+ents+" "+(ents===1?R.entry1:R.entryN)});
+  });
+  return out;
+}
 function dayGroups(entries){
   var out=[],at={};
   (entries||[]).forEach(function(e,i){
@@ -8143,7 +8179,7 @@ function ctrReport(s,R,lang){
 function ctrHTML(s,R,lang){
   var k=ctrReport(s,R,lang);if(!k)return "";
   var td="padding:5px 8px;border:1px solid #e5e7eb;font-size:12px";
-  return "<h2 style=\"font-size:16px;margin:22px 0 6px;border-bottom:2px solid #2563eb;padding-bottom:5px\">"+esc(k.title)+"</h2>"
+  return repH2(k.title,"2563eb")
     +"<table style=\"width:auto;min-width:60%\"><thead><tr>"+k.head.map(function(h){return "<th>"+esc(h)+"</th>"}).join("")+"</tr></thead><tbody>"
     +k.rows.map(function(r){return "<tr>"+r.map(function(c,i){return "<td style=\""+td+(i?";text-align:right;font-family:monospace":";font-weight:700")+"\">"+esc(c)+"</td>"}).join("")+"</tr>"}).join("")
     +"</tbody></table>"
@@ -8153,8 +8189,7 @@ function ctrHTML(s,R,lang){
 function pdfCtrSection(doc,s,R,lang,y,M,CW,H){
   var k=ctrReport(s,R,lang);if(!k)return y;
   if(y>H-40){doc.addPage();y=M}
-  doc.setFont("helvetica","bold");doc.setFontSize(10.5);doc.setTextColor(17,24,39);
-  doc.text(k.title,M,y+3.5);doc.setDrawColor(37,99,235);doc.setLineWidth(0.5);doc.line(M,y+5.5,M+CW,y+5.5);y+=8;
+  y=pdfH2(doc,k.title,M,y,[37,99,235]);
   doc.autoTable({startY:y,margin:{left:M,right:M},tableWidth:Math.min(CW,120),theme:"grid",
     styles:{fontSize:7.5,cellPadding:1.4,lineColor:[229,231,235],lineWidth:0.15},
     head:[k.head],headStyles:{fillColor:[17,24,39],textColor:255,fontSize:7},body:k.rows,
@@ -8222,7 +8257,7 @@ function resolvedIn(e,R){
 function incidentsHTML(s,R,lang){
   var rows=incidentRows(s,lang);if(!rows.length)return "";
   var td="padding:5px 8px;border:1px solid #e5e7eb;font-size:12px";
-  return "<h2 style=\"font-size:16px;margin:22px 0 6px;border-bottom:2px solid #dc2626;padding-bottom:5px\">"+esc(R.incTitle)+"</h2>"
+  return repH2(R.incTitle,"dc2626")
     +"<table><thead><tr><th>"+esc(R.severity)+"</th><th>"+esc(R.incWhen)+"</th><th>"+esc(R.incWhat)+"</th><th>"+esc(R.incState)+"</th></tr></thead><tbody>"
     +rows.map(function(r){var c=incCells(r,R);
       return "<tr><td style=\""+td+";font-weight:700;white-space:nowrap;width:1%;color:"+c.sevCol+"\">"+esc(c.sev)+"</td>"
@@ -8280,7 +8315,7 @@ function ptSummaryHead(R){var L=R.pt;return [L.test,L.product,L.period,L.units,L
 function ptReportHTML(s,R,lang,full){
   var tests=(s&&s.prodTests)||[];if(!tests.length)return "";
   var L=R.pt,td="padding:5px 8px;border:1px solid #e5e7eb;font-size:12px";
-  var h2="<h2 style=\"font-size:17px;margin:30px 0 6px;border-bottom:2px solid #8b5cf6;padding-bottom:6px\">"+esc(L.title)+"</h2>";
+  var h2=repH2(L.title,"8b5cf6");
   if(!full){
     var td2="padding:5px 6px;border:1px solid #e5e7eb;font-size:11.5px;white-space:nowrap";
     return h2+"<table><thead><tr>"+ptSummaryHead(R).map(function(h){return "<th style=\"font-size:10px;padding:6px\">"+esc(h)+"</th>"}).join("")+"</tr></thead><tbody>"
@@ -8320,8 +8355,7 @@ function ptReportHTML(s,R,lang,full){
 function pdfIncSection(doc,s,R,lang,y,M,CW,H,ar){
   var rows=incidentRows(s,lang);if(!rows.length)return y;
   if(y>H-40){doc.addPage();y=M}
-  doc.setFont("helvetica","bold");doc.setFontSize(10.5);doc.setTextColor(17,24,39);
-  doc.text(R.incTitle,M,y+3.5);doc.setDrawColor(220,38,38);doc.setLineWidth(0.5);doc.line(M,y+5.5,M+CW,y+5.5);y+=8;
+  y=pdfH2(doc,R.incTitle,M,y,[220,38,38]);
   var C=rows.map(function(r){return incCells(r,R)});
   doc.autoTable({startY:y,margin:{left:M,right:M},theme:"grid",
     styles:{fontSize:7.5,cellPadding:1.4,overflow:"linebreak",lineColor:[229,231,235],lineWidth:0.15},
@@ -8343,8 +8377,7 @@ function pdfPartsSection(doc,s,R,y,M,CW,H,ar){
   function block(title,st,list,prio,note){
     if(y>H-40){doc.addPage();y=M}
     var c=PST_RGB[st],o=prio?1:0,cs={};
-    doc.setFont("helvetica","bold");doc.setFontSize(12);doc.setTextColor(17,24,39);
-    doc.text(title,M,y+4);doc.setDrawColor(c[0],c[1],c[2]);doc.setLineWidth(0.6);doc.line(M,y+6.5,M+CW,y+6.5);y+=11;
+    y=pdfH2(doc,title,M,y+1,c)+1;
     if(prio)cs[0]={cellWidth:24,fontStyle:"bold"};
     cs[o]={cellWidth:16,halign:"right"};cs[o+1]={cellWidth:34};
     doc.autoTable({startY:y,margin:{left:M,right:M},theme:"grid",
@@ -8375,8 +8408,7 @@ function pdfProdSection(doc,s,R,lang,y,M,CW,H,full){
   var tests=(s&&s.prodTests)||[];if(!tests.length)return y;
   var L=R.pt;
   if(y>H-50){doc.addPage();y=M}
-  doc.setFont("helvetica","bold");doc.setFontSize(12);doc.setTextColor(17,24,39);
-  doc.text(L.title,M,y+4);doc.setDrawColor(139,92,246);doc.setLineWidth(0.6);doc.line(M,y+6.5,M+CW,y+6.5);y+=11;
+  y=pdfH2(doc,L.title,M,y+1,[139,92,246])+1;
   if(!full){
     doc.autoTable({startY:y,margin:{left:M,right:M},theme:"grid",
       styles:{fontSize:7.5,cellPadding:1.3,overflow:"linebreak"},
@@ -8426,6 +8458,10 @@ function pdfProdSection(doc,s,R,lang,y,M,CW,H,full){
   });
   return y;
 }
+// A section title in the HTML report: a colour bar on the left.
+function repH2(title,col,extra){
+  return "<h2 style=\"font-size:15px;font-weight:600;color:#1f2937;margin:28px 0 8px;padding:1px 0 1px 10px;border-left:3px solid #"+col+(extra?";"+extra:"")+"\">"+esc(title)+"</h2>";
+}
 function buildReportHTML(s,forPrint,lang,rev,opts){
   var local=!!(opts&&opts.local);
   lang=RPT[lang]?lang:"ca";
@@ -8471,7 +8507,7 @@ function buildReportHTML(s,forPrint,lang,rev,opts){
     +".meta{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;margin:16px 0}"
     +".ml{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:#9ca3af;font-weight:600}.mv{font-size:13px;font-weight:700}"
     +".stats{display:flex;gap:12px;margin:16px 0}.stat{text-align:center;padding:10px 20px;border-radius:8px}"
-    +"table{width:100%;border-collapse:collapse}td{vertical-align:top}th{background:#111827;color:#fff;padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.8px}"
+    +"table{width:100%;border-collapse:collapse}td{vertical-align:top}th{background:#f3f4f6;color:#4b5563;font-weight:600;padding:7px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid #d1d5db}"
     +"tr:nth-child(even) td{background:#f9fafb}"
     +".sig{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:60px}.sl{border-top:1px solid #6b7280;padding-top:8px;font-size:12px;color:#6b7280;margin-top:48px}"
     +".ft{margin-top:28px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;display:flex;justify-content:space-between}"
@@ -8499,14 +8535,22 @@ function buildReportHTML(s,forPrint,lang,rev,opts){
     +"</div>"
     +ctrHTML(s,R,lang)
     // the summary of the visit, near the top; its line breaks kept (one line per day)
-    +(s.notes&&String(s.notes).trim()?"<h2 style=\"font-size:16px;margin:22px 0 6px;border-bottom:2px solid #f59e0b;padding-bottom:5px\">"+esc(R.notes)+"</h2>"
+    +(s.notes&&String(s.notes).trim()?repH2(R.notes,"f59e0b")
       +"<div style=\"font-size:13px;line-height:1.55;white-space:pre-line\">"+esc(String(s.notes).trim())+"</div>":"")
     +incidentsHTML(s,R,lang)
     +(function(){
-      // ONE table and one header; each day is a slim bar inside it
+      // ONE table and one header (the columns line up); each day its own
+      // box with air between them, and a band opening each week when the
+      // visit spans more than one
+      var DG=dayGroups(entries),WB=weekBands(DG,entries,R);
+      var gapRow="<tr><td colspan=\"5\" style=\"height:10px;padding:0;border:none;background:#fff\"></td></tr>";
       return "<table style=\"margin-top:12px\"><thead><tr><th>"+esc(R.time)+"</th><th>"+esc(R.severity)+"</th><th>"+esc(R.tag)+"</th><th>"+esc(R.desc)+"</th><th>"+esc(R.att)+"</th></tr></thead><tbody>"
-        +dayGroups(entries).map(function(g){
-          return "<tr><td colspan=\"5\" style=\"background:#f3f4f6;border:1px solid #e5e7eb;border-bottom:2px solid #f59e0b;padding:5px 8px\">"
+        +DG.map(function(g,gi){
+          var b=WB[gi];
+          return (gi?gapRow:"")
+            +(b?"<tr><td colspan=\"5\" style=\"padding:0 0 6px;border:none;background:#fff\"><div style=\"padding:6px 10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:5px;font-size:12px;font-weight:600;color:#9a3412\">"
+              +esc(b.title)+"<span style=\"font-weight:400;color:#c2410c;margin-left:10px;font-size:11px\">"+esc(b.sum)+"</span></div></td></tr>":"")
+            +"<tr><td colspan=\"5\" style=\"background:#f9fafb;border:1px solid #e5e7eb;padding:6px 8px\">"
             +"<strong style=\"font-size:12px\">"+esc(reportDayTitle(g.key,R,lang))+"</strong>"
             +"<span style=\"font-size:11px;color:#6b7280;margin-left:12px\">"+esc(reportDaySummary(g.idx.map(function(i){return entries[i]}),R))+"</span></td></tr>"
             +g.idx.map(function(i){return rows[i]}).join("");
@@ -8535,7 +8579,11 @@ function buildReportHTML(s,forPrint,lang,rev,opts){
       // under each, like the PDF's appendix. Photos only; the picture opens
       // the original file.
       if(!shots.length)return "";
-      return "<h2 style=\"font-size:17px;margin:40px 0 10px;border-bottom:2px solid #f59e0b;padding-bottom:6px;break-before:page;page-break-before:always\">"+esc(R.photos)+"</h2>"
+      // an annex: on paper a page of its own; on screen, clear air and a rule first
+      return "<div style=\"margin:64px 0 26px;border-top:1px solid #d1d5db\"></div>"
+        +"<div style=\"break-before:page;page-break-before:always;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px\">"
+        +repH2((R.annex||"Annex")+" · "+R.photos,"f59e0b","margin:0;font-size:17px")
+        +"<span style=\"font-size:12px;color:#6b7280\">"+esc([s.project||"",rev?(R.revLbl+" "+("0"+rev.n).slice(-2)):"",shots.length+" "+String(R.photos).toLowerCase()].filter(Boolean).join(" · "))+"</span></div>"
         +"<div style=\"display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px\">"
         +shots.map(function(sh,k){
           var vid=sh.img.type==="video";
@@ -9387,6 +9435,7 @@ async function buildTimesheetBlob(s){
   if(!L)return null;
   var t=TSL[T.lang]||TSL.en;
   var doc=new L.jsPDF({unit:"mm",format:"a4"});
+  pdfLightHeads(doc,true);
   var M=14,W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),CW=W-M*2;
   var y=M;
   var tsTexts=[s.client,s.project,s.machine,s.location,s.tech,T.techName,T.cliName,T.remarks]
@@ -9959,7 +10008,7 @@ function pdfMetaBlock(doc,meta,M,CW,y,ar){
 function entryColWidths(doc,R,entries,attTexts,ar,CW,minAtt){
   var PAD=5; // 2mm cell padding each side, plus slack
   doc.setFont("helvetica","bold");doc.setFontSize(7.5);
-  function headW(t){var w=0;String(t).split(/\s+/).forEach(function(k){w=Math.max(w,doc.getTextWidth(k))});return w+PAD}
+  function headW(t){var w=0;String(t).toUpperCase().split(/\s+/).forEach(function(k){w=Math.max(w,doc.getTextWidth(k))});return w+PAD}
   var hTs=headW(R.time||R.ts),hSev=headW(R.severity),hTag=headW(R.tag),hAtt=headW(R.att);
   // The severity column is sized to its longest label in this language: a
   // fixed 17mm split "PROBLEMA" into "PROBLE"/"MA" (and "WARNING" never quite
@@ -10015,6 +10064,30 @@ function pdfFitCol(doc,texts,minW,maxW,pad,ar){
   c.set(Math.min(w+pad,maxW));
   return c;
 }
+// Light table headings for every table a document draws: one wrapper, so
+// no table is left with the old black bar.
+var PDF_HEAD={fillColor:[243,244,246],textColor:[75,85,99],fontStyle:"bold",lineColor:[209,213,219],lineWidth:{top:0,right:0,bottom:0.3,left:0}};
+// `keepCase`: the timesheet's narrow columns, where capitals broke words in two.
+function pdfLightHeads(doc,keepCase){
+  var at=doc.autoTable;if(!at||doc._lightHeads)return;doc._lightHeads=true;
+  doc.autoTable=function(o){
+    o=Object.assign({},o);
+    if(o.head&&!keepCase)o.head=o.head.map(function(r){return r.map(function(c){
+      return typeof c==="string"?c.toUpperCase():(c&&typeof c==="object"&&c.content!=null?Object.assign({},c,{content:String(c.content).toUpperCase()}):c);
+    })});
+    o.headStyles=Object.assign({},o.headStyles||{},PDF_HEAD);
+    return at.call(this,o);
+  };
+}
+// A section title: a colour bar on the left, the title beside it.
+function pdfH2(doc,title,M,y,c,fs){
+  fs=fs||11;var h=fs*0.42;
+  doc.setFillColor(c[0],c[1],c[2]);doc.rect(M,y,0.9,h,"F");
+  doc.setFont("helvetica","bold");doc.setFontSize(fs);doc.setTextColor(31,41,55);
+  doc.text(String(title),M+3,y+h*0.8);
+  doc.setFont("helvetica","normal");
+  return y+h+3.5;
+}
 function hexRgb(h){var m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h||"");return m?[parseInt(m[1],16),parseInt(m[2],16),parseInt(m[3],16)]:[17,24,39]}
 // s = the real session (Drive folder, file names); R = {s: its localized copy, lang}
 async function exportPDF(s,R,base){
@@ -10032,6 +10105,7 @@ async function buildPdfBlob(s,lang,rev,opts){
   if(!L)return null;
   var R=RPT[lang]||RPT.ca;
   var doc=new L.jsPDF({unit:"mm",format:"a4"});
+  pdfLightHeads(doc);
   var M=14,W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),CW=W-M*2;
   var tl=R.types[s.type]||R.types.commissioning,entries=s.entries||[];
   var cnt=severityCounts(entries);
@@ -10089,8 +10163,7 @@ async function buildPdfBlob(s,lang,rev,opts){
   // and the photos last, as an annex.
   if(s.notes&&String(s.notes).trim()&&!V){
     if(y>H-40){doc.addPage();y=M}
-    doc.setFont("helvetica","bold");doc.setFontSize(10.5);doc.setTextColor(17,24,39);
-    doc.text(R.notes,M,y+3.5);doc.setDrawColor(245,158,11);doc.setLineWidth(0.5);doc.line(M,y+5.5,M+CW,y+5.5);y+=9.5;
+    y=pdfH2(doc,R.notes,M,y,[245,158,11])+1.4;
     pdfFont(doc,ar,s.notes,"normal");doc.setFontSize(8.5);doc.setTextColor(55,65,81);
     var nl=doc.splitTextToSize(String(s.notes).trim(),CW),nr=startsRtl(s.notes);
     nl.forEach(function(l){if(y>H-15){doc.addPage();y=M}doc.text(l,M+(nr?CW-doc.getTextWidth(l):0),y);y+=4});
@@ -10193,20 +10266,21 @@ async function buildPdfBlob(s,lang,rev,opts){
   var HEADS=[R.time,R.severity,R.tag,R.desc,R.att],HFS=7.5,HLH=HFS/doc.internal.scaleFactor*1.15;
   function colWs(){return [tsW,sevW,tagC.cellWidth,descW(),attC.cellWidth]}
   function headLines(){var w=colWs();doc.setFont("helvetica","bold");doc.setFontSize(HFS);
-    var L=HEADS.map(function(h,i){return doc.splitTextToSize(String(h),w[i]-4)});doc.setFont("helvetica","normal");return L}
+    var L=HEADS.map(function(h,i){return doc.splitTextToSize(String(h).toUpperCase(),w[i]-4)});doc.setFont("helvetica","normal");return L}
   var HH=Math.max.apply(null,headLines().map(function(l){return l.length}))*HLH+4;
   function drawHead(yy){
     var w=colWs(),L=headLines(),x=M;
-    doc.setFillColor(17,24,39);doc.rect(M,yy,CW,HH,"F");
-    doc.setFont("helvetica","bold");doc.setFontSize(HFS);doc.setTextColor(255,255,255);
+    doc.setFillColor(243,244,246);doc.rect(M,yy,CW,HH,"F");
+    doc.setDrawColor(209,213,219);doc.setLineWidth(0.3);doc.line(M,yy+HH,M+CW,yy+HH);
+    doc.setFont("helvetica","bold");doc.setFontSize(HFS);doc.setTextColor(75,85,99);
     L.forEach(function(l,i){doc.text(l,x+2,yy+2,{baseline:"top",lineHeightFactor:1.15});x+=w[i]});
     doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(0,0,0);
     return yy+HH;
   }
   var DH=6.2;
   function drawDay(g){
-    doc.setFillColor(243,244,246);doc.rect(M,y,CW,DH,"F");
-    doc.setDrawColor(245,158,11);doc.setLineWidth(0.4);doc.line(M,y+DH,M+CW,y+DH);
+    doc.setFillColor(249,250,251);doc.rect(M,y,CW,DH,"F");
+    doc.setDrawColor(229,231,235);doc.setLineWidth(0.25);doc.line(M,y+DH,M+CW,y+DH);
     doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setTextColor(17,24,39);
     var dt=reportDayTitle(g.key,R,lang);doc.text(dt,M+2,y+4.2);
     var dw=doc.getTextWidth(dt);
@@ -10330,13 +10404,34 @@ async function buildPdfBlob(s,lang,rev,opts){
   }
   if(y+HH+DH+20>H-15){doc.addPage();y=M}
   y=drawHead(y);
+  // each day a box of its own, air between them; a week band opens each week
+  // when the visit spans more than one
+  var DG=dayGroups(entries),WB=weekBands(DG,entries,R),WH=6.2;
+  function drawWeek(b){
+    doc.setFillColor(255,247,237);doc.setDrawColor(254,215,170);doc.setLineWidth(0.25);
+    doc.roundedRect(M,y,CW,WH,1.2,1.2,"FD");
+    doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setTextColor(154,52,18);
+    doc.text(b.title,M+2.5,y+4.2);
+    var bw=doc.getTextWidth(b.title);
+    doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor(194,65,12);
+    doc.text(b.sum,M+2.5+bw+4,y+4.2);
+    y+=WH+2;
+  }
   if(!entries.length)drawEntries([]);
-  else dayGroups(entries).forEach(function(g){
-    // a day's bar never sits alone at the foot of a page
-    if(y+DH+Math.min(estRowH(g.idx[0]),H/2)>H-15){doc.addPage();y=M;y=drawHead(y)}
+  else DG.forEach(function(g,gi){
+    var gap=gi?3:1.5,band=WB[gi];
+    // a day's bar (and its week's band) never sits alone at the foot of a page
+    if(y+gap+(band?WH+2:0)+DH+Math.min(estRowH(g.idx[0]),H/2)>H-15){doc.addPage();y=M;y=drawHead(y)+1.5}
+    else y+=gap;
+    if(band)drawWeek(band);
+    var top=y,pg=doc.internal.getCurrentPageInfo().pageNumber;
     drawDay(g);
     drawEntries(g.idx);
     y=doc.lastAutoTable.finalY;
+    // the box round the day, when it stayed on one page
+    if(doc.internal.getCurrentPageInfo().pageNumber===pg){
+      doc.setDrawColor(229,231,235);doc.setLineWidth(0.25);doc.roundedRect(M,top,CW,y-top,1.2,1.2,"S");
+    }
   });
   y=doc.lastAutoTable.finalY+8;
   y=pdfPartsSection(doc,s,R,y,M,CW,H,ar);
@@ -10351,8 +10446,10 @@ async function buildPdfBlob(s,lang,rev,opts){
   // Kept small (2026-10-13: "they take up too much of the page"): 14 mm high,
   // at most 45 mm wide — a signature, not an illustration.
   var inked=!!(gs.techSig||gs.cliSig),sigH=inked?14:0,SIGW=45;
-  if(y>H-32-sigH){doc.addPage();y=M}
-  y=Math.max(y+14,H-32-sigH)+sigH;
+  // right after the last section, with air above (2026-10-23) — it used to
+  // sink to the foot of the page, alone on a page that was otherwise empty
+  if(y+16+sigH+12>H-15){doc.addPage();y=M}
+  y+=16+sigH;
   var hw=CW/2-10;
   [[R.sigTech,gs.techName||s.tech||"",gs.techSig,M],
    [R.sigCli,gs.cliName||"",gs.cliSig,M+CW/2+10]].forEach(function(b){
@@ -10382,8 +10479,11 @@ async function buildPdfBlob(s,lang,rev,opts){
     // it used to be left alone at the foot of a page
     var firstRowH=(CW-8)/3*0.72+11;
     if(y+5+firstRowH>H-M){doc.addPage();y=M}
-    doc.setFont("helvetica","bold");doc.setFontSize(11);doc.setTextColor(17,24,39);
-    doc.text(R.photos,M,y);y+=5;
+    // "Annex · Fotos", and what it belongs to
+    y=pdfH2(doc,(R.annex||"Annex")+" · "+R.photos,M,y-3,[245,158,11],12);
+    doc.setFontSize(7.5);doc.setTextColor(107,114,128);
+    doc.text([s.project||"",rev?(R.revLbl+" "+("0"+rev.n).slice(-2)):"",shots.length+" "+String(R.photos).toLowerCase()].filter(Boolean).join(" · "),M+3,y+0.6);
+    y+=6;
     doc.setFont("helvetica","normal");doc.setFontSize(6.5);
     var cols=3,gap=4,iw=(CW-gap*(cols-1))/cols,ih=iw*0.72;
     // The caption used to be one line, cut at the column width — which ate the
@@ -10680,9 +10780,16 @@ async function buildDocxDocument(D,s,lang,rev,opts){
   }
   var COLW=colMm.map(tw),TBLW=COLW.reduce(function(a,b){return a+b},0);
 
-  function hdrCell(t,w){return new D.TableCell({borders:borders,margins:mg,width:{size:w,type:D.WidthType.DXA},
-    shading:{fill:"111827",type:D.ShadingType.CLEAR},
-    children:[P({children:[T({text:t,bold:true,color:"FFFFFF",size:hp(7.5),font:"Arial"})]})]})}
+  function hdrCell(t,w){return new D.TableCell({margins:mg,width:{size:w,type:D.WidthType.DXA},
+    borders:Object.assign({},borders,{bottom:{style:D.BorderStyle.SINGLE,size:6,color:"D1D5DB"}}),
+    shading:{fill:"F3F4F6",type:D.ShadingType.CLEAR},
+    children:[P({children:[T({text:String(t).toUpperCase(),bold:true,color:"4B5563",size:hp(7),font:"Arial"})]})]})}
+  // a section title: a colour bar on the left
+  function wordH2(text,col,o){o=o||{};
+    return P({pageBreakBefore:!!o.pageBreak,spacing:{before:o.before==null?160:o.before,after:80},keepNext:true,
+      border:{left:{style:D.BorderStyle.SINGLE,size:18,color:col,space:6}},
+      children:[T({text:text,bold:true,size:hp(o.size||10.5),font:"Arial",color:"1F2937"})]});
+  }
 
   // The spare parts, as the same QT./REF./SPARE PART table the PDF draws.
   function partsTable(parts,descMm){
@@ -10823,8 +10930,7 @@ async function buildDocxDocument(D,s,lang,rev,opts){
       children:[P({alignment:o.right?D.AlignmentType.RIGHT:undefined,children:[T({text:String(t),bold:!!o.bold,size:hp(7.5),font:"Arial",color:"111827"})]})]})}
     var trs=[new D.TableRow({tableHeader:true,children:k.head.map(function(h,i){return hdrCell(h,W[i])})})];
     k.rows.forEach(function(r){trs.push(new D.TableRow({children:r.map(function(v,i){return c(v,W[i],{bold:!i,right:!!i})})}))});
-    var out=[P({spacing:{before:120,after:60},keepNext:true,border:{bottom:{style:D.BorderStyle.SINGLE,size:8,color:"2563EB",space:2}},
-        children:[T({text:k.title,bold:true,size:hp(10.5),font:"Arial",color:"111827"})]}),
+    var out=[wordH2(k.title,"2563EB"),
       new D.Table({width:{size:W.reduce(function(a,b){return a+b},0),type:D.WidthType.DXA},columnWidths:W,layout:D.TableLayoutType.FIXED,rows:trs})];
     if(k.since)out.push(P({spacing:{before:60},children:[T({text:k.since,bold:true,size:hp(8),font:"Arial",color:"111827"})]}));
     if(k.during)out.push(P({children:[T({text:k.during,size:hp(8),font:"Arial",color:"6B7280"})]}));
@@ -10834,8 +10940,7 @@ async function buildDocxDocument(D,s,lang,rev,opts){
   // The general notes, near the top as in the PDF, one paragraph per line.
   var notesCh=(function(){
     var t=String(s.notes||"").trim();if(!t)return [];
-    return [P({spacing:{before:120,after:60},keepNext:true,border:{bottom:{style:D.BorderStyle.SINGLE,size:8,color:"F59E0B",space:2}},
-        children:[T({text:R.notes,bold:true,size:hp(10.5),font:"Arial",color:"111827"})]})]
+    return [wordH2(R.notes,"F59E0B")]
       .concat(t.split(/\r?\n/).map(function(l){return P({spacing:{after:40},children:[T({text:l,size:hp(8.5),font:"Arial",color:"374151"})]})}))
       .concat([P({spacing:{after:60},children:[T({text:""})]})]);
   })();
@@ -10851,8 +10956,7 @@ async function buildDocxDocument(D,s,lang,rev,opts){
       trs.push(new D.TableRow({cantSplit:true,children:[c(k.sev,W[0],{bold:true,color:k.sevCol.replace("#","")}),c(k.when,W[1],{color:"6B7280"}),
         c(k.what,W[2],{sub:k.sub}),c(k.st,W[3],{bold:true,color:k.stCol.replace("#","")})]}));
     });
-    return [P({spacing:{before:120,after:60},keepNext:true,border:{bottom:{style:D.BorderStyle.SINGLE,size:8,color:"DC2626",space:2}},
-        children:[T({text:R.incTitle,bold:true,size:hp(10.5),font:"Arial",color:"111827"})]}),
+    return [wordH2(R.incTitle,"DC2626"),
       new D.Table({width:{size:W.reduce(function(a,b){return a+b},0),type:D.WidthType.DXA},columnWidths:W,layout:D.TableLayoutType.FIXED,rows:trs}),
       P({spacing:{after:60},children:[T({text:""})]})];
   })();
@@ -10866,10 +10970,21 @@ async function buildDocxDocument(D,s,lang,rev,opts){
     // ONE table: its header repeats at the top of each page, and each day is a
     // slim bar inside it, kept with its first entry — as in the PDF
     var trs=[new D.TableRow({tableHeader:true,children:[hdrCell(R.time,COLW[0]),hdrCell(R.severity,COLW[1]),hdrCell(R.tag,COLW[2]),hdrCell(R.desc,COLW[3]),hdrCell(R.att,COLW[4])]})];
-    dayGroups(entries).forEach(function(g){
+    // each day its own block with air between them; a band opens each week
+    // when the visit spans more than one
+    var DG=dayGroups(entries),WB=weekBands(DG,entries,R);
+    function fullRow(cell,o){return new D.TableRow(Object.assign({cantSplit:true,children:[new D.TableCell(Object.assign({columnSpan:5,width:{size:TBLW,type:D.WidthType.DXA}},cell))]},o||{}))}
+    DG.forEach(function(g,gi){
+      if(gi)trs.push(fullRow({borders:noBorders,margins:{top:0,bottom:0,left:0,right:0},
+        children:[P({spacing:{before:0,after:0},children:[T({text:"",size:hp(4)})]})]},{height:{value:tw(3),rule:D.HeightRule.EXACT}}));
+      var b=WB[gi];
+      if(b)trs.push(fullRow({margins:{top:40,bottom:40,left:113,right:113},shading:{fill:"FFF7ED",type:D.ShadingType.CLEAR},
+        borders:{top:{style:D.BorderStyle.SINGLE,size:4,color:"FED7AA"},bottom:{style:D.BorderStyle.SINGLE,size:4,color:"FED7AA"},left:{style:D.BorderStyle.SINGLE,size:4,color:"FED7AA"},right:{style:D.BorderStyle.SINGLE,size:4,color:"FED7AA"}},
+        children:[P({keepNext:true,children:[T({text:b.title,bold:true,size:hp(8.5),font:"Arial",color:"9A3412"}),
+          T({text:"    "+b.sum,size:hp(7.5),font:"Arial",color:"C2410C"})]})]}));
       trs.push(new D.TableRow({cantSplit:true,children:[new D.TableCell({columnSpan:5,width:{size:TBLW,type:D.WidthType.DXA},
-        margins:{top:30,bottom:30,left:113,right:113},shading:{fill:"F3F4F6",type:D.ShadingType.CLEAR},
-        borders:{top:br,left:br,right:br,bottom:{style:D.BorderStyle.SINGLE,size:8,color:"F59E0B"}},
+        margins:{top:30,bottom:30,left:113,right:113},shading:{fill:"F9FAFB",type:D.ShadingType.CLEAR},
+        borders:{top:br,left:br,right:br,bottom:br},
         children:[P({keepNext:true,children:[T({text:reportDayTitle(g.key,R,lang),bold:true,size:hp(8.5),font:"Arial",color:"111827"}),
           T({text:"    "+reportDaySummary(g.idx.map(function(i){return entries[i]}),R),size:hp(7.5),font:"Arial",color:"6B7280"})]})]})]}));
       g.idx.forEach(function(i){trs.push(rows[i])});
@@ -10892,8 +11007,7 @@ async function buildDocxDocument(D,s,lang,rev,opts){
         cells.push(c(partQty(m),W[o],{right:true,color:"B45309"}),c(m.ref||"",W[o+1],{color:"1D4ED8"}),c(m.denominacio||"",W[o+2]));
         trs.push(new D.TableRow({children:cells}));
       });
-      children.push(P({spacing:{before:240,after:80},keepNext:true,border:{bottom:{style:D.BorderStyle.SINGLE,size:8,color:PST_HEX[st],space:2}},
-        children:[T({text:title,bold:true,size:hp(12),font:"Arial",color:"111827"})]}));
+      children.push(wordH2(title,PST_HEX[st],{before:240}));
       children.push(new D.Table({width:{size:W.reduce(function(a,b){return a+b},0),type:D.WidthType.DXA},columnWidths:W,layout:D.TableLayoutType.FIXED,rows:trs}));
       children.push(P({spacing:{before:60,after:160},children:note?[T({text:note,size:hp(7.5),font:"Arial",color:"6B7280"})]:[]}));
     }
@@ -10918,7 +11032,7 @@ async function buildDocxDocument(D,s,lang,rev,opts){
         return ptCell(c,W[i],o);
       })}));
     });
-    children.push(P({spacing:{before:240,after:80},children:[T({text:PL.title,bold:true,size:hp(12),font:"Arial",color:"111827"})]}));
+    children.push(wordH2(PL.title,"8B5CF6",{before:240}));
     children.push(new D.Table({width:{size:W.reduce(function(x,y){return x+y},0),type:D.WidthType.DXA},columnWidths:W,layout:D.TableLayoutType.FIXED,rows:trs}));
     children.push(P({spacing:{before:60,after:160},children:[T({text:PL.summaryNote,size:hp(7.5),font:"Arial",color:"6B7280"})]}));
   }
@@ -10979,7 +11093,8 @@ async function buildDocxDocument(D,s,lang,rev,opts){
   // inside the rows would blow the table up.
   if(shots.length){
     var cols=3,gapMm=4,iwMm=(CW-gapMm*(cols-1))/cols,ihMm=iwMm*0.72;
-    children.push(P({pageBreakBefore:true,spacing:{after:80},children:[T({text:R.photos,bold:true,size:hp(11),font:"Arial",color:"111827"})]}));
+    children.push(wordH2((R.annex||"Annex")+" · "+R.photos,"F59E0B",{pageBreak:true,before:0,size:12}));
+    children.push(P({spacing:{after:120},children:[T({text:[s.project||"",rev?(R.revLbl+" "+("0"+rev.n).slice(-2)):"",shots.length+" "+String(R.photos).toLowerCase()].filter(Boolean).join(" · "),size:hp(8),font:"Arial",color:"6B7280"})]}));
     var shotRows=[];
     for(var i=0;i<shots.length;i+=cols){
       var cellsS=[];

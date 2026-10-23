@@ -1926,6 +1926,38 @@ Now (`syncTick`, `scheduleSync`):
   preview (offline pick → ⏳, kept across a reload, played from IndexedDB)
   and in a sandbox (failed upload stays queued; upload once, blob gone, list
   cleared; the stale-copy race; the one-day clean-up).
+- **The report's new look: A · 1 · X** (version 2026-10-23 · 6, the user: "I
+  don't like the thick black titles; more room between the signatures and
+  the photos; maybe the days set apart, showing which week they're in when
+  the report runs 2 or 3 weeks — propose designs", then "A, 1, X" from a
+  page of mock-ups).
+  - A, headings: `pdfLightHeads(doc[,keepCase])` wraps `doc.autoTable` so
+    every table's head is light grey (#F3F4F6), grey bold capitals, a thin
+    rule under it (`PDF_HEAD`); the log's own `drawHead` likewise
+    (`headW`/`headLines` measure in capitals). The timesheet keeps its own
+    case: in its narrow columns capitals broke "ARRIBAD/A". Section titles:
+    `pdfH2` (a colour bar at the left, 11pt dark grey) replaces the black
+    title + coloured rule; HTML `repH2`, Word `wordH2` (left border), and
+    the HTML th / Word `hdrCell` turned light the same way.
+  - 1, days and weeks: `isoWeek`, `weekBands(groups,entries,R)` → a band
+    before the first day of each ISO week, only when the days span more
+    than one week ("Setmana N · Monday – Sunday · n dies · n entrades",
+    new labels `week` and `annex` in ca/es/en; the other languages'
+    cached tables no longer fit RPT.en and are translated again). PDF: 3mm
+    between days, the day bar light (#F9FAFB) with a thin rule, an outline
+    round the day when it stays on one page, the band kept with its day.
+    HTML: spacer rows and band rows in the one table (columns still line up).
+    Word: an exact-height spacer row, the band row (#FFF7ED), the day row.
+  - X: the PDF's signatures follow the last section (+16mm) instead of
+    `max(y, foot of page)`; the photos open a new page as "Annex · Fotos"
+    with "project · Rev. NN · n fotos" (PDF, Word; the HTML puts a rule and
+    air before it on screen and a page break on paper).
+  - Checked with P-2026-140 stretched to two weeks: PDF (3 pages: weeks 39
+    and 40, boxes, signatures after the production tests, annex on page 3),
+    validation PDF, HTML in the browser, the Word XML (no dark fills, two
+    week bands, spacer rows, six left-bar titles, the annex) — Word itself
+    could not be driven here (its COM registration is broken) — and the
+    timesheet as rendered on the review screen.
 - **The machine history from the first visit** (version 2026-10-23 · 5, the
   user: "I can't find the incidents report", meaning the machine history):
   its chip in the header and the new layout's list item only appeared with

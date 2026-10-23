@@ -265,13 +265,16 @@ textarea{resize:none;line-height:1.4}
 .ts-col{font-size:11px;padding:3px 9px;border-radius:20px}
 .ts-col.on{background:var(--goldbg);border-color:var(--golddim);color:var(--goldtx);font-weight:700}
 .ts-col.lock{opacity:.5;cursor:default}
+#tsSigGrid{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:620px){#tsSigGrid{grid-template-columns:1fr 1fr}}
 .pv-modal{max-width:min(98vw,1100px);width:98vw;height:94vh;max-height:94vh;display:flex;flex-direction:column;padding:12px}
 .pv-scroll{flex:1;overflow:auto;position:relative;border:1px solid var(--br);border-radius:8px;background:#e5e7eb;-webkit-overflow-scrolling:touch}
 #pvDoc iframe{display:block;width:100%;border:0;background:#fff}
-#pvDoc canvas{display:block;width:100%;max-width:900px;height:auto;margin:12px auto;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.25)}
+.pv-part{font-size:15px;font-weight:700;padding:12px 14px;background:var(--bg1);border-bottom:1px solid var(--br);color:var(--tx)}
+#pvDoc .pv-pages canvas{display:block;width:100%;max-width:900px;height:auto;margin:12px auto;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.25)}
 .pv-sign{background:var(--bg1);border-top:3px solid var(--gold);padding:14px}
-#pvPads{display:grid;grid-template-columns:1fr;gap:12px}
-@media(min-width:620px){#pvPads{grid-template-columns:1fr 1fr}}
+.pv-pads{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:620px){.pv-pads{grid-template-columns:1fr 1fr}}
 /* misc */
 .no-ent{font-family:monospace;font-size:12px;color:var(--tx3);padding:24px 0;text-align:center}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -707,8 +710,18 @@ textarea{resize:none;line-height:1.4}
       <div class="field" style="margin-top:12px"><label>Observacions (s'imprimeixen al full)</label><textarea id="tsRem" rows="2" class="inp-notes"></textarea>
         <button class="btn-sm" id="tsCorr" style="margin-top:6px" title="Corregeix ortografia i gramàtica">&#10003; Corregeix</button></div>
       <div style="border-top:1px solid var(--br);margin-top:12px;padding-top:12px">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong style="font-size:12px;color:var(--tx2)">Signatures</strong><span id="tsSigState" class="ts-note"></span>
-          <button class="btn-sm" id="tsSignBtn" style="margin-left:auto" title="Mostra el full tal com sortir&agrave; i signa'l al final">&#128065; Revisa i signa</button></div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap"><strong style="font-size:12px;color:var(--tx2)">Signatures</strong><span class="ts-note">signa amb el dit o amb un llapis tàctil &mdash; deixa-ho en blanc per imprimir línies buides</span></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap"><label for="tsSigDate" style="font-size:11px;color:var(--tx3)">Data de signatura</label><input type="date" id="tsSigDate" style="font-size:12px;padding:4px 8px"><span class="ts-note">es posa sola el dia que es signa; la pots canviar</span></div>
+        <div id="tsSigGrid">
+          <div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:11px;color:var(--tx3);flex-shrink:0">Tècnic</span><input type="text" id="tsTechName" placeholder="Nom" style="flex:1;font-size:12px;padding:4px 8px"><button class="btn-xs" id="tsTechClr">Esborra</button></div>
+            <canvas class="ts-sig" id="tsTechSig"></canvas>
+          </div>
+          <div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:11px;color:var(--tx3);flex-shrink:0">Client</span><input type="text" id="tsCliName" placeholder="Nom / càrrec" style="flex:1;font-size:12px;padding:4px 8px"><button class="btn-xs" id="tsCliClr">Esborra</button></div>
+            <canvas class="ts-sig" id="tsCliSig"></canvas>
+          </div>
+        </div>
       </div>
       <div class="modal-actions">
         <button id="tsCancel">Cancel·la</button>
@@ -745,26 +758,10 @@ textarea{resize:none;line-height:1.4}
   <div class="modal-back" id="pvBack" style="display:none">
     <div class="modal pv-modal">
       <div class="modal-title" style="margin-bottom:8px">&#128065; <span id="pvTitle">Revisa i signa</span></div>
-      <div id="pvScroll" class="pv-scroll">
-        <div id="pvDoc"></div>
-        <div class="pv-sign">
-          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap"><strong style="font-size:13px">&#9997; Signatures</strong><span id="pvSignNote" class="ts-note"></span></div>
-          <div id="pvDateRow" style="display:none;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap"><label for="pvSigDate" style="font-size:11px;color:var(--tx3)">Data de signatura</label><input type="date" id="pvSigDate" style="font-size:12px;padding:4px 8px"><span class="ts-note">es posa sola el dia que es signa; la pots canviar</span></div>
-          <div id="pvPads">
-            <div>
-              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:11px;color:var(--tx3);flex-shrink:0">T&egrave;cnic</span><input type="text" id="pvTechName" placeholder="Nom" style="flex:1;font-size:12px;padding:4px 8px"><button class="btn-xs" id="pvTechClr">Esborra</button></div>
-              <canvas class="ts-sig" id="pvTechSig"></canvas>
-            </div>
-            <div>
-              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:11px;color:var(--tx3);flex-shrink:0">Client</span><input type="text" id="pvCliName" placeholder="Nom / c&agrave;rrec" style="flex:1;font-size:12px;padding:4px 8px"><button class="btn-xs" id="pvCliClr">Esborra</button></div>
-              <canvas class="ts-sig" id="pvCliSig"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
+      <div id="pvScroll" class="pv-scroll"><div id="pvDoc"></div></div>
       <div class="modal-actions">
         <button id="pvCancel">Tanca</button>
-        <button class="btn-sm" id="pvSave">&#9997; Desa la signatura</button>
+        <button class="btn-sm" id="pvSave">&#9997; Desa les signatures</button>
         <button class="btn-gold" id="pvGen">&#128196; Desa i genera el PDF</button>
       </div>
     </div>
@@ -5530,7 +5527,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-23 · 1";
+var APP_VERSION="2026-10-23 · 2";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -6790,67 +6787,101 @@ function setRevSign(id,n,sign){
 }
 // ── REVIEW AND SIGN (2026-10-23) ─────────────────────────────────────────────
 // "First I want to see the report, to show it and explain it a little, and if
-// they agree, sign it in that same view; then generate the report with the
-// signatures. The hours the same. Unsigned, I still want to be able to
-// generate them." One screen for both: the document as the client will get
-// it — the report as its HTML, in the language it goes out in (its own
-// signature lines hidden); the timesheet as its PDF pages — and at the end of
-// it the two pads. "Desa la signatura" keeps them (the report's on its
-// revision, the sheet's on the sheet); "Desa i genera el PDF" makes the PDF
-// as well. Every export still works without signing.
-var pv={kind:null,sid:null,rev:null,pads:{},dateHand:false},pvWired=false;
-function pvClose(){$$("pvBack").style.display="none";$$("pvDoc").innerHTML="";pv.kind=null;pv.sid=null;pv.rev=null}
+// they agree, sign it in that same view; then generate it with the
+// signatures." And the same entry for the hours ("Revisa i signa l'informe is
+// also for reviewing and signing the hours"; the timesheet form itself stays
+// as it was, pads and all). One scrolling view: the report as its HTML, in
+// the language it goes out in (its own signature lines hidden), with its two
+// pads under it; then, when the visit has a timesheet, the sheet as its PDF
+// pages with its pads and sign date. "Desa les signatures" keeps them (the
+// report's on its revision, the sheet's on the sheet); "Desa i genera el PDF"
+// makes the PDFs as well. Every export still works without signing.
+var pv={sid:null,rev:null,parts:[]},pvWired=false;
+function pvClose(){$$("pvBack").style.display="none";$$("pvDoc").innerHTML="";pv.sid=null;pv.rev=null;pv.parts=[]}
 function pvWire(){
   if(pvWired)return;pvWired=true;
   $$("pvCancel").addEventListener("click",pvClose);
-  $$("pvTechClr").addEventListener("click",function(){if(pv.pads.tech)pv.pads.tech.clear()});
-  $$("pvCliClr").addEventListener("click",function(){if(pv.pads.cli)pv.pads.cli.clear()});
-  $$("pvSigDate").addEventListener("input",function(){pv.dateHand=true});
   $$("pvSave").addEventListener("click",function(){if(pvCommit())pvClose()});
   $$("pvGen").addEventListener("click",function(){
-    var kind=pv.kind,id=pv.sid;
+    var id=pv.sid,hasTs=pv.parts.some(function(x){return x.kind==="ts"});
     if(!pvCommit())return;
     pvClose();
-    var s=sessions.find(function(x){return x.id===id});if(!s)return;
-    if(kind==="ts")exportTimesheet(s);else exportRep(s,"pdf");
+    // one after the other: two reports saved at once could trip over the
+    // offline queue, each reading it before the other wrote it
+    (async function(){
+      var s=sessions.find(function(x){return x.id===id});if(!s)return;
+      if(hasTs)await exportTimesheet(s);
+      s=sessions.find(function(x){return x.id===id});if(s)exportRep(s,"pdf");
+    })();
+  });
+}
+// The pads under one document: names, the two pads, and for the sheet its
+// sign date (filled with today on the first ink, unless typed).
+function pvPadsEl(kind,s,g,note){
+  var k=kind,box=document.createElement("div");box.className="pv-sign";
+  box.innerHTML="<div style=\"display:flex;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap\"><strong style=\"font-size:13px\">&#9997; "+(k==="ts"?"Signatures del full d'hores":"Signatures de l'informe")+"</strong><span class=\"ts-note\">"+esc(note)+"</span></div>"
+    +(k==="ts"?"<div style=\"display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap\"><label for=\"pvDate_ts\" style=\"font-size:11px;color:var(--tx3)\">Data de signatura</label><input type=\"date\" id=\"pvDate_ts\" style=\"font-size:12px;padding:4px 8px\"><span class=\"ts-note\">es posa sola el dia que es signa; la pots canviar</span></div>":"")
+    +"<div class=\"pv-pads\">"
+    +["tech","cli"].map(function(w){
+      return "<div><div style=\"display:flex;align-items:center;gap:6px;margin-bottom:4px\"><span style=\"font-size:11px;color:var(--tx3);flex-shrink:0\">"+(w==="tech"?"T&egrave;cnic":"Client")+"</span>"
+        +"<input type=\"text\" id=\"pvName_"+w+"_"+k+"\" placeholder=\""+(w==="tech"?"Nom":"Nom / c&agrave;rrec")+"\" style=\"flex:1;font-size:12px;padding:4px 8px\">"
+        +"<button class=\"btn-xs\" id=\"pvClr_"+w+"_"+k+"\">Esborra</button></div><canvas class=\"ts-sig\" id=\"pvSig_"+w+"_"+k+"\"></canvas></div>";
+    }).join("")+"</div>";
+  box.querySelector("#pvName_tech_"+k).value=g.techName||s.tech||"";
+  // suggested, not imposed: usually the contact signs, sometimes whoever is on site
+  box.querySelector("#pvName_cli_"+k).value=g.cliName||contactLine(s)||"";
+  if(k==="ts")box.querySelector("#pvDate_ts").value=tsSignDate(g);
+  return box;
+}
+function pvPartTitle(t){var h=document.createElement("div");h.className="pv-part";h.textContent=t;return h}
+function pvInitPads(){
+  pv.parts.forEach(function(pt){
+    var k=pt.kind;pt.pads={};pt.dateHand=false;
+    ["tech","cli"].forEach(function(w){
+      pt.pads[w]=tsInitPad("pvSig_"+w+"_"+k,(pt.g||{})[w==="tech"?"techSig":"cliSig"]||"");
+      $$("pvClr_"+w+"_"+k).addEventListener("click",function(){if(pt.pads[w])pt.pads[w].clear()});
+      if(k==="ts"&&pt.pads[w])pt.pads[w].onInk=function(){if(!pt.dateHand)$$("pvDate_ts").value=todayISO()};
+    });
+    if(k==="ts")$$("pvDate_ts").addEventListener("input",function(){pt.dateHand=true});
   });
 }
 function pvCommit(){
   var s=sessions.find(function(x){return x.id===pv.sid});if(!s)return false;
-  var sig={techName:$$("pvTechName").value.trim(),cliName:$$("pvCliName").value.trim(),
-    techSig:pv.pads.tech?pv.pads.tech.data():"",cliSig:pv.pads.cli?pv.pads.cli.data():""};
-  if(pv.kind==="ts"){
-    var T=Object.assign({},s.timesheet||{},sig,{signDate:(sig.techSig||sig.cliSig)?($$("pvSigDate").value||todayISO()):($$("pvSigDate").value||"")});
-    sessions=sessions.map(function(x){return x.id===s.id?Object.assign({},x,{timesheet:T}):x});
-    // signing is not a change to the visit: stamped, saved, synced like one,
-    // but through saveLocal, so the visit is not marked as edited today
-    saveLocal();isDirty=true;if(isLoggedIn)saveToDrive();
-    renderAll();
-  } else if(pv.rev){
-    setRevSign(s.id,pv.rev.n,Object.assign(sig,{signedAt:now()}));
-    renderContent();
-  }
+  pv.parts.forEach(function(pt){
+    var k=pt.kind,P=pt.pads||{};
+    var sig={techName:$$("pvName_tech_"+k).value.trim(),cliName:$$("pvName_cli_"+k).value.trim(),
+      techSig:P.tech?P.tech.data():"",cliSig:P.cli?P.cli.data():""};
+    if(k==="ts"){
+      var d=$$("pvDate_ts").value||((sig.techSig||sig.cliSig)?todayISO():"");
+      var T=Object.assign({},(sessions.find(function(x){return x.id===s.id})||s).timesheet||{},sig,{signDate:d});
+      // signing is not a change to the visit: saved and synced, not stamped as an edit
+      sessions=sessions.map(function(x){return x.id===s.id?Object.assign({},x,{timesheet:T}):x});
+      saveLocal();isDirty=true;if(isLoggedIn)saveToDrive();
+    } else if(pv.rev){
+      setRevSign(s.id,pv.rev.n,Object.assign(sig,{signedAt:now()}));
+    }
+  });
+  renderAll();
   return true;
 }
-function pvOpen(kind,s,title,note,g){
-  pvWire();
-  pv.kind=kind;pv.sid=s.id;pv.dateHand=false;g=g||{};
-  $$("pvDoc").innerHTML="";
-  $$("pvTitle").textContent=title;
-  $$("pvSignNote").textContent=note;
-  $$("pvTechName").value=g.techName||s.tech||"";
-  // suggested, not imposed: usually the contact signs, sometimes whoever is on site
-  $$("pvCliName").value=g.cliName||contactLine(s)||"";
-  $$("pvDateRow").style.display=kind==="ts"?"flex":"none";
-  $$("pvSigDate").value=kind==="ts"?tsSignDate(g):"";
-  $$("pvBack").style.display="flex";
-  $$("pvScroll").scrollTop=0;
-  // after the box has a size, or the canvases come up 0×0
-  setTimeout(function(){
-    pv.pads.tech=tsInitPad("pvTechSig",g.techSig||"");
-    pv.pads.cli=tsInitPad("pvCliSig",g.cliSig||"");
-    [pv.pads.tech,pv.pads.cli].forEach(function(pd){if(pd)pd.onInk=function(){if(pv.kind==="ts"&&!pv.dateHand)$$("pvSigDate").value=todayISO()}});
-  },40);
+// A PDF drawn page by page into `box`, exactly as it goes out.
+async function pvRenderPdf(blob,box){
+  try{
+    var lib=await loadPdfjs();
+    var doc=await lib.getDocument({data:new Uint8Array(await blob.arrayBuffer())}).promise;
+    var dpr=Math.min(2,window.devicePixelRatio||1),w=Math.min(($$("pvDoc").clientWidth||800)-24,900);
+    for(var i=1;i<=doc.numPages;i++){
+      if(!box.isConnected)return;                  // closed meanwhile
+      var pg=await doc.getPage(i),vp0=pg.getViewport({scale:1});
+      var vp=pg.getViewport({scale:w/vp0.width*dpr});
+      var cv=document.createElement("canvas");cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);
+      cv.style.maxWidth=w+"px";
+      box.appendChild(cv);
+      await pg.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;
+    }
+  }catch(e){
+    box.innerHTML="<div class=\"ts-note\" style=\"padding:16px\">No s'ha pogut mostrar ("+esc((e&&e.message)||String(e))+"). Pots signar igualment: el PDF sortirà igual.</div>";
+  }
 }
 async function openReportSign(){
   var s=sessions.find(function(x){return x.id===aid});if(!s)return;
@@ -6858,23 +6889,53 @@ async function openReportSign(){
   var rev=await ensureRevision(s);if(!rev)return;    // a signature needs a revision to belong to
   s=sessions.find(function(x){return x.id===aid})||s;
   renderContent();
-  var R=null;
+  var R=null,T0=s.timesheet,tsBlob=null;
+  var hasTs=!!(T0&&T0.rows&&T0.rows.length);
   expBusy("Preparant l'informe…");
-  try{R=await reportSession(s)}catch(e){R=null}finally{expBusy("")}
+  try{
+    R=await reportSession(s);
+    if(hasTs){
+      var tl=(T0.lang&&knownLang(T0.lang))?T0.lang:"ca";
+      if(await ensureLabels(tl)){
+        var T=await localizeTimesheet(s,tl);
+        if(T)tsBlob=await buildTimesheetBlob(Object.assign({},s,{timesheet:T}));
+      }
+    }
+  }catch(e){R=R||null}finally{expBusy("")}
   if(!R)return;
   R.rev=rev;
-  pvOpen("rep",s,"Informe · "+revNo(rev.n),
-    "La signatura queda lligada a la "+revNo(rev.n)+": si se n'emet una de nova, es torna a signar.",revSign(s,rev)||{});
-  pv.rev=rev;
-  var fr=document.createElement("iframe");
-  fr.setAttribute("title","Informe");
-  $$("pvDoc").appendChild(fr);
+  pvWire();
+  pv.sid=s.id;pv.rev=rev;pv.parts=[];
+  var doc=$$("pvDoc");doc.innerHTML="";
+  $$("pvTitle").textContent=hasTs?"Informe i full d'hores":"Informe · "+revNo(rev.n);
+  // the report, then its pads
+  doc.appendChild(pvPartTitle("📄 Informe · "+revNo(rev.n)));
+  var fr=document.createElement("iframe");fr.setAttribute("title","Informe");
+  doc.appendChild(fr);
+  var gR=revSign(s,rev)||{};
+  doc.appendChild(pvPadsEl("rep",s,gR,"Queda lligada a la "+revNo(rev.n)+": si se n'emet una de nova, es torna a signar."));
+  pv.parts.push({kind:"rep",g:gR});
+  // then the timesheet, and its pads
+  if(hasTs){
+    doc.appendChild(pvPartTitle("🕒 Full d'hores"));
+    var pages=document.createElement("div");pages.className="pv-pages";
+    doc.appendChild(pages);
+    doc.appendChild(pvPadsEl("ts",s,T0,"Si després canvies els dies, es torna a signar al full d'hores."));
+    pv.parts.push({kind:"ts",g:T0});
+    if(tsBlob)pvRenderPdf(tsBlob,pages);
+    else pages.innerHTML="<div class=\"ts-note\" style=\"padding:16px\">No s'ha pogut preparar el full (cal la llibreria PDF: comprova la connexió). Pots signar igualment.</div>";
+  }
+  $$("pvGen").innerHTML=hasTs?"&#128196; Desa i genera els PDF":"&#128196; Desa i genera el PDF";
+  $$("pvBack").style.display="flex";
+  $$("pvScroll").scrollTop=0;
+  // after the box has a size, or the canvases come up 0×0
+  setTimeout(pvInitPads,40);
   fr.addEventListener("load",function(){
     var d=fr.contentDocument;if(!d)return;
     var st=d.createElement("style");
     st.textContent=".sig{display:none!important}body{margin-top:16px!important;margin-bottom:16px!important}";
     d.head.appendChild(st);
-    // as tall as the report, so the one scroll runs from its top to the pads
+    // as tall as the report, so the one scroll runs on through the pads
     function fit(){fr.style.height=(d.documentElement.scrollHeight+4)+"px"}
     fit();setTimeout(fit,300);setTimeout(fit,1200);
     Array.prototype.forEach.call(d.images,function(im){if(!im.complete)im.addEventListener("load",fit)});
@@ -6887,37 +6948,6 @@ async function openReportSign(){
     });
   });
   fr.srcdoc=buildReportHTML(R.s,false,R.lang,rev);
-}
-// The timesheet: its PDF, page by page, exactly as it goes out.
-async function openTsSign(s){
-  s=s&&sessions.find(function(x){return x.id===s.id})||s;
-  if(!s)return;
-  var T0=s.timesheet;
-  if(!T0||!T0.rows||!T0.rows.length){openTimesheet();return}
-  var lang=(T0.lang&&knownLang(T0.lang))?T0.lang:"ca";
-  if(!await ensureLabels(lang))return;
-  var blob=null;
-  expBusy("Preparant el full…");
-  try{var T=await localizeTimesheet(s,lang);if(T)blob=await buildTimesheetBlob(Object.assign({},s,{timesheet:T}))}catch(e){blob=null}
-  finally{expBusy("")}
-  if(!blob){alert("No s'ha pogut preparar el full d'hores (cal la llibreria PDF: comprova la connexió).");return}
-  pvOpen("ts",s,"Full d'hores","Si després canvies els dies o les observacions, caldrà tornar-lo a signar.",T0);
-  try{
-    var lib=await loadPdfjs();
-    var doc=await lib.getDocument({data:new Uint8Array(await blob.arrayBuffer())}).promise;
-    var dpr=Math.min(2,window.devicePixelRatio||1),w=Math.min(($$("pvDoc").clientWidth||800)-24,900);
-    for(var i=1;i<=doc.numPages;i++){
-      if(pv.kind!=="ts")return;                    // closed meanwhile
-      var pg=await doc.getPage(i),vp0=pg.getViewport({scale:1});
-      var vp=pg.getViewport({scale:w/vp0.width*dpr});
-      var cv=document.createElement("canvas");cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);
-      cv.style.maxWidth=w+"px";
-      $$("pvDoc").appendChild(cv);
-      await pg.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;
-    }
-  }catch(e){
-    $$("pvDoc").innerHTML="<div class=\"ts-note\" style=\"padding:16px\">No s'ha pogut mostrar el full ("+esc((e&&e.message)||String(e))+"). Pots signar igualment: el PDF sortirà igual.</div>";
-  }
 }
 // The client's contact as one line. Not translated, for the same reason the
 // client and the machine aren't: it is a person's name and the title they go
@@ -9044,7 +9074,7 @@ function tsChipHTML(sess){
 }
 
 // ── TIMESHEET · modal ─────────────────────────────────────────────────────────
-var tsSess=null,tsAll=[],tsPick=null,tsWired=false,tsCols=TSCOL_ALL.slice();
+var tsSess=null,tsAll=[],tsPick=null,tsPads={},tsWired=false,tsCols=TSCOL_ALL.slice();
 
 // The pad is drawn white and kept white: it goes straight into the PDF as an
 // image, where a transparent background would come out as a black smear.
@@ -9223,12 +9253,21 @@ function openTimesheet(){
   tsCols=(T.cols&&T.cols.length)?TSCOL_ALL.filter(function(k){return T.cols.indexOf(k)>=0}):tsColDef();
   if(tsCols.indexOf("date")<0)tsCols.unshift("date");
   $$("tsRem").value=T.remarks||"";
-  // Signing happens on the review screen (2026-10-23), with the sheet in view.
-  // The date under the signatures is the day it is SIGNED, not the day it is
-  // saved; signing fills in today, a date typed by hand stays.
-  var sd=tsSignDate(T);
-  $$("tsSigState").innerHTML=(T.techSig||T.cliSig)?"&#9997; Signat"+(sd?" el "+esc(dmy(sd)):"")+(T.cliName?" · "+esc(T.cliName):""):"Sense signar";
+  $$("tsTechName").value=T.techName||active.tech||"";
+  $$("tsCliName").value=T.cliName||contactLine(active)||"";
   $$("tsBack").style.display="flex";
+  // The canvases have no size until the modal is laid out — but reading a
+  // rect inside tsInitPad flushes the pending layout, so this is safe right
+  // here. requestAnimationFrame would have been the reflex; it never fires
+  // in a backgrounded tab, and the pads would stay unusable.
+  tsPads.tech=tsInitPad("tsTechSig",T.techSig||"");
+  tsPads.cli=tsInitPad("tsCliSig",T.cliSig||"");
+  // The date under the signatures is the day the sheet is SIGNED, not the day
+  // it is saved (it used to be `generatedAt`, so saving again a week later
+  // re-dated a signature). Signing fills in today; a date typed by hand stays.
+  $$("tsSigDate").value=tsSignDate(T);
+  tsDateHand=false;
+  [tsPads.tech,tsPads.cli].forEach(function(pd){if(pd)pd.onInk=function(){if(!tsDateHand)$$("tsSigDate").value=todayISO()}});
   if(!tsWired){
     tsWired=true;
     wireCorrect("tsCorr","tsRem");
@@ -9241,15 +9280,9 @@ function openTimesheet(){
     $$("tsColReset").addEventListener("click",function(){tsCols=TSCOL_ALL.slice();tsColSaveDef(tsCols);tsRenderRows()});
     $$("tsAll").addEventListener("click",function(){tsAll.forEach(function(r){tsPick[r.date]=true});tsRenderRows()});
     $$("tsNone").addEventListener("click",function(){tsAll.forEach(function(r){tsPick[r.date]=false});tsRenderRows()});
-    $$("tsSignBtn").addEventListener("click",function(){
-      var id=tsSess.id,T0=(sessions.find(function(x){return x.id===id})||{}).timesheet;
-      // the calendar not loaded (offline, no copy): the sheet already saved is
-      // what gets reviewed and signed
-      if(!tsChosen().length&&T0&&T0.rows&&T0.rows.length){closeTimesheet();openTsSign(sessions.find(function(x){return x.id===id}));return}
-      if(!tsCommit())return;
-      closeTimesheet();
-      openTsSign(sessions.find(function(x){return x.id===id}));
-    });
+    $$("tsSigDate").addEventListener("input",function(){tsDateHand=true});
+    $$("tsTechClr").addEventListener("click",function(){if(tsPads.tech)tsPads.tech.clear()});
+    $$("tsCliClr").addEventListener("click",function(){if(tsPads.cli)tsPads.cli.clear()});
     $$("tsImportBtn").addEventListener("click",function(){$$("tsImportIn").click()});
     $$("tsImportIn").addEventListener("change",tsImportFile);
     $$("tsSave").addEventListener("click",function(){if(tsCommit())closeTimesheet()});
@@ -9290,6 +9323,7 @@ function tsImportFile(e){
 // sheet must not change under them because a day was edited in the calendar
 // afterwards; it also means the PDF rebuilds offline and rides along in the
 // Drive ZIP like the other reports.
+var tsDateHand=false;
 function tsSignDate(T){
   if(!T)return "";
   if(T.signDate!=null)return T.signDate;
@@ -9302,18 +9336,12 @@ function tsCommit(){
     from:$$("tsFrom").value,to:$$("tsTo").value,lang:$$("tsLang").value,
     cols:tsCols.slice(),
     remarks:$$("tsRem").value.trim(),
+    techName:$$("tsTechName").value.trim(),cliName:$$("tsCliName").value.trim(),
+    techSig:tsPads.tech?tsPads.tech.data():"",cliSig:tsPads.cli?tsPads.cli.data():"",
+    signDate:$$("tsSigDate").value||"",
     rows:rows.map(function(r){return Object.assign({},r)}),
     generatedAt:now()
   };
-  // The signatures (made on the review screen) stay with the sheet — unless
-  // what was signed has changed: then they go, and it is signed again.
-  var old=(sessions.find(function(x){return x.id===tsSess.id})||{}).timesheet||{};
-  var signed=!!(old.techSig||old.cliSig);
-  var same=JSON.stringify([old.rows,old.remarks,old.cols,old.lang])===JSON.stringify([T.rows,T.remarks,T.cols,T.lang]);
-  if(signed&&!same&&!confirm("Aquest full ja està signat. Amb aquests canvis la signatura s'esborra i caldrà tornar-lo a signar. Vols continuar?"))return false;
-  T.techName=old.techName||"";T.cliName=old.cliName||"";
-  if(same){T.techSig=old.techSig||"";T.cliSig=old.cliSig||"";T.signDate=old.signDate!=null?old.signDate:tsSignDate(old)}
-  else{T.techSig="";T.cliSig="";T.signDate=""}
   var id=tsSess.id;
   sessions=sessions.map(function(s){return s.id===id?Object.assign({},s,{timesheet:T}):s});
   scheduleSave();renderAll();

@@ -1926,6 +1926,23 @@ Now (`syncTick`, `scheduleSync`):
   preview (offline pick → ⏳, kept across a reload, played from IndexedDB)
   and in a sandbox (failed upload stays queued; upload once, blob gone, list
   cleared; the stale-copy race; the one-day clean-up).
+- **…the same entry for the hours; the timesheet form as it was** (version
+  2026-10-23 · 2, the user: "Revisa i signa l'informe should also review and
+  sign the hours; the timesheet must stay as before").
+  - The timesheet form, its code (`openTimesheet` … `tsCommit`), `tsPads` and
+    the #tsSigGrid CSS were restored verbatim from 1a15a10: pads, names and
+    sign date are back in the form, and `openTsSign` and the form's button
+    are gone. `tsInitPad`'s proportions fix stays.
+  - The review screen is built per document now: `openReportSign` shows the
+    report with its pads, then, if the visit has a timesheet, the sheet's
+    PDF pages (`pvRenderPdf`) with its pads and sign date
+    (`pvPadsEl(kind,…)`: ids `pvSig_<tech|cli>_<rep|ts>`, `pvName_…`,
+    `pvDate_ts`; `pvInitPads` after layout). `pvCommit` saves each part;
+    "Desa i genera els PDF" makes the timesheet first, awaited, then the
+    report — two reports saved at once could race on the offline queue.
+  - Tested with P-2026-140: both parts shown, all four pads signed, both
+    PDFs with the new signatures and the sheet dated 23/10/26; the
+    timesheet form has its pads and no review button.
 - **Review and sign** (version 2026-10-23 · 1, the user: "first I want to see
   the report, to show it and explain it a little, and if they agree, sign it
   in that same view; then generate it with the signatures. The hours the

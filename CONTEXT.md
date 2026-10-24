@@ -1926,6 +1926,15 @@ Now (`syncTick`, `scheduleSync`):
   preview (offline pick → ⏳, kept across a reload, played from IndexedDB)
   and in a sandbox (failed upload stays queued; upload once, blob gone, list
   cleared; the stale-copy race; the one-day clean-up).
+- **Word: the production-tests table on one line per cell** (version
+  2026-10-24 · 4, the user: "Proves de producció is two lines per cell"). The
+  ten columns had 2 mm side padding and 7 % widths, too narrow for "REBUIG",
+  "100,0 %" or the period, so Word broke them. The table now has its own
+  cells: 1 mm side padding, 7 pt values, 6.5 pt upper-case heads (numbers
+  right-aligned under right-aligned heads), and widths in mm measured with
+  Arial on the longest label/value of ca/es/en, with ~1.5 mm to spare:
+  23 · 31.5 · 29 · 15 · 14.5 · 4 × 12 · 21.5. Only the product and the test name can still wrap, when
+  they are long. The heading row repeats on a new page.
 - **ZIP file times in local time** (version 2026-10-24 · 3, the user: "the
   modified dates of the documents in the zip are two hours behind"). JSZip
   stores each entry's time from the Date's UTC fields and Windows reads the

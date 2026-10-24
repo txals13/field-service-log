@@ -1926,6 +1926,21 @@ Now (`syncTick`, `scheduleSync`):
   preview (offline pick → ⏳, kept across a reload, played from IndexedDB)
   and in a sandbox (failed upload stays queued; upload once, blob gone, list
   cleared; the stale-copy race; the one-day clean-up).
+- **The machine history in the project ZIP** (version 2026-10-24 · 5, the
+  user: "include the machine history report in the project ZIP as an
+  option"). New pick-list item `hist` ("📜 Historial de la màquina (HTML)"),
+  the only one NOT ticked the first time (`zpGet` defaults it to false), greyed
+  out when the visit names no machine. `buildHistoryHTML(cur,lang)` makes the
+  print button's page as a standalone HTML file — `mhRender(…,forPrint)` with
+  the visits through `localizeSession` in the report's language, the print
+  colours spelled out as CSS variables (incl. `--redbg`/`--orangebg`), footer
+  "Generat el …" (`RPT[lang].gen`) instead of "Imprès el". A visit whose
+  translation fails goes in as typed; the ZIP never stops for it. File:
+  `historial_de_la_maquina_<machine>_<client>.html` (`fileSafe(L.h.title)`).
+  Only with an explicit pick (`pick&&pick.hist`): archiving's no-pick ZIP is
+  unchanged, and the history does not count toward zipAt. Tested with a test
+  copy of the page exposing the builder (the export needs Google sign-in):
+  the Albera visits in ca/es/en, and the pick list row.
 - **Word: the production-tests table on one line per cell** (version
   2026-10-24 · 4, the user: "Proves de producció is two lines per cell"). The
   ten columns had 2 mm side padding and 7 % widths, too narrow for "REBUIG",

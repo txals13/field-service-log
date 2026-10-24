@@ -1926,6 +1926,14 @@ Now (`syncTick`, `scheduleSync`):
   preview (offline pick → ⏳, kept across a reload, played from IndexedDB)
   and in a sandbox (failed upload stays queued; upload once, blob gone, list
   cleared; the stale-copy race; the one-day clean-up).
+- **ZIP file times in local time** (version 2026-10-24 · 3, the user: "the
+  modified dates of the documents in the zip are two hours behind"). JSZip
+  stores each entry's time from the Date's UTC fields and Windows reads the
+  DOS time as local, so every file was the UTC offset early. The project /
+  Word-pack export sets `JSZip.defaults.date` to now shifted by the local
+  offset before building, and puts it back to null in its `finally`.
+  Checked with JSZip 3.10.1 read back by Python: 10:09 before, 12:09 after
+  (local 12:09, CEST), folders included.
 - **Contact phone and email** (version 2026-10-24 · 2, the user: "add the
   contact's phone and email to the client's details"). New session fields
   `contactPhone`, `contactEmail` (the form's Client section, under the

@@ -5551,7 +5551,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-24 · 2";
+var APP_VERSION="2026-10-24 · 3";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -11335,6 +11335,10 @@ async function exportSessionZip(s,kind,pick){
     var JSZipLib=await loadJSZip();
     if(!JSZipLib){alert("No s'ha pogut carregar la llibreria ZIP. Comprova la connexió.");return}
     var files=await sessionFolderFiles(token,s,folderId);
+    // JSZip writes each file's time as UTC and Windows reads it as local time:
+    // every file came out two hours early (2026-10-24, in summer time here).
+    // Shifted by the local offset, the ZIP shows the time on the wall clock.
+    JSZipLib.defaults.date=new Date(Date.now()-new Date().getTimezoneOffset()*60000);
     var zip=new JSZipLib();
     var base=reportBase(s,R.lang,rev.n),P=RPT[R.lang].pre;
 
@@ -11515,7 +11519,7 @@ async function exportSessionZip(s,kind,pick){
     if(lostMedia.length)alert("Atenció: el ZIP no porta "+lostMedia.length+" fitxer(s) que la visita té però que ja no són a Drive:\n· "+lostMedia.join("\n· ")
       +"\n\nSi els tens en algun altre lloc, afegeix-los a la carpeta de la visita i torna a fer el ZIP abans d'esborrar la visita.");
   }catch(e){alert("No s'ha pogut exportar el ZIP: "+((e&&e.message)||e))}
-  finally{expBusy("")}
+  finally{expBusy("");if(window.JSZip&&JSZip.defaults)JSZip.defaults.date=null}
   // Says WHICH file, because a suffix means the folder now holds more than one
   // go at this revision and that is worth noticing when it happens.
   if(arxOk){expBusy("\ud83d\uddc4 "+(arxOk===zipName?(drvArx?"Desat a Drive":"Desat a la carpeta d'arxiu"):"Desat com a "+arxOk));setTimeout(function(){expBusy("")},4000)}

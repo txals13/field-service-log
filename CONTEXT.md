@@ -1926,6 +1926,26 @@ Now (`syncTick`, `scheduleSync`):
   preview (offline pick → ⏳, kept across a reload, played from IndexedDB)
   and in a sandbox (failed upload stays queued; upload once, blob gone, list
   cleared; the stale-copy race; the one-day clean-up).
+- **Equipment number and year; the details in three groups** (version
+  2026-10-24 · 1, the user: "add the year of manufacture; machine/equipment
+  as the equipment's name and another field for its number; reorganise the
+  title area if it suits").
+  - New session fields `machineNo` and `year` (the visit form, now in three
+    sections — Client, Equip, Visita — `.nv-sec`); the header chip reads
+    "🔧 name · Nº number · year"; kept in the history record and
+    `histSession`; the machine history's N/S prefers `machineNo` over the
+    manual's serial. Machine identity is still client + machine name.
+  - Labels: `machine` is now "Màquina / Equip" (es/en likewise), new
+    `machineNo`, `year`, `gClient`, `gEquip`, `gVisit` (ca/es/en; the other
+    languages are translated again on the next export).
+  - `reportMetaGroups(s,R,V)` builds the three groups (number, year and
+    manual only when there is one; no manual in the validation report);
+    `pdfMetaGroups` draws them in three columns, label over value; the HTML
+    `.meta` grid and the Word meta table do the same. `pdfMetaBlock` stays
+    for the timesheet. The Excel's session sheet gets the number and year.
+  - Checked in the preview with P-2026-140 given a number and a year: the
+    form, the chip, the PDF and validation PDF headers, the HTML header, the
+    Word text and the Excel rows.
 - **Thumbnails tried again and dropped** (version 2026-10-23 · 8): b7a29be
   (· 7) brought the photo thumbnails back into the Adjunts column; the user
   undid it the same day ("I got confused: it would be worse when the report

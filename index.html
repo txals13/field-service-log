@@ -195,11 +195,11 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .btn-g:hover{background:var(--bg2)}
 .btn-danger{background:var(--redbg);border-color:rgba(239,68,68,.4);color:var(--red)}
 /* inputs */
-textarea,input[type=text],input[type=date],input[type=datetime-local],select{background:var(--bg2);border:1px solid var(--br2);border-radius:6px;color:var(--tx1);font-family:inherit;font-size:13px;padding:7px 10px;outline:none;width:100%;transition:border-color .15s}
-textarea,input[type=text],select{-webkit-appearance:none}
+textarea,input[type=text],input[type=tel],input[type=email],input[type=date],input[type=datetime-local],select{background:var(--bg2);border:1px solid var(--br2);border-radius:6px;color:var(--tx1);font-family:inherit;font-size:13px;padding:7px 10px;outline:none;width:100%;transition:border-color .15s}
+textarea,input[type=text],input[type=tel],input[type=email],select{-webkit-appearance:none}
 /* native pickers (date/time, scrollbars) follow the app's theme */
 :root{color-scheme:dark}:root.light{color-scheme:light}
-textarea:focus,input[type=text]:focus,select:focus{border-color:var(--gold)}
+textarea:focus,input[type=text]:focus,input[type=tel]:focus,input[type=email]:focus,select:focus{border-color:var(--gold)}
 textarea{resize:none;line-height:1.4}
 #eText{min-height:72px} /* ~3 lines: comfortable to read and edit even when short */
 .sel-sev{width:110px;font-size:12px;padding:6px 8px;cursor:pointer}
@@ -465,7 +465,7 @@ textarea{resize:none;line-height:1.4}
   body.m2 .m2-inl{display:inline-flex}
   body.m2 .m2-grd{display:grid}
   body.m2 .modal-actions button,body.m2 .input-ctrl button,body.m2 .m2-side button,body.m2 #sideTools>button,body.m2 select{min-height:44px}
-  body.m2 textarea,body.m2 input[type=text],body.m2 select{font-size:16px}
+  body.m2 textarea,body.m2 input[type=text],body.m2 input[type=tel],body.m2 input[type=email],body.m2 select{font-size:16px}
   /* top bar: the menu, the visit, find and more — the rest went to the sidebar */
   body.m2 #btnFullSync,body.m2 #btnLogout,body.m2 #btnTheme,body.m2 #btnImport{display:none!important}
   body.m2 .topbar{height:56px;gap:6px;padding:0 6px}
@@ -630,6 +630,10 @@ textarea{resize:none;line-height:1.4}
         <div style="display:flex;gap:6px">
           <input type="text" id="nContact" placeholder="Nom i cognoms" style="flex:2">
           <input type="text" id="nContactRole" placeholder="C&agrave;rrec" style="flex:1">
+        </div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <input type="tel" id="nContactPhone" placeholder="Tel&egrave;fon" inputmode="tel" style="flex:1">
+          <input type="email" id="nContactEmail" placeholder="Correu electr&ograve;nic" inputmode="email" style="flex:1.4">
         </div>
       </div>
       <div class="field"><label>Ubicació</label><input type="text" id="nLoc" placeholder="Planta, línia, adreça…"></div>
@@ -4056,6 +4060,8 @@ function renderContent(){
     +(active.location?"<span>📍 "+esc(active.location)+"</span>":"")
     +(active.tech?"<span>👤 "+esc(active.tech)+"</span>":"")
     +(contactLine(active)?"<span>🤝 "+esc(contactLine(active))+"</span>":"")
+    +(active.contactPhone?"<a href=\"tel:"+esc(String(active.contactPhone).replace(/[^\d+]/g,""))+"\" style=\"color:inherit;text-decoration:none\" title=\"Truca\">📞 "+esc(active.contactPhone)+"</a>":"")
+    +(active.contactEmail?"<a href=\"mailto:"+esc(active.contactEmail)+"\" style=\"color:inherit;text-decoration:none\" title=\"Escriu un correu\">✉ "+esc(active.contactEmail)+"</a>":"")
     +"<span>🕐 "+fts(active.createdAt)+"</span>"
     +manualChipHTML(active)
     +drawingsChipHTML(active)
@@ -5545,7 +5551,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-24 · 1";
+var APP_VERSION="2026-10-24 · 2";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -6123,6 +6129,8 @@ function openNewModal(editSess){
   $$("nTech").value=editSess?(editSess.tech||""):"";
   $$("nContact").value=editSess?(editSess.contact||""):"";
   $$("nContactRole").value=editSess?(editSess.contactRole||""):"";
+  $$("nContactPhone").value=editSess?(editSess.contactPhone||""):"";
+  $$("nContactEmail").value=editSess?(editSess.contactEmail||""):"";
   $$("nType").value=editSess?(editSess.type||"commissioning"):"commissioning";
   $$("newBack").style.display="flex";setTimeout(function(){$$("nClient").focus()},80);
 }
@@ -6156,18 +6164,20 @@ $$("nSave").addEventListener("click",function(){
   // Who signs on the client's side. Kept apart from the company name because it
   // is a person: it heads the report AND is what the signature pads start with.
   var cont=$$("nContact").value.trim(),crole=$$("nContactRole").value.trim();
+  // how to reach them (2026-10-24)
+  var cphone=$$("nContactPhone").value.trim(),cmail=$$("nContactEmail").value.trim();
   if(editingSessId){
     var editId=editingSessId,old=sessions.find(function(s){return s.id===editId});
     var folderChanged=old&&(old.client!==c||old.machine!==m||(old.tech||"")!==tech);
-    sessions=sessions.map(function(s){return s.id===editId?Object.assign({},s,{client:c,project:proj,machine:m,machineNo:mno,year:year,location:loc,tech:tech,type:type,contact:cont,contactRole:crole}):s});
-    closeNewModal();["nClient","nProject","nMachine","nMachineNo","nYear","nLoc","nTech","nContact","nContactRole"].forEach(function(id){$$(id).value=""});
+    sessions=sessions.map(function(s){return s.id===editId?Object.assign({},s,{client:c,project:proj,machine:m,machineNo:mno,year:year,location:loc,tech:tech,type:type,contact:cont,contactRole:crole,contactPhone:cphone,contactEmail:cmail}):s});
+    closeNewModal();["nClient","nProject","nMachine","nMachineNo","nYear","nLoc","nTech","nContact","nContactRole","nContactPhone","nContactEmail"].forEach(function(id){$$(id).value=""});
     scheduleSave();renderAll();
     if(isLoggedIn&&old&&folderChanged)renameSessionFolder(old,{client:c,machine:m,tech:tech});
   } else {
-    var s={id:uid(),client:c,project:proj,machine:m,machineNo:mno,year:year,location:loc,tech:tech,type:type,contact:cont,contactRole:crole,status:"open",createdAt:now(),entries:[],notes:""};
+    var s={id:uid(),client:c,project:proj,machine:m,machineNo:mno,year:year,location:loc,tech:tech,type:type,contact:cont,contactRole:crole,contactPhone:cphone,contactEmail:cmail,status:"open",createdAt:now(),entries:[],notes:""};
     sessions=[s].concat(sessions);aid=s.id;
     if(type==="production")setTimeout(function(){openProdList(true)},0);
-    closeNewModal();["nClient","nProject","nMachine","nMachineNo","nYear","nLoc","nTech","nContact","nContactRole"].forEach(function(id){$$(id).value=""});
+    closeNewModal();["nClient","nProject","nMachine","nMachineNo","nYear","nLoc","nTech","nContact","nContactRole","nContactPhone","nContactEmail"].forEach(function(id){$$(id).value=""});
     scheduleSave();renderAll();
     if(isLoggedIn)ensureSessionFolders(s.id); // create Drive folders up front, not on first upload
   }
@@ -6431,7 +6441,7 @@ var RPT={
   ca:{title:"Informe de servei tècnic",gen:"Generat el",
       types:{commissioning:"Posada en marxa",maintenance:"Manteniment",retrofit:"Millora / Retrofit",production:"Prova de producció"},
       sev:{info:"INFO",ok:"OK",warning:"AVÍS",issue:"PROBLEMA"},
-      client:"Client",contact:"Persona de contacte",project:"Número de projecte",machine:"Màquina / Equip",machineNo:"Núm. de màquina / equip",year:"Any de fabricació",gClient:"Client",gEquip:"Equip",gVisit:"Visita",location:"Ubicació",tech:"Tècnic",
+      client:"Client",contact:"Persona de contacte",project:"Número de projecte",machine:"Màquina / Equip",machineNo:"Núm. de màquina / equip",phone:"Telèfon",email:"Correu electrònic",year:"Any de fabricació",gClient:"Client",gEquip:"Equip",gVisit:"Visita",location:"Ubicació",tech:"Tècnic",
       start:"Inici",status:"Estat",manual:"Manual",open:"Oberta",closed:"Tancada",
       issues:"Problemes",warnings:"Avisos",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resolt",resN:"resolts",resolved:"Resolts",
       time:"Hora",entry1:"entrada",entryN:"entrades",noDate:"Sense data",ts:"Data i hora",severity:"Gravetat",tag:"Etiqueta",desc:"Descripció",att:"Adjunts",
@@ -6448,7 +6458,7 @@ var RPT={
   es:{title:"Informe de servicio técnico",gen:"Generado el",
       types:{commissioning:"Puesta en marcha",maintenance:"Mantenimiento",retrofit:"Mejora / Retrofit",production:"Prueba de producción"},
       sev:{info:"INFO",ok:"OK",warning:"AVISO",issue:"PROBLEMA"},
-      client:"Cliente",contact:"Persona de contacto",project:"Número de proyecto",machine:"Máquina / Equipo",machineNo:"N.º de máquina / equipo",year:"Año de fabricación",gClient:"Cliente",gEquip:"Equipo",gVisit:"Visita",location:"Ubicación",tech:"Técnico",
+      client:"Cliente",contact:"Persona de contacto",project:"Número de proyecto",machine:"Máquina / Equipo",machineNo:"N.º de máquina / equipo",phone:"Teléfono",email:"Correo electrónico",year:"Año de fabricación",gClient:"Cliente",gEquip:"Equipo",gVisit:"Visita",location:"Ubicación",tech:"Técnico",
       start:"Inicio",status:"Estado",manual:"Manual",open:"Abierta",closed:"Cerrada",
       issues:"Problemas",warnings:"Avisos",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resuelto",resN:"resueltos",resolved:"Resueltos",
       time:"Hora",entry1:"entrada",entryN:"entradas",noDate:"Sin fecha",ts:"Fecha y hora",severity:"Gravedad",tag:"Etiqueta",desc:"Descripción",att:"Adjuntos",
@@ -6465,7 +6475,7 @@ var RPT={
   en:{title:"Field Service Report",gen:"Generated on",
       types:{commissioning:"Commissioning",maintenance:"Maintenance",retrofit:"Upgrade / Retrofit",production:"Production test"},
       sev:{info:"INFO",ok:"OK",warning:"WARNING",issue:"ISSUE"},
-      client:"Client",contact:"Contact",project:"Project Number",machine:"Machine / Equipment",machineNo:"Machine / equipment no.",year:"Year of manufacture",gClient:"Client",gEquip:"Equipment",gVisit:"Visit",location:"Location",tech:"Technician",
+      client:"Client",contact:"Contact",project:"Project Number",machine:"Machine / Equipment",machineNo:"Machine / equipment no.",phone:"Phone",email:"Email",year:"Year of manufacture",gClient:"Client",gEquip:"Equipment",gVisit:"Visit",location:"Location",tech:"Technician",
       start:"Start",status:"Status",manual:"Manual",open:"Open",closed:"Closed",
       issues:"Issues",warnings:"Warnings",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resolved",resN:"resolved",resolved:"Resolved",
       time:"Time",entry1:"entry",entryN:"entries",noDate:"No date",ts:"Timestamp",severity:"Severity",tag:"Tag",desc:"Description",att:"Attachments",
@@ -8536,7 +8546,7 @@ function buildReportHTML(s,forPrint,lang,rev,opts){
     // the details in three groups: client, equipment, visit
     +"<div class=\"meta\">"+reportMetaGroups(s,R,false).map(function(g){
       return "<div><div class=\"mg\">"+esc(g.t)+"</div>"
-        +g.rows.map(function(p){return "<div class=\"ml\">"+esc(p[0])+"</div><div class=\"mv\">"+esc(p[1])+"</div>"}).join("")+"</div>";
+        +g.rows.map(function(p){return "<div class=\"ml\">"+esc(p[0])+"</div><div class=\"mv\">"+(p[2]?"<a href=\""+esc(p[2])+"\" style=\"color:inherit\">"+esc(p[1])+"</a>":esc(p[1]))+"</div>"}).join("")+"</div>";
     }).join("")+"</div>"
     +"<div class=\"stats\">"
     +"<div class=\"stat\" style=\"background:#fef2f2;color:#dc2626\"><strong style=\"font-size:26px;display:block\">"+errs+"</strong><span style=\"font-size:11px\">"+esc(R.issues)+"</span></div>"
@@ -9987,7 +9997,10 @@ function pdfFont(doc,ar,txt,style){
 function reportMetaGroups(s,R,V){
   function opt(l,v){return v?[[l,String(v)]]:[]}
   return [
-    {t:R.gClient||"Client",rows:[[R.client,s.client||"—"],[R.contact,contactLine(s)||"—"],[R.location,s.location||"—"]]},
+    {t:R.gClient||"Client",rows:[[R.client,s.client||"—"],[R.contact,contactLine(s)||"—"]]
+      .concat(s.contactPhone?[[R.phone||"Phone",String(s.contactPhone),"tel:"+String(s.contactPhone).replace(/[^\d+]/g,"")]]:[],
+              s.contactEmail?[[R.email||"Email",String(s.contactEmail),"mailto:"+String(s.contactEmail)]]:[],
+              [[R.location,s.location||"—"]])},
     {t:R.gEquip||"Equipment",rows:[[R.machine,s.machine||"—"]].concat(opt(R.machineNo,s.machineNo),opt(R.year,s.year),
       V?[]:opt(R.manual,s.manualRef&&(s.manualRef.base||s.manualRef.serial)))},
     {t:R.gVisit||"Visit",rows:[[R.project,s.project||"—"],[R.tech,s.tech||"—"],[R.start,fts(s.createdAt)],[R.status,s.status==="open"?R.open:R.closed]]}
@@ -10677,11 +10690,11 @@ async function buildXlsxBlob(s,lang,rev){
   wsD["!autofilter"]={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:detall.length-1,c:11}})};
 
   // Sheet 3 — who/what/when this list belongs to
-  var info=[[R.client,s.client||""],[R.contact,contactLine(s)],[C.project,s.project||""],[R.machine,s.machine||""]].concat(s.machineNo?[[R.machineNo,s.machineNo]]:[],s.year?[[R.year,s.year]]:[],[[R.location,s.location||""],
+  var info=[[R.client,s.client||""],[R.contact,contactLine(s)]].concat(s.contactPhone?[[R.phone,s.contactPhone]]:[],s.contactEmail?[[R.email,s.contactEmail]]:[]).concat([[C.project,s.project||""],[R.machine,s.machine||""]].concat(s.machineNo?[[R.machineNo,s.machineNo]]:[],s.year?[[R.year,s.year]]:[],[[R.location,s.location||""],
             [R.tech,s.tech||""],[C.type,R.types[s.type]||R.types.commissioning],[R.start,fts(s.createdAt)],
             [R.status,s.status==="open"?R.open:R.closed],[R.manual,(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||""],
             [R.revLbl,rev?("0"+rev.n).slice(-2)+" · "+dmy(rev.date):""],
-            [C.gen,fts(new Date().toISOString())],[C.lines,items.length],[C.refs,summarizeParts(items).length]]);
+            [C.gen,fts(new Date().toISOString())],[C.lines,items.length],[C.refs,summarizeParts(items).length]]));
   (function(){var cc=s.counters||{},K=R.ctr;if(!K)return;
     [["arr",K.arr],["dep",K.dep]].forEach(function(x){var r=ctrRead(cc[x[0]]);if(!r)return;
       if(r.h!=null)info.push([K.hours+" · "+x[1],r.h]);

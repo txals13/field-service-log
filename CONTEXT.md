@@ -1926,6 +1926,15 @@ Now (`syncTick`, `scheduleSync`):
   preview (offline pick → ⏳, kept across a reload, played from IndexedDB)
   and in a sandbox (failed upload stays queued; upload once, blob gone, list
   cleared; the stale-copy race; the one-day clean-up).
+- **Contact phone and email** (version 2026-10-24 · 2, the user: "add the
+  contact's phone and email to the client's details"). New session fields
+  `contactPhone`, `contactEmail` (the form's Client section, under the
+  contact; `input[type=tel|email]` now share the text inputs' styles); the
+  header shows "📞 …" (tel: link, digits and + only) and "✉ …" (mailto:);
+  `reportMetaGroups` adds them to the Client group when filled, a row's
+  optional third element being a link the HTML report uses; the Excel's
+  session sheet lists them. Labels `phone`, `email` (ca/es/en). Checked in
+  the preview: form, header links, PDF header, HTML links, Word text, Excel.
 - **Equipment number and year; the details in three groups** (version
   2026-10-24 · 1, the user: "add the year of manufacture; machine/equipment
   as the equipment's name and another field for its number; reorganise the

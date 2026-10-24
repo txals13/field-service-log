@@ -88,6 +88,7 @@ mark{background:var(--goldbg);color:var(--goldtx);padding:0 1px;border-radius:2p
 /* session header */
 .s-hdr{padding:8px 12px;border-bottom:1px solid var(--br);background:var(--bg1);flex-shrink:0}
 .s-hdr-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+.nv-sec{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--gold);margin:14px 0 8px;padding-bottom:3px;border-bottom:1px solid var(--br)}
 .s-hdr-meta{font-size:11px;color:var(--tx2);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 /* filter */
 .filter-row{display:flex;align-items:center;gap:8px;padding:5px 12px;border-bottom:1px solid var(--br);background:var(--bg0);flex-shrink:0}
@@ -623,6 +624,7 @@ textarea{resize:none;line-height:1.4}
   <div class="modal-back" id="newBack" style="display:none">
     <div class="modal">
       <div class="modal-title" id="newModalTitle">&#9658; Nova visita de servei</div>
+      <div class="nv-sec" style="margin-top:0">Client</div>
       <div class="field"><label>Client / Empresa *</label><input type="text" id="nClient" placeholder="Nom del client"></div>
       <div class="field"><label>Persona de contacte</label>
         <div style="display:flex;gap:6px">
@@ -630,9 +632,15 @@ textarea{resize:none;line-height:1.4}
           <input type="text" id="nContactRole" placeholder="C&agrave;rrec" style="flex:1">
         </div>
       </div>
-      <div class="field"><label>Número de projecte</label><input type="text" id="nProject" placeholder="Núm. de projecte"></div>
-      <div class="field"><label>Màquina / Equip *</label><input type="text" id="nMachine" placeholder="Model o referència"></div>
       <div class="field"><label>Ubicació</label><input type="text" id="nLoc" placeholder="Planta, línia, adreça…"></div>
+      <div class="nv-sec">Equip</div>
+      <div class="field"><label>Màquina / Equip *</label><input type="text" id="nMachine" placeholder="Nom de l'equip (model)"></div>
+      <div style="display:flex;gap:8px">
+        <div class="field" style="flex:2"><label>Núm. de màquina / equip</label><input type="text" id="nMachineNo" placeholder="Número de sèrie o de màquina"></div>
+        <div class="field" style="flex:1;min-width:110px"><label>Any de fabricació</label><input type="text" id="nYear" inputmode="numeric" maxlength="4" placeholder="p. ex. 2019"></div>
+      </div>
+      <div class="nv-sec">Visita</div>
+      <div class="field"><label>Número de projecte</label><input type="text" id="nProject" placeholder="Núm. de projecte"></div>
       <div class="field"><label>Tècnic</label><input type="text" id="nTech" placeholder="Nom del tècnic"></div>
       <div class="field"><label>Tipus</label>
         <select id="nType">
@@ -4044,7 +4052,7 @@ function renderContent(){
     +"</div>"
     +"<div class=\"s-hdr-meta\">"
     +(active.project?"<span>&#128209; "+esc(active.project)+"</span>":"")
-    +(active.machine?"<span>🔧 "+esc(active.machine)+"</span>":"")
+    +(active.machine?"<span>🔧 "+esc(active.machine)+(active.machineNo?" · Nº "+esc(active.machineNo):"")+(active.year?" · "+esc(active.year):"")+"</span>":"")
     +(active.location?"<span>📍 "+esc(active.location)+"</span>":"")
     +(active.tech?"<span>👤 "+esc(active.tech)+"</span>":"")
     +(contactLine(active)?"<span>🤝 "+esc(contactLine(active))+"</span>":"")
@@ -5537,7 +5545,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-23 · 8";
+var APP_VERSION="2026-10-24 · 1";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -6109,6 +6117,8 @@ function openNewModal(editSess){
   $$("nClient").value=editSess?(editSess.client||""):"";
   $$("nProject").value=editSess?(editSess.project||""):"";
   $$("nMachine").value=editSess?(editSess.machine||""):"";
+  $$("nMachineNo").value=editSess?(editSess.machineNo||""):"";
+  $$("nYear").value=editSess?(editSess.year||""):"";
   $$("nLoc").value=editSess?(editSess.location||""):"";
   $$("nTech").value=editSess?(editSess.tech||""):"";
   $$("nContact").value=editSess?(editSess.contact||""):"";
@@ -6140,21 +6150,24 @@ $$("nSave").addEventListener("click",function(){
   var c=$$("nClient").value.trim(),m=$$("nMachine").value.trim();
   if(!c||!m){alert("El client i la màquina són obligatoris.");return}
   var proj=$$("nProject").value.trim(),loc=$$("nLoc").value.trim(),tech=$$("nTech").value.trim(),type=$$("nType").value;
+  // the equipment's own number and year (2026-10-24): what tells two machines
+  // of the same model apart, and how old this one is
+  var mno=$$("nMachineNo").value.trim(),year=$$("nYear").value.trim();
   // Who signs on the client's side. Kept apart from the company name because it
   // is a person: it heads the report AND is what the signature pads start with.
   var cont=$$("nContact").value.trim(),crole=$$("nContactRole").value.trim();
   if(editingSessId){
     var editId=editingSessId,old=sessions.find(function(s){return s.id===editId});
     var folderChanged=old&&(old.client!==c||old.machine!==m||(old.tech||"")!==tech);
-    sessions=sessions.map(function(s){return s.id===editId?Object.assign({},s,{client:c,project:proj,machine:m,location:loc,tech:tech,type:type,contact:cont,contactRole:crole}):s});
-    closeNewModal();["nClient","nProject","nMachine","nLoc","nTech","nContact","nContactRole"].forEach(function(id){$$(id).value=""});
+    sessions=sessions.map(function(s){return s.id===editId?Object.assign({},s,{client:c,project:proj,machine:m,machineNo:mno,year:year,location:loc,tech:tech,type:type,contact:cont,contactRole:crole}):s});
+    closeNewModal();["nClient","nProject","nMachine","nMachineNo","nYear","nLoc","nTech","nContact","nContactRole"].forEach(function(id){$$(id).value=""});
     scheduleSave();renderAll();
     if(isLoggedIn&&old&&folderChanged)renameSessionFolder(old,{client:c,machine:m,tech:tech});
   } else {
-    var s={id:uid(),client:c,project:proj,machine:m,location:loc,tech:tech,type:type,contact:cont,contactRole:crole,status:"open",createdAt:now(),entries:[],notes:""};
+    var s={id:uid(),client:c,project:proj,machine:m,machineNo:mno,year:year,location:loc,tech:tech,type:type,contact:cont,contactRole:crole,status:"open",createdAt:now(),entries:[],notes:""};
     sessions=[s].concat(sessions);aid=s.id;
     if(type==="production")setTimeout(function(){openProdList(true)},0);
-    closeNewModal();["nClient","nProject","nMachine","nLoc","nTech","nContact","nContactRole"].forEach(function(id){$$(id).value=""});
+    closeNewModal();["nClient","nProject","nMachine","nMachineNo","nYear","nLoc","nTech","nContact","nContactRole"].forEach(function(id){$$(id).value=""});
     scheduleSave();renderAll();
     if(isLoggedIn)ensureSessionFolders(s.id); // create Drive folders up front, not on first upload
   }
@@ -6418,7 +6431,7 @@ var RPT={
   ca:{title:"Informe de servei tècnic",gen:"Generat el",
       types:{commissioning:"Posada en marxa",maintenance:"Manteniment",retrofit:"Millora / Retrofit",production:"Prova de producció"},
       sev:{info:"INFO",ok:"OK",warning:"AVÍS",issue:"PROBLEMA"},
-      client:"Client",contact:"Persona de contacte",project:"Número de projecte",machine:"Màquina",location:"Ubicació",tech:"Tècnic",
+      client:"Client",contact:"Persona de contacte",project:"Número de projecte",machine:"Màquina / Equip",machineNo:"Núm. de màquina / equip",year:"Any de fabricació",gClient:"Client",gEquip:"Equip",gVisit:"Visita",location:"Ubicació",tech:"Tècnic",
       start:"Inici",status:"Estat",manual:"Manual",open:"Oberta",closed:"Tancada",
       issues:"Problemes",warnings:"Avisos",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resolt",resN:"resolts",resolved:"Resolts",
       time:"Hora",entry1:"entrada",entryN:"entrades",noDate:"Sense data",ts:"Data i hora",severity:"Gravetat",tag:"Etiqueta",desc:"Descripció",att:"Adjunts",
@@ -6435,7 +6448,7 @@ var RPT={
   es:{title:"Informe de servicio técnico",gen:"Generado el",
       types:{commissioning:"Puesta en marcha",maintenance:"Mantenimiento",retrofit:"Mejora / Retrofit",production:"Prueba de producción"},
       sev:{info:"INFO",ok:"OK",warning:"AVISO",issue:"PROBLEMA"},
-      client:"Cliente",contact:"Persona de contacto",project:"Número de proyecto",machine:"Máquina",location:"Ubicación",tech:"Técnico",
+      client:"Cliente",contact:"Persona de contacto",project:"Número de proyecto",machine:"Máquina / Equipo",machineNo:"N.º de máquina / equipo",year:"Año de fabricación",gClient:"Cliente",gEquip:"Equipo",gVisit:"Visita",location:"Ubicación",tech:"Técnico",
       start:"Inicio",status:"Estado",manual:"Manual",open:"Abierta",closed:"Cerrada",
       issues:"Problemas",warnings:"Avisos",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resuelto",resN:"resueltos",resolved:"Resueltos",
       time:"Hora",entry1:"entrada",entryN:"entradas",noDate:"Sin fecha",ts:"Fecha y hora",severity:"Gravedad",tag:"Etiqueta",desc:"Descripción",att:"Adjuntos",
@@ -6452,7 +6465,7 @@ var RPT={
   en:{title:"Field Service Report",gen:"Generated on",
       types:{commissioning:"Commissioning",maintenance:"Maintenance",retrofit:"Upgrade / Retrofit",production:"Production test"},
       sev:{info:"INFO",ok:"OK",warning:"WARNING",issue:"ISSUE"},
-      client:"Client",contact:"Contact",project:"Project Number",machine:"Machine",location:"Location",tech:"Technician",
+      client:"Client",contact:"Contact",project:"Project Number",machine:"Machine / Equipment",machineNo:"Machine / equipment no.",year:"Year of manufacture",gClient:"Client",gEquip:"Equipment",gVisit:"Visit",location:"Location",tech:"Technician",
       start:"Start",status:"Status",manual:"Manual",open:"Open",closed:"Closed",
       issues:"Issues",warnings:"Warnings",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resolved",resN:"resolved",resolved:"Resolved",
       time:"Time",entry1:"entry",entryN:"entries",noDate:"No date",ts:"Timestamp",severity:"Severity",tag:"Tag",desc:"Description",att:"Attachments",
@@ -7180,6 +7193,8 @@ function mhCardIssues(x,closed,all,H){
 // there is nothing underneath. And "aquesta" means nothing to a client.
 function mhRender(cur,all,L,forPrint){
   var H=L.h,serial=null;
+  // the machine's own number first, then the one on its manual
+  all.forEach(function(x){if(!serial&&x.machineNo)serial=x.machineNo});
   all.forEach(function(x){if(!serial&&x.manualRef&&x.manualRef.serial)serial=x.manualRef.serial});
   var newest=all[0]||cur;
   var title=(mhDisp(newest.machine)||"—")+" · "+(mhDisp(newest.client)||"—");
@@ -7862,7 +7877,7 @@ function histRecord(s,arch){
       if(e.trF)o.trF=e.trF;
       return o;
     });
-  return {id:s.id,at:sStamp(s)||s.createdAt||"",client:s.client||"",machine:s.machine||"",project:s.project||"",location:s.location||"",
+  return {id:s.id,at:sStamp(s)||s.createdAt||"",client:s.client||"",machine:s.machine||"",machineNo:s.machineNo||"",year:s.year||"",project:s.project||"",location:s.location||"",
     type:s.type||"",status:s.status||"",createdAt:s.createdAt||"",closedAt:s.closedAt||"",writeLang:s.writeLang||"",
     serial:(s.manualRef&&s.manualRef.serial)||"",rev:r?{n:r.n,date:r.date}:null,range:tsRange(s),
     counts:severityCounts(es),n:es.length,entries:keep,counters:s.counters||null,
@@ -7871,7 +7886,7 @@ function histRecord(s,arch){
 // A record dressed as a visit, for the code that reads visits.
 function histSession(rec){
   if(!rec||rec.del)return null;
-  return {id:rec.id,client:rec.client,machine:rec.machine,project:rec.project,location:rec.location,type:rec.type,status:rec.status,
+  return {id:rec.id,client:rec.client,machine:rec.machine,machineNo:rec.machineNo||"",year:rec.year||"",project:rec.project,location:rec.location,type:rec.type,status:rec.status,
     createdAt:rec.createdAt,closedAt:rec.closedAt,writeLang:rec.writeLang,manualRef:rec.serial?{serial:rec.serial}:null,
     revisions:rec.rev?[rec.rev]:[],entries:rec.entries||[],counters:rec.counters||null,_hist:true,_counts:rec.counts,_n:rec.n,_range:rec.range,_arch:rec.arch};
 }
@@ -8504,8 +8519,10 @@ function buildReportHTML(s,forPrint,lang,rev,opts){
   return "<!DOCTYPE html><html lang=\""+lang+"\"><head><meta charset=\"UTF-8\"><title>"+esc(R.title)+" - "+esc(s.client||"")+"</title>"
     +"<style>body{font-family:Arial,sans-serif;max-width:1000px;margin:40px auto;padding:0 24px;color:#111827}"
     +"h1{font-size:22px;font-weight:800;margin:8px 0 4px}"
-    +".meta{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;margin:16px 0}"
-    +".ml{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:#9ca3af;font-weight:600}.mv{font-size:13px;font-weight:700}"
+    +".meta{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;margin:16px 0}"
+    +"@media(max-width:640px){.meta{grid-template-columns:1fr;gap:12px}}"
+    +".mg{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#b45309;border-bottom:1px solid #f59e0b;padding-bottom:3px;margin-bottom:6px}"
+    +".ml{font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;color:#9ca3af;font-weight:600;margin-top:7px}.mv{font-size:13px;font-weight:700;overflow-wrap:anywhere}"
     +".stats{display:flex;gap:12px;margin:16px 0}.stat{text-align:center;padding:10px 20px;border-radius:8px}"
     +"table{width:100%;border-collapse:collapse}td{vertical-align:top}th{background:#f3f4f6;color:#4b5563;font-weight:600;padding:7px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid #d1d5db}"
     +"tr:nth-child(even) td{background:#f9fafb}"
@@ -8516,16 +8533,11 @@ function buildReportHTML(s,forPrint,lang,rev,opts){
     +"<span style=\"background:"+tm.bg+";color:"+tm.tx+";border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700;letter-spacing:1px\">"+esc(tl.toUpperCase())+"</span>"
     +"<h1>"+esc(R.title)+"</h1>"
     +"<div style=\"color:#6b7280;font-size:13px\">"+esc(revLine(R,rev,tl))+"</div></div>"
-    +"<div class=\"meta\">"
-    +"<div><div class=\"ml\">"+esc(R.client)+"</div><div class=\"mv\">"+esc(s.client||"—")+"</div></div>"
-    +"<div><div class=\"ml\">"+esc(R.contact)+"</div><div class=\"mv\">"+esc(contactLine(s)||"—")+"</div></div>"
-    +"<div><div class=\"ml\">"+esc(R.project)+"</div><div class=\"mv\">"+esc(s.project||"—")+"</div></div>"
-    +"<div><div class=\"ml\">"+esc(R.machine)+"</div><div class=\"mv\">"+esc(s.machine||"—")+"</div></div>"
-    +"<div><div class=\"ml\">"+esc(R.location)+"</div><div class=\"mv\">"+esc(s.location||"—")+"</div></div>"
-    +"<div><div class=\"ml\">"+esc(R.tech)+"</div><div class=\"mv\">"+esc(s.tech||"—")+"</div></div>"
-    +"<div><div class=\"ml\">"+esc(R.start)+"</div><div class=\"mv\">"+fts(s.createdAt)+"</div></div>"
-    +"<div><div class=\"ml\">"+esc(R.status)+"</div><div class=\"mv\">"+esc(s.status==="open"?R.open:R.closed)+"</div></div>"
-    +"</div>"
+    // the details in three groups: client, equipment, visit
+    +"<div class=\"meta\">"+reportMetaGroups(s,R,false).map(function(g){
+      return "<div><div class=\"mg\">"+esc(g.t)+"</div>"
+        +g.rows.map(function(p){return "<div class=\"ml\">"+esc(p[0])+"</div><div class=\"mv\">"+esc(p[1])+"</div>"}).join("")+"</div>";
+    }).join("")+"</div>"
     +"<div class=\"stats\">"
     +"<div class=\"stat\" style=\"background:#fef2f2;color:#dc2626\"><strong style=\"font-size:26px;display:block\">"+errs+"</strong><span style=\"font-size:11px\">"+esc(R.issues)+"</span></div>"
     +"<div class=\"stat\" style=\"background:#fff7ed;color:#ea580c\"><strong style=\"font-size:26px;display:block\">"+warns+"</strong><span style=\"font-size:11px\">"+esc(R.warnings)+"</span></div>"
@@ -9966,8 +9978,44 @@ function pdfFont(doc,ar,txt,style){
   if(ar&&hasArabic(txt)){doc.setFont(ar,"normal");return true}
   doc.setFont("helvetica",style||"normal");return false;
 }
-// Two-column LABEL / value block, shared by the service report and the
-// timesheet. The value WRAPS: it used to be cut to its first line, which
+// ── THE VISIT'S DETAILS IN THREE GROUPS (2026-10-24) ─────────────────────────
+// "Add the year of manufacture, the machine/equipment as its name and another
+// field for its number; reorganise the title area if it suits." Client,
+// Equipment and Visit side by side, label over value — so each group reads
+// on its own and a long address or machine name wraps in its own column. The
+// number, the year and the manual only show when there is one.
+function reportMetaGroups(s,R,V){
+  function opt(l,v){return v?[[l,String(v)]]:[]}
+  return [
+    {t:R.gClient||"Client",rows:[[R.client,s.client||"—"],[R.contact,contactLine(s)||"—"],[R.location,s.location||"—"]]},
+    {t:R.gEquip||"Equipment",rows:[[R.machine,s.machine||"—"]].concat(opt(R.machineNo,s.machineNo),opt(R.year,s.year),
+      V?[]:opt(R.manual,s.manualRef&&(s.manualRef.base||s.manualRef.serial)))},
+    {t:R.gVisit||"Visit",rows:[[R.project,s.project||"—"],[R.tech,s.tech||"—"],[R.start,fts(s.createdAt)],[R.status,s.status==="open"?R.open:R.closed]]}
+  ];
+}
+function pdfMetaGroups(doc,groups,M,CW,y,ar){
+  var gap=6,cw=(CW-gap*2)/3,LH=3.9,bottom=y;
+  groups.forEach(function(g,gi){
+    var x=M+gi*(cw+gap),yy=y;
+    pdfFont(doc,ar,g.t,"bold");doc.setFontSize(7.5);doc.setTextColor(180,83,9);
+    doc.text(String(g.t).toUpperCase(),x,yy);
+    doc.setDrawColor(245,158,11);doc.setLineWidth(0.3);doc.line(x,yy+1.5,x+cw,yy+1.5);
+    yy+=5.6;
+    g.rows.forEach(function(p){
+      pdfFont(doc,ar,p[0],"normal");doc.setFontSize(6.8);doc.setTextColor(156,163,175);
+      doc.text(String(p[0]).toUpperCase(),x,yy);yy+=3.4;
+      doc.setFontSize(8.8);doc.setTextColor(17,24,39);
+      var rtl=startsRtl(p[1]);pdfFont(doc,ar,p[1],"bold");
+      var ln=doc.splitTextToSize(String(p[1]),cw);
+      ln.forEach(function(l,k){doc.text(l,x+(rtl?cw-doc.getTextWidth(l):0),yy+k*LH)});
+      yy+=(ln.length-1)*LH+5.6;
+    });
+    bottom=Math.max(bottom,yy);
+  });
+  doc.setFont("helvetica","normal");doc.setTextColor(17,24,39);
+  return bottom+3;
+}
+// Two-column LABEL / value block, used by the timesheet. The value WRAPS: it used to be cut to its first line, which
 // silently dropped the rest of a long one — a full address under UBICACIÓ came
 // out halfway. Returns the y to carry on from.
 function pdfMetaBlock(doc,meta,M,CW,y,ar){
@@ -10134,17 +10182,9 @@ async function buildPdfBlob(s,lang,rev,opts){
   doc.setDrawColor(245,158,11);doc.setLineWidth(0.8);doc.line(M,y+15,W-M,y+15);
   y+=21;
 
-  // metadata, two columns
-  var meta=[[R.client,s.client||"—"],[R.contact,contactLine(s)||"—"],[R.project,s.project||"—"],[R.machine,s.machine||"—"],
-            [R.location,s.location||"—"],[R.tech,s.tech||"—"],[R.start,fts(s.createdAt)],
-            [R.status,s.status==="open"?R.open:R.closed]];
-  // The spare-parts manual has nothing to do with a production test: not in
-  // the validation report (2026-10-18).
-  if(!V)meta.push([R.manual,(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||"—"]);
-  // Values used to sit at a fixed x, which the widest label ran straight into.
-  // pdfMetaBlock measures the labels, starts the values past the longest one,
-  // and wraps them.
-  y=pdfMetaBlock(doc,meta,M,CW,y,ar);
+  // the details in three groups (the manual is left out of the validation
+  // report: it has nothing to do with a production test)
+  y=pdfMetaGroups(doc,reportMetaGroups(s,R,V),M,CW,y,ar);
 
   if(!V){
   // counters
@@ -10637,11 +10677,11 @@ async function buildXlsxBlob(s,lang,rev){
   wsD["!autofilter"]={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:detall.length-1,c:11}})};
 
   // Sheet 3 — who/what/when this list belongs to
-  var info=[[R.client,s.client||""],[R.contact,contactLine(s)],[C.project,s.project||""],[R.machine,s.machine||""],[R.location,s.location||""],
+  var info=[[R.client,s.client||""],[R.contact,contactLine(s)],[C.project,s.project||""],[R.machine,s.machine||""]].concat(s.machineNo?[[R.machineNo,s.machineNo]]:[],s.year?[[R.year,s.year]]:[],[[R.location,s.location||""],
             [R.tech,s.tech||""],[C.type,R.types[s.type]||R.types.commissioning],[R.start,fts(s.createdAt)],
             [R.status,s.status==="open"?R.open:R.closed],[R.manual,(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||""],
             [R.revLbl,rev?("0"+rev.n).slice(-2)+" · "+dmy(rev.date):""],
-            [C.gen,fts(new Date().toISOString())],[C.lines,items.length],[C.refs,summarizeParts(items).length]];
+            [C.gen,fts(new Date().toISOString())],[C.lines,items.length],[C.refs,summarizeParts(items).length]]);
   (function(){var cc=s.counters||{},K=R.ctr;if(!K)return;
     [["arr",K.arr],["dep",K.dep]].forEach(function(x){var r=ctrRead(cc[x[0]]);if(!r)return;
       if(r.h!=null)info.push([K.hours+" · "+x[1],r.h]);
@@ -10765,16 +10805,11 @@ async function buildDocxDocument(D,s,lang,rev,opts){
   }
   // Measured by jsPDF, exactly as the PDF measures them.
   var L=await loadPdfLibs(),mdoc=L?new L.jsPDF({unit:"mm",format:"a4"}):null;
-  var colMm,tagPt=8,attPt=8,valX=30;
+  var colMm,tagPt=8,attPt=8;
   if(mdoc){
     var COL=entryColWidths(mdoc,R,entries,attTexts,null,CW,0);
     colMm=[COL.ts,COL.sev,COL.tagC.cellWidth,COL.desc(),COL.attC.cellWidth];
     tagPt=COL.tagC.fontSize;attPt=COL.attC.fontSize;
-    mdoc.setFont("helvetica","normal");mdoc.setFontSize(8.5);
-    valX=0;[R.client,R.contact,R.project,R.machine,R.location,R.tech,R.start,R.status,R.manual].forEach(function(l){
-      valX=Math.max(valX,mdoc.getTextWidth(String(l).toUpperCase()));
-    });
-    valX+=4;
   } else {
     colMm=[19,21,18,74,50]; // no jsPDF: sane fallback, same shape
   }
@@ -10895,26 +10930,20 @@ async function buildDocxDocument(D,s,lang,rev,opts){
     ]});
   });
 
-  // Metadata: the PDF's two-column LABEL / value grid, as a borderless table.
-  var meta=[[R.client,s.client||"—"],[R.contact,contactLine(s)||"—"],[R.project,s.project||"—"],[R.machine,s.machine||"—"],
-            [R.location,s.location||"—"],[R.tech,s.tech||"—"],[R.start,fts(s.createdAt)],
-            [R.status,s.status==="open"?R.open:R.closed],[R.manual,(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||"—"]];
-  var halfW=CW/2,metaCols=[valX,halfW-valX,valX,halfW-valX].map(tw);
-  var metaRows=[];
-  for(var mi=0;mi<meta.length;mi+=2){
-    var cells=[];
-    [meta[mi],meta[mi+1]].forEach(function(p,col){
-      if(!p){cells.push(new D.TableCell({borders:noBorders,width:{size:metaCols[col*2],type:D.WidthType.DXA},children:[P({})]}),
-                        new D.TableCell({borders:noBorders,width:{size:metaCols[col*2+1],type:D.WidthType.DXA},children:[P({})]}));return}
-      cells.push(new D.TableCell({borders:noBorders,margins:{top:20,bottom:20,left:0,right:57},width:{size:metaCols[col*2],type:D.WidthType.DXA},
-        children:[P({children:[T({text:String(p[0]).toUpperCase(),size:hp(8.5),font:"Arial",color:"9CA3AF"})]})]}));
-      cells.push(new D.TableCell({borders:noBorders,margins:{top:20,bottom:20,left:0,right:57},width:{size:metaCols[col*2+1],type:D.WidthType.DXA},
-        children:[P({children:[T({text:String(p[1]),bold:true,size:hp(8.5),font:"Arial",color:"111827"})]})]}));
-    });
-    metaRows.push(new D.TableRow({children:cells}));
-  }
+  // The details in three groups — client, equipment, visit — as the PDF has
+  // them: three columns of a borderless table, label over value.
+  var mGap=6,mCol=(CW-mGap*2)/3,metaCols=[mCol+mGap,mCol+mGap,mCol].map(tw);
   var metaTable=new D.Table({width:{size:tw(CW),type:D.WidthType.DXA},columnWidths:metaCols,
-    layout:D.TableLayoutType.FIXED,borders:{top:NONE,bottom:NONE,left:NONE,right:NONE,insideHorizontal:NONE,insideVertical:NONE},rows:metaRows});
+    layout:D.TableLayoutType.FIXED,borders:{top:NONE,bottom:NONE,left:NONE,right:NONE,insideHorizontal:NONE,insideVertical:NONE},
+    rows:[new D.TableRow({children:reportMetaGroups(s,R,false).map(function(g,gi){
+      var ch=[P({spacing:{after:60},border:{bottom:{style:D.BorderStyle.SINGLE,size:4,color:"F59E0B",space:1}},
+        children:[T({text:String(g.t).toUpperCase(),bold:true,size:hp(7.5),font:"Arial",color:"B45309"})]})];
+      g.rows.forEach(function(p){
+        ch.push(P({spacing:{before:60},children:[T({text:String(p[0]).toUpperCase(),size:hp(6.8),font:"Arial",color:"9CA3AF"})]}));
+        ch.push(P({children:[T({text:String(p[1]),bold:true,size:hp(8.8),font:"Arial",color:"111827"})]}));
+      });
+      return new D.TableCell({borders:noBorders,margins:{top:0,bottom:0,left:0,right:gi<2?tw(mGap):0},width:{size:metaCols[gi],type:D.WidthType.DXA},children:ch});
+    })})]});
 
   var counters=[T({text:R.issues+": ",bold:true,size:hp(9),font:"Arial",color:"DC2626"}),T({text:errs+"      ",size:hp(9),font:"Arial",color:"DC2626"}),
                 T({text:R.warnings+": ",bold:true,size:hp(9),font:"Arial",color:"EA580C"}),T({text:warns+"      ",size:hp(9),font:"Arial",color:"EA580C"})]

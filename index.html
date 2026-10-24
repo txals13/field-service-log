@@ -5551,7 +5551,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-24 · 3";
+var APP_VERSION="2026-10-24 · 4";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -11063,10 +11063,18 @@ async function buildDocxDocument(D,s,lang,rev,opts){
   var ptTests=s.prodTests||[];
   if(ptTests.length){
     var PL=R.pt;
-    var ptCell=function(text,w,o){o=o||{};return new D.TableCell({borders:borders,margins:mg,width:{size:w,type:D.WidthType.DXA},
-      children:[P({alignment:o.right?D.AlignmentType.RIGHT:undefined,children:[T({text:String(text==null?"":text),bold:!!o.bold,size:hp(7.5),font:"Arial",color:o.color||"111827"})]})]})};
-    var mmW=[CW*0.16,CW*0.13,CW*0.17,CW*0.08,CW*0.07,CW*0.07,CW*0.07,CW*0.07,CW*0.07,CW*0.11],W=mmW.map(function(x){return tw(x)});
-    var trs=[new D.TableRow({children:ptSummaryHead(R).map(function(h,i){return hdrCell(h,W[i])})})];
+    // Ten columns: thin side padding and widths measured on the longest
+    // label and value (es "RECHAZO", "100,0 %", "NO SUPERADA", the period),
+    // so no cell breaks onto a second line (2026-10-24).
+    var ptMg={top:57,bottom:57,left:57,right:57};
+    var ptCell=function(text,w,o){o=o||{};return new D.TableCell({borders:borders,margins:ptMg,width:{size:w,type:D.WidthType.DXA},
+      children:[P({alignment:o.right?D.AlignmentType.RIGHT:undefined,children:[T({text:String(text==null?"":text),bold:!!o.bold,size:hp(7),font:"Arial",color:o.color||"111827"})]})]})};
+    var ptHd=function(text,w,right){return new D.TableCell({margins:ptMg,width:{size:w,type:D.WidthType.DXA},
+      borders:Object.assign({},borders,{bottom:{style:D.BorderStyle.SINGLE,size:6,color:"D1D5DB"}}),
+      shading:{fill:"F3F4F6",type:D.ShadingType.CLEAR},
+      children:[P({alignment:right?D.AlignmentType.RIGHT:undefined,children:[T({text:String(text).toUpperCase(),bold:true,color:"4B5563",size:hp(6.5),font:"Arial"})]})]})};
+    var mmW=[23,31.5,29,15,14.5,12,12,12,12,21.5],W=mmW.map(function(x){return tw(x*CW/182)});
+    var trs=[new D.TableRow({tableHeader:true,children:ptSummaryHead(R).map(function(h,i){return ptHd(h,W[i],i>=3&&i<=8)})})];
     ptSummaryRows(ptTests,R,lang,false).forEach(function(r){
       trs.push(new D.TableRow({children:r.map(function(c,i){
         var o={right:i>=3&&i<=8,bold:i>=8};

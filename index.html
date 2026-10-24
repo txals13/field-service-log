@@ -5551,7 +5551,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-24 · 4";
+var APP_VERSION="2026-10-24 · 5";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
@@ -7391,6 +7391,33 @@ async function printMachineHistory(){
   document.title=fileSafe(L.h.title,"history")+"_"+sanitize(newest.machine)+"_"+sanitize(newest.client)+"_"+todayISO();
   document.body.classList.add("print-mh");
   setTimeout(function(){window.print()},50);
+}
+// The same history as a file of its own, for the project ZIP (2026-10-24:
+// "include the machine history report in the project ZIP, as an option").
+// What the print button makes, in the report's language, as a standalone page:
+// the print colours spelled out, since there is no app around it. A visit that
+// cannot be translated (no Gemini key, no connection) goes in as typed rather
+// than stopping the ZIP.
+async function buildHistoryHTML(cur,lang){
+  var all=machineSessions(cur);if(!all.length)return null;
+  var loc=[];
+  for(var i=0;i<all.length;i++){try{loc.push(await localizeSession(all[i],lang))}catch(e){loc.push(all[i])}}
+  var L=RPT[lang]||RPT.en,v=mhRender(cur,loc,L,true),newest=all[0]||cur;
+  var html="<!DOCTYPE html><html lang=\""+esc(lang)+"\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+    +"<title>"+esc(L.h.title)+" - "+esc(v.title)+"</title><style>"
+    +":root{--bg2:#f3f4f6;--br:#d1d5db;--br2:#d1d5db;--tx1:#111827;--tx2:#374151;--tx3:#6b7280;"
+    +"--gold:#b45309;--green:#047857;--red:#b91c1c;--orange:#c2410c;--blue:#1d4ed8;--redbg:rgba(220,38,38,.08);--orangebg:rgba(234,88,12,.08)}"
+    +"*{box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:14px;line-height:1.5;max-width:900px;margin:40px auto;padding:0 24px;color:#111827;background:#fff;"
+    +"-webkit-print-color-adjust:exact;print-color-adjust:exact}"
+    +".ts-note{font-size:11px;color:var(--tx3)}.mh-card{cursor:default!important}"
+    +"@media print{body{margin:0;padding:16px}.mh-card,.mh-row{break-inside:avoid}}</style></head><body>"
+    +"<div style=\"font-size:18px;font-weight:700;color:var(--gold)\">&#128220; "+esc(v.title)+"</div>"
+    +"<div class=\"ts-note\" style=\"margin:2px 0 12px\">"+esc(L.h.title)+" · "+v.note+"</div>"
+    +v.body
+    +"<div class=\"ts-note\" style=\"margin-top:14px\">"+esc(L.gen||"")+" "+dmy(todayISO())+(cur.tech?" · "+esc(cur.tech):"")+"</div>"
+    +"</body></html>";
+  return {name:fileSafe(L.h.title,"history")+"_"+sanitize(newest.machine)+"_"+sanitize(newest.client)+".html",
+    blob:new Blob([html],{type:"text/html;charset=utf-8"})};
 }
 function pushRevision(id,n,date,note){
   var rec={n:n,date:date,note:note||"",issuedAt:now()};
@@ -11277,13 +11304,14 @@ async function collectDriveFiles(token,folderId,pathPrefix,out){
 // do not ask: they always make the whole ZIP.
 var ZP_KEY="fsl_v6_zippick";
 var ZP_ITEMS=[["json","🗃 Dades de la visita (session.json, per poder-la tornar a importar)"],["pdf","📄 Informe PDF"],["docx","📝 Informe Word (.docx)"],["html","🌐 Informe HTML"],["xlsx","📊 Recanvis (Excel)"],
-  ["val","✅ Informe de validació"],["ts","🕒 Full d'hores"],["media","📷 Fotos, vídeos i notes de veu"],["exp","💶 Tiquets de les despeses"],["revs","🗂 Revisions anteriors"],["manual","📚 Manual de recanvis"]];
-function zpGet(){var o={};ZP_ITEMS.forEach(function(it){o[it[0]]=true});try{var v=JSON.parse(localStorage.getItem(ZP_KEY)||"null");if(v)Object.keys(o).forEach(function(k){if(k in v)o[k]=!!v[k]})}catch(e){}return o}
+  ["val","✅ Informe de validació"],["hist","📜 Historial de la màquina (HTML)"],["ts","🕒 Full d'hores"],["media","📷 Fotos, vídeos i notes de veu"],["exp","💶 Tiquets de les despeses"],["revs","🗂 Revisions anteriors"],["manual","📚 Manual de recanvis"]];
+// everything ticked the first time, except the machine history: an extra (2026-10-24)
+function zpGet(){var o={};ZP_ITEMS.forEach(function(it){o[it[0]]=it[0]!=="hist"});try{var v=JSON.parse(localStorage.getItem(ZP_KEY)||"null");if(v)Object.keys(o).forEach(function(k){if(k in v)o[k]=!!v[k]})}catch(e){}return o}
 function zpSet(o){try{localStorage.setItem(ZP_KEY,JSON.stringify(o))}catch(e){}}
 var zpSess=null,zpWired=false;
 function openZipPick(s){
   zpSess=s;
-  var o=zpGet(),has={val:!!(s.prodTests||[]).length,ts:!!(s.timesheet&&s.timesheet.rows&&s.timesheet.rows.length),manual:!!(s.manualRef&&s.manualRef.pdfId),xlsx:!!collectSessionParts(s).length,exp:!!(s.expenses||[]).length};
+  var o=zpGet(),has={hist:machineSessions(s).length>0,val:!!(s.prodTests||[]).length,ts:!!(s.timesheet&&s.timesheet.rows&&s.timesheet.rows.length),manual:!!(s.manualRef&&s.manualRef.pdfId),xlsx:!!collectSessionParts(s).length,exp:!!(s.expenses||[]).length};
   var row=function(k,l,on,dis,why){return "<label style=\"display:flex;align-items:center;gap:8px;font-size:13px"+(dis?";opacity:.5":"")+"\"><input type=\"checkbox\" data-zp=\""+k+"\""+(on?" checked":"")+(dis?" disabled":"")+">"+l+(why?" <span style=\"color:var(--tx3);font-size:11px\">("+why+")</span>":"")+"</label>"};
   $$("zipPickList").innerHTML=ZP_ITEMS.map(function(it){var k=it[0],no=(k in has)&&!has[k];return row(k,it[1],o[k]&&!no,no,no?"no n'hi ha":"")}).join("");
   function note(){
@@ -11366,6 +11394,8 @@ async function exportSessionZip(s,kind,pick){
       if(want("pdf")){var pdfBlob=await buildPdfBlob(R.s,R.lang,R.rev,{local:true}); if(pdfBlob)zip.file(P.report+"_"+base+".pdf",pdfBlob)}
       if(want("xlsx")){var xlsxBlob=await buildXlsxBlob(R.s,R.lang,R.rev); if(xlsxBlob)zip.file(P.parts+"_"+base+".xlsx",xlsxBlob)}
       if(want("val")&&(R.s.prodTests||[]).length){var valBlob=await buildPdfBlob(R.s,R.lang,R.rev,{validation:true});if(valBlob)zip.file(RPT[R.lang].pt.file+"_"+base+".pdf",valBlob)}
+      // only when ticked: archiving (no pick) keeps the ZIP it always made
+      if(pick&&pick.hist){expBusy("Historial…");var hi=await buildHistoryHTML(s,R.lang);if(hi)zip.file(hi.name,hi.blob)}
       // The sheet has its own language and its own words: same treatment here
       // as when it is exported on its own, or the ZIP's copy comes out in the
       // language it was typed in while the loose one is translated.

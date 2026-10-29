@@ -1926,6 +1926,28 @@ Now (`syncTick`, `scheduleSync`):
   preview (offline pick → ⏳, kept across a reload, played from IndexedDB)
   and in a sandbox (failed upload stays queued; upload once, blob gone, list
   cleared; the stale-copy race; the one-day clean-up).
+- **Android's back button** (version 2026-10-29 · 1, the user: "when I use
+  Android's back button it closes the app"; at the root they chose option 2,
+  "press back again to exit"). One section after the m2 sheet code ("THE
+  PHONE'S BACK BUTTON"). What is open is READ from the page, not reported by
+  the openers: `navLayers()` looks at the 25 overlays in `NAV_BTN` (display
+  not none), `#expMenu`, the m2 compose/notes sheet, and on the phone the ☰
+  drawer and the open visit. A MutationObserver on style/class (plus click and
+  pointerdown) calls `navSoon()` → `navSync()`, which keeps `navStack` in
+  opening order (the visit always at the bottom) and pushes or `history.go`es
+  back until there is one entry per layer plus a guard. Entries carry
+  `{nav:n,navT:<load token>}`; a reload's leftover state is replaced on load.
+  popstate (a real back press) closes the top layer with its own button
+  (`navClose`: the visit opens the drawer as the root, `navSideRoot`; xe's
+  crop and the edit window's part form go first). `NAV_ASK` windows with an
+  input/change event or a pointerdown on a canvas since they opened ask
+  before closing; a "no" keeps the window and its entry is pushed again. At
+  the root: toast `#navToast`, guard off for 2 s (`navArmed`), so a second
+  back leaves. The guard alone is pushed only during user activation, because
+  Chrome skips entries added without one. m2Show/m2Hide no longer touch
+  history themselves. Tested in the preview at 375 px: history, edit with and
+  without text (confirm no/yes), ☰ drawer, ↓ Informe → Revisa i signa with a
+  stroke on the pad, ⋮ Més, visit → list → toast.
 - **The machine history in the project ZIP** (version 2026-10-24 · 5, the
   user: "include the machine history report in the project ZIP as an
   option"). New pick-list item `hist` ("📜 Historial de la màquina (HTML)"),

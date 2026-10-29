@@ -310,6 +310,9 @@ textarea{resize:none;line-height:1.4}
   border-radius:0 8px 8px 0;padding:9px 10px 9px 12px;font-size:13px;box-shadow:0 6px 24px rgba(0,0,0,.35)}
 #repNote.wait{border-left-color:var(--orange)}
 #repNote span{min-width:0;overflow-wrap:anywhere}#repNote a{color:var(--blue)}#repNote code{font-size:12px}
+/* the root's "press back again to exit" */
+#navToast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:500;display:none;max-width:calc(100vw - 32px);
+  background:var(--bg2);color:var(--tx1);border:1px solid var(--br2);border-radius:20px;padding:8px 16px;font-size:13px;box-shadow:0 6px 24px rgba(0,0,0,.35)}
 /* manuals manager */
 .manual-row{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--br2);border-radius:8px;padding:8px 10px;margin-bottom:6px}
 .manual-row .mr-info{flex:1;min-width:0}
@@ -3729,7 +3732,7 @@ if("serviceWorker" in navigator){
 
 // ── SIDEBAR ──────────────────────────────────────────────────────────────────
 function openSide(){m2Side();$$("sidebar").classList.remove("collapsed");$$("sidebar").classList.add("open");$$("overlay").style.display="block"}
-function closeSide(){$$("sidebar").classList.remove("open");$$("overlay").style.display="none"}
+function closeSide(){$$("sidebar").classList.remove("open");$$("overlay").style.display="none";navSideRoot=false}
 $$("btnSide").addEventListener("click",function(){
   if(mob()){if($$("sidebar").classList.contains("open"))closeSide();else openSide()}
   else $$("sidebar").classList.toggle("collapsed");
@@ -5411,33 +5414,132 @@ function m2Pending(sess){
   }catch(e){return 0}
 }
 // One sheet at a time — the composer, the general notes, "more" or the report
-// menu — each with a history entry, so the phone's back button closes the
-// sheet instead of leaving the app.
+// menu. The phone's back button closes it through the back-button section
+// below (navLayers), like any other window.
 var m2Sheet=null;
 function m2Show(kind){
   if(m2Sheet)m2HideNow();
   m2Sheet=kind;
   if(kind==="compose")document.body.classList.add("m2-compose");
   if(kind==="notes")document.body.classList.add("m2-notes");
-  // From one sheet to the next (more → report menu) the entry is reused, so
-  // one back press is always one sheet.
-  try{
-    if(history.state&&history.state.m2)history.replaceState({m2:kind},"");
-    else history.pushState({m2:kind},"");
-  }catch(e){}
+  navSoon();
 }
 function m2HideNow(){
   var k=m2Sheet;m2Sheet=null;
   document.body.classList.remove("m2-compose","m2-notes");
   if(k==="more")$$("m2MoreBack").style.display="none";
   if(k==="exp"){var m=$$("expMenu");if(m)m.style.display="none"}
+  navSoon();
 }
 function m2Hide(){
   if(!m2Sheet)return;
   m2HideNow();
-  try{if(history.state&&history.state.m2)history.back()}catch(e){}
 }
-window.addEventListener("popstate",function(){if(m2Sheet)m2HideNow()});
+
+// ── THE PHONE'S BACK BUTTON (2026-10-29) ─────────────────────────────────────
+// "When I press Android's back button it closes the app." The windows here are
+// not pages, so the browser had nothing to go back to. Now every open window
+// holds one history entry, and back closes the top one, as its ✕ would.
+//
+// What is open is READ from the page (navLayers), not reported by the two
+// dozen places that open and close windows: a watcher on style/class changes
+// keeps a stack in opening order (navStack), and navSync() adds or takes away
+// history entries until there is one per window, plus a guard entry at the
+// bottom. So Cancel, ✕ or a tap outside drop the window's entry too.
+//
+// Levels on the phone: a window closes; an open visit goes back to the list of
+// visits (the drawer, opened "as the root"); at the root the first back shows
+// "press back again to exit" and takes the guard away for 2 s — a second back
+// in that time leaves the app (the user's choice, option 2). The guard comes
+// back with the next tap, because Chrome skips entries added without one.
+//
+// A window with something typed or signed in it (NAV_ASK) asks first, since a
+// back press is easy to make by accident. Saying no keeps it open.
+var NAV_BTN={arxBack:"arxCancel",bulkBack:"bulkCancel",ctrBack:"ctrCancel",delBack:"delCancel",drawBack:"drawClose",
+  exBack:"exClose",folBack:"folClose",fsaBack:"fsaCancel",gemBack:"gemCancel",lblBack:"lblCancel",linkBack:"linkClose",
+  m2MoreBack:"m2MoreClose",manualsBack:"manualsClose",mhBack:"mhClose",newBack:"nCancel",pdBack:"pdClose",ptBack:"ptDone",
+  pvBack:"pvCancel",pvPickBack:"pvPickCancel",revBack:"revCancel",tsBack:"tsCancel",zipPickBack:"zipPickCancel",
+  mediaModal:"mediaClose",editBack:"eCancel",xeBack:"xeCancel"};
+var NAV_ASK={editBack:1,newBack:1,xeBack:1,tsBack:1,pvBack:1,ctrBack:1,lblBack:1};
+var navStack=[],navDirty={},navSideRoot=false,navArmed=0,navGoing=false,navQueued=false,navTok=String(Date.now());
+function navShown(el){return !!el&&!!el.style.display&&el.style.display!=="none"}
+function navLayers(){
+  var on={};
+  Object.keys(NAV_BTN).forEach(function(id){if(navShown($$(id)))on[id]=1});
+  var m=$$("expMenu");if(m&&m.style.display==="block")on.expMenu=1;
+  if(m2Sheet==="compose"||m2Sheet==="notes")on.m2Sheet=1;
+  if(mob()){
+    var side=$$("sidebar").classList.contains("open");
+    if(side&&!navSideRoot)on.side=1;
+    if(aid&&!(side&&navSideRoot))on.visit=1;
+  }
+  return on;
+}
+function navHere(){var s=history.state;return s&&s.navT===navTok?(s.nav||0):0}
+function navWant(){return (navArmed?0:1)+navStack.length}
+function navRead(){
+  var on=navLayers();
+  navStack=navStack.filter(function(k){return on[k]});
+  Object.keys(on).forEach(function(k){
+    if(navStack.indexOf(k)<0){
+      if(k==="visit")navStack.unshift(k);else navStack.push(k);   // the visit is always underneath
+      delete navDirty[k];
+    }
+  });
+}
+function navSync(){
+  navQueued=false;
+  navRead();
+  if(navGoing)return;                       // a step back of ours is on its way: popstate syncs again
+  var cur=navHere(),want=navWant();
+  if(want<cur){navGoing=true;try{history.go(want-cur)}catch(e){navGoing=false}return}
+  // the guard alone waits for a tap: without one Chrome would skip it
+  if(want>cur&&!navStack.length&&navigator.userActivation&&!navigator.userActivation.isActive)return;
+  for(var n=cur+1;n<=want;n++){try{history.pushState({nav:n,navT:navTok},"")}catch(e){break}}
+}
+function navSoon(){if(navQueued)return;navQueued=true;setTimeout(navSync,0)}
+function navClose(k){
+  if(k==="visit"){openSide();navSideRoot=true;return}
+  if(k==="side"){closeSide();return}
+  if(k==="m2Sheet"||(k==="expMenu"&&m2Sheet==="exp")){m2HideNow();return}
+  if(k==="expMenu"){$$("expMenu").style.display="none";return}
+  // a step inside the window first
+  if(k==="xeBack"&&navShown($$("xeCropNo"))){$$("xeCropNo").click();return}
+  if(k==="editBack"&&$$("pfCancel")&&$$("pfCancel").offsetParent){$$("pfCancel").click();return}
+  if(NAV_ASK[k]&&navDirty[k]&&!confirm("Hi ha canvis sense desar en aquesta finestra.\n\nVols tancar-la i perdre'ls?"))return;
+  if(k==="xeBack"){xeClose();return}         // its ✕ would ask a second time about the image
+  var b=$$(NAV_BTN[k]);if(b)b.click();
+}
+function navToast(){
+  var t=$$("navToast");
+  if(!t){t=document.createElement("div");t.id="navToast";document.body.appendChild(t)}
+  t.textContent="Prem enrere un altre cop per sortir";
+  t.style.display="block";
+  clearTimeout(navToast.tm);navToast.tm=setTimeout(function(){t.style.display="none"},2000);
+}
+window.addEventListener("popstate",function(){
+  if(navGoing){navGoing=false;navSync();return}
+  var cur=navHere();
+  navRead();                                // the stack as it stands
+  if(cur>=navWant()){navSync();return}
+  if(navStack.length){navClose(navStack[navStack.length-1]);setTimeout(navSync,0);return}
+  // the root: once more leaves
+  navToast();
+  var mine=++navArmed;
+  setTimeout(function(){if(navArmed===mine)navArmed=0},2000);
+});
+// a reload keeps history.state: start from here, whatever it says
+try{if(history.state&&history.state.nav)history.replaceState(null,"")}catch(e){}
+new MutationObserver(navSoon).observe(document.body,{subtree:true,attributes:true,attributeFilter:["style","class"]});
+document.addEventListener("click",navSoon,true);
+document.addEventListener("pointerdown",function(e){
+  navSoon();
+  var c=e.target&&e.target.tagName==="CANVAS"&&e.target.closest?e.target:null;
+  if(c)navStack.forEach(function(k){var el=$$(k);if(el&&el.contains(c))navDirty[k]=1});
+},true);
+["input","change"].forEach(function(ev){document.addEventListener(ev,function(e){
+  navStack.forEach(function(k){var el=$$(k);if(el&&e.target&&el.contains(e.target))navDirty[k]=1});
+},true)});
 function m2Wire(active,isOpen){
   if(!active)return;
   var f=$$("btnM2Find");
@@ -5551,7 +5653,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-10-24 · 5";
+var APP_VERSION="2026-10-29 · 1";
 (function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,

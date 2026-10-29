@@ -20,6 +20,12 @@
       "port": 8521
     },
     {
+      "name": "moviments",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["C:\\Users\\usuari\\OneDrive\\F\\Finances\\moviments\\servir.py"],
+      "port": 8531
+    },
+    {
       "name": "finances",
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8530", "--directory", "C:\\Users\\usuari\\OneDrive\\F\\Finances\\app"],

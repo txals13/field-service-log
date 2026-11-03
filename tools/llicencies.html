@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Llicències · Field Service Log</title>
+<!--
+  L'eina per emetre les llicències del Field Service Log. No és part de
+  l'aplicació: s'obre aquí, en aquest ordinador, i no envia res enlloc.
+
+  Com funciona una llicència:
+    FSL1.<dades>.<signatura>
+  Les dades són un JSON curt (titular, caducitat, tècnics) en base64url, i la
+  signatura és ECDSA P-256 sobre el text de les dades tal com queda escrit.
+  L'aplicació porta només la clau PÚBLICA, i per això pot comprovar una
+  llicència sense cobertura i sense cap servidor. La clau PRIVADA no surt mai
+  d'aquí: es desa en un fitxer que ha de viure fora del repositori.
+
+  Si es perd la clau privada, les llicències ja emeses segueixen valent (les
+  comprova la pública, que és a l'app), però no se'n poden emetre de noves:
+  caldria un parell de claus nou i una versió nova de l'app. Guarda-la com
+  guardes les claus del cotxe.
+-->
+<style>
+  :root{
+    --bg:#0f1115;--pan:#171a21;--pan2:#1d2129;--bd:#2a2f3a;
+    --tx:#e6e8ee;--tx2:#aab0bd;--tx3:#737b8c;--gold:#d4a843;--bad:#e2605a;--good:#5db37e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px 16px 64px;background:var(--bg);color:var(--tx);
+       font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:860px;margin:0 auto}
+  h1{font-size:19px;margin:0 0 4px;font-weight:700}
+  h1 span{color:var(--gold)}
+  .sub{color:var(--tx3);font-size:12.5px;margin-bottom:22px}
+  section{background:var(--pan);border:1px solid var(--bd);border-radius:10px;padding:16px;margin-bottom:16px}
+  h2{font-size:14px;margin:0 0 10px;color:var(--gold);font-weight:700}
+  .note{color:var(--tx2);font-size:12.5px;margin:0 0 12px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+  .f{display:flex;flex-direction:column;gap:4px}
+  .f.grow{flex:1;min-width:180px}
+  label{font-size:11.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em}
+  input[type=text],input[type=date],input[type=number],textarea,select{
+    background:var(--pan2);border:1px solid var(--bd);color:var(--tx);border-radius:7px;
+    padding:8px 10px;font:13px/1.4 inherit;width:100%}
+  textarea{font-family:ui-monospace,Consolas,monospace;font-size:12px;resize:vertical}
+  button{background:var(--pan2);border:1px solid var(--bd);color:var(--tx);border-radius:7px;
+         padding:8px 13px;font:13px inherit;cursor:pointer}
+  button:hover{border-color:var(--tx3)}
+  button.gold{background:var(--gold);border-color:var(--gold);color:#15171c;font-weight:600}
+  button.gold:disabled{opacity:.45;cursor:not-allowed}
+  .out{background:#0b0d11;border:1px solid var(--bd);border-radius:7px;padding:10px;margin-top:12px;
+       font-family:ui-monospace,Consolas,monospace;font-size:12px;white-space:pre-wrap;
+       overflow-wrap:anywhere;color:var(--tx2);display:none}
+  .out.on{display:block}
+  .st{font-size:12.5px;margin-top:10px;min-height:18px}
+  .st.bad{color:var(--bad)}.st.good{color:var(--good)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd);vertical-align:top}
+  th{color:var(--tx3);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  td.tok{font-family:ui-monospace,Consolas,monospace;font-size:11px;overflow-wrap:anywhere;color:var(--tx3)}
+  .warn{background:#2a2015;border:1px solid #4a3a1c;border-radius:7px;padding:10px 12px;
+        color:#e8d3a3;font-size:12.5px;margin-bottom:12px}
+  .key{color:var(--tx3);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Llicències · <span>Field Service Log</span></h1>
+  <div class="sub">S'obre en local, no envia res enlloc. La clau privada no surt d'aquest ordinador.</div>
+
+  <section>
+    <h2>1 · El parell de claus</h2>
+    <p class="note">Això es fa <b>un sol cop</b>. La pública va dins de l'aplicació; la privada
+      es desa en un fitxer que has de guardar fora del repositori (i en una còpia de seguretat).
+      Si després canvies de parell, totes les llicències emeses deixen de valer.</p>
+    <div class="row">
+      <button id="gen">Crea un parell de claus nou</button>
+      <button id="dl" disabled>&#8681; Desa la clau privada</button>
+    </div>
+    <div class="out" id="pubOut"></div>
+    <div class="st" id="genSt"></div>
+  </section>
+
+  <section>
+    <h2>2 · La clau privada d'aquesta sessió</h2>
+    <p class="note">Per emetre llicències cal carregar el fitxer de la clau privada. No es
+      recorda: cada vegada que obris aquesta pàgina l'has de tornar a triar, que és justament
+      el que vols.</p>
+    <div class="row">
+      <input type="file" id="keyFile" accept=".json,application/json"
+             style="font-size:12.5px;color:var(--tx2);max-width:360px">
+    </div>
+    <div class="st" id="keySt"></div>
+  </section>
+
+  <section>
+    <h2>3 · Emet una llicència</h2>
+    <div class="row">
+      <div class="f grow"><label>Titular (surt al peu de cada informe)</label>
+        <input type="text" id="n" placeholder="Nom de l'empresa, tal com ha de sortir"></div>
+      <div class="f"><label>Caduca el</label><input type="date" id="x"></div>
+      <div class="f" style="width:110px"><label>Tècnics</label><input type="number" id="s" min="1" max="999" value="1"></div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div class="f"><label>Durada ràpida</label>
+        <select id="dur">
+          <option value="">— a mà —</option>
+          <option value="30">30 dies (prova)</option>
+          <option value="365" selected>1 any</option>
+          <option value="730">2 anys</option>
+        </select></div>
+      <div class="f grow"><label>Extres (separats per comes; buit = res)</label>
+        <input type="text" id="f" placeholder="ai"></div>
+      <button class="gold" id="mk" disabled>Genera la llicència</button>
+    </div>
+    <div class="out" id="tokOut"></div>
+    <div class="row" style="margin-top:10px">
+      <button id="cp" style="display:none">&#128203; Copia la llicència</button>
+      <button id="cpMail" style="display:none">&#9993; Copia el text del correu</button>
+    </div>
+    <div class="st" id="mkSt"></div>
+  </section>
+
+  <section>
+    <h2>4 · Comprova una llicència</h2>
+    <p class="note">El mateix que fa l'aplicació. Serveix per a quan un client diu que no li val:
+      enganxa-la aquí i surt el titular, la caducitat i si la signatura és bona.</p>
+    <div class="f"><textarea id="vIn" rows="3" placeholder="FSL1.…"></textarea></div>
+    <div class="row" style="margin-top:10px"><button id="vGo">Comprova-la</button></div>
+    <div class="st" id="vSt"></div>
+  </section>
+
+  <section>
+    <h2>5 · Registre de les emeses</h2>
+    <p class="note">Es desa en aquest navegador, en aquesta adreça. No és una còpia de
+      seguretat: baixa'n el CSV i guarda'l amb la comptabilitat.</p>
+    <div class="row">
+      <button id="csv">&#8681; Baixa el CSV</button>
+      <button id="wipe">Buida el registre</button>
+    </div>
+    <table id="reg"><thead><tr><th>Emesa</th><th>Titular</th><th>Fins a</th><th>Tèc.</th><th>Id</th><th>Llicència</th></tr></thead><tbody></tbody></table>
+  </section>
+
+</div>
+
+<script>
+var $=function(i){return document.getElementById(i)};
+var ALG={name:"ECDSA",namedCurve:"P-256"},SIG={name:"ECDSA",hash:"SHA-256"};
+var LS_REG="fsl_lic_reg";
+var priv=null,pubFromPriv=null,lastTok="",lastPay=null;
+
+function b64u(b){var s="",i;for(i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);
+  return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
+function unb64u(s){s=String(s).replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";
+  var b=atob(s),a=new Uint8Array(b.length),i;for(i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a}
+function say(id,msg,cls){var e=$(id);e.textContent=msg||"";e.className="st"+(cls?" "+cls:"")}
+function show(id,txt){var e=$(id);e.textContent=txt;e.className="out on"}
+function esc(t){return String(t==null?"":t).replace(/[&<>"]/g,function(c){
+  return({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"})[c]})}
+
+/* ── 1 · el parell de claus ────────────────────────────────────────────────── */
+var privJwk=null;
+$("gen").addEventListener("click",async function(){
+  if(privJwk&&!confirm("Ja n'has creat un en aquesta pàgina. Si en fas un altre i el poses a "
+    +"l'aplicació, les llicències emeses amb el primer deixaran de valer. Segur?"))return;
+  try{
+    var kp=await crypto.subtle.generateKey(ALG,true,["sign","verify"]);
+    privJwk=await crypto.subtle.exportKey("jwk",kp.privateKey);
+    var pub=await crypto.subtle.exportKey("jwk",kp.publicKey);
+    show("pubOut","// index.html — substitueix la línia de LIC_PUB per aquesta:\nvar LIC_PUB="
+      +JSON.stringify({kty:pub.kty,crv:pub.crv,x:pub.x,y:pub.y})+";");
+    $("dl").disabled=false;
+    say("genSt","Fet. Copia la línia de dalt a index.html i desa la clau privada ARA: aquesta pàgina no la recorda.","good");
+    await useKey(privJwk);
+  }catch(e){say("genSt","No s'ha pogut crear: "+(e.message||e),"bad")}
+});
+$("dl").addEventListener("click",function(){
+  if(!privJwk)return;
+  var b=new Blob([JSON.stringify(privJwk,null,2)],{type:"application/json"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(b);
+  a.download="fsl-clau-privada.json";
+  a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},4000);
+  say("genSt","Desada. Treu-la de la carpeta de Baixades i guarda-la fora del repositori.","good");
+});
+
+/* ── 2 · carregar-la ───────────────────────────────────────────────────────── */
+async function useKey(jwk){
+  if(!jwk||jwk.kty!=="EC"||!jwk.d){say("keySt","Aquest fitxer no és una clau privada EC.","bad");return false}
+  try{
+    priv=await crypto.subtle.importKey("jwk",jwk,ALG,false,["sign"]);
+    pubFromPriv=await crypto.subtle.importKey("jwk",
+      {kty:jwk.kty,crv:jwk.crv,x:jwk.x,y:jwk.y},ALG,false,["verify"]);
+  }catch(e){say("keySt","No s'ha pogut llegir: "+(e.message||e),"bad");return false}
+  $("mk").disabled=false;
+  say("keySt","Clau carregada. Ja pots emetre llicències.","good");
+  return true;
+}
+$("keyFile").addEventListener("change",async function(){
+  var f=this.files&&this.files[0];if(!f)return;
+  try{await useKey(JSON.parse(await f.text()))}
+  catch(e){say("keySt","No s'ha pogut llegir el fitxer: "+(e.message||e),"bad")}
+});
+
+/* ── 3 · emetre ────────────────────────────────────────────────────────────── */
+function addDays(n){var d=new Date();d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
+function setDur(){var v=$("dur").value;if(v)$("x").value=addDays(parseInt(v,10))}
+$("dur").addEventListener("change",setDur);
+setDur();
+
+$("mk").addEventListener("click",async function(){
+  var n=$("n").value.trim(),x=$("x").value,s=parseInt($("s").value,10)||1;
+  var f=$("f").value.split(",").map(function(t){return t.trim()}).filter(Boolean);
+  if(!n){say("mkSt","Falta el titular.","bad");return}
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(x)){say("mkSt","Falta la data de caducitat.","bad");return}
+  if(!priv){say("mkSt","Carrega la clau privada (pas 2).","bad");return}
+  var pay={n:n,x:x,s:s,i:Math.random().toString(16).slice(2,8).toUpperCase()};
+  if(f.length)pay.f=f;
+  var p64=b64u(new TextEncoder().encode(JSON.stringify(pay)));
+  var sig=await crypto.subtle.sign(SIG,priv,new TextEncoder().encode(p64));
+  lastTok="FSL1."+p64+"."+b64u(new Uint8Array(sig));
+  lastPay=pay;
+  show("tokOut",lastTok);
+  $("cp").style.display="";$("cpMail").style.display="";
+  say("mkSt","Emesa per a "+n+", fins al "+x+". Comprova-la al pas 4 abans d'enviar-la.","good");
+  regAdd(pay,lastTok);
+});
+function copy(t,msg){
+  navigator.clipboard.writeText(t).then(function(){say("mkSt",msg,"good")},
+    function(){say("mkSt","El navegador no ha deixat copiar: selecciona-ho a mà.","bad")});
+}
+$("cp").addEventListener("click",function(){if(lastTok)copy(lastTok,"Llicència copiada.")});
+$("cpMail").addEventListener("click",function(){
+  if(!lastTok)return;
+  copy("Bon dia,\n\nAquí teniu la llicència del Field Service Log per a "+lastPay.n
+    +", vàlida fins al "+lastPay.x+" per a "+lastPay.s+" tècnic"+(lastPay.s==1?"":"s")+".\n\n"
+    +lastTok+"\n\nPer activar-la, a cada aparell: obriu l'aplicació, menú lateral → 🔒 Llicència,"
+    +" enganxeu-la sencera i Desa. No cal cobertura, i es desa només en aquell aparell, de manera"
+    +" que s'ha de fer un cop a cada telèfon o ordinador.\n\nEl vostre nom sortirà al peu de cada"
+    +" informe.\n\nSalutacions,\n","Text del correu copiat.")
+});
+
+/* ── 4 · comprovar ─────────────────────────────────────────────────────────── */
+$("vGo").addEventListener("click",async function(){
+  var t=$("vIn").value.trim(),p=t.split(".");
+  if(p.length!==3||p[0]!=="FSL1"){say("vSt","No té la forma d'una llicència (FSL1.…).","bad");return}
+  if(!pubFromPriv){say("vSt","Carrega primer la clau privada: la comprovació fa servir la seva part pública.","bad");return}
+  var ok=false;
+  try{ok=await crypto.subtle.verify(SIG,pubFromPriv,unb64u(p[2]),new TextEncoder().encode(p[1]))}
+  catch(e){say("vSt","No s'ha pogut comprovar: "+(e.message||e),"bad");return}
+  if(!ok){say("vSt","La signatura NO val: o està tallada, o no és d'aquest parell de claus.","bad");return}
+  var d;try{d=JSON.parse(new TextDecoder().decode(unb64u(p[1])))}
+  catch(e){say("vSt","La signatura val, però les dades no es llegeixen.","bad");return}
+  var left=Math.ceil((Date.parse(d.x+"T23:59:59")-Date.now())/864e5);
+  say("vSt","Bona. Titular: "+d.n+" · fins al "+d.x+" ("+(left>=0?"queden "+left+" dies":"caducada fa "+(-left)+" dies")
+    +") · "+(d.s||1)+" tècnic"+((d.s||1)==1?"":"s")+(d.f?" · extres: "+d.f.join(", "):"")+" · id "+(d.i||"—"),
+    left>=0?"good":"bad");
+});
+
+/* ── 5 · registre ──────────────────────────────────────────────────────────── */
+function regGet(){try{return JSON.parse(localStorage.getItem(LS_REG)||"[]")}catch(e){return[]}}
+function regSet(a){try{localStorage.setItem(LS_REG,JSON.stringify(a))}catch(e){}}
+function regAdd(pay,tok){
+  var a=regGet();
+  a.unshift({d:new Date().toISOString().slice(0,16).replace("T"," "),n:pay.n,x:pay.x,s:pay.s,i:pay.i,t:tok});
+  regSet(a);regDraw();
+}
+function regDraw(){
+  var b=$("reg").querySelector("tbody"),a=regGet();
+  b.innerHTML=a.length?a.map(function(r){
+    return "<tr><td>"+esc(r.d)+"</td><td>"+esc(r.n)+"</td><td>"+esc(r.x)+"</td><td>"+esc(r.s)
+      +"</td><td>"+esc(r.i)+"</td><td class=\"tok\">"+esc(r.t)+"</td></tr>"}).join("")
+    :"<tr><td colspan=\"6\" style=\"color:var(--tx3)\">Encara no n'has emesa cap.</td></tr>";
+}
+$("csv").addEventListener("click",function(){
+  var a=regGet();
+  var q=function(v){return "\""+String(v==null?"":v).replace(/"/g,"\"\"")+"\""};
+  var txt="emesa,titular,caduca,tecnics,id,llicencia\n"
+    +a.map(function(r){return [r.d,r.n,r.x,r.s,r.i,r.t].map(q).join(",")}).join("\n");
+  var bl=new Blob(["﻿"+txt],{type:"text/csv;charset=utf-8"});
+  var el=document.createElement("a");
+  el.href=URL.createObjectURL(bl);el.download="llicencies-fsl.csv";el.click();
+  setTimeout(function(){URL.revokeObjectURL(el.href)},4000);
+});
+$("wipe").addEventListener("click",function(){
+  if(!confirm("Vols buidar el registre d'aquest navegador?\nLes llicències emeses seguiran valent."))return;
+  regSet([]);regDraw();
+});
+regDraw();
+</script>
+</body>
+</html>

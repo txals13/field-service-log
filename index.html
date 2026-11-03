@@ -614,6 +614,7 @@ textarea{resize:none;line-height:1.4}
         <button class="btn-g btn-sm" id="btnHelp" style="width:100%;font-size:12px;margin-bottom:6px" title="Com fer servir l'aplicació">&#128214; Manual d'&uacute;s</button>
         <button class="btn-g btn-sm" id="btnManuals" style="width:100%;font-size:12px" title="Manuals de recanvis guardats a Drive">&#128218; Manuals de recanvis</button>
         <button class="btn-g btn-sm" id="btnGemKey" style="width:100%;font-size:12px;margin-top:6px" title="La clau de Gemini que fa servir el corrector i la traducció dels informes; es desa només en aquest navegador">&#128273; Clau de Gemini</button>
+        <button class="btn-g btn-sm" id="btnLic" style="width:100%;font-size:12px;margin-top:6px" title="La llicència d'ús de l'aplicació: es desa només en aquest aparell i es comprova sense cobertura">&#128274; Llic&egrave;ncia</button>
         <button class="btn-g btn-sm" id="btnBulkArx" style="width:100%;font-size:12px;margin-top:6px" title="Tria les sessions acabades: cadascuna es desa com el seu ZIP del projecte i surt de l'aplicació">&#128452; Arxiva sessions&hellip;</button>
         <button class="btn-g btn-sm" id="btnOutDir" style="width:100%;font-size:12px;margin-top:6px" title="On es desa el ZIP del projecte (Drive o una carpeta de l'ordinador), i on s'obre el diàleg de fotos">&#128193; Carpetes</button>
       </div>
@@ -1082,6 +1083,22 @@ textarea{resize:none;line-height:1.4}
     </div>
   </div>
 
+  <div class="modal-back" id="licBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,520px)">
+      <div class="modal-title">&#128274; Llic&egrave;ncia</div>
+      <div id="licNote" class="ts-note" style="margin-bottom:10px">&mdash;</div>
+      <form id="licForm" autocomplete="off" onsubmit="return false">
+        <div class="field"><label>La llic&egrave;ncia, tal com l'has rebuda</label><input type="text" id="licIn" placeholder="FSL1.&hellip;" autocomplete="off" spellcheck="false" style="font-family:monospace"></div>
+      </form>
+      <div class="ts-note">Es desa nom&eacute;s en aquest aparell i no viatja enlloc: ni a Drive, ni als ZIP, ni a les c&ograve;pies de seguretat &mdash; per aix&ograve; cal escriure-la un cop a cada aparell. No li cal cobertura: es comprova aqu&iacute; mateix, i per tant funciona en una planta sense senyal. El nom del titular surt al peu de cada informe.</div>
+      <div class="modal-actions">
+        <button id="licCancel">Tanca</button>
+        <button class="btn-sm" id="licClear">&#10005; Treu-la d'aqu&iacute;</button>
+        <button class="btn-gold" id="licSave">Desa</button>
+      </div>
+    </div>
+  </div>
+
   <!-- The session's Drive folder: what the report shows AND what was dropped in
        from Drive to round it out. Rename anything, and tie a loose photo to the
        one that does appear in the report so the folder itself tells you which
@@ -1278,6 +1295,8 @@ var LS_TOKEN   = "fsl_v6_tok";
 var LS_THEME   = "fsl_v6_thm";
 var LS_ROOT    = "fsl_v6_root";
 var LS_GEM     = "fsl_v6_gem";
+var LS_LIC     = "fsl_v6_lic";     // the licence token, as it was pasted in
+var LS_LIC0    = "fsl_v6_lic0";    // the day this device first opened the app
 var DATA_FILE  = "field_service_log_data.json";
 var ROOT_NAME  = "Field Service Log";
 var OUT_NAME   = "Outputs";
@@ -2600,6 +2619,7 @@ async function deleteManual(idx){
 }
 $$("btnManuals").addEventListener("click",openManuals);
 $$("btnGemKey").addEventListener("click",function(){openGemKey()});
+$$("btnLic").addEventListener("click",function(){openLic()});
 $$("btnOutDir").addEventListener("click",function(){openFsa()});
 $$("manualsClose").addEventListener("click",closeManuals);
 $$("manualsBack").addEventListener("click",function(e){if(e.target===$$("manualsBack"))closeManuals()});
@@ -5654,7 +5674,12 @@ function openM2More(){
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
 var APP_VERSION="2026-10-29 · 1";
-(function(){var v=$$("appVer");if(v)v.textContent="Versió "+APP_VERSION})();
+function verLine(){
+  var v=$$("appVer");if(!v)return;
+  var w=licWords();
+  v.textContent="Versió "+APP_VERSION+(w?" · "+w:"");
+}
+verLine();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
 // A run of the line over a period, recorded to validate it: what was made,
 // what was thrown out, every stop and why — and from that the standard OEE.
@@ -6219,6 +6244,7 @@ async function archiveSessions(ids,del){
 // ── NEW / EDIT SESSION MODAL ───────────────────────────────────────────────────
 var editingSessId=null;
 function openNewModal(editSess){
+  if(!editSess&&!licGate())return;
   editingSessId=editSess?editSess.id:null;
   $$("newModalTitle").innerHTML=editSess?"&#9998; Edita la visita de servei":"&#9658; Nova visita de servei";
   $$("nSave").innerHTML=editSess?"&#10003; Desa els canvis":"&#10003; Crea la sessió";
@@ -6698,6 +6724,163 @@ function openGemKey(msg){
   $$("gemIn").value="";
   $$("gemBack").style.display="flex";
   setTimeout(function(){var i=$$("gemIn");if(i)i.focus()},30);
+}
+// ── LICENCES · verified here, never against a server ────────────────────
+// A licence is a short signed text pasted in once per device. It is checked in
+// the page, with a public key, because the app's whole reason to exist is a
+// factory with no signal: a licence that needed the network to be believed
+// would lock a technician out exactly while they were working.
+//
+// ECDSA P-256, not Ed25519 — WebCrypto only got Ed25519 in recent Chrome and
+// Safari, and this runs on whatever Android phone a technician happens to
+// carry. The signature covers the payload AS ENCODED (the middle part of the
+// token), so nothing depends on re-serialising the JSON the same way twice.
+//
+// Anyone can delete this check from a copy of the file, and that is not what it
+// is for. It is for the case that actually happens: one paying customer passing
+// the URL to three colleagues. The licensee's name is stamped on every report,
+// so a borrowed copy signs someone else's name to the work.
+//
+// LIC_ON is the switch. It stays false until there is a key in LIC_PUB and a
+// licence issued to ourselves — shipping the gate before that would, after
+// LIC_TRIAL days, stop a real visit on the user's own phone. With it false
+// everything below still works and can be tested; nothing is blocked and no
+// report changes.
+var LIC_ON=false;
+var LIC_PUB=null;          // the public key, as a JWK — tools/llicencies.html prints it
+var LIC_TRIAL=30;          // days a fresh device may work with no licence
+var LIC_GRACE=30;          // days an expired licence keeps working, warning
+var lic=null,licReady=false;
+
+function licB64u(s){
+  s=String(s).replace(/-/g,"+").replace(/_/g,"/");
+  while(s.length%4)s+="=";
+  var b=atob(s),a=new Uint8Array(b.length),i;
+  for(i=0;i<b.length;i++)a[i]=b.charCodeAt(i);
+  return a;
+}
+var licPub=null;
+async function licPubKey(){
+  if(licPub)return licPub;
+  if(!LIC_PUB)return null;
+  try{licPub=await crypto.subtle.importKey("jwk",LIC_PUB,{name:"ECDSA",namedCurve:"P-256"},false,["verify"])}
+  catch(e){return null}
+  return licPub;
+}
+// The token: FSL1.<payload>.<signature>, both parts base64url.
+async function licCheck(tok){
+  var p=String(tok||"").trim().split(".");
+  if(p.length!==3||p[0]!=="FSL1")return null;
+  var k=await licPubKey();if(!k)return null;
+  var ok=false;
+  try{ok=await crypto.subtle.verify({name:"ECDSA",hash:"SHA-256"},k,licB64u(p[2]),new TextEncoder().encode(p[1]))}
+  catch(e){return null}
+  if(!ok)return null;
+  var d;
+  try{d=JSON.parse(new TextDecoder().decode(licB64u(p[1])))}catch(e){return null}
+  if(!d||!d.n||!d.x)return null;
+  return d;
+}
+function licStored(){try{return localStorage.getItem(LS_LIC)||""}catch(e){return ""}}
+// Days left: 0 is the last day it works, negative is past.
+function licDays(d){
+  var t=Date.parse(d.x+"T23:59:59");
+  if(isNaN(t))return -99999;
+  return Math.ceil((t-Date.now())/864e5);
+}
+// The trial starts the first time this device opens the app, not the first time
+// it is asked about — otherwise the question itself would start the clock.
+function licTrialLeft(){
+  var s0=null;
+  try{s0=localStorage.getItem(LS_LIC0)}catch(e){}
+  if(!s0){s0=new Date().toISOString().slice(0,10);try{localStorage.setItem(LS_LIC0,s0)}catch(e){}}
+  var t=Date.parse(s0+"T00:00:00");
+  if(isNaN(t))return 0;
+  return LIC_TRIAL-Math.floor((Date.now()-t)/864e5);
+}
+function licState(){
+  if(!LIC_ON)return{ok:true,kind:"off"};
+  if(!licReady)return{ok:true,kind:"wait"};       // the check is one await away
+  if(lic){
+    var d=licDays(lic);
+    if(d>=0)return{ok:true,kind:"ok",days:d,name:lic.n,seats:lic.s};
+    if(d>-LIC_GRACE)return{ok:true,kind:"grace",days:d,name:lic.n,seats:lic.s};
+    return{ok:false,kind:"expired",days:d,name:lic.n};
+  }
+  var tl=licTrialLeft();
+  if(tl>0)return{ok:true,kind:"trial",days:tl};
+  return{ok:false,kind:"none"};
+}
+// What goes in the footer of every report. The licensee is the company whose
+// technician writes the report, so its name there reads as a letterhead, not as
+// licence paperwork — which is also why it is only the name.
+function licStamp(){
+  var st=licState();
+  if(st.kind==="off"||st.kind==="wait")return"";
+  return st.name||"Field Service Log \u00b7 prova";
+}
+function licWords(){
+  var st=licState();
+  if(st.kind==="ok")   return lic.n+(lic.s?" \u00b7 "+lic.s+(lic.s==1?" t\u00e8cnic":" t\u00e8cnics"):"")+(st.days<30?" \u00b7 caduca en "+st.days+" dies":"");
+  if(st.kind==="grace")return lic.n+" \u00b7 CADUCADA fa "+(-st.days)+" dies";
+  if(st.kind==="expired")return lic.n+" \u00b7 caducada";
+  if(st.kind==="trial")return "prova, "+st.days+(st.days==1?" dia":" dies");
+  if(st.kind==="none") return "prova acabada";
+  return "";
+}
+async function licBoot(){
+  var t=licStored();
+  if(t)lic=await licCheck(t);
+  licReady=true;
+  verLine();
+}
+// The gate. It never stands between a technician and work already begun: a
+// visit that exists can be written, finished, exported and archived whatever
+// the licence says. Only STARTING a new one asks.
+function licGate(){
+  var st=licState();
+  if(st.ok)return true;
+  openLic(st.kind==="expired"
+    ?"La llic\u00e8ncia de "+st.name+" ha caducat. Les visites que ja tens segueixen obertes i es poden acabar i exportar; per estrenar-ne una de nova, escriu la llic\u00e8ncia renovada."
+    :"La prova de "+LIC_TRIAL+" dies s'ha acabat. Les visites que ja tens segueixen obertes i es poden acabar i exportar; per estrenar-ne una de nova, cal una llic\u00e8ncia.");
+  return false;
+}
+var licWired=false;
+function wireLic(){
+  if(licWired)return;licWired=true;
+  function close(){$$("licBack").style.display="none";$$("licIn").value=""}
+  $$("licCancel").addEventListener("click",close);
+  $$("licBack").addEventListener("click",function(e){if(e.target===$$("licBack"))close()});
+  $$("licSave").addEventListener("click",async function(){
+    var t=$$("licIn").value.trim();
+    if(!t){$$("licNote").textContent="Enganxa la llic\u00e8ncia, o tanca sense desar-ne cap.";return}
+    var d=await licCheck(t);
+    if(!d){$$("licNote").innerHTML="Aquesta llic\u00e8ncia no val: o est\u00e0 escrita a mitges, o no l'hem emesa nosaltres. Torna a copiar-la sencera del correu."
+      +(LIC_PUB?"":" <b>(Aquesta c\u00f2pia de l'aplicaci\u00f3 encara no t\u00e9 clau p\u00fablica: cap llic\u00e8ncia no hi pot valer.)</b>");return}
+    try{localStorage.setItem(LS_LIC,t)}
+    catch(err){alert("No s'ha pogut desar la llic\u00e8ncia en aquest navegador: "+((err&&err.message)||err));return}
+    lic=d;verLine();close();
+    alert("Llic\u00e8ncia de "+d.n+", fins al "+d.x+".");
+  });
+  $$("licClear").addEventListener("click",function(){
+    if(!licStored()){close();return}
+    if(!confirm("Vols treure la llic\u00e8ncia d'aquest aparell?"))return;
+    try{localStorage.removeItem(LS_LIC)}catch(err){}
+    lic=null;verLine();close();
+  });
+}
+function openLic(msg){
+  wireLic();
+  var st=licState(),d=lic;
+  $$("licNote").innerHTML=msg?esc(msg)
+    :(d?"Aquest aparell t\u00e9 la llic\u00e8ncia de <b>"+esc(d.n)+"</b>, fins al <b>"+esc(d.x)+"</b>"
+        +(d.s?", per a "+esc(String(d.s))+" t\u00e8cnic"+(d.s==1?"":"s"):"")+"."
+        +(st.kind==="grace"?" <b>Ha caducat</b>, i segueix funcionant durant "+LIC_GRACE+" dies de cortesia.":"")
+       :(st.kind==="trial"?"Estem de prova: queden <b>"+st.days+"</b> dies. Enganxa la llic\u00e8ncia quan la tinguis."
+                          :"Aquest aparell no t\u00e9 llic\u00e8ncia."));
+  $$("licIn").value="";
+  $$("licBack").style.display="flex";
+  setTimeout(function(){var i=$$("licIn");if(i)i.focus()},30);
 }
 function wireCorrect(btnId,fieldId,compact){
   var b=$$(btnId),f=$$(fieldId);
@@ -8748,7 +8931,7 @@ function buildReportHTML(s,forPrint,lang,rev,opts){
             +"<span style=\"font-family:monospace;overflow-wrap:anywhere\">"+mediaA(sh.img,(vid?"» ":"")+esc(sh.img.name||(vid?R.video:R.photo)))+"</span></figcaption></figure>";
         }).join("")+"</div>";
     })()
-    +"<div class=\"ft\"><span>ID: "+s.id+"</span><span>Field Service Log</span></div>"
+    +"<div class=\"ft\"><span>ID: "+s.id+"</span>"+(licStamp()?"<span>"+esc(licStamp())+"</span>":"")+"<span>Field Service Log</span></div>"
     +"</body></html>";
 }
 
@@ -9731,6 +9914,7 @@ async function buildTimesheetBlob(s){
   for(var p=1;p<=n;p++){
     doc.setPage(p);doc.setFontSize(7.5);doc.setTextColor(156,163,175);
     doc.text("ID: "+s.id,M,H-6);
+    var lst=licStamp();if(lst)doc.text(lst,W/2,H-6,{align:"center"});
     doc.text(p+" / "+n,W-M,H-6,{align:"right"});
   }
   return doc.output("blob");
@@ -10703,6 +10887,7 @@ async function buildPdfBlob(s,lang,rev,opts){
   for(var p=1;p<=n;p++){
     doc.setPage(p);doc.setFontSize(7.5);doc.setTextColor(156,163,175);
     doc.text("ID: "+s.id,M,H-6);
+    var lst=licStamp();if(lst)doc.text(lst,W/2,H-6,{align:"center"});
     doc.text(p+" / "+n,W-M,H-6,{align:"right"});
   }
 
@@ -11302,8 +11487,9 @@ async function buildDocxDocument(D,s,lang,rev,opts){
 
   // The PDF's footer: session id on the left, page x / y on the right.
   var footer=new D.Footer({children:[P({
-    tabStops:[{type:D.TabStopType.RIGHT,position:tw(CW)}],
+    tabStops:[{type:D.TabStopType.CENTER,position:tw(CW/2)},{type:D.TabStopType.RIGHT,position:tw(CW)}],
     children:[T({text:"ID: "+s.id,size:hp(7.5),font:"Arial",color:"9CA3AF"}),T({text:"\t",size:hp(7.5)}),
+              T({text:licStamp(),size:hp(7.5),font:"Arial",color:"9CA3AF"}),T({text:"\t",size:hp(7.5)}),
               T({children:[D.PageNumber.CURRENT," / ",D.PageNumber.TOTAL_PAGES],size:hp(7.5),font:"Arial",color:"9CA3AF"})]})]});
 
   return new D.Document({
@@ -12884,6 +13070,7 @@ $$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><di
   exWipClean();                     // tickets left half-made when the app was closed
   setTimeout(exMigrate,1500);       // tickets from before version · 10: whole pictures out of the visit        // idb is open by now; nothing waits on this
   labelsLoad();                     // so a language translated earlier is ready offline
+  licBoot();                        // the licence, read and verified in the page
   if(loadTok()&&accessToken&&Date.now()<tokenExp){
     isLoggedIn=true;
     loadFromDrive().then(function(){renderAll();scheduleSync();flushTrash()});

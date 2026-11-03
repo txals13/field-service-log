@@ -1,0 +1,9 @@
+# Secrets del Worker: la clau de Cloud Translation hi és en clar.
+worker/.dev.vars
+worker/.wrangler/
+worker/node_modules/
+
+# La clau privada que signa les llicències. Si aquesta surt del teu ordinador,
+# qualsevol pot emetre llicències del Field Service Log.
+tools/*.json
+fsl-clau-privada.json

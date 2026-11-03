@@ -1,0 +1,18 @@
+# Cloudflare Worker del Field Service Log.
+#
+# Aquest fitxer s'havia perdut (worker/ no era al git i src/ havia quedat buit);
+# està refet a partir del que el Worker feia servir. Comprova el nom abans de
+# desplegar: ha de ser el mateix del Worker que ja existeix al compte de
+# Cloudflare, o en crearà un de nou amb una altra URL.
+#
+#   wrangler dev      → en local, amb worker/.dev.vars (ENVIRONMENT=development)
+#   wrangler deploy   → a producció
+#
+# El secret NO va aquí:
+#   wrangler secret put TRANSLATE_KEY
+name = "fsl-translate"
+main = "src/index.js"
+compatibility_date = "2026-09-21"
+
+[vars]
+ENVIRONMENT = "production"

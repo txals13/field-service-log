@@ -2344,6 +2344,91 @@ Must use Safari (not Chrome) on iOS. Chrome on iOS cannot install PWAs.
 
 ---
 
+## Licences (2026-11-03)
+
+A licence is a short signed text the customer pastes in once per device:
+
+    FSL1.<payload>.<signature>
+
+`payload` is base64url of a small JSON — `{n:titular, x:"YYYY-MM-DD", s:seats,
+i:id, f:[extres]}` — and `signature` is **ECDSA P-256 / SHA-256 over the
+payload exactly as encoded** (the middle part of the token, as ASCII, not over
+the re-serialised JSON). The app carries only the **public** key, so a licence
+is verified **in the page, with no network**: the app's whole reason to exist is
+a plant with no signal, and a licence that needed a server to be believed would
+lock a technician out exactly while they were working.
+
+Not Ed25519: WebCrypto only got it in recent Chrome and Safari, and this runs on
+whatever Android phone the technician carries. P-256 is everywhere.
+
+### Where things are
+- `index.html` — `LIC_ON`, `LIC_PUB`, `LIC_TRIAL`, `LIC_GRACE`, then `licCheck`,
+  `licState`, `licStamp`, `licGate`, `openLic`, and `licBoot()` called from INIT.
+  Stored in `fsl_v6_lic` (the token) and `fsl_v6_lic0` (the day this device
+  first opened the app, which is when the trial starts).
+- `tools/llicencies.html` — the issuing tool. Local, offline, sends nothing. It
+  makes the key pair, signs licences, verifies one a customer complains about,
+  and keeps a register it can export as CSV. **Not part of the app.**
+- The **private key** never goes in the repo (`.gitignore` covers
+  `tools/*.json` and `fsl-clau-privada.json`). Lose it and licences already
+  issued keep working — the public key in the app is what checks them — but no
+  new ones can be signed without a new key pair and a new release.
+
+### Turning it on
+`LIC_ON = false` is how it ships. It stays false until:
+1. `tools/llicencies.html` → *Crea un parell de claus nou* → paste the printed
+   `var LIC_PUB={…};` line into `index.html`, and save the private key file
+   somewhere outside the repo (plus a backup).
+2. Issue a licence to ourselves, paste it into the app (🔒 Llicència), check the
+   sidebar line reads the right name.
+3. Only then set `LIC_ON = true` and deploy.
+
+Flipping it before step 2 would, after `LIC_TRIAL` days, stop a real visit on
+our own phone.
+
+### What it gates, and what it does not
+- Only **starting a new visit** asks. A visit that already exists can be
+  written, finished, exported and archived whatever the licence says — never
+  stand between a technician and work already begun.
+- Expired licences keep working for `LIC_GRACE` days (30), warning in the
+  sidebar line, so a renewal that arrives late does not stop a trip.
+- No licence on a fresh device → `LIC_TRIAL` days (30) of everything.
+- **Seats (`s`) are not enforced.** They cannot be, offline. The number is shown
+  and goes on the invoice; it is a contractual term, not a lock.
+- The licensee's name is stamped in the footer of **every report** — HTML, PDF
+  (centred, both the report and the validation PDF) and Word (a CENTER tab stop
+  added beside the existing RIGHT one). That is the real deterrent: a borrowed
+  copy signs someone else's name to the work. Note the PDF footer is WinAnsi —
+  a titular with exotic characters would flip the line to UTF-16, like ✔ does.
+- Anyone can delete the check from a copy of `index.html`. That is not what it
+  is for; it is for one paying customer passing the URL to three colleagues.
+
+### Tested 2026-11-03
+End to end in the browser, with a throwaway key pair: issuing, a good token, a
+tampered token (rejected), valid / in-grace / expired / trial-over states, the
+gate on «+ Nova», pasting a licence through the modal, and the name landing in
+the HTML, PDF and Word footers (checked inside `word/footer1.xml`).
+
+---
+
+## The Worker (worker/)
+
+`worker/src/index.js` was **lost** — the folder was never committed and `src/`
+had been emptied — and was recovered on 2026-11-03 from the source map left in
+`worker/.wrangler/tmp/dev-*/index.js.map`. `wrangler.toml` was gone too and is
+rebuilt from what the code reads; **check `name` against the Worker that already
+exists in the Cloudflare account before deploying**, or it will create a second
+one at a different URL.
+
+It still proxies **Cloud Translation**, which the app no longer uses: the
+report translations and ✓ Corregeix moved to Gemini with the key typed into
+🔑 Clau de Gemini. So the Worker is deployed-and-idle, and the next step of the
+distribution plan is to put **Gemini** behind it, gated by the licence token —
+then a copy of `index.html` without a licence has no AI at all, and customers
+stop needing a Gemini key and a billing account of their own.
+
+---
+
 ## Deployment procedure
 1. Edit `index.html`
 2. In VS Code: Source Control → write commit message → ✓ Commit → **Sync Changes**

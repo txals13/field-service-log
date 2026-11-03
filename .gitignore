@@ -7,3 +7,7 @@ worker/node_modules/
 # qualsevol pot emetre llicències del Field Service Log.
 tools/*.json
 fsl-clau-privada.json
+
+# Els servidors de desenvolupament: hi ha els camins de les carpetes d'aquest
+# ordinador, i el repositori és públic. El fitxer es queda al disc.
+.claude/launch.json

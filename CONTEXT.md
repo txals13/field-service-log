@@ -2374,17 +2374,25 @@ whatever Android phone the technician carries. P-256 is everywhere.
   issued keep working — the public key in the app is what checks them — but no
   new ones can be signed without a new key pair and a new release.
 
-### Turning it on
-`LIC_ON = false` is how it ships. It stays false until:
-1. `tools/llicencies.html` → *Crea un parell de claus nou* → paste the printed
-   `var LIC_PUB={…};` line into `index.html`, and save the private key file
-   somewhere outside the repo (plus a backup).
-2. Issue a licence to ourselves, paste it into the app (🔒 Llicència), check the
-   sidebar line reads the right name.
-3. Only then set `LIC_ON = true` and deploy.
+### On since 2026-11-03
+`LIC_ON = true`, `LIC_PUB` holds the real public key, and the first licence is
+issued to **Txals**, one technician, until 2031-12-31. Every report now carries
+that name in its footer — re-issue the licence with the company's legal name
+(and the right number of technicians) and the footer follows, it takes a minute.
 
-Flipping it before step 2 would, after `LIC_TRIAL` days, stop a real visit on
-our own phone.
+The **private key** lives in the `Claus` folder of the user's OneDrive, outside
+the repository, and nothing in git points at it. Back it up: without it no new
+licence can be signed — though every licence already issued keeps working, since
+what checks them is the public key in `index.html`. If it is ever lost, the only
+way out is a new key pair, a new `LIC_PUB` and a new licence for everyone.
+
+To issue one: open `tools/llicencies.html`, load that file in step 2, fill in
+titular / caducitat / tècnics, *Genera la llicència*, check it in step 4, and
+send it with the *Copia el text del correu* button. The tool reads and writes
+the same JWK format the key was generated in.
+
+Putting `LIC_ON` back to false disables the whole thing: nothing is blocked and
+no footer is stamped.
 
 ### What it gates, and what it does not
 - Only **starting a new visit** asks. A visit that already exists can be
@@ -2404,10 +2412,16 @@ our own phone.
   is for; it is for one paying customer passing the URL to three colleagues.
 
 ### Tested 2026-11-03
-End to end in the browser, with a throwaway key pair: issuing, a good token, a
-tampered token (rejected), valid / in-grace / expired / trial-over states, the
-gate on «+ Nova», pasting a licence through the modal, and the name landing in
-the HTML, PDF and Word footers (checked inside `word/footer1.xml`).
+First with a throwaway key pair: issuing, a good token, a tampered token
+(rejected), valid / in-grace / expired / trial-over states, the gate on
+«+ Nova», pasting a licence through the modal, and the name landing in the
+HTML, PDF and Word footers (checked inside `word/footer1.xml`).
+
+Then again with the real key, which also proves the two implementations agree:
+the licence is signed by a Python script (`cryptography`, DER → raw r‖s) and
+verified by the app's WebCrypto, and `tools/llicencies.html` loads that same
+private key file, signs and verifies. The footer of a report exported from the
+running app reads `Txals`.
 
 ---
 

@@ -6741,13 +6741,16 @@ function openGemKey(msg){
 // the URL to three colleagues. The licensee's name is stamped on every report,
 // so a borrowed copy signs someone else's name to the work.
 //
-// LIC_ON is the switch. It stays false until there is a key in LIC_PUB and a
-// licence issued to ourselves — shipping the gate before that would, after
-// LIC_TRIAL days, stop a real visit on the user's own phone. With it false
-// everything below still works and can be tested; nothing is blocked and no
-// report changes.
-var LIC_ON=false;
-var LIC_PUB=null;          // the public key, as a JWK — tools/llicencies.html prints it
+// LIC_ON is the switch, ON since 2026-11-03. Turning it on before LIC_PUB held
+// a key and we had issued ourselves a licence would have stopped a real visit
+// on our own phone LIC_TRIAL days later. Back to false and nothing is blocked,
+// nothing is stamped, and everything below can still be tested.
+//
+// The private key that signs licences is not here and not in the repository.
+// Without it no new licence can be signed; the ones already out keep working,
+// because what checks them is the public key below.
+var LIC_ON=true;
+var LIC_PUB={"kty":"EC","crv":"P-256","x":"i5WMBBT-5fox0P6va1CKRd5SbvuyqDCWzpudAhpErtA","y":"uLmv4izNR0kh7PxRHb0WXk0TI0iDQypzIt4kwgjwhf0"};  // the public key, as a JWK — tools/llicencies.html prints it
 var LIC_TRIAL=30;          // days a fresh device may work with no licence
 var LIC_GRACE=30;          // days an expired licence keeps working, warning
 var lic=null,licReady=false;

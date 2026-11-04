@@ -6718,9 +6718,10 @@ function wireGem(){
 function openGemKey(msg){
   wireGem();
   var k=gemKey();
-  $$("gemNote").innerHTML=msg?esc(msg)
+  $$("gemNote").innerHTML=(wkCan()?"<b>Amb la llicència activa no et cal cap clau</b>: el corrector, les traduccions i la lectura de tiquets ja hi van incloses. Això només serveix si la vols fer anar amb la teva.<br><br>":"")
+    +(msg?esc(msg)
     :(k?"Aquest navegador ja en té una: <code>"+esc(gemMask(k))+"</code>. Escriu-ne una altra només si la vols substituir."
-       :"Aquest navegador encara no en té cap. La treus d'AI Studio, del projecte que tingui la facturació activada.");
+       :"Aquest navegador encara no en té cap. La treus d'AI Studio, del projecte que tingui la facturació activada."));
   $$("gemIn").value="";
   $$("gemBack").style.display="flex";
   setTimeout(function(){var i=$$("gemIn");if(i)i.focus()},30);
@@ -6915,8 +6916,7 @@ function wireCorrect(btnId,fieldId,compact){
       var m=(e&&e.message)||String(e);
       // Missing key isn't a breakdown to explain, it's a field to fill in.
       if(m===GEM_NOKEY){rest();openGemKey("Per corregir el text cal la clau de Gemini. Escriu-la aquí i torna-ho a provar.");return}
-      alert("No s'ha pogut corregir el text: "+m
-        +"\n\nComprova la connexió, i que l'API de Gemini estigui activada al projecte de Google Cloud i permesa per a la clau.");
+      alert("No s'ha pogut corregir el text: "+m+gemHint());
     }
     rest();
   });
@@ -6996,8 +6996,7 @@ function wireDaySummary(btnId,fieldId){
     }catch(e){
       var m=(e&&e.message)||String(e);
       if(m===GEM_NOKEY){rest();openGemKey("Per resumir els dies cal la clau de Gemini. Escriu-la aquí i torna-ho a provar.");return}
-      alert("No s'ha pogut fer el resum: "+m
-        +"\n\nComprova la connexió, i que l'API de Gemini estigui activada al projecte de Google Cloud i permesa per a la clau.");
+      alert("No s'ha pogut fer el resum: "+m+gemHint());
     }
     rest();
   });
@@ -7862,6 +7861,25 @@ function setWriteLang(id,lang){
 // answer the CORS preflight those custom headers trigger. The classic
 // :generateContent with the key in the query string does, so that's what this
 // uses. Checked against the real API, not a mock.
+// ── WHERE THE MODEL COMES FROM ────────────────────────────────────
+// Two ways, in this order:
+//   1. OUR WORKER, when this device holds a valid licence. The key is the
+//      Worker's, not the user's, so a buyer never has to make a Gemini key or
+//      open a billing account — and a copy of this file taken from the public
+//      page has no way in at all. That is what the licence actually buys.
+//   2. THE USER'S OWN KEY, typed into 🔑 Clau de Gemini. It stays the escape
+//      hatch: it works with no licence, and it takes over if the Worker ever
+//      refuses or cannot be reached, because a licence problem must never cost
+//      a technician the corrector in the middle of a visit.
+// With WK_URL empty only the second exists, which is exactly how this worked
+// before the Worker — so nothing changes until the address is filled in.
+var WK_URL="";             // "https://fsl.<subdomini>.workers.dev", no trailing slash
+var WK_TRIAL=false;        // true would let trial devices spend our Gemini budget too
+function wkCan(){
+  if(!WK_URL)return false;
+  var k=licState().kind;
+  return k==="ok"||k==="grace"||(WK_TRIAL&&k==="trial");
+}
 var GEM_BASE="https://generativelanguage.googleapis.com/v1beta/models/";
 var GEM_MODEL="gemini-3.5-flash-lite";
 // Read on every call, never cached in a variable: the key modal writes it and
@@ -7869,6 +7887,15 @@ var GEM_MODEL="gemini-3.5-flash-lite";
 function gemKey(){try{return localStorage.getItem(LS_GEM)||""}catch(e){return ""}}
 function gemUrl(model){return GEM_BASE+(model||GEM_MODEL)+":generateContent?key="+encodeURIComponent(gemKey())}
 var GEM_NOKEY="falta la clau de Gemini";
+var GEM_NOSERV="no s'ha pogut connectar amb el servei";
+// What to suggest after a failed call. Telling someone to go and enable an API
+// in "the Google Cloud project" is good advice when the key is theirs, and
+// nonsense to a customer who has a licence precisely so as not to have one.
+function gemHint(){
+  return gemKey()
+    ? "\n\nComprova la connexi\u00f3, i que l'API de Gemini estigui activada al projecte de Google Cloud i permesa per a la clau."
+    : "\n\nComprova la connexi\u00f3 i torna-ho a provar d'aqu\u00ed a una estona. Si segueix igual, avisa'ns.";
+}
 var GEM_SYS="Ets un corrector de textos tècnics d'informes de servei de camp. "
   +"Corregeix NOMÉS ortografia, accents, puntuació i concordança, en la mateixa llengua en què està escrit el text. "
   +"No canviïs el sentit, l'estil ni el registre; no afegeixis ni treguis informació; no resumeixis ni reordenis. "
@@ -7887,13 +7914,33 @@ function gemText(j){
 // `input` is the text, or the parts themselves (the tickets send images);
 // `model` overrides GEM_MODEL for that one call.
 async function gemAsk(sys,input,json,model){
-  if(!gemKey())throw new Error(GEM_NOKEY);
   var cfg={temperature:0};
   if(json)cfg.responseMimeType="application/json";
-  var r=await fetch(gemUrl(model),{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({systemInstruction:{parts:[{text:sys}]},
+  var mdl=model||GEM_MODEL;
+  // The same body either way: the Worker forwards it untouched and hands back
+  // Gemini's own answer, so everything below this point is exactly what it was
+  // when the app called Google directly — errors included.
+  var req={systemInstruction:{parts:[{text:sys}]},
       contents:[{role:"user",parts:Array.isArray(input)?input:[{text:input}]}],
-      generationConfig:cfg})});
+      generationConfig:cfg};
+  var r=null;
+  if(wkCan()){
+    try{
+      r=await fetch(WK_URL+"/gemini",{method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer "+licStored()},
+        body:JSON.stringify({model:mdl,req:req})});
+    }catch(e){}
+    // There, but it will not serve this call (licence refused, or it broke).
+    // With a key of our own we simply use it; with none we let the Worker's
+    // own message through, since it says what is wrong better than we could.
+    if((!r||r.status===401||r.status===403||r.status>=500)&&gemKey())r=null;
+    else if(!r)throw new Error(GEM_NOSERV);
+  }
+  if(!r){
+    if(!gemKey())throw new Error(GEM_NOKEY);
+    r=await fetch(gemUrl(mdl),{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(req)});
+  }
   var j=null;try{j=await r.json()}catch(e){}
   if(!r.ok){
     var m="HTTP "+r.status;

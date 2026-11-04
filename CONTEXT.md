@@ -2434,12 +2434,74 @@ rebuilt from what the code reads; **check `name` against the Worker that already
 exists in the Cloudflare account before deploying**, or it will create a second
 one at a different URL.
 
-It still proxies **Cloud Translation**, which the app no longer uses: the
-report translations and ✓ Corregeix moved to Gemini with the key typed into
-🔑 Clau de Gemini. So the Worker is deployed-and-idle, and the next step of the
-distribution plan is to put **Gemini** behind it, gated by the licence token —
-then a copy of `index.html` without a licence has no AI at all, and customers
-stop needing a Gemini key and a billing account of their own.
+### It now serves Gemini, and only to a licence (2026-11-04)
+
+`POST /gemini`, `Authorization: Bearer FSL1.…`, body `{model, req}` where `req`
+is the Gemini request body verbatim. The Worker verifies the licence with the
+**same ECDSA P-256 check as the app** (same public key, same 30-day grace — if
+these two ever disagree, a customer gets a licence that opens the app but not
+the model, the most confusing failure there is), checks the model against an
+allowlist of the only two the app asks for (`gemini-3.5-flash` and
+`-flash-lite`, so a licence is not a licence to spend our money on any model),
+caps the body at 20 MB because a ticket can be a whole PDF, and forwards to
+Gemini with `GEMINI_KEY`. Gemini's answer goes back untouched, errors included,
+so the client parses exactly what it parsed when it called Google directly.
+
+The old `/translate` endpoint is **gone**: it proxied Cloud Translation, which
+the app stopped using when the reports moved to Gemini, and it took no licence
+— an unauthenticated endpoint that spends money is not worth keeping for
+nothing. It is in the git history if ever wanted; the `TRANSLATE_KEY` secret
+and the Cloud Translation API can be dropped.
+
+**In the app** (`index.html`): `WK_URL` — empty for now — plus `WK_TRIAL`
+(false: trial devices do not spend our Gemini budget) and `wkCan()`. Only
+`gemAsk` changed, and it is the single chokepoint every AI feature goes
+through: corrector, report translations, day summary and ticket reading. The
+order is Worker first when the device holds a valid licence, **the user's own
+key as the way out** — it works with no licence at all, and it takes over if
+the Worker refuses (401/403) or cannot be reached, because a licence problem
+must never cost a technician the corrector in the middle of a visit. With
+`WK_URL` empty only the own-key path exists, which is exactly how the app
+worked before, so nothing changes until the address is filled in.
+
+The error advice follows suit (`gemHint`): "enable the Gemini API in your
+Google Cloud project" is good advice to someone using their own key and
+nonsense to a customer who bought a licence precisely so as not to have one.
+
+### Deploying it
+
+**Node is not installed on this machine any more**, so `wrangler` cannot run
+(it was there on 2026-09-21 — the `.wrangler` folder is from then). Two ways:
+
+1. **The Cloudflare dashboard.** The Worker is one self-contained file with no
+   dependencies: paste `worker/src/index.js` into the editor, set `GEMINI_KEY`
+   as a secret and `ENVIRONMENT=production` as a variable. No toolchain.
+2. **Install Node** (`winget install OpenJS.NodeJS.LTS`), then
+   `npx wrangler secret put GEMINI_KEY` and `npx wrangler deploy`.
+
+Then put the Worker's address in `WK_URL` and deploy the page. Check the name
+in `wrangler.toml` against the Worker that already exists in the account first.
+
+**Not done yet: a quota per licence.** Nothing counts calls, so one customer
+could run up the Gemini bill. Counting needs storage the Worker does not have
+a binding for (KV, or the native rate-limit binding); the only brakes today are
+the body cap, the model allowlist and the licence's own expiry.
+
+### Tested 2026-11-04, without Node
+
+A stand-in Worker written in Python (same contract, same ECDSA check, same CORS)
+with the app driven in the browser against it:
+
+- licence, no key of its own → the corrector goes through the Worker (CORS
+  preflight and all) and the Worker logs the licence holder and the model;
+- no licence, no key → the Worker is never called and the key modal opens,
+  exactly as before;
+- licence, Worker refuses, own key present → falls back to Google and shows
+  Google's own error;
+- licence, Worker refuses, no key → the Worker's message reaches the user.
+
+That also makes three independent implementations of the licence check that
+agree: the app's WebCrypto, the Python issuer, and this.
 
 ---
 

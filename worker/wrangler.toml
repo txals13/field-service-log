@@ -1,18 +1,26 @@
 # Cloudflare Worker del Field Service Log.
 #
-# Aquest fitxer s'havia perdut (worker/ no era al git i src/ havia quedat buit);
-# està refet a partir del que el Worker feia servir. Comprova el nom abans de
-# desplegar: ha de ser el mateix del Worker que ja existeix al compte de
-# Cloudflare, o en crearà un de nou amb una altra URL.
+# Serveix Gemini a qui ensenya una llicència vàlida (POST /gemini). La clau de
+# Gemini viu aquí dins com a secret i no surt mai de Cloudflare.
 #
-#   wrangler dev      → en local, amb worker/.dev.vars (ENVIRONMENT=development)
-#   wrangler deploy   → a producció
-#
-# El secret NO va aquí:
-#   wrangler secret put TRANSLATE_KEY
-name = "fsl-translate"
+# EL NOM ÉS LA URL: el Worker queda a https://<name>.<subdomini>.workers.dev,
+# i aquesta adreça va a WK_URL dins d'index.html. Si al compte ja hi ha un
+# Worker d'aquest projecte, posa-hi el seu nom o en crearàs un de nou en una
+# altra adreça. Es deia «fsl-translate» quan només traduïa; ara ja no tradueix.
+name = "fsl-api"
 main = "src/index.js"
 compatibility_date = "2026-09-21"
 
+# Res sensible aquí dins: aquest fitxer va al repositori, que és públic.
 [vars]
 ENVIRONMENT = "production"
+
+# El secret es posa a part, i no toca mai el disc del repositori:
+#   wrangler secret put GEMINI_KEY
+# o, al tauler: el Worker → Settings → Variables and Secrets → Add → Secret.
+#
+# TRANSLATE_KEY ja no es fa servir: l'endpoint /translate es va treure el
+# 2026-11-04. El secret es pot esborrar del compte.
+#
+#   wrangler dev      → en local, amb worker/.dev.vars (ENVIRONMENT=development)
+#   wrangler deploy   → a producció

@@ -2468,19 +2468,45 @@ The error advice follows suit (`gemHint`): "enable the Gemini API in your
 Google Cloud project" is good advice to someone using their own key and
 nonsense to a customer who bought a licence precisely so as not to have one.
 
-### Deploying it
+### Deploying it (checked against Cloudflare's docs, 2026-11-04)
 
 **Node is not installed on this machine any more**, so `wrangler` cannot run
-(it was there on 2026-09-21 — the `.wrangler` folder is from then). Two ways:
+(it was there on 2026-09-21 — the `.wrangler` folder is from then). The
+dashboard's **Create application** is now a Git flow (template gallery or
+import a repository), so there is no longer a "paste your code here and
+create" button. Three ways in, cheapest first:
 
-1. **The Cloudflare dashboard.** The Worker is one self-contained file with no
-   dependencies: paste `worker/src/index.js` into the editor, set `GEMINI_KEY`
-   as a secret and `ENVIRONMENT=production` as a variable. No toolchain.
-2. **Install Node** (`winget install OpenJS.NodeJS.LTS`), then
-   `npx wrangler secret put GEMINI_KEY` and `npx wrangler deploy`.
+1. **The Playground** — `workers.cloudflare.com/playground`. A browser sandbox
+   you can paste a Worker into and deploy straight to the account; it becomes a
+   real Worker with its own `workers.dev` URL. Nothing to install. This is the
+   one to use today: `worker/src/index.js` is a single dependency-free ES
+   module, which is exactly what it expects.
+2. **Point Cloudflare at the GitHub repo** — Create application → import
+   `txals13/field-service-log`, root directory `worker/`. Then every push
+   redeploys the Worker, which is tidy but couples the page's repo to the
+   deploy.
+3. **Install Node** (`winget install OpenJS.NodeJS.LTS`), then
+   `npx wrangler deploy`. Worth doing eventually anyway: logs, KV and the
+   quota work below all want wrangler.
 
-Then put the Worker's address in `WK_URL` and deploy the page. Check the name
-in `wrangler.toml` against the Worker that already exists in the account first.
+**The name is the URL.** The Worker answers at
+`https://<name>.<subdomain>.workers.dev`, and that address is what goes into
+`WK_URL`. `wrangler.toml` says `fsl-api` (it said `fsl-translate` back when
+translating was all it did). If a Worker for this project already exists in the
+account, use ITS name or a second one appears at a different address.
+
+**The secret, after it exists:** Workers & Pages → the Worker → **Settings** →
+**Variables and Secrets** → **Add** → type **Secret**, name `GEMINI_KEY`, the
+AI Studio key as the value → **Deploy** (the dashboard needs that last click for
+it to take effect). Add `ENVIRONMENT` = `production` as a plain variable in the
+same place if the Playground route did not carry `wrangler.toml` over — without
+it only `https://txals13.github.io` is allowed as an origin, which is the safe
+default anyway, so this only matters for `wrangler dev`.
+
+Until `GEMINI_KEY` is set the Worker answers **500 "the service has no key
+configured"**, which is the expected first response, not a fault.
+
+Then `WK_URL` in index.html, and deploy the page.
 
 **Not done yet: a quota per licence.** Nothing counts calls, so one customer
 could run up the Gemini bill. Counting needs storage the Worker does not have

@@ -139,11 +139,20 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
     inside `ensureLabels`, and `t("…")` there was a TypeError waiting for the
     first person to export a report in a new language. Renaming removed the
     whole class of bug instead of that one instance.
-  - **What is left in Catalan:** anything whose variable half is itself still
-    Catalan — the language names from `langInto` ("a l'anglès") and the
-    expense-gap words in `EX_MISS`. Those dialogs are deliberately left
-    unwrapped and whole in Catalan rather than mixed. Localising `LANGS` and
-    `EX_MISS` would free them.
+  - **The language names come from the browser** (`langIntoUI`, 2026-11-05).
+    `Intl.DisplayNames` knows every language's name in every language, so the
+    29 × 2 columns of translation that `LANGS` would have needed were never
+    written, and the 26 languages nobody has picked yet are right anyway.
+    **Catalan keeps its hand-written column**: there the preposition changes
+    with the word — "al català" but "a l'anglès" — and only a table gets that
+    right. Spanish takes "al" for every language name and English takes
+    "into", so for those the browser's list is enough. That freed the five
+    dialogs about translating a report, and `EX_MISS` freed the two about a
+    missing receipt.
+  - **Not exercised end to end:** those five dialogs need a real export into a
+    new language with no Gemini key, and the expense ones a real ticket. The
+    edits are mechanical and the app runs clean, but they have not been seen
+    on screen — worth a look on the device.
   - 299 translations each for es and en, hand-written. Eight strings are
     deliberately absent (brand names, `u/min`, `EUR`, `FSL1.…`): absent means
     Catalan, which for those is right.

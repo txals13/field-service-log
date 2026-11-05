@@ -6679,6 +6679,17 @@ function knownLang(c){return !!langRow(c)}
 function langName(c){var r=langRow(c);return r?r[2]:c}      // for the model
 function langNative(c){var r=langRow(c);return r?r[1]:c}    // for the menu
 function langInto(c){var r=langRow(c);return r?r[3]:c}      // for our messages
+// The same thing in whatever language the interface is in. Catalan keeps the
+// written column: "al català" but "a l'anglès", and only a table knows which.
+// Spanish takes "al" for every language name and English takes "into", so for
+// those the browser's own name list is enough and stays right for the 26
+// languages nobody has picked yet.
+function langIntoUI(c){
+  if(uiLang()==="ca")return langInto(c);
+  var nm=c;
+  try{nm=new Intl.DisplayNames([uiLang()],{type:"language"}).of(c)||c}catch(e){nm=langNative(c)}
+  return (uiLang()==="es"?"al ":"into ")+nm;
+}
 function reportLang(s){return (s&&knownLang(s.reportLang))?s.reportLang:"ca"}
 // One row of the export menu: three chips for the everyday languages and a
 // dropdown for the other twenty-six, so the common case stays one tap and the
@@ -7248,7 +7259,16 @@ es:{
   "No s'han pogut preparar les etiquetes en {l}: ":"No se han podido preparar las etiquetas en {l}: ",
   "Atenció: el ZIP no porta {n} fitxer(s) que la visita té però que ja no són a Drive:":"Atención: el ZIP no lleva {n} archivo(s) que la visita tiene pero que ya no están en Drive:",
   "Aquesta visita és a l'arxiu{x}, no a l'app.\n\nPer obrir-la sencera, importa'n el ZIP: Importa › tria el ZIP de la carpeta d'arxiu.":"Esta visita está en el archivo{x}, no en la app.\n\nPara abrirla entera, importa su ZIP: Importa › elige el ZIP de la carpeta de archivo.",
-  "Les etiquetes en {l} ja hi són, traduïdes per Gemini i guardades en aquest navegador.\n\n":"Las etiquetas en {l} ya están, traducidas por Gemini y guardadas en este navegador.\n\n"
+  "Les etiquetes en {l} ja hi són, traduïdes per Gemini i guardades en aquest navegador.\n\n":"Las etiquetas en {l} ya están, traducidas por Gemini y guardadas en este navegador.\n\n",
+  "L'historial s'ha de traduir {l}, i en aquest navegador no hi ha cap clau de Gemini.":"El historial se ha de traducir {l}, y en este navegador no hay ninguna clave de Gemini.",
+  "Aquest informe s'ha de traduir {l}, i en aquest navegador no hi ha cap clau de Gemini.":"Este informe se ha de traducir {l}, y en este navegador no hay ninguna clave de Gemini.",
+  "No s'han pogut traduir els textos {l}:":"No se han podido traducir los textos {l}:",
+  "No s'han pogut traduir els textos del full d'hores {l}:":"No se han podido traducir los textos de la hoja de horas {l}:",
+  "A aquesta despesa li falta {x}.":"A este gasto le falta {x}.",
+  " i ":" y ",
+  "el rebut de la despesa":"el recibo del gasto",
+  "el comprovant de la targeta":"el comprobante de la tarjeta",
+  "un altre document: el rebut o el comprovant de la targeta":"otro documento: el recibo o el comprobante de la tarjeta"
 },
 en:{
   "Es desa només en aquest aparell i no viatja enlloc: ni a Drive, ni als ZIP, ni a les còpies de seguretat — per això cal escriure-la un cop a cada aparell. No li cal cobertura: es comprova aquí mateix, i per tant funciona en una planta sense senyal. El nom del titular surt al peu de cada informe.":"It is kept on this device only and goes nowhere else: not to Drive, not into the ZIPs, not into the backups — which is why it has to be entered once on each device. It needs no signal: it is checked right here, so it works in a plant with no coverage. The licence holder's name appears at the foot of every report.",
@@ -7767,7 +7787,17 @@ en:{
   "No s'han pogut preparar les etiquetes en {l}: ":"The labels in {l} could not be prepared: ",
   "Atenció: el ZIP no porta {n} fitxer(s) que la visita té però que ja no són a Drive:":"Careful: the ZIP is missing {n} file(s) the visit has but that are no longer in Drive:",
   "Aquesta visita és a l'arxiu{x}, no a l'app.\n\nPer obrir-la sencera, importa'n el ZIP: Importa › tria el ZIP de la carpeta d'arxiu.":"This visit is in the archive{x}, not in the app.\n\nTo open it whole, import its ZIP: Importa › pick the ZIP from the archive folder.",
-  "Les etiquetes en {l} ja hi són, traduïdes per Gemini i guardades en aquest navegador.\n\n":"The labels in {l} are already here, translated by Gemini and kept in this browser.\n\n"
+  "Les etiquetes en {l} ja hi són, traduïdes per Gemini i guardades en aquest navegador.\n\n":"The labels in {l} are already here, translated by Gemini and kept in this browser.\n\n",
+  "L'historial s'ha de traduir {l}, i en aquest navegador no hi ha cap clau de Gemini.":"The history has to be translated {l}, and this browser has no Gemini key.",
+  "Aquest informe s'ha de traduir {l}, i en aquest navegador no hi ha cap clau de Gemini.":"This report has to be translated {l}, and this browser has no Gemini key.",
+  "No s'han pogut traduir els textos {l}:":"The text could not be translated {l}:",
+  "No s'han pogut traduir els textos del full d'hores {l}:":"The timesheet's text could not be translated {l}:",
+  "A aquesta despesa li falta {x}.":"This expense is missing {x}.",
+  "Falta {x}.":"Missing {x}.",
+  " i ":" and ",
+  "el rebut de la despesa":"the receipt for the expense",
+  "el comprovant de la targeta":"the card slip",
+  "un altre document: el rebut o el comprovant de la targeta":"another document: the receipt or the card slip"
 }};   // UI[lang][catalan]; ca is the source, so it has no table
 function uiLang(){
   try{var l=localStorage.getItem(LS_UILANG);if(l&&(l==="ca"||UI[l]))return l}catch(e){}
@@ -8745,12 +8775,12 @@ async function printMachineHistory(){
     loc=all;done();
     var m=(e&&e.message)||String(e);
     if(m===GEM_NOKEY){
-      if(confirm("L'historial s'ha de traduir "+langInto(lang)+", i en aquest navegador no hi ha cap clau de Gemini."
-        +"\n\nAccepta per escriure-la ara, o cancel·la per imprimir-lo amb els textos tal com els vas escriure.")){
+      if(confirm(uiT("L'historial s'ha de traduir {l}, i en aquest navegador no hi ha cap clau de Gemini.").replace("{l}",langIntoUI(lang))
+        +uiT("\n\nAccepta per escriure-la ara, o cancel·la per imprimir-lo amb els textos tal com els vas escriure."))){
         openGemKey("L'historial s'ha de traduir "+langInto(lang)+". Escriu la clau i torna a imprimir-lo.");return;
       }
-    }else if(!confirm("No s'han pogut traduir els textos "+langInto(lang)+":\n"+m
-      +"\n\nVols imprimir-lo igualment, amb els textos tal com els vas escriure?"))return;
+    }else if(!confirm(uiT("No s'han pogut traduir els textos {l}:").replace("{l}",langIntoUI(lang))+"\n"+m
+      +uiT("\n\nVols imprimir-lo igualment, amb els textos tal com els vas escriure?")))return;
   }
   done();
   var L=RPT[lang]||RPT.en,v=mhRender(cur,loc,L,true),newest=all[0]||cur;
@@ -9209,13 +9239,13 @@ async function reportSession(s){
   catch(e){
     var m=(e&&e.message)||String(e);
     if(m===GEM_NOKEY){
-      if(!confirm("Aquest informe s'ha de traduir "+langInto(lang)+", i en aquest navegador no hi ha cap clau de Gemini."
-        +"\n\nAccepta per escriure-la ara, o cancel·la per generar-lo amb els textos tal com els vas escriure."))return {s:s,lang:lang};
+      if(!confirm(uiT("Aquest informe s'ha de traduir {l}, i en aquest navegador no hi ha cap clau de Gemini.").replace("{l}",langIntoUI(lang))
+        +uiT("\n\nAccepta per escriure-la ara, o cancel·la per generar-lo amb els textos tal com els vas escriure.")))return {s:s,lang:lang};
       openGemKey("L'informe s'ha de traduir "+langInto(lang)+". Escriu la clau i torna a exportar-lo.");
       return null;
     }
-    if(!confirm("No s'han pogut traduir els textos "+langInto(lang)+":\n"+m
-      +"\n\nVols generar l'informe igualment, amb els textos tal com els vas escriure?"))return null;
+    if(!confirm(uiT("No s'han pogut traduir els textos {l}:").replace("{l}",langIntoUI(lang))+"\n"+m
+      +uiT("\n\nVols generar l'informe igualment, amb els textos tal com els vas escriure?")))return null;
     return {s:s,lang:lang};
   }
 }
@@ -11088,8 +11118,8 @@ async function localizeTimesheet(s,lang){
       openGemKey("El full d'hores va "+langInto(lang)+". Escriu la clau i torna a exportar-lo.");
       return null;
     }
-    if(!confirm("No s'han pogut traduir els textos del full d'hores "+langInto(lang)+":\n"+m
-      +"\n\nVols generar-lo igualment, amb els textos tal com els vas escriure?"))return null;
+    if(!confirm(uiT("No s'han pogut traduir els textos del full d'hores {l}:").replace("{l}",langIntoUI(lang))+"\n"+m
+      +uiT("\n\nVols generar-lo igualment, amb els textos tal com els vas escriure?")))return null;
     return T;
   }finally{expBusy("")}
   var out=Object.assign({},T,{rows:(T.rows||[]).map(function(r){return Object.assign({},r)})});
@@ -13996,7 +14026,7 @@ function xeReadLine(){
   var miss=exReading[x.id]?[]:exMissing(x),nb=$$("xeNeed");
   if(miss.length){
     nb.style.display="";
-    nb.innerHTML="&#9888; <b>Falta "+miss.map(function(k){return esc(EX_MISS[k][1])}).join(" i ")+".</b> Cada despesa porta el comprovant de la targeta i el rebut. Afegeix-lo aquí:"
+    nb.innerHTML="&#9888; <b>"+uiT("Falta {x}.").replace("{x}",miss.map(function(k){return esc(uiT(EX_MISS[k][1]))}).join(uiT(" i ")))+"</b> Cada despesa porta el comprovant de la targeta i el rebut. Afegeix-lo aquí:"
       +"<div class=\"bt\">"+(handheld()?"<button class=\"btn-sm btn-gold\" data-add=\"cam\">&#128247; Fotografia'l</button>":"")
       +"<button class=\"btn-sm"+(handheld()?"":" btn-gold")+"\" data-add=\"file\">&#65291; Imatge o PDF</button></div>";
   }else{nb.style.display="none";nb.innerHTML=""}
@@ -14034,7 +14064,7 @@ function xeClose(){
 async function xeSave(){
   var x=xeEx();if(!x){xeClose();return}
   var miss=exReading[x.id]?[]:exMissing(Object.assign({},x,{pay:$$("xePay").value}));
-  if(miss.length&&!confirm("A aquesta despesa li falta "+miss.map(function(k){return EX_MISS[k][1]}).join(" i ")+".\n\nVols desar-la igualment?"))return;
+  if(miss.length&&!confirm(uiT("A aquesta despesa li falta {x}.").replace("{x}",miss.map(function(k){return uiT(EX_MISS[k][1])}).join(uiT(" i ")))+uiT("\n\nVols desar-la igualment?")))return;
   var sessId=xeSessId,id=xeId,p={},rv=x.readVals||{};
   XE_F.forEach(function(f){p[f[1]]=$$(f[0]).value.trim()});
   p.currency=(p.currency||"EUR").toUpperCase();

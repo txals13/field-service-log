@@ -103,10 +103,26 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
       That is a code change, not a translation, and it is the next pass.
     - Note the keys are the **decoded** strings: the source says
       `"llic\u00e8ncia"`, what `t()` is handed is `llicència`.
-  - **Still Catalan whatever the picker says: the generated HTML** — everything
-    the code builds into `innerHTML` or writes with `textContent`, such as the
-    notes inside the key and licence modals. The DOM pass catches those only
-    when the exact string is already in the table from the markup.
+  - **The generated HTML went in through the screen, not the source**
+    (2026-11-05). Scanning the code for it gave 1.872 candidates that were
+    mostly URLs, CSS and selectors — useless. So instead the app was driven in
+    the browser with a visit and an entry in it, every main screen opened, and
+    the text nodes collected: 185 strings, the ones a user actually sees.
+    Switching the picker to **English** and collecting again named the
+    untranslated ones exactly — Spanish is no good for this, since half the
+    words are identical and show up as false alarms. 68 real ones, now
+    translated; what is left after that is 12 strings that are the same word in
+    English anyway, plus the language names.
+    - **None of it needed a code change.** `uiApply` already runs inside
+      `renderAll`, so a string only has to be in the table.
+    - The exception is anything drawn **outside** `renderAll` — the pass has
+      been and gone by then. There was one, the sign-in line in `driveInfo`,
+      and it is wrapped in `t()` instead. Any new code that writes text after
+      a render needs one or the other.
+  - **Still Catalan whatever the picker says**: strings carrying data inside
+    them (`"Sessions (2)"`, `"🟢 Oberta · 1 entrada"`, `"■ 0 problemes"`,
+    the weekday in a date). Same shape of problem as the 29 dialog fragments:
+    they need a single string with a placeholder, which is a code change.
   - 299 translations each for es and en, hand-written. Eight strings are
     deliberately absent (brand names, `u/min`, `EUR`, `FSL1.…`): absent means
     Catalan, which for those is right.

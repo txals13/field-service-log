@@ -70,8 +70,36 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
 ---
 
 ## Languages
-- **The app is Catalan only.** No UI language switch — every UI string is written
-  in Catalan in the code (`<html lang="ca">`, TM/SM labels included).
+- **The interface speaks ca / es / en** (2026-11-05), picked with the 🌐
+  selector in the sidebar and kept per device in `fsl_v6_uilang`. The report's
+  language is the CLIENT's, chosen per visit; this one is the technician's,
+  chosen once.
+  - **The Catalan string IS the key**: `UI.es["Nova visita"]="Nueva visita"`.
+    No invented identifiers. The source still reads as what the button says, a
+    string with no translation falls back to Catalan by simply not being found,
+    and **the markup needed no edits at all** — which is the only reason this
+    was safe to do to an 800 KB single file in one pass.
+  - `uiApply(root)` walks the text nodes and the title / placeholder /
+    aria-label attributes of a part of the page and swaps what it finds in the
+    table. A string that is not in the table is left alone, so it is safe to
+    run over anything; it never writes to a session, only to the screen. It
+    also sets `<html lang>`. In Catalan it returns at once and costs nothing.
+  - It runs **at boot over the shell**, inside `renderAll` (the sidebar and the
+    content pane are rebuilt from code, and put the same strings back), and in
+    `openNewModal`, which rewrites its own title and button. Any new place that
+    redraws labels needs the same call.
+  - `t(s)` is the same lookup for strings built in code. **The 307 strings of
+    the static markup are done; the ones built in JS are not** — 92 `alert`s,
+    26 `confirm`s and the generated HTML are still Catalan whatever the picker
+    says. That is the next pass, and `t()` is already there for it.
+  - 299 translations each for es and en, hand-written. Eight strings are
+    deliberately absent (brand names, `u/min`, `EUR`, `FSL1.…`): absent means
+    Catalan, which for those is right.
+  - The other 26 report languages are **not** offered for the interface yet.
+    When they are, it should be the report-labels trick (`ensureLabels`):
+    translate once with Gemini, check the shape, cache, let it be reviewed —
+    but chunked, because 307 strings will not come back in one reply, and with
+    a fallback that can never leave a button blank.
 - **Reports go out in any of 29 languages** (`LANGS`), chosen in the ↓ Informe
   menu — chips for CA · ES · EN, a dropdown for the other 26 — and remembered
   per session as `session.reportLang` (default ca).

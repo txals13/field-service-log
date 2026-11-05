@@ -116,9 +116,16 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
     - **None of it needed a code change.** `uiApply` already runs inside
       `renderAll`, so a string only has to be in the table.
     - The exception is anything drawn **outside** `renderAll` — the pass has
-      been and gone by then. There was one, the sign-in line in `driveInfo`,
-      and it is wrapped in `t()` instead. Any new code that writes text after
-      a render needs one or the other.
+      been and gone by then. Two were found this way: the sign-in line in
+      `driveInfo`, wrapped in `uiT()`, and the whole **⋮ Més menu of the new
+      layout** (`openM2More`), which is built when it opens and now ends with
+      `uiApply(list)`. Any new code that writes text after a render needs one
+      or the other.
+    - **How the Més menu was missed in the first place:** the collection pass
+      was run with the new layout switched OFF, so that whole screen never
+      appeared. When checking a translation, turn on every optional thing
+      first — the new layout, the expenses module — or a third of the app is
+      invisible to the sweep.
   - **The strings with data inside them, done too** (2026-11-05). They cannot
     be keys, because the key would change with the number, so:
     - `pl(n,one,many)` now translates the word it picks. One change, **27 call

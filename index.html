@@ -5633,8 +5633,8 @@ function openM2More(){
   function click(id){return function(){var b=$$(id);if(b)b.click()}}
   var secs=[
     ["INFORME",[
-      it("&#9997;","Revisa i signa",[revSign(a)?"informe signat":"",tsSigned(a)?"full signat":""].filter(Boolean).join(" · "),function(){openReviewSign()}),
-      it("&#8595;","Informe i exportació",(r?revNo(r.n):"sense revisió")+" · "+reportLang(a).toUpperCase(),function(){
+      it("&#9997;","Revisa i signa",[revSign(a)?uiT("informe signat"):"",tsSigned(a)?uiT("full signat"):""].filter(Boolean).join(" · "),function(){openReviewSign()}),
+      it("&#8595;","Informe i exportació",(r?revNo(r.n):uiT("sense revisió"))+" · "+reportLang(a).toUpperCase(),function(){
         // under whichever button is on screen: Més on the computer, the hidden
         // ↓ Informe only on the phone, where the menu fills the screen anyway
         var m=$$("expMenu"),anc=$$("btnM2More2");
@@ -5644,16 +5644,16 @@ function openM2More(){
       it("&#129534;","Full d'hores","",function(){openTimesheet()})
     ]],
     ["VISITA",[
-      it("&#9201;","Comptadors de la màquina",ctrLast(a)?"":"sense lectures",function(){openCounters()}),
+      it("&#9201;","Comptadors de la màquina",ctrLast(a)?"":uiT("sense lectures"),function(){openCounters()}),
       it("&#128200;","Proves de producció",prodChipNote(a),function(){openProdList()}),
       exOn()?it("&#128182;","Despeses",exChipNote(a),function(){openExpenses()}):null,
-      mh?it("&#128220;","Historial de la màquina",(mh>1?mh+" visites":"només aquesta visita")+(m2Pending(a)?" · "+pl(m2Pending(a),"pendent","pendents"):""),function(){openMachineHistory()}):null,
+      mh?it("&#128220;","Historial de la màquina",(mh>1?pl(mh,"visita","visites"):uiT("només aquesta visita"))+(m2Pending(a)?" · "+pl(m2Pending(a),"pendent","pendents"):""),function(){openMachineHistory()}):null,
       $$("folChip")?it("&#128451;","Carpeta de Drive","",click("folChip")):null,
-      $$("manualChip")?it("&#128218;","Manual de recanvis",/Vincula/.test($$("manualChip").textContent)?"sense vincular":"",click("manualChip")):null,
+      $$("manualChip")?it("&#128218;","Manual de recanvis",/Vincula|Link/.test($$("manualChip").textContent)?uiT("sense vincular"):"",click("manualChip")):null,
       $$("drawingsChip")?it("&#128208;","Dibuixos","",click("drawingsChip")):null,
       it("&#9998;","Dades de la visita",a.contact||"",function(){openNewModal(a)}),
-      isOpen&&m2On()?it("&#128221;","Notes generals",(a.notes||"").trim()?"":"buides",function(){m2Show("notes");var t=$$("notesIn");if(t)t.focus()}):null,
-      $$("btnSessSync")?it("&#9729;","Desa a Drive","fotos que hi faltin",click("btnSessSync")):null,
+      isOpen&&m2On()?it("&#128221;","Notes generals",(a.notes||"").trim()?"":uiT("buides"),function(){m2Show("notes");var t=$$("notesIn");if(t)t.focus()}):null,
+      $$("btnSessSync")?it("&#9729;","Desa a Drive",uiT("fotos que hi faltin"),click("btnSessSync")):null,
       $$("btnSync")?it("&#10227;","Sincronitza ara","",click("btnSync")):null,
       isOpen?it("&#9632;","Tanca la visita","",click("btnClose")):it("&#8634;","Reobre la visita","",click("btnReopen")),
       // also on the ✕ in the list of visits; here it is next to the rest
@@ -5668,7 +5668,8 @@ function openM2More(){
         +(x.note?"<span class=\"nt\">"+esc(x.note)+"</span>":"")+"</button>";
     }).join("");
   }).join("");
-  $$("m2MoreTitle").textContent=a.client||"Més";
+  $$("m2MoreTitle").textContent=a.client||uiT("Més");
+  uiApply(list);                 // built on open, so renderAll's pass never saw it
   Array.prototype.forEach.call(list.querySelectorAll("[data-i]"),function(b){
     b.addEventListener("click",function(e){
       e.stopPropagation();   // or the document click closes what this opens
@@ -7268,7 +7269,36 @@ es:{
   " i ":" y ",
   "el rebut de la despesa":"el recibo del gasto",
   "el comprovant de la targeta":"el comprobante de la tarjeta",
-  "un altre document: el rebut o el comprovant de la targeta":"otro documento: el recibo o el comprobante de la tarjeta"
+  "un altre document: el rebut o el comprovant de la targeta":"otro documento: el recibo o el comprobante de la tarjeta",
+  "Revisa i signa":"Revisa y firma",
+  "Informe i exportació":"Informe y exportación",
+  "Full d'hores":"Hoja de horas",
+  "Comptadors de la màquina":"Contadores de la máquina",
+  "Proves de producció":"Pruebas de producción",
+  "Despeses":"Gastos",
+  "Historial de la màquina":"Historial de la máquina",
+  "Manual de recanvis":"Manual de recambios",
+  "Dibuixos":"Dibujos",
+  "Dades de la visita":"Datos de la visita",
+  "Notes generals":"Notas generales",
+  "Desa a Drive":"Guarda en Drive",
+  "Sincronitza ara":"Sincroniza ahora",
+  "Tanca la visita":"Cierra la visita",
+  "Reobre la visita":"Reabre la visita",
+  "⋮ Més":"⋮ Más",
+  "Més":"Más",
+  "sense revisió":"sin revisión",
+  "sense lectures":"sin lecturas",
+  "només aquesta visita":"solo esta visita",
+  "sense vincular":"sin vincular",
+  "buides":"vacías",
+  "fotos que hi faltin":"fotos que falten",
+  "informe signat":"informe firmado",
+  "full signat":"hoja firmada",
+  " per revisar":" por revisar",
+  "cap tiquet":"ningún tique",
+  "🧪 Disseny nou: sí":"🧪 Diseño nuevo: sí",
+  "— Encara no hi ha entrades. Registra la primera acció o incidència. —":"— Todavía no hay entradas. Registra la primera acción o incidencia. —"
 },
 en:{
   "Es desa només en aquest aparell i no viatja enlloc: ni a Drive, ni als ZIP, ni a les còpies de seguretat — per això cal escriure-la un cop a cada aparell. No li cal cobertura: es comprova aquí mateix, i per tant funciona en una planta sense senyal. El nom del titular surt al peu de cada informe.":"It is kept on this device only and goes nowhere else: not to Drive, not into the ZIPs, not into the backups — which is why it has to be entered once on each device. It needs no signal: it is checked right here, so it works in a plant with no coverage. The licence holder's name appears at the foot of every report.",
@@ -7797,7 +7827,40 @@ en:{
   " i ":" and ",
   "el rebut de la despesa":"the receipt for the expense",
   "el comprovant de la targeta":"the card slip",
-  "un altre document: el rebut o el comprovant de la targeta":"another document: the receipt or the card slip"
+  "un altre document: el rebut o el comprovant de la targeta":"another document: the receipt or the card slip",
+  "INFORME":"REPORT",
+  "VISITA":"VISIT",
+  "Revisa i signa":"Review and sign",
+  "Informe i exportació":"Report and export",
+  "Full d'hores":"Timesheet",
+  "Comptadors de la màquina":"Machine counters",
+  "Proves de producció":"Production tests",
+  "Despeses":"Expenses",
+  "Historial de la màquina":"Machine history",
+  "Carpeta de Drive":"Drive folder",
+  "Manual de recanvis":"Spare-part manual",
+  "Dibuixos":"Drawings",
+  "Dades de la visita":"The visit's details",
+  "Notes generals":"General notes",
+  "Desa a Drive":"Save to Drive",
+  "Sincronitza ara":"Sync now",
+  "Tanca la visita":"Close the visit",
+  "Reobre la visita":"Reopen the visit",
+  "Elimina la visita":"Delete the visit",
+  "⋮ Més":"⋮ More",
+  "Més":"More",
+  "sense revisió":"no revision",
+  "sense lectures":"no readings",
+  "només aquesta visita":"this visit only",
+  "sense vincular":"not linked",
+  "buides":"empty",
+  "fotos que hi faltin":"any missing photos",
+  "informe signat":"report signed",
+  "full signat":"sheet signed",
+  " per revisar":" to check",
+  "cap tiquet":"no tickets",
+  "🧪 Disseny nou: sí":"🧪 New layout: yes",
+  "— Encara no hi ha entrades. Registra la primera acció o incidència. —":"— No entries yet. Record the first action or incident. —"
 }};   // UI[lang][catalan]; ca is the source, so it has no table
 function uiLang(){
   try{var l=localStorage.getItem(LS_UILANG);if(l&&(l==="ca"||UI[l]))return l}catch(e){}
@@ -13184,7 +13247,7 @@ function exMissing(x){
 var EX_MISS={rebut:["FALTA REBUT","el rebut de la despesa"],comprovant:["FALTA COMPROVANT","el comprovant de la targeta"],
   doc:["FALTA UN DOCUMENT","un altre document: el rebut o el comprovant de la targeta"]};
 function exToCheck(s){return ((s&&s.expenses)||[]).filter(function(x){return !x.checked}).length}
-function exChipNote(s){var n=((s&&s.expenses)||[]).length,k=exToCheck(s);return n?pl(n,"tiquet","tiquets")+(k?" · "+k+" per revisar":""):"cap tiquet"}
+function exChipNote(s){var n=((s&&s.expenses)||[]).length,k=exToCheck(s);return n?pl(n,"tiquet","tiquets")+(k?" · "+k+uiT(" per revisar"):""):uiT("cap tiquet")}
 function exChipHTML(s){
   if(!exOn()||!s)return "";
   var n=(s.expenses||[]).length,k=exToCheck(s);

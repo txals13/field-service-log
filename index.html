@@ -1555,7 +1555,7 @@ function entryMatches(e,rawQuery){
 }
 function $$(id){return document.getElementById(id)}
 // "1 entrada" / "3 entrades" — a count glued to a plural reads wrong in Catalan
-function pl(n,one,many){return n+" "+(n===1?one:many)}
+function pl(n,one,many){return n+" "+uiT(n===1?one:many)}
 // Grows a textarea to fit its text. Two traps: a hidden element measures 0
 // (which used to collapse the box to 0px and clip the line), and with
 // box-sizing:border-box the borders sit inside the height, so scrollHeight
@@ -1716,7 +1716,7 @@ function exportAllBackup(){
   try{
     var str=JSON.stringify(sessions,null,2);
     dlBlob(new Blob([str],{type:"application/json;charset=utf-8"}),"field_service_log_backup_"+fnameStamp()+".json");
-  }catch(e){alert(t("No s'ha pogut crear la còpia: ")+((e&&e.message)||e))}
+  }catch(e){alert(uiT("No s'ha pogut crear la còpia: ")+((e&&e.message)||e))}
 }
 function saveTok(){try{localStorage.setItem(LS_TOKEN,JSON.stringify({accessToken,tokenExp,driveFileId,rootFolderId,email:driveEmail||""}))}catch(e){}}
 function loadTok(){try{var t=JSON.parse(localStorage.getItem(LS_TOKEN)||"null");if(!t)return false;accessToken=t.accessToken;tokenExp=t.tokenExp||0;driveFileId=t.driveFileId||null;rootFolderId=t.rootFolderId||null;if(t.email&&!driveEmail)driveEmail=t.email;return true}catch(e){return false}}
@@ -1824,7 +1824,7 @@ function makeLocalImageData(file){
 function loadGIS(){return new Promise(function(res){if(window.google&&window.google.accounts){res();return}var s=document.createElement("script");s.src="https://accounts.google.com/gsi/client";s.onload=res;s.onerror=res;document.head.appendChild(s)})}
 async function googleLogin(){
   await loadGIS();
-  if(!window.google||!window.google.accounts){alert(t("No s'ha pogut carregar l'inici de sessió de Google. Comprova la connexió."));return null}
+  if(!window.google||!window.google.accounts){alert(uiT("No s'ha pogut carregar l'inici de sessió de Google. Comprova la connexió."));return null}
   // If the browser blocks the Google popup, requestAccessToken's callback
   // never fires and this would hang forever — race it against a timeout so
   // the caller always gets an answer and can show a useful message.
@@ -1834,7 +1834,7 @@ async function googleLogin(){
   });
   var timeout=new Promise(function(res){setTimeout(function(){res("timeout")},25000)});
   var result=await Promise.race([opened,timeout]);
-  if(result==="timeout"){alert(t("L'inici de sessió no s'ha completat. Si s'ha bloquejat una finestra emergent de Google, permet-les per a aquest lloc i torna-ho a provar."));return null}
+  if(result==="timeout"){alert(uiT("L'inici de sessió no s'ha completat. Si s'ha bloquejat una finestra emergent de Google, permet-les per a aquest lloc i torna-ho a provar."));return null}
   return result;
 }
 // ── STAYING CONNECTED (2026-10-18) ───────────────────────────────────────────
@@ -2147,22 +2147,22 @@ function syncSummary(res,n){
     +(res.missingVideos?"\n"+res.missingVideos+" vídeo(s) no s'han pogut recuperar (el fitxer original no es va guardar mai, només la miniatura).":"");
 }
 async function syncActiveSessionToDrive(){
-  if(!isLoggedIn){alert(t("Primer inicia la sessió amb Google."));return}
+  if(!isLoggedIn){alert(uiT("Primer inicia la sessió amb Google."));return}
   var sess=sessions.find(function(s){return s.id===aid});if(!sess)return;
-  var token=await ensureToken();if(!token){alert(t("No s'ha pogut autenticar amb Drive."));return}
+  var token=await ensureToken();if(!token){alert(uiT("No s'ha pogut autenticar amb Drive."));return}
   var btn=$$("btnSessSync");if(btn){btn.disabled=true;btn.textContent="Desant…"}
   try{
     var res=await syncSessionToDrive(token,sess);
     saveLocal();
     if(res.uploaded>0){isDirty=true;await saveToDrive()}
     renderAll();
-    alert(t("Sessió desada a Drive.\n")+syncSummary(res));
-  }catch(e){alert(t("La sincronització ha fallat: ")+((e&&e.message)||e))}
+    alert(uiT("Sessió desada a Drive.\n")+syncSummary(res));
+  }catch(e){alert(uiT("La sincronització ha fallat: ")+((e&&e.message)||e))}
   finally{var b2=$$("btnSessSync");if(b2){b2.disabled=false;b2.innerHTML="&#9729; Desa"}}
 }
 async function syncAllToDrive(){
-  if(!isLoggedIn){alert(t("Primer inicia la sessió amb Google."));return}
-  var token=await ensureToken();if(!token){alert(t("No s'ha pogut autenticar amb Drive."));return}
+  if(!isLoggedIn){alert(uiT("Primer inicia la sessió amb Google."));return}
+  var token=await ensureToken();if(!token){alert(uiT("No s'ha pogut autenticar amb Drive."));return}
   var btn=$$("btnFullSync");if(btn){btn.disabled=true;btn.textContent="Sincronitzant…"}
   var total={uploaded:0,missingVideos:0,moved:0};
   try{
@@ -2174,8 +2174,8 @@ async function syncAllToDrive(){
     saveLocal();
     if(total.uploaded>0){isDirty=true;await saveToDrive()}
     renderAll();
-    alert(t("Sincronització completa.\n")+syncSummary(total,sessions.length));
-  }catch(e){alert(t("La sincronització ha fallat: ")+((e&&e.message)||e))}
+    alert(uiT("Sincronització completa.\n")+syncSummary(total,sessions.length));
+  }catch(e){alert(uiT("La sincronització ha fallat: ")+((e&&e.message)||e))}
   finally{var b2=$$("btnFullSync");if(b2){b2.disabled=false;b2.innerHTML="&#9729; Sincronitza"}}
 }
 $$("btnFullSync").addEventListener("click",syncAllToDrive);
@@ -2531,7 +2531,7 @@ async function saveManualsIndex(token){
   else{await uploadTextFile(token,"manuals_index.json",content,"application/json",rootId)}
 }
 function openManuals(){
-  if(!isLoggedIn){alert(t("Inicia la sessió amb Google per gestionar els manuals a Drive."));return}
+  if(!isLoggedIn){alert(uiT("Inicia la sessió amb Google per gestionar els manuals a Drive."));return}
   mfPdfFile=null;mfJsonFile=null;mfParsed=null;
   $$("mfPdfName").innerHTML="&mdash; cap fitxer &mdash;";
   $$("mfJsonName").innerHTML="&mdash; cap fitxer &mdash;";
@@ -2577,7 +2577,7 @@ function onJsonPick(file){
 }
 async function uploadManual(){
   if(!mfPdfFile||!mfJsonFile||!mfParsed)return;
-  var token=await ensureToken();if(!token){alert(t("No s'ha pogut autenticar amb Drive."));return}
+  var token=await ensureToken();if(!token){alert(uiT("No s'ha pogut autenticar amb Drive."));return}
   var btn=$$("mfUpload"),lbl=btn.innerHTML;btn.disabled=true;btn.textContent="Pujant…";
   try{
     var mac=mfParsed.machine||{};
@@ -2617,12 +2617,12 @@ async function uploadManual(){
     mfPdfFile=null;mfJsonFile=null;mfParsed=null;
     renderManualsList();mfRefresh();
     $$("mfInfo").textContent="✓ "+base+(jsonUpdated?" actualitzat.":" desat.")+(pdfReused?" (el PDF ja era a Drive — s'ha reaprofitat.)":"");
-  }catch(e){alert(t("No s'ha pogut pujar: ")+((e&&e.message)||e))}
+  }catch(e){alert(uiT("No s'ha pogut pujar: ")+((e&&e.message)||e))}
   finally{btn.innerHTML=lbl;btn.disabled=!(mfPdfFile&&mfJsonFile&&mfParsed)}
 }
 async function deleteManual(idx){
   var m=manuals[idx];if(!m)return;
-  if(!confirm("Vols treure \""+(m.base||t("aquest manual"))+"\" de la llista?\nEls fitxers es queden a la carpeta Manuals del teu Drive."))return;
+  if(!confirm(uiT("Vols treure \"{x}\" de la llista?\nEls fitxers es queden a la carpeta Manuals del teu Drive.").replace("{x}",m.base||uiT("aquest manual"))))return;
   manuals.splice(idx,1);renderManualsList();
   var token=await ensureToken();if(token){try{await saveManualsIndex(token)}catch(e){}}
 }
@@ -2661,7 +2661,7 @@ function manualMatchScore(sess,m){
   return score;
 }
 function openLinkModal(){
-  if(!isLoggedIn){alert(t("Inicia la sessió amb Google per fer servir els manuals de recanvis."));return}
+  if(!isLoggedIn){alert(uiT("Inicia la sessió amb Google per fer servir els manuals de recanvis."));return}
   renderLinkList();
   $$("linkBack").style.display="flex";
   loadManualsIndex().then(renderLinkList);
@@ -2734,8 +2734,8 @@ async function getManualPdfBytes(pdfId){
 async function openDrawings(targetPage,pickMode,purpose){
   viewerPickPurpose=purpose||"part";
   var sess=sessions.find(function(s){return s.id===aid});
-  if(!sess||!sess.manualRef){alert(t("Primer vincula un manual de recanvis a aquesta sessió."));return}
-  if(!isLoggedIn){alert(t("Inicia la sessió amb Google per obrir els dibuixos."));return}
+  if(!sess||!sess.manualRef){alert(uiT("Primer vincula un manual de recanvis a aquesta sessió."));return}
+  if(!isLoggedIn){alert(uiT("Inicia la sessió amb Google per obrir els dibuixos."));return}
   var ref=sess.manualRef;
   viewerPickMode=!!pickMode;viewerPickItems=[];
   $$("drawPickHint").style.display=viewerPickMode?"block":"none";
@@ -2760,7 +2760,7 @@ async function openDrawings(targetPage,pickMode,purpose){
     viewerDoc=doc;viewerNumPages=doc.numPages;viewerPdfId=ref.pdfId;
     $$("drawStatus").textContent="";
     renderViewerPage(targetPage||1);
-  }catch(e){$$("drawStatus").textContent="";alert(t("No s'han pogut obrir els dibuixos: ")+((e&&e.message)||e));closeDrawings()}
+  }catch(e){$$("drawStatus").textContent="";alert(uiT("No s'han pogut obrir els dibuixos: ")+((e&&e.message)||e));closeDrawings()}
 }
 function renderViewerPage(n){
   if(!viewerDoc)return;
@@ -3480,7 +3480,7 @@ async function refreshDriveInfo(token){
   var pend=pendReps&&pendReps.length?"<br><span style=\"color:var(--orange)\">&#9203; "+pl(pendReps.length,"informe pendent","informes pendents")+" de pujar</span>":"";
   if(mqN-mqNT)pend+="<br><span style=\"color:var(--orange)\">&#9203; "+pl(mqN-mqNT,"vídeo a la cua","vídeos a la cua")+" per pujar</span>";
   if(mqNT)pend+="<br><span style=\"color:var(--orange)\">&#9203; "+pl(mqNT,"tiquet a la cua","tiquets a la cua")+" per pujar</span>";
-  if(!isLoggedIn){el.innerHTML=t("Sense entrar a Google: només aquest aparell")+pend+left;return}
+  if(!isLoggedIn){el.innerHTML=uiT("Sense entrar a Google: només aquest aparell")+pend+left;return}
   el.innerHTML="Compte: <strong>"+esc(driveEmail||"?")+"</strong>"
     +(lastDriveCount!=null?"<br>A Drive: "+pl(lastDriveCount,"visita","visites")
       +(lastOutputs!=null?" · "+pl(lastOutputs,"carpeta","carpetes")+" a Outputs":"")
@@ -3691,7 +3691,7 @@ function updateAuthUI(){
   var lo=$$("btnLogout");if(lo)lo.style.display=isLoggedIn?"":"none";
 }
 function signOut(){
-  if(!confirm(t("Vols tancar la sessió de Google Drive? Les dades d'aquest dispositiu es conserven.")))return;
+  if(!confirm(uiT("Vols tancar la sessió de Google Drive? Les dades d'aquest dispositiu es conserven.")))return;
   clearTok();
   isLoggedIn=false;
   hideAuthExpired();
@@ -3788,7 +3788,7 @@ function buildSitem(s,applyFilter){
     // machine comes back visit after visit); the machine only stands in when
     // there is no project yet
     +"<div class=\"sitem-sub\">"+highlightText(s.project||s.machine||"",sessFilterTxt)+"</div>"
-    +"<div class=\"sitem-sub\" style=\"margin-top:2px\">"+(s.status==="open"?"🟢 Oberta":"🔴 Tancada")+" · "+pl((s.entries||[]).length,"entrada","entrades")+"</div>"
+    +"<div class=\"sitem-sub\" style=\"margin-top:2px\">"+(s.status==="open"?uiT("🟢 Oberta"):uiT("🔴 Tancada"))+" · "+pl((s.entries||[]).length,"entrada","entrades")+"</div>"
     +"<button class=\"sitem-del\" title=\"Elimina\">✕</button>";
   div.addEventListener("click",function(){if(aid!==s.id)stopCurAudio();aid=s.id;filterTxt=applyFilter||"";if(mob())closeSide();renderAll()});
   div.querySelector(".sitem-del").addEventListener("click",function(e){e.stopPropagation();openDelModal(s)});
@@ -3798,7 +3798,7 @@ function renderSidebar(){
   m2Side();
   $$("btnSideX").style.display=mob()?"block":"none";
   var list=$$("sList");list.innerHTML="";
-  if(!sessions.length){$$("sideCount").textContent="Sessions (0)";list.innerHTML="<div style=\"font-size:12px;color:var(--tx3);padding:20px 10px;text-align:center\">Encara no hi ha cap sessió.<br>Crea'n una de nova.</div>";return}
+  if(!sessions.length){$$("sideCount").textContent=uiT("Sessions")+" (0)";list.innerHTML="<div style=\"font-size:12px;color:var(--tx3);padding:20px 10px;text-align:center\">Encara no hi ha cap sessió.<br>Crea'n una de nova.</div>";return}
 
   var q=sessFilterTxt.trim().toLowerCase();
   // Newest first, by the session's start date — the one the reports print as
@@ -3806,7 +3806,7 @@ function renderSidebar(){
   // used to land its sessions wherever the file had them.
   var ordered=sessions.slice().sort(function(a,b){return String(b.createdAt||"").localeCompare(String(a.createdAt||""))});
   if(!q){
-    $$("sideCount").textContent="Sessions ("+sessions.length+")";
+    $$("sideCount").textContent=uiT("Sessions")+" ("+sessions.length+")";
     ordered.forEach(function(s){list.appendChild(buildSitem(s))});
     return;
   }
@@ -3820,7 +3820,7 @@ function renderSidebar(){
     return{s:s,sessMatch:sessMatch,hits:hits};
   }).filter(function(r){return r.sessMatch||r.hits.length});
 
-  $$("sideCount").textContent="Sessions ("+results.length+"/"+sessions.length+")";
+  $$("sideCount").textContent=uiT("Sessions")+" ("+results.length+"/"+sessions.length+")";
   if(!results.length){list.innerHTML="<div style=\"font-size:12px;color:var(--tx3);padding:20px 10px;text-align:center\">Cap coincidència per a \""+esc(sessFilterTxt)+"\".</div>";return}
 
   results.forEach(function(r){
@@ -3911,7 +3911,7 @@ function renderLogArea(){
         hd.className="log-day";
         var title="Sense data";
         if(dk){
-          var dd=new Date(dk+"T12:00:00"),wd=dd.toLocaleDateString("ca-ES",{weekday:"long"});
+          var dd=new Date(dk+"T12:00:00"),wd=dd.toLocaleDateString(uiLang()==="ca"?"ca-ES":uiLang(),{weekday:"long"});
           title=wd.charAt(0).toUpperCase()+wd.slice(1)+" "+dmy(dk);
         }
         hd.innerHTML="<b>"+esc(title)+"</b><span>"+pl(list.length,"entrada","entrades")+"</span>"
@@ -3947,7 +3947,7 @@ function renderLogArea(){
           var img=logImgAt(e,t);if(!img)return;
           var file=fileCache.get(img)||fileFromLocal(img);
           if(!file&&img.qid){mqFlush();return}
-          if(!file){alert(t("No es pot tornar a provar: el fitxer original ja no està disponible en aquesta sessió. Treu-lo i torna'l a afegir des d'Edita."));return}
+          if(!file){alert(uiT("No es pot tornar a provar: el fitxer original ja no està disponible en aquesta sessió. Treu-lo i torna'l a afegir des d'Edita."));return}
           img.uploadStatus="loading";renderLogArea();
           uploadMedia(active,file,img.type==="video"?"videos":"photos").then(function(r){
             if(r)mediaUploaded(img,r);else img.uploadStatus="err";
@@ -3962,13 +3962,13 @@ function renderLogArea(){
             if(img.qid&&!img.driveId){                                          // waiting in the queue
               mqBlob(img.qid).then(function(b){
                 if(b)openMedia(URL.createObjectURL(b),"video",img.name);
-                else alert(t("Aquest vídeo és a la cua de l'aparell on el vas afegir: es pujarà quan aquell aparell tingui connexió."));
+                else alert(uiT("Aquest vídeo és a la cua de l'aparell on el vas afegir: es pujarà quan aquell aparell tingui connexió."));
               });
               return;
             }
-            if(!img.driveId||!accessToken){alert(img.uploadStatus==="err"?t("No s'ha pogut pujar el vídeo. Toca la marca ! per tornar-ho a provar.")
-              :!img.driveId&&isLoggedIn?t("Aquest vídeo no és a Drive: la visita es va importar d'un ZIP que no el portava. Torna a importar el ZIP de la visita (⇧ Importa): si el vídeo encara és a Drive, també a la paperera, l'app el recupera.")
-              :t("El vídeo és a Drive. Inicia la sessió per reproduir-lo."));return}
+            if(!img.driveId||!accessToken){alert(img.uploadStatus==="err"?uiT("No s'ha pogut pujar el vídeo. Toca la marca ! per tornar-ho a provar.")
+              :!img.driveId&&isLoggedIn?uiT("Aquest vídeo no és a Drive: la visita es va importar d'un ZIP que no el portava. Torna a importar el ZIP de la visita (⇧ Importa): si el vídeo encara és a Drive, també a la paperera, l'app el recupera.")
+              :uiT("El vídeo és a Drive. Inicia la sessió per reproduir-lo."));return}
             openDriveVideo(img.driveId,img.name);
           } else openMedia(img.data,"image",img.name);
         });
@@ -4163,7 +4163,7 @@ function renderContent(){
     +"<span style=\"color:var(--orange)\">▲ "+pl(warns,"avís","avisos")+"</span>"
     +(cnt.resolved?"<span style=\"color:var(--green)\">✔ "+pl(cnt.resolved,"resolt","resolts")+"</span>":"")
     +"<span style=\"color:var(--green)\">● "+oks+" ok</span>"
-    +"<span style=\"margin-left:auto\">"+entries.length+" en total</span>"
+    +"<span style=\"margin-left:auto\">"+entries.length+" "+uiT("en total")+"</span>"
     +(m2Pending(active)?"<span class=\"m2-inl\" id=\"m2Pend\" style=\"flex-basis:100%;cursor:pointer;color:var(--orange)\">⚠ "+pl(m2Pending(active),"pendent","pendents")+" de visites anteriors ›</span>":"")
     +"</div>"
     +(isOpen?"<div class=\"m2-grd m2-quick\">"
@@ -4186,8 +4186,8 @@ function renderContent(){
   var pdC=$$("pdChip");if(pdC)pdC.addEventListener("click",function(){openProdList()});
   var exC=$$("exChip");if(exC)exC.addEventListener("click",function(){openExpenses()});
   var ctC=$$("ctrChip");if(ctC)ctC.addEventListener("click",openCounters);
-  var btnC=$$("btnClose");if(btnC)btnC.addEventListener("click",function(){if(confirm(t("Vols tancar aquesta sessió? La pots reobrir més endavant."))){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"closed",closedAt:now()}):s});scheduleSave();renderAll()}});
-  var btnR=$$("btnReopen");if(btnR)btnR.addEventListener("click",function(){if(confirm(t("Vols reobrir aquesta sessió?"))){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"open",closedAt:null}):s});scheduleSave();renderAll()}});
+  var btnC=$$("btnClose");if(btnC)btnC.addEventListener("click",function(){if(confirm(uiT("Vols tancar aquesta sessió? La pots reobrir més endavant."))){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"closed",closedAt:now()}):s});scheduleSave();renderAll()}});
+  var btnR=$$("btnReopen");if(btnR)btnR.addEventListener("click",function(){if(confirm(uiT("Vols reobrir aquesta sessió?"))){sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{status:"open",closedAt:null}):s});scheduleSave();renderAll()}});
   var btnEx=$$("btnExp");if(btnEx){
     btnEx.addEventListener("click",function(e){e.stopPropagation();var m=$$("expMenu");if(m.style.display==="block")m.style.display="none";else openExpMenu(btnEx,m)});
     // The dropdown of the other languages: change, not click.
@@ -4283,7 +4283,7 @@ function fileFromLocal(img){
 function retryUpload(img,bk){
   var active=sessions.find(function(s){return s.id===aid});
   var file=fileCache.get(img)||fileFromLocal(img);
-  if(!active||!file){alert(t("No es pot tornar a provar: treu aquest adjunt i torna'l a afegir."));return}
+  if(!active||!file){alert(uiT("No es pot tornar a provar: treu aquest adjunt i torna'l a afegir."));return}
   img.uploadStatus="loading";
   renderThumbs(bk);
   uploadMedia(active,file,img.type==="video"?"videos":"photos").then(function(r){
@@ -4375,14 +4375,14 @@ function upBadgeAc(img){
 }
 function playAudioToggle(img,btn){
   var src=audioSrc(img);
-  if(!src){alert(t("Aquesta nota de veu és a Drive. Inicia la sessió per reproduir-la."));return}
+  if(!src){alert(uiT("Aquesta nota de veu és a Drive. Inicia la sessió per reproduir-la."));return}
   if(curAudioImg===img&&curAudio&&!curAudio.paused){curAudio.pause();btn.textContent="▶";return}
   stopCurAudio();
   var a=new Audio(src);curAudio=a;curAudioImg=img;
   a.addEventListener("ended",function(){btn.textContent="▶";if(curAudioImg===img){curAudio=null;curAudioImg=null}});
   a.addEventListener("pause",function(){btn.textContent="▶"});
   a.addEventListener("play",function(){btn.textContent="⏸"});
-  a.play().catch(function(){alert(t("No s'ha pogut reproduir aquesta nota de veu."))});
+  a.play().catch(function(){alert(uiT("No s'ha pogut reproduir aquesta nota de veu."))});
 }
 // cfg: { editable, bk, onDelete }
 function audioChipEl(img,cfg){
@@ -4424,13 +4424,13 @@ function renderRecUI(bk,active){
 function recTick(){recSeconds++;var el=$$(MB[recBk].live);if(el){var t=el.querySelector(".rec-time");if(t)t.textContent=fmtDur(recSeconds)}}
 async function startRec(bk){
   if(mediaRec)return;
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){alert(t("Aquest navegador no permet gravar notes de veu."));return}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){alert(uiT("Aquest navegador no permet gravar notes de veu."));return}
   try{recStream=await navigator.mediaDevices.getUserMedia({audio:true})}
-  catch(e){alert(t("L'accés al micròfon s'ha denegat o no està disponible."));return}
+  catch(e){alert(uiT("L'accés al micròfon s'ha denegat o no està disponible."));return}
   recBk=bk;recChunks=[];recSeconds=0;
   var mime=pickAudioMime();
   try{mediaRec=mime?new MediaRecorder(recStream,{mimeType:mime}):new MediaRecorder(recStream)}
-  catch(e){try{mediaRec=new MediaRecorder(recStream)}catch(e2){alert(t("La gravació no és compatible."));recStream.getTracks().forEach(function(t){t.stop()});recStream=null;return}}
+  catch(e){try{mediaRec=new MediaRecorder(recStream)}catch(e2){alert(uiT("La gravació no és compatible."));recStream.getTracks().forEach(function(t){t.stop()});recStream=null;return}}
   mediaRec.ondataavailable=function(ev){if(ev.data&&ev.data.size)recChunks.push(ev.data)};
   mediaRec.onstop=onRecStop;
   mediaRec.start();
@@ -4630,7 +4630,7 @@ function camCopy(fileList){
 $$("btnCamCopy").addEventListener("click",function(){
   try{localStorage.setItem(LS_CAMCOPY,camCopyOn()?"0":"1")}catch(e){}
   camCopyLabel();
-  if(camCopyOn())alert(t("A partir d'ara, cada foto feta amb 📷 també es desarà a Baixades del telèfon, amb el client i el projecte al principi del nom.\n\nEl primer cop, Chrome pot demanar permís per baixar diversos fitxers: digues que sí."));
+  if(camCopyOn())alert(uiT("A partir d'ara, cada foto feta amb 📷 també es desarà a Baixades del telèfon, amb el client i el projecte al principi del nom.\n\nEl primer cop, Chrome pot demanar permís per baixar diversos fitxers: digues que sí."));
 });
 camCopyLabel();
 // Shows the capture buttons only where capturing means something, and renames
@@ -4665,7 +4665,7 @@ function wireFsa(){
     try{
       var h=await window.showDirectoryPicker({id:"fslOutputs",mode:"read"});
       await outDirSave(h);openFsa();
-    }catch(e){if(e&&e.name!=="AbortError")alert(t("No s'ha pogut obrir la carpeta: ")+((e&&e.message)||e))}
+    }catch(e){if(e&&e.name!=="AbortError")alert(uiT("No s'ha pogut obrir la carpeta: ")+((e&&e.message)||e))}
   });
   $$("fsaArxClear").addEventListener("click",async function(){await arxDirSave(null);arxModeSet("drive");openFsa()});
   Array.prototype.forEach.call(document.querySelectorAll("input[name=arxMode]"),function(r){
@@ -4677,17 +4677,17 @@ function wireFsa(){
     });
   });
   $$("arxDrivePick").addEventListener("click",async function(){
-    if(!isLoggedIn){alert(t("Primer entra amb Google."));return}
+    if(!isLoggedIn){alert(uiT("Primer entra amb Google."));return}
     var token=await ensureToken();if(!token)return;
     var got=await pickDriveArxFolder(token);
     if(got){arxDriveSet(got);arxModeSet("drive")}
     openFsa();
   });
   $$("arxDriveNew").addEventListener("click",async function(){
-    if(!isLoggedIn){alert(t("Primer entra amb Google."));return}
+    if(!isLoggedIn){alert(uiT("Primer entra amb Google."));return}
     var token=await ensureToken();if(!token)return;
     var made=await makeDriveArxFolder(token);
-    if(!made)alert(t("No s'ha pogut crear la carpeta a Drive."));else arxModeSet("drive");
+    if(!made)alert(uiT("No s'ha pogut crear la carpeta a Drive."));else arxModeSet("drive");
     openFsa();
   });
   // Everything in the archive folder, in one go. The permission is asked here,
@@ -4710,11 +4710,11 @@ function wireFsa(){
       try{
         var token=await ensureToken();if(!token)return;
         var fid=await driveArxFolder(token,false);
-        if(!fid){alert(t("Primer assenyala la carpeta d'arxiu a Drive."));return}
+        if(!fid){alert(uiT("Primer assenyala la carpeta d'arxiu a Drive."));return}
         var list=await listDriveArxiu(token,fid);
         $$("fsaBack").style.display="none";
         openArxPicker(list,(arxDriveGet()||{}).name||"Drive",fid);
-      }catch(e){alert(t("No s'ha pogut llegir la carpeta d'arxiu de Drive: ")+((e&&e.message)||e))}
+      }catch(e){alert(uiT("No s'ha pogut llegir la carpeta d'arxiu de Drive: ")+((e&&e.message)||e))}
       finally{bd.disabled=false}
       return;
     }
@@ -4722,7 +4722,7 @@ function wireFsa(){
     var b=$$("fsaArxLoad");b.disabled=true;
     try{
       if(!await arxPermission(true)){
-        alert(t("Sense permís per llegir la carpeta d'arxiu. Torna-la a triar i dona-li permís."));
+        alert(uiT("Sense permís per llegir la carpeta d'arxiu. Torna-la a triar i dona-li permís."));
         return;
       }
       var found=[];
@@ -4731,14 +4731,14 @@ function wireFsa(){
         try{found.push(await h.getFile())}catch(e){}
       }
       if(!found.length){
-        alert("No hi ha cap ZIP ni cap JSON a "+(arxDir.name||t("la carpeta d'arxiu"))+".");
+        alert(uiT("No hi ha cap ZIP ni cap JSON a {x}.").replace("{x}",arxDir.name||uiT("la carpeta d'arxiu")));
         return;
       }
       // Name order, so a project's several goes sit together and in sequence.
       found.sort(function(x,y){return x.name.localeCompare(y.name)});
       $$("fsaBack").style.display="none";
       openArxPicker(found);
-    }catch(e){alert(t("No s'ha pogut llegir la carpeta d'arxiu: ")+((e&&e.message)||e))}
+    }catch(e){alert(uiT("No s'ha pogut llegir la carpeta d'arxiu: ")+((e&&e.message)||e))}
     finally{b.disabled=false}
   });
   $$("fsaArxPick").addEventListener("click",async function(){
@@ -4747,7 +4747,7 @@ function wireFsa(){
       // click in hand, and not in the middle of an export.
       var h=await window.showDirectoryPicker({id:"fslArxiu",mode:"readwrite"});
       await arxDirSave(h);openFsa();
-    }catch(e){if(e&&e.name!=="AbortError")alert(t("No s'ha pogut obrir la carpeta: ")+((e&&e.message)||e))}
+    }catch(e){if(e&&e.name!=="AbortError")alert(uiT("No s'ha pogut obrir la carpeta: ")+((e&&e.message)||e))}
   });
 }
 var arxFiles=[],arxWired=false;
@@ -4837,10 +4837,10 @@ async function driveArxFolder(token,interactive){
     arxDriveSet(null);
   }
   if(!interactive)return null;
-  if(!confirm(t("On vols desar el ZIP del projecte a Drive?\n\nAccepta per assenyalar la carpeta (per exemple Field Service Log › Arxiu). Només cal fer-ho la primera vegada.\nCancel·la per descarregar-lo, com fins ara.")))return null;
+  if(!confirm(uiT("On vols desar el ZIP del projecte a Drive?\n\nAccepta per assenyalar la carpeta (per exemple Field Service Log › Arxiu). Només cal fer-ho la primera vegada.\nCancel·la per descarregar-lo, com fins ara.")))return null;
   var got=await pickDriveArxFolder(token);
   if(got){arxDriveSet(got);return got.id}
-  if(confirm(t("No n'has triat cap. Vols que en creï una de nova, «Arxiu», dins de Field Service Log?"))){
+  if(confirm(uiT("No n'has triat cap. Vols que en creï una de nova, «Arxiu», dins de Field Service Log?"))){
     var made=await makeDriveArxFolder(token);
     if(made)return made.id;
   }
@@ -4855,7 +4855,7 @@ async function makeDriveArxFolder(token){
 // {id,name} or null.
 async function pickDriveArxFolder(token){
   var P=await loadPicker();
-  if(!P){alert(t("No s'ha pogut carregar el selector de Google. Comprova la connexió."));return null}
+  if(!P){alert(uiT("No s'ha pogut carregar el selector de Google. Comprova la connexió."));return null}
   var rootId=null;try{rootId=await getRootId(token)}catch(e){}
   return new Promise(function(res){
     try{
@@ -4873,7 +4873,7 @@ async function pickDriveArxFolder(token){
             res(x?{id:x.id,name:x.name||"Arxiu"}:null);
           }else if(d.action===P.Action.CANCEL)res(null);
         }).build().setVisible(true);
-    }catch(e){alert(t("El selector de Google ha fallat: ")+((e&&e.message)||e));res(null)}
+    }catch(e){alert(uiT("El selector de Google ha fallat: ")+((e&&e.message)||e));res(null)}
   });
 }
 // Resumable upload in 8 MB pieces, so a 300 MB project on a phone connection
@@ -4972,7 +4972,7 @@ async function driveStandInToFile(f){
 // desktop — picked one by one, which is what hands the app access to them.
 async function pickDriveZips(token,folderId){
   var P=await loadPicker();
-  if(!P){alert(t("No s'ha pogut carregar el selector de Google. Comprova la connexió."));return []}
+  if(!P){alert(uiT("No s'ha pogut carregar el selector de Google. Comprova la connexió."));return []}
   return new Promise(function(res){
     try{
       var view=new P.DocsView(P.ViewId.DOCS);
@@ -4987,7 +4987,7 @@ async function pickDriveZips(token,folderId){
             .map(function(x){return {name:x.name,size:+x.sizeBytes||0,lastModified:+x.lastEditedUtc||0,_drive:x.id}}));
           else if(d.action===P.Action.CANCEL)res([]);
         }).build().setVisible(true);
-    }catch(e){alert(t("El selector de Google ha fallat: ")+((e&&e.message)||e));res([])}
+    }catch(e){alert(uiT("El selector de Google ha fallat: ")+((e&&e.message)||e));res([])}
   });
 }
 function openFsa(){
@@ -5024,7 +5024,7 @@ function handleFiles(e,bk){
   // A video waits in the queue (mqAdd) until it can go up — offline, or not
   // signed in yet, it is kept on this device instead of being refused.
   if(files.some(isVidFile)&&!active){
-    alert(t("Obre o crea primer una visita per adjuntar-hi vídeos."));
+    alert(uiT("Obre o crea primer una visita per adjuntar-hi vídeos."));
     files=files.filter(function(f){return !isVidFile(f)});
   }
   files.forEach(function(file){
@@ -5166,7 +5166,7 @@ function orderSessions(list){
   });
 }
 function addEntry(){
-  if(mediaRec&&recBk==="pend"){alert(t("Atura la gravació de veu abans d'afegir l'entrada."));return}
+  if(mediaRec&&recBk==="pend"){alert(uiT("Atura la gravació de veu abans d'afegir l'entrada."));return}
   var entIn=$$("entIn");if(!entIn)return;
   var text=entIn.value.trim();
   if(!text&&!pImgs.length)return;
@@ -5268,9 +5268,9 @@ function renderFixUI(){
   $$("fixAdd").style.display=(!fixOn&&fixOffered(sev))?"inline-block":"none";
 }
 function saveEdit(){
-  if(mediaRec&&recBk!=="pend"){alert(t("Atura la gravació de veu abans de desar."));return}
+  if(mediaRec&&recBk!=="pend"){alert(uiT("Atura la gravació de veu abans de desar."));return}
   var text=$$("eText").value.trim();
-  if(!text&&!eImgs.length){alert(t("La descripció no pot quedar buida."));return}
+  if(!text&&!eImgs.length){alert(uiT("La descripció no pot quedar buida."));return}
   if(!editingId)return;
   var entId=editingId,newSev=$$("eSev").value,newTag=$$("eTag").value.trim(),waited=0;
   var captText=text||(eImgs.length?"[Multimèdia — afegeix-hi una descripció]":"");
@@ -5281,9 +5281,9 @@ function saveEdit(){
   var entry0=active0&&(active0.entries||[]).find(function(x){return x.id===entId});
   var tsVal=$$("eTs").value,newTs=null;
   if(entry0&&tsVal&&tsVal!==tsToInput(entry0.ts))newTs=inputToTs(tsVal);
-  if(tsVal&&!newTs&&tsVal!==tsToInput(entry0&&entry0.ts)){alert(t("La data i hora no són vàlides."));return}
+  if(tsVal&&!newTs&&tsVal!==tsToInput(entry0&&entry0.ts)){alert(uiT("La data i hora no són vàlides."));return}
   var fixText=$$("fText").value.trim(),fixSev=$$("fSev").value;
-  if(fixOn&&!fixText&&!fImgs.length){alert(t("Escriu què s'hi ha fet, o treu la resolució."));return}
+  if(fixOn&&!fixText&&!fImgs.length){alert(uiT("Escriu què s'hi ha fet, o treu la resolució."));return}
   function tryS(){
     if((pExifEdit>0||pExifFix>0)&&waited<3000){var b=$$("eSave");if(b){b.disabled=true;b.textContent="Processant…"}waited+=150;setTimeout(tryS,150);return}
     var b2=$$("eSave");if(b2){b2.disabled=false;b2.innerHTML="✓ Desa els canvis"}
@@ -5312,7 +5312,7 @@ function saveEdit(){
 }
 function closeEdit(){if(mediaRec&&recBk!=="pend"){stopRec();recChunks=[]}stopCurAudio();$$("editBack").style.display="none";editingId=null;eImgs=[];eParts=[];fImgs=[];fixOn=false;clearPartForm()}
 function delEntry(entryId){
-  if(!confirm(t("Vols eliminar aquesta entrada? No es pot desfer.")))return;
+  if(!confirm(uiT("Vols eliminar aquesta entrada? No es pot desfer.")))return;
   var act=sessions.find(function(s){return s.id===aid});
   var gone=act&&(act.entries||[]).find(function(en){return en.id===entryId});
   queueTrash(aid,((gone&&gone.images)||[]).concat((gone&&gone.fix&&gone.fix.images)||[]).map(function(im){return im.driveId}));
@@ -5338,7 +5338,7 @@ wireCorrect("eCorr","eText");
 wireCorrect("fCorr","fText");
 $$("fixAdd").addEventListener("click",function(){fixOn=true;renderFixUI();rFThumbs();setTimeout(function(){$$("fText").focus()},50)});
 $$("fixDel").addEventListener("click",function(){
-  if(($$("fText").value.trim()||fImgs.length)&&!confirm(t("Vols treure la resolució d'aquesta entrada? El problema i la seva descripció es queden com estan.")))return;
+  if(($$("fText").value.trim()||fImgs.length)&&!confirm(uiT("Vols treure la resolució d'aquesta entrada? El problema i la seva descripció es queden com estan.")))return;
   fixOn=false;fImgs=[];$$("fText").value="";renderFixUI();
 });
 $$("fAddPhoto").addEventListener("click",function(){pickMedia("fFileIn",function(e){handleFiles(e,"fix")})});
@@ -5352,7 +5352,7 @@ $$("ePartAdd").addEventListener("click",function(){var f=$$("ePartForm");f.style
 $$("pfCancel").addEventListener("click",clearPartForm);
 $$("pfSave").addEventListener("click",function(){
   var pos=$$("pfPos").value.trim(),ref=$$("pfRef").value.trim(),cant=$$("pfCant").value.trim(),den=$$("pfDen").value.trim();
-  if(!pos&&!ref&&!den){alert(t("Escriu com a mínim una posició, una referència o una denominació."));return}
+  if(!pos&&!ref&&!den){alert(uiT("Escriu com a mínim una posició, una referència o una denominació."));return}
   var st=$$("pfSt").value;st=PART_STS.indexOf(st)>=0?st:"fit";lastPartSt=st;
   eParts.push({pos:pos,ref:ref,cant:cant,denominacio:den,st:st});
   clearPartForm();rEParts();
@@ -5538,7 +5538,7 @@ function navClose(k){
   // a step inside the window first
   if(k==="xeBack"&&navShown($$("xeCropNo"))){$$("xeCropNo").click();return}
   if(k==="editBack"&&$$("pfCancel")&&$$("pfCancel").offsetParent){$$("pfCancel").click();return}
-  if(NAV_ASK[k]&&navDirty[k]&&!confirm(t("Hi ha canvis sense desar en aquesta finestra.\n\nVols tancar-la i perdre'ls?")))return;
+  if(NAV_ASK[k]&&navDirty[k]&&!confirm(uiT("Hi ha canvis sense desar en aquesta finestra.\n\nVols tancar-la i perdre'ls?")))return;
   if(k==="xeBack"){xeClose();return}         // its ✕ would ask a second time about the image
   var b=$$(NAV_BTN[k]);if(b)b.click();
 }
@@ -6040,7 +6040,7 @@ function wirePt(){
   $$("ptDone").addEventListener("click",ptClose);
   $$("ptBack").addEventListener("click",function(e){if(e.target===$$("ptBack"))ptClose()});
   $$("ptDel").addEventListener("click",function(){
-    if(!confirm(t("Vols eliminar aquesta prova de producció? No es pot desfer.")))return;
+    if(!confirm(uiT("Vols eliminar aquesta prova de producció? No es pot desfer.")))return;
     var id=ptId;ptSetTests(function(l){return l.filter(function(t){return t.id!==id})});
     ptClose();
   });
@@ -6184,15 +6184,15 @@ function wireBulk(){
     Array.prototype.forEach.call($$("bulkList").querySelectorAll("input[type=checkbox]:checked"),function(c){ids.push(c.dataset.id)});
     if(!ids.length)return;
     var del=$$("bulkDel").checked;
-    if(del&&!confirm(t("S'arxivaran ")+(ids.length===1?t("1 sessió"):ids.length+t(" sessions"))+" i després s'esborraran d'aquesta aplicació."
-      +t("\n\nLes seves carpetes de Drive aniran a la paperera de Drive, d'on es poden recuperar. Només s'esborra la sessió si el seu ZIP ha sortit bé.")))return;
+    if(del&&!confirm(uiT("S'arxivaran {x} i després s'esborraran d'aquesta aplicació.").replace("{x}",ids.length===1?uiT("1 sessió"):ids.length+uiT(" sessions"))
+      +uiT("\n\nLes seves carpetes de Drive aniran a la paperera de Drive, d'on es poden recuperar. Només s'esborra la sessió si el seu ZIP ha sortit bé.")))return;
     close();
     await archiveSessions(ids,del);
   });
 }
 function openBulkArchive(){
-  if(!sessions.length){alert(t("No hi ha cap sessió per arxivar."));return}
-  if(!isLoggedIn){alert(t("Primer inicia la sessió amb Google: el ZIP del projecte es fa amb els fitxers de la carpeta de Drive de cada sessió."));return}
+  if(!sessions.length){alert(uiT("No hi ha cap sessió per arxivar."));return}
+  if(!isLoggedIn){alert(uiT("Primer inicia la sessió amb Google: el ZIP del projecte es fa amb els fitxers de la carpeta de Drive de cada sessió."));return}
   wireBulk();
   var list=sessions.slice().sort(function(a,b){return String(b.createdAt||"").localeCompare(String(a.createdAt||""))});
   $$("bulkNote").innerHTML="Cada sessió marcada surt com el seu <strong>ZIP del projecte</strong>"
@@ -6206,7 +6206,7 @@ function openBulkArchive(){
       +"<span style=\"display:block;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\">"+esc(x.client||"—")+"</span>"
       +"<span style=\"display:block;font-size:11px;color:var(--tx3)\">"+(x.project?esc(x.project)+" · ":"")+(x.machine?esc(x.machine)+" · ":"")
       +dmy(rng.from)+(rng.to!==rng.from?" → "+dmy(rng.to):"")+(r?" · "+revNo(r.n):"")
-      +(x.status==="closed"?" · Tancada":" · Oberta")+"</span></span>"
+      +(x.status==="closed"?" · "+uiT("Tancada"):" · "+uiT("Oberta"))+"</span></span>"
       +"<span style=\"flex-shrink:0;font-size:11px;color:"+(ok?"var(--green)":"var(--tx3)")+"\" title=\""+(ok?"Ja té un ZIP del projecte posterior a l'últim canvi":"Encara no té cap ZIP del projecte al dia")+"\">"
       +(ok?"&#10003; ZIP al dia":"sense ZIP")+"</span>"
       +"</label>";
@@ -6297,7 +6297,7 @@ $$("nCancel").addEventListener("click",closeNewModal);
 $$("newBack").addEventListener("click",function(e){if(e.target===$$("newBack"))closeNewModal()});
 $$("nSave").addEventListener("click",function(){
   var c=$$("nClient").value.trim(),m=$$("nMachine").value.trim();
-  if(!c||!m){alert(t("El client i la màquina són obligatoris."));return}
+  if(!c||!m){alert(uiT("El client i la màquina són obligatoris."));return}
   var proj=$$("nProject").value.trim(),loc=$$("nLoc").value.trim(),tech=$$("nTech").value.trim(),type=$$("nType").value;
   // the equipment's own number and year (2026-10-24): what tells two machines
   // of the same model apart, and how old this one is
@@ -6717,12 +6717,12 @@ function wireGem(){
     var k=$$("gemIn").value.trim();
     if(!k){$$("gemNote").textContent="Escriu la clau, o tanca sense desar-ne cap.";return}
     try{localStorage.setItem(LS_GEM,k)}
-    catch(err){alert(t("No s'ha pogut desar la clau en aquest navegador: ")+((err&&err.message)||err));return}
+    catch(err){alert(uiT("No s'ha pogut desar la clau en aquest navegador: ")+((err&&err.message)||err));return}
     close();
   });
   $$("gemClear").addEventListener("click",function(){
     if(!gemKey()){close();return}
-    if(!confirm(t("Vols treure la clau d'aquest navegador?\nEl corrector i la traducció dels informes deixaran de funcionar fins que la tornis a escriure.")))return;
+    if(!confirm(uiT("Vols treure la clau d'aquest navegador?\nEl corrector i la traducció dels informes deixaran de funcionar fins que la tornis a escriure.")))return;
     try{localStorage.removeItem(LS_GEM)}catch(err){}
     close();
   });
@@ -7197,7 +7197,58 @@ es:{
   "🧾 Full d'hores…":"🧾 Hoja de horas…",
   "🗄 ZIP del projecte (arxiu)":"🗄 ZIP del proyecto (archivo)",
   "📦 ZIP Word + multimèdia":"📦 ZIP Word + multimedia",
-  "✎ Edita la visita de servei":"✎ Edita la visita de servicio"
+  "✎ Edita la visita de servei":"✎ Edita la visita de servicio",
+  "entrades":"entradas",
+  "problemes":"problemas",
+  "avís":"aviso",
+  "🟢 Oberta":"🟢 Abierta",
+  "🔴 Tancada":"🔴 Cerrada",
+  "Oberta":"Abierta",
+  "Tancada":"Cerrada",
+  "despesa":"gasto",
+  "despeses":"gastos",
+  "carpetes":"carpetas",
+  "fitxer":"archivo",
+  "fitxers":"archivos",
+  "prova":"prueba",
+  "proves":"pruebas",
+  "resolt":"resuelto",
+  "resolts":"resueltos",
+  "visites":"visitas",
+  "visita afegida":"visita añadida",
+  "visites afegides":"visitas añadidas",
+  "tiquet":"tique",
+  "tiquets":"tiques",
+  "tiquet a la cua":"tique en la cola",
+  "tiquets a la cua":"tiques en la cola",
+  "vídeo a la cua":"vídeo en la cola",
+  "vídeos a la cua":"vídeos en la cola",
+  "pendent":"pendiente",
+  "pendents":"pendientes",
+  "informe pendent":"informe pendiente",
+  "informes pendents":"informes pendientes",
+  "vinculades":"vinculadas",
+  "de complement":"de complemento",
+  "fitxer de la cua pujat":"archivo de la cola subido",
+  "fitxers de la cua pujats":"archivos de la cola subidos",
+  "ZIP llegit":"ZIP leído",
+  "ZIPs llegits":"ZIPs leídos",
+  "ZIP no s'ha pogut llegir":"ZIP no se ha podido leer",
+  "ZIPs no s'han pogut llegir":"ZIPs no se han podido leer",
+  "Vols treure \"{x}\" de la llista?\nEls fitxers es queden a la carpeta Manuals del teu Drive.":"¿Quieres quitar \"{x}\" de la lista?\nLos archivos se quedan en la carpeta Manuals de tu Drive.",
+  "aquest manual":"este manual",
+  "Llicència de {n}, fins al {x}.":"Licencia de {n}, hasta el {x}.",
+  "S'arxivaran {x} i després s'esborraran d'aquesta aplicació.":"Se archivarán {x} y después se borrarán de esta aplicación.",
+  "1 sessió":"1 sesión",
+  " sessions":" sesiones",
+  "Historial: {z} de l'arxiu ({on}), {v}.":"Historial: {z} del archivo ({on}), {v}.",
+  "No hi ha cap ZIP ni cap JSON a {x}.":"No hay ningún ZIP ni ningún JSON en {x}.",
+  "la carpeta d'arxiu":"la carpeta de archivo",
+  "Vols enviar «{x}» a la paperera de Drive?":"¿Quieres enviar «{x}» a la papelera de Drive?",
+  "No s'han pogut preparar les etiquetes en {l}: ":"No se han podido preparar las etiquetas en {l}: ",
+  "Atenció: el ZIP no porta {n} fitxer(s) que la visita té però que ja no són a Drive:":"Atención: el ZIP no lleva {n} archivo(s) que la visita tiene pero que ya no están en Drive:",
+  "Aquesta visita és a l'arxiu{x}, no a l'app.\n\nPer obrir-la sencera, importa'n el ZIP: Importa › tria el ZIP de la carpeta d'arxiu.":"Esta visita está en el archivo{x}, no en la app.\n\nPara abrirla entera, importa su ZIP: Importa › elige el ZIP de la carpeta de archivo.",
+  "Les etiquetes en {l} ja hi són, traduïdes per Gemini i guardades en aquest navegador.\n\n":"Las etiquetas en {l} ya están, traducidas por Gemini y guardadas en este navegador.\n\n"
 },
 en:{
   "Es desa només en aquest aparell i no viatja enlloc: ni a Drive, ni als ZIP, ni a les còpies de seguretat — per això cal escriure-la un cop a cada aparell. No li cal cobertura: es comprova aquí mateix, i per tant funciona en una planta sense senyal. El nom del titular surt al peu de cada informe.":"It is kept on this device only and goes nowhere else: not to Drive, not into the ZIPs, not into the backups — which is why it has to be entered once on each device. It needs no signal: it is checked right here, so it works in a plant with no coverage. The licence holder's name appears at the foot of every report.",
@@ -7659,13 +7710,70 @@ en:{
   "🧾 Full d'hores…":"🧾 Timesheet…",
   "🗄 ZIP del projecte (arxiu)":"🗄 Project ZIP (archive)",
   "📦 ZIP Word + multimèdia":"📦 ZIP Word + media",
-  "✎ Edita la visita de servei":"✎ Edit the service visit"
+  "✎ Edita la visita de servei":"✎ Edit the service visit",
+  "entrada":"entry",
+  "entrades":"entries",
+  "problema":"problem",
+  "problemes":"problems",
+  "avís":"warning",
+  "avisos":"warnings",
+  "en total":"in total",
+  "🟢 Oberta":"🟢 Open",
+  "🔴 Tancada":"🔴 Closed",
+  "Oberta":"Open",
+  "Tancada":"Closed",
+  "despesa":"expense",
+  "despeses":"expenses",
+  "carpeta":"folder",
+  "carpetes":"folders",
+  "fitxer":"file",
+  "fitxers":"files",
+  "prova":"test",
+  "proves":"tests",
+  "resolt":"resolved",
+  "resolts":"resolved",
+  "visita":"visit",
+  "visites":"visits",
+  "visita afegida":"visit added",
+  "visites afegides":"visits added",
+  "tiquet":"ticket",
+  "tiquets":"tickets",
+  "tiquet a la cua":"ticket queued",
+  "tiquets a la cua":"tickets queued",
+  "vídeo a la cua":"video queued",
+  "vídeos a la cua":"videos queued",
+  "pendent":"pending",
+  "pendents":"pending",
+  "informe pendent":"report pending",
+  "informes pendents":"reports pending",
+  "vinculada":"linked",
+  "vinculades":"linked",
+  "de complement":"supporting",
+  "fitxer de la cua pujat":"queued file uploaded",
+  "fitxers de la cua pujats":"queued files uploaded",
+  "ZIP llegit":"ZIP read",
+  "ZIPs llegits":"ZIPs read",
+  "ZIP no s'ha pogut llegir":"ZIP could not be read",
+  "ZIPs no s'han pogut llegir":"ZIPs could not be read",
+  "Vols treure \"{x}\" de la llista?\nEls fitxers es queden a la carpeta Manuals del teu Drive.":"Remove \"{x}\" from the list?\nThe files stay in the Manuals folder of your Drive.",
+  "aquest manual":"this manual",
+  "Llicència de {n}, fins al {x}.":"Licence for {n}, until {x}.",
+  "S'arxivaran {x} i després s'esborraran d'aquesta aplicació.":"{x} will be archived and then deleted from this app.",
+  "1 sessió":"1 session",
+  "Historial: {z} de l'arxiu ({on}), {v}.":"History: {z} from the archive ({on}), {v}.",
+  "No hi ha cap ZIP ni cap JSON a {x}.":"There is no ZIP and no JSON in {x}.",
+  "la carpeta d'arxiu":"the archive folder",
+  "Vols enviar «{x}» a la paperera de Drive?":"Send «{x}» to the Drive bin?",
+  "No s'han pogut preparar les etiquetes en {l}: ":"The labels in {l} could not be prepared: ",
+  "Atenció: el ZIP no porta {n} fitxer(s) que la visita té però que ja no són a Drive:":"Careful: the ZIP is missing {n} file(s) the visit has but that are no longer in Drive:",
+  "Aquesta visita és a l'arxiu{x}, no a l'app.\n\nPer obrir-la sencera, importa'n el ZIP: Importa › tria el ZIP de la carpeta d'arxiu.":"This visit is in the archive{x}, not in the app.\n\nTo open it whole, import its ZIP: Importa › pick the ZIP from the archive folder.",
+  "Les etiquetes en {l} ja hi són, traduïdes per Gemini i guardades en aquest navegador.\n\n":"The labels in {l} are already here, translated by Gemini and kept in this browser.\n\n"
 }};   // UI[lang][catalan]; ca is the source, so it has no table
 function uiLang(){
   try{var l=localStorage.getItem(LS_UILANG);if(l&&(l==="ca"||UI[l]))return l}catch(e){}
   return "ca";
 }
-function t(s){
+function uiT(s){
   var l=uiLang();
   if(l==="ca")return s;
   var tab=UI[l];
@@ -7839,13 +7947,13 @@ function wireLic(){
     if(!d){$$("licNote").innerHTML="Aquesta llic\u00e8ncia no val: o est\u00e0 escrita a mitges, o no l'hem emesa nosaltres. Torna a copiar-la sencera del correu."
       +(LIC_PUB?"":" <b>(Aquesta c\u00f2pia de l'aplicaci\u00f3 encara no t\u00e9 clau p\u00fablica: cap llic\u00e8ncia no hi pot valer.)</b>");return}
     try{localStorage.setItem(LS_LIC,t)}
-    catch(err){alert(t("No s'ha pogut desar la llic\u00e8ncia en aquest navegador: ")+((err&&err.message)||err));return}
+    catch(err){alert(uiT("No s'ha pogut desar la llic\u00e8ncia en aquest navegador: ")+((err&&err.message)||err));return}
     lic=d;verLine();close();
-    alert("Llic\u00e8ncia de "+d.n+", fins al "+d.x+".");
+    alert(uiT("Llicència de {n}, fins al {x}.").replace("{n}",d.n).replace("{x}",d.x));
   });
   $$("licClear").addEventListener("click",function(){
     if(!licStored()){close();return}
-    if(!confirm(t("Vols treure la llic\u00e8ncia d'aquest aparell?")))return;
+    if(!confirm(uiT("Vols treure la llic\u00e8ncia d'aquest aparell?")))return;
     try{localStorage.removeItem(LS_LIC)}catch(err){}
     lic=null;verLine();close();
   });
@@ -7893,7 +8001,7 @@ function wireCorrect(btnId,fieldId,compact){
       var m=(e&&e.message)||String(e);
       // Missing key isn't a breakdown to explain, it's a field to fill in.
       if(m===GEM_NOKEY){rest();openGemKey("Per corregir el text cal la clau de Gemini. Escriu-la aquí i torna-ho a provar.");return}
-      alert(t("No s'ha pogut corregir el text: ")+m+gemHint());
+      alert(uiT("No s'ha pogut corregir el text: ")+m+gemHint());
     }
     rest();
   });
@@ -7962,7 +8070,7 @@ function wireDaySummary(btnId,fieldId){
   b.addEventListener("click",async function(){
     if(prev!=null){f.value=prev;prev=null;made=null;f.dispatchEvent(new Event("input",{bubbles:true}));autoH(f);rest();return}
     var s=sessions.find(function(x){return x.id===aid});
-    if(!s||!(s.entries||[]).length){alert(t("Encara no hi ha entrades per resumir."));return}
+    if(!s||!(s.entries||[]).length){alert(uiT("Encara no hi ha entrades per resumir."));return}
     b.disabled=true;b.innerHTML="Resumint…";
     try{
       var sum=await gemDaySummary(s);
@@ -7973,7 +8081,7 @@ function wireDaySummary(btnId,fieldId){
     }catch(e){
       var m=(e&&e.message)||String(e);
       if(m===GEM_NOKEY){rest();openGemKey("Per resumir els dies cal la clau de Gemini. Escriu-la aquí i torna-ho a provar.");return}
-      alert(t("No s'ha pogut fer el resum: ")+m+gemHint());
+      alert(uiT("No s'ha pogut fer el resum: ")+m+gemHint());
     }
     rest();
   });
@@ -8638,11 +8746,11 @@ async function printMachineHistory(){
     var m=(e&&e.message)||String(e);
     if(m===GEM_NOKEY){
       if(confirm("L'historial s'ha de traduir "+langInto(lang)+", i en aquest navegador no hi ha cap clau de Gemini."
-        +t("\n\nAccepta per escriure-la ara, o cancel·la per imprimir-lo amb els textos tal com els vas escriure."))){
+        +"\n\nAccepta per escriure-la ara, o cancel·la per imprimir-lo amb els textos tal com els vas escriure.")){
         openGemKey("L'historial s'ha de traduir "+langInto(lang)+". Escriu la clau i torna a imprimir-lo.");return;
       }
     }else if(!confirm("No s'han pogut traduir els textos "+langInto(lang)+":\n"+m
-      +t("\n\nVols imprimir-lo igualment, amb els textos tal com els vas escriure?")))return;
+      +"\n\nVols imprimir-lo igualment, amb els textos tal com els vas escriure?"))return;
   }
   done();
   var L=RPT[lang]||RPT.en,v=mhRender(cur,loc,L,true),newest=all[0]||cur;
@@ -8740,7 +8848,7 @@ function wireRev(){
   });
   $$("revNew").addEventListener("click",function(){
     var note=$$("revTxt").value.trim();
-    if(!note){alert(t("Escriu què ha canviat en aquesta revisió."));return}
+    if(!note){alert(uiT("Escriu què ha canviat en aquesta revisió."));return}
     var date=$$("revDate").value||todayISO();
     if(!revResolve){
       var s=sessions.find(function(x){return x.id===aid});
@@ -9102,12 +9210,12 @@ async function reportSession(s){
     var m=(e&&e.message)||String(e);
     if(m===GEM_NOKEY){
       if(!confirm("Aquest informe s'ha de traduir "+langInto(lang)+", i en aquest navegador no hi ha cap clau de Gemini."
-        +t("\n\nAccepta per escriure-la ara, o cancel·la per generar-lo amb els textos tal com els vas escriure.")))return {s:s,lang:lang};
+        +"\n\nAccepta per escriure-la ara, o cancel·la per generar-lo amb els textos tal com els vas escriure."))return {s:s,lang:lang};
       openGemKey("L'informe s'ha de traduir "+langInto(lang)+". Escriu la clau i torna a exportar-lo.");
       return null;
     }
     if(!confirm("No s'han pogut traduir els textos "+langInto(lang)+":\n"+m
-      +t("\n\nVols generar l'informe igualment, amb els textos tal com els vas escriure?")))return null;
+      +"\n\nVols generar l'informe igualment, amb els textos tal com els vas escriure?"))return null;
     return {s:s,lang:lang};
   }
 }
@@ -9449,9 +9557,9 @@ async function histBackfill(ask){
   if(added)histSchedule();
   if(added||ask)renderAll();
   if(ask)alert(where.length
-    ?t("Historial: ")+pl(read,"ZIP llegit","ZIPs llegits")+" de l'arxiu ("+where.join(" i ")+"), "+pl(added,t("visita afegida"),t("visites afegides"))+"."
+    ?uiT("Historial: {z} de l'arxiu ({on}), {v}.").replace("{z}",pl(read,"ZIP llegit","ZIPs llegits")).replace("{on}",where.join(" i ")).replace("{v}",pl(added,"visita afegida","visites afegides"))
       +(failed?"\n"+pl(failed,"ZIP no s'ha pogut llegir","ZIPs no s'han pogut llegir")+".":"")
-    :t("No hi ha cap carpeta d'arxiu a la vista: assenyala-la aquí mateix, a Drive o en aquest ordinador."));
+    :uiT("No hi ha cap carpeta d'arxiu a la vista: assenyala-la aquí mateix, a Drive o en aquest ordinador."));
   return added;
 }
 // An archived visit, touched in the history: its ZIP in Drive, if it is there.
@@ -9472,7 +9580,7 @@ async function histOpenArchive(id){
       if(fileId){window.open("https://drive.google.com/file/d/"+encodeURIComponent(fileId)+"/view","_blank","noopener");return}
     }
   }catch(e){}
-  alert(t("Aquesta visita és a l'arxiu")+(a&&a.name?" ("+a.name+")":"")+", no a l'app.\n\nPer obrir-la sencera, importa'n el ZIP: Importa › tria el ZIP de la carpeta d'arxiu.");
+  alert(uiT("Aquesta visita és a l'arxiu{x}, no a l'app.\n\nPer obrir-la sencera, importa'n el ZIP: Importa › tria el ZIP de la carpeta d'arxiu.").replace("{x}",a&&a.name?" ("+a.name+")":""));
 }
 // ── MACHINE COUNTERS (2026-10-17) ─────────────────────────────────────────────
 // Two readings per visit — on arrival and on leaving — of the machine's hour
@@ -9975,7 +10083,7 @@ async function exportRep(s,fmt){
   if(fmt==="timesheet"){openTimesheet();return}
   if(fmt==="zip"){openZipPick(s);return}
   if(fmt==="zipdocx"){exportSessionZip(s,"docx");return}
-  if(fmt==="xlsx"&&!collectSessionParts(s).length&&!(s.prodTests||[]).length){alert(t("Aquesta sessió encara no té recanvis ni proves de producció.\n\nTria els recanvis d'un dibuix o afegeix-los a mà en una entrada."));return}
+  if(fmt==="xlsx"&&!collectSessionParts(s).length&&!(s.prodTests||[]).length){alert(uiT("Aquesta sessió encara no té recanvis ni proves de producció.\n\nTria els recanvis d'un dibuix o afegeix-los a mà en una entrada."));return}
   // A language the app has no labels for yet has to get them before anything
   // is built, or the report comes out with Catalan headings on foreign text.
   if(!await ensureLabels(reportLang(s)))return;
@@ -10001,7 +10109,7 @@ async function exportRep(s,fmt){
     expBusy("Informe de validació…");
     try{
       var vb=await buildPdfBlob(R.s,R.lang,R.rev,{validation:true});
-      if(!vb){alert(t("No s'ha pogut carregar la llibreria PDF. Comprova la connexió."));return}
+      if(!vb){alert(uiT("No s'ha pogut carregar la llibreria PDF. Comprova la connexió."));return}
       var vn=RPT[R.lang].pt.file+"_"+base+".pdf";
       await saveReport(s,vb,vn,"application/pdf");
     }finally{expBusy("")}
@@ -10234,7 +10342,7 @@ async function folUpload(ev){
   var files=Array.from(ev.target.files||[]);
   ev.target.value="";
   if(!s||!files.length)return;
-  if(!isLoggedIn){alert(t("Inicia la sessió amb Google per afegir fitxers a la carpeta."));return}
+  if(!isLoggedIn){alert(uiT("Inicia la sessió amb Google per afegir fitxers a la carpeta."));return}
   var done=0,failed=0;
   for(var i=0;i<files.length;i++){
     folNote("<span class=\"spinner\"></span> Pujant "+(i+1)+" de "+files.length+"…");
@@ -10269,7 +10377,7 @@ function loadPicker(){
 }
 async function folPickFromDrive(){
   var s=sessions.find(function(x){return x.id===aid});if(!s)return;
-  if(!isLoggedIn){alert(t("Inicia la sessió amb Google per triar fitxers de Drive."));return}
+  if(!isLoggedIn){alert(uiT("Inicia la sessió amb Google per triar fitxers de Drive."));return}
   var token=await ensureToken();if(!token)return;
   folNote("<span class=\"spinner\"></span> Obrint el selector de Drive…");
   var P=await loadPicker();
@@ -10323,11 +10431,11 @@ function openDriveFile(id,name){
       var r=await fetch("https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(id)+"?alt=media",{headers:{Authorization:"Bearer "+token}});
       if(!r.ok)throw new Error("Drive ha respost "+r.status);
       var html=await r.text();
-      if(!w||w.closed){alert(t("El navegador no ha deixat obrir una pestanya nova. Permet les finestres emergents d'aquesta app i torna-ho a provar."));return}
+      if(!w||w.closed){alert(uiT("El navegador no ha deixat obrir una pestanya nova. Permet les finestres emergents d'aquesta app i torna-ho a provar."));return}
       w.document.open();w.document.write(html);w.document.close();
     }catch(e){
       try{if(w)w.close()}catch(e2){}
-      alert(t("No s'ha pogut obrir ")+(name||t("el fitxer"))+": "+((e&&e.message)||e));
+      alert(uiT("No s'ha pogut obrir ")+(name||uiT("el fitxer"))+": "+((e&&e.message)||e));
     }
   })();
 }
@@ -10395,7 +10503,7 @@ function folAct(ev){
 function folPickTarget(f,row){
   var s=sessions.find(function(x){return x.id===aid});if(!s)return;
   var att=reportAttachments(s);
-  if(!att.length){alert(t("Aquesta sessió encara no té cap adjunt a l'informe per vincular-hi."));return}
+  if(!att.length){alert(uiT("Aquesta sessió encara no té cap adjunt a l'informe per vincular-hi."));return}
   folLinking=f.id;
   var opts=att.map(function(a){return "<option value=\""+esc(a.driveId)+"\">"+esc(fts(a.ts)+" · "+(a.name||"—"))+"</option>"}).join("");
   row.querySelector(".fol-acts").innerHTML=
@@ -10422,7 +10530,7 @@ async function folDoLink(f,targetId){
   var nn=linkedName(t.name||"foto",extOf(f.name));
   folNote("<span class=\"spinner\"></span> Reanomenant a Drive…");
   var ok=await driveRename(f.id,nn);
-  if(!ok){alert(t("No s'ha pogut reanomenar el fitxer a Drive."));renderFolder();return}
+  if(!ok){alert(uiT("No s'ha pogut reanomenar el fitxer a Drive."));renderFolder();return}
   f.name=nn;f.path=f.path.replace(/[^/]+$/,nn);
   folSetLink(f.id,targetId);
 }
@@ -10462,7 +10570,7 @@ async function folDoRename(f){
   if(!extOf(nn)&&extOf(f.name))nn+="."+extOf(f.name); // keep the extension
   folNote("<span class=\"spinner\"></span> Reanomenant a Drive…");
   var ok=await driveRename(f.id,nn);
-  if(!ok){alert(t("No s'ha pogut reanomenar el fitxer a Drive."));renderFolder();return}
+  if(!ok){alert(uiT("No s'ha pogut reanomenar el fitxer a Drive."));renderFolder();return}
   var old=f.name;
   f.name=nn;f.path=f.path.replace(/[^/]+$/,nn);
   await folRenameLinked(f);
@@ -10480,9 +10588,9 @@ async function folDoRename(f){
 async function folDoDelete(f){
   var s=sessions.find(function(x){return x.id===aid});if(!s)return;
   var att=reportAttachments(s).filter(function(a){return a.driveId===f.id})[0];
-  if(!confirm("Vols enviar «"+(f.name||f.path)+"» a la paperera de Drive?"
-    +(att?t("\n\nAquest fitxer és a l'informe: també es traurà de la seva entrada."):"")
-    +t("\n\nEl podràs recuperar durant 30 dies des de drive.google.com.")))return;
+  if(!confirm(uiT("Vols enviar «{x}» a la paperera de Drive?").replace("{x}",f.name||f.path)
+    +(att?uiT("\n\nAquest fitxer és a l'informe: també es traurà de la seva entrada."):"")
+    +uiT("\n\nEl podràs recuperar durant 30 dies des de drive.google.com.")))return;
   if(att){
     sessions=sessions.map(function(x){
       if(x.id!==aid)return x;
@@ -10751,7 +10859,7 @@ function tsImportFile(e){
   rd.onload=function(){
     var db=null;
     try{db=JSON.parse(rd.result)}catch(err){}
-    if(!db||!db.years){alert(t("Això no és una exportació del Calendari laboral: no hi ha \"years\"."));return}
+    if(!db||!db.years){alert(uiT("Això no és una exportació del Calendari laboral: no hi ha \"years\"."));return}
     saveCalCache(db,"fitxer importat");
     tsPick=null;tsLoad(false);
   };
@@ -10769,7 +10877,7 @@ function tsSignDate(T){
 }
 function tsCommit(){
   var rows=tsChosen();
-  if(!rows.length){alert(t("Tria com a mínim un dia per al full d'hores."));return false}
+  if(!rows.length){alert(uiT("Tria com a mínim un dia per al full d'hores."));return false}
   var T={
     from:$$("tsFrom").value,to:$$("tsTo").value,lang:$$("tsLang").value,
     cols:tsCols.slice(),
@@ -10976,12 +11084,12 @@ async function localizeTimesheet(s,lang){
     var m=(e&&e.message)||String(e);
     if(m===GEM_NOKEY){
       if(!confirm("El full d'hores va "+langInto(lang)+", i en aquest navegador no hi ha cap clau de Gemini."
-        +t("\n\nAccepta per escriure-la ara, o cancel·la per generar-lo amb els textos tal com els vas escriure.")))return T;
+        +"\n\nAccepta per escriure-la ara, o cancel·la per generar-lo amb els textos tal com els vas escriure."))return T;
       openGemKey("El full d'hores va "+langInto(lang)+". Escriu la clau i torna a exportar-lo.");
       return null;
     }
     if(!confirm("No s'han pogut traduir els textos del full d'hores "+langInto(lang)+":\n"+m
-      +t("\n\nVols generar-lo igualment, amb els textos tal com els vas escriure?")))return null;
+      +"\n\nVols generar-lo igualment, amb els textos tal com els vas escriure?"))return null;
     return T;
   }finally{expBusy("")}
   var out=Object.assign({},T,{rows:(T.rows||[]).map(function(r){return Object.assign({},r)})});
@@ -11003,7 +11111,7 @@ async function exportTimesheet(s){
   if(!T)return;
   s=Object.assign({},s,{timesheet:T});
   var blob=await buildTimesheetBlob(s);
-  if(!blob){alert(t("No s'ha pogut carregar la llibreria PDF. Comprova la connexió."));return}
+  if(!blob){alert(uiT("No s'ha pogut carregar la llibreria PDF. Comprova la connexió."));return}
   var fn=tsFileName(s);
   await saveReport(s,blob,fn,"application/pdf");
 }
@@ -11186,12 +11294,12 @@ async function ensureLabels(lang){
     RPT[lang]=got.rpt;TSL[lang]=got.tsl;
     await labelsSave();
   }catch(e){
-    alert("No s'han pogut preparar les etiquetes en "+t+": "+((e&&e.message)||e)
-      +t("\n\nL'informe no s'ha generat. Torna-ho a provar, o tria un altre idioma."));
+    alert(uiT("No s'han pogut preparar les etiquetes en {l}: ").replace("{l}",t)+((e&&e.message)||e)
+      +uiT("\n\nL'informe no s'ha generat. Torna-ho a provar, o tria un altre idioma."));
     return false;
   }finally{expBusy("")}
-  alert("Les etiquetes en "+t+" ja hi són, traduïdes per Gemini i guardades en aquest navegador.\n\n"
-    +t("Com que surten a cada fila de cada pàgina, val la pena mirar-les un cop: ↓ Informe › Revisa les etiquetes."));
+  alert(uiT("Les etiquetes en {l} ja hi són, traduïdes per Gemini i guardades en aquest navegador.\n\n").replace("{l}",t)
+    +uiT("Com que surten a cada fila de cada pàgina, val la pena mirar-les un cop: ↓ Informe › Revisa les etiquetes."));
   return true;
 }
 // ── THE LABEL REVIEW SCREEN ──────────────────────────────────────────────────
@@ -11248,7 +11356,7 @@ function wireLbl(){
   });
   $$("lblRedo").addEventListener("click",async function(){
     var lang=lblLang;if(!lang)return;
-    if(!confirm(t("Vols llençar aquestes etiquetes i tornar-les a demanar a Gemini?\nEls canvis que hi hagis fet a mà es perdran.")))return;
+    if(!confirm(uiT("Vols llençar aquestes etiquetes i tornar-les a demanar a Gemini?\nEls canvis que hi hagis fet a mà es perdran.")))return;
     if(!gemKey()){openGemKey("Per tornar a traduir les etiquetes cal la clau de Gemini.");return}
     var b=$$("lblRedo");b.disabled=true;b.textContent="Traduint…";
     try{
@@ -11256,7 +11364,7 @@ function wireLbl(){
       RPT[lang]=got.rpt;TSL[lang]=got.tsl;
       await labelsSave();
       $$("lblList").innerHTML=lblRowsHTML(lang);
-    }catch(e){alert(t("No s'han pogut tornar a traduir: ")+((e&&e.message)||e))}
+    }catch(e){alert(uiT("No s'han pogut tornar a traduir: ")+((e&&e.message)||e))}
     b.disabled=false;b.innerHTML="&#8635; Torna-les a traduir";
   });
 }
@@ -11493,7 +11601,7 @@ function hexRgb(h){var m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h||"")
 // s = the real session (Drive folder, file names); R = {s: its localized copy, lang}
 async function exportPDF(s,R,base){
   var blob=await buildPdfBlob(R.s,R.lang,R.rev);
-  if(!blob){alert(t("No s'ha pogut carregar la llibreria PDF. Comprova la connexió."));return}
+  if(!blob){alert(uiT("No s'ha pogut carregar la llibreria PDF. Comprova la connexió."));return}
   var fn=RPT[R.lang].pre.report+"_"+base+".pdf";
   await saveReport(s,blob,fn,"application/pdf");
 }
@@ -11521,11 +11629,11 @@ async function buildPdfBlob(s,lang,rev,opts){
     (e.images||[]).forEach(function(im){typed.push(im.name)});
   });
   var ar=await pdfArabicFont(doc,typed);
-  if(!ar&&typed.some(hasArabic))alert(t("No s'ha pogut carregar la tipografia àrab (cal connexió el primer cop): el text en àrab d'aquest PDF no sortirà bé."));
+  if(!ar&&typed.some(hasArabic))alert(uiT("No s'ha pogut carregar la tipografia àrab (cal connexió el primer cop): el text en àrab d'aquest PDF no sortirà bé."));
   // The labels count too: a report in Greek has Greek column heads even when
   // every word the technician typed is Latin.
   if(!await pdfUniFont(doc,typed.concat(labelTexts(R))))
-    alert(t("No s'ha pogut carregar la tipografia ampliada (cal connexió el primer cop): les lletres que no són del llatí bàsic no sortiran bé en aquest PDF."));
+    alert(uiT("No s'ha pogut carregar la tipografia ampliada (cal connexió el primer cop): les lletres que no són del llatí bàsic no sortiran bé en aquest PDF."));
 
   // header
   doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(17,24,39);
@@ -11993,7 +12101,7 @@ function autoCols(rows,min,max){
 }
 async function exportXLSX(s,R,base){
   var blob=await buildXlsxBlob(R.s,R.lang,R.rev);
-  if(!blob){alert(t("No s'ha pogut carregar la llibreria d'Excel. Comprova la connexió."));return}
+  if(!blob){alert(uiT("No s'ha pogut carregar la llibreria d'Excel. Comprova la connexió."));return}
   var fn=RPT[R.lang].pre.parts+"_"+base+".xlsx";
   await saveReport(s,blob,fn,XLSX_MIME);
 }
@@ -12107,10 +12215,10 @@ async function buildDocxBlob(s,lang,rev,opts){
 async function exportDOCX(s,R,base){
   try{
     var blob=await buildDocxBlob(R.s,R.lang,R.rev);
-    if(!blob){alert(t("No s'ha pogut carregar la llibreria de Word. Comprova la connexió."));return}
+    if(!blob){alert(uiT("No s'ha pogut carregar la llibreria de Word. Comprova la connexió."));return}
     var fn=RPT[R.lang].pre.report+"_"+base+".docx";
     await saveReport(s,blob,fn,DOCX_MIME);
-  }catch(err){alert(t("Error en generar el Word: ")+err.message)}
+  }catch(err){alert(uiT("Error en generar el Word: ")+err.message)}
 }
 // The Word report is built to land on the SAME layout as the PDF, because the
 // technician's usual route is "export Word → Save as PDF" and the two had
@@ -12657,8 +12765,8 @@ async function exportSessionZip(s,kind,pick){
   var want=function(k){return !pick||pick[k]!==false};
   s=sessions.find(function(x){return x.id===s.id})||s; // pick up a language just chosen in the menu
   var archive=(kind||"project")==="project";
-  if(!isLoggedIn){alert(t("Primer inicia la sessió amb Google: s'exporten els fitxers guardats a la carpeta de Drive de la sessió."));return}
-  var token=await ensureToken();if(!token){alert(t("No s'ha pogut autenticar amb Drive."));return}
+  if(!isLoggedIn){alert(uiT("Primer inicia la sessió amb Google: s'exporten els fitxers guardats a la carpeta de Drive de la sessió."));return}
+  var token=await ensureToken();if(!token){alert(uiT("No s'ha pogut autenticar amb Drive."));return}
   if(!await ensureLabels(reportLang(s)))return;   // same gate as a single report
   // While the click is still counted as a gesture: after this comes a minute
   // of translating and zipping, and by then the permission prompt is refused.
@@ -12682,9 +12790,9 @@ async function exportSessionZip(s,kind,pick){
   expBusy("Comprimint…");
   try{
     var folderId=await getSessionFolder(token,s);
-    if(!folderId){alert(t("Aquesta sessió encara no té carpeta a Drive."));return}
+    if(!folderId){alert(uiT("Aquesta sessió encara no té carpeta a Drive."));return}
     var JSZipLib=await loadJSZip();
-    if(!JSZipLib){alert(t("No s'ha pogut carregar la llibreria ZIP. Comprova la connexió."));return}
+    if(!JSZipLib){alert(uiT("No s'ha pogut carregar la llibreria ZIP. Comprova la connexió."));return}
     var files=await sessionFolderFiles(token,s,folderId);
     // JSZip writes each file's time as UTC and Windows reads it as local time:
     // every file came out two hours early (2026-10-24, in summer time here).
@@ -12853,7 +12961,7 @@ async function exportSessionZip(s,kind,pick){
     else if(drvArx){
       expBusy("Pujant a Drive…");
       arxOk=await saveToDriveArxiu(drvArx,zipName,zipBlob,s.id);
-      if(!arxOk)alert(t("No s'ha pogut pujar el ZIP a Drive (o no hi ha arribat sencer). Es descarrega, perquè no es perdi."));
+      if(!arxOk)alert(uiT("No s'ha pogut pujar el ZIP a Drive (o no hi ha arribat sencer). Es descarrega, perquè no es perdi."));
     }
     if(!archive)await saveReport(s,zipBlob,zipName,"application/zip");
     else if(!arxOk)dlBlob(zipBlob,zipName);
@@ -12869,9 +12977,9 @@ async function exportSessionZip(s,kind,pick){
         zipName:typeof arxOk==="string"?arxOk:"",zipTo:arxOn?"local":(drvArx?"drive":"")}):x});
       saveLocal();isDirty=true;
     }
-    if(lostMedia.length)alert("Atenció: el ZIP no porta "+lostMedia.length+" fitxer(s) que la visita té però que ja no són a Drive:\n· "+lostMedia.join("\n· ")
-      +t("\n\nSi els tens en algun altre lloc, afegeix-los a la carpeta de la visita i torna a fer el ZIP abans d'esborrar la visita."));
-  }catch(e){alert(t("No s'ha pogut exportar el ZIP: ")+((e&&e.message)||e))}
+    if(lostMedia.length)alert(uiT("Atenció: el ZIP no porta {n} fitxer(s) que la visita té però que ja no són a Drive:").replace("{n}",lostMedia.length)+"\n· "+lostMedia.join("\n· ")
+      +uiT("\n\nSi els tens en algun altre lloc, afegeix-los a la carpeta de la visita i torna a fer el ZIP abans d'esborrar la visita."));
+  }catch(e){alert(uiT("No s'ha pogut exportar el ZIP: ")+((e&&e.message)||e))}
   finally{expBusy("");if(window.JSZip&&JSZip.defaults)JSZip.defaults.date=null}
   // Says WHICH file, because a suffix means the folder now holds more than one
   // go at this revision and that is worth noticing when it happens.
@@ -13464,7 +13572,7 @@ async function exAddFiles(files){
   var s=exSess();if(!s)return;
   var sessId=s.id,first=null;
   files=files.filter(function(f){return /^image\//.test(f.type||"")||exIsPdf(f)});
-  if(!files.length){alert(t("Tria una foto o un PDF del tiquet."));return}
+  if(!files.length){alert(uiT("Tria una foto o un PDF del tiquet."));return}
   var cur;try{cur=localStorage.getItem(LS_EXCUR)||"EUR"}catch(e){cur="EUR"}
   for(var i=0;i<files.length;i++){
     var f=files[i],id=uid();
@@ -13763,7 +13871,7 @@ function wireEx(){
     b.disabled=true;var was=b.innerHTML;b.innerHTML="Preparant&hellip;";
     try{
       var blob=await exBuildXlsx(s);
-      if(!blob){alert(t("No s'ha pogut fer l'Excel: no hi ha despeses o no s'ha pogut carregar la llibreria (cal connexió el primer cop)."));return}
+      if(!blob){alert(uiT("No s'ha pogut fer l'Excel: no hi ha despeses o no s'ha pogut carregar la llibreria (cal connexió el primer cop)."));return}
       var ok=await saveReport(s,blob,exXlsxName(s),XLSX_MIME);
       b.innerHTML=ok?"&#10003; Desat a Drive":"&#9203; Es pujarà a Drive";
       setTimeout(function(){b.innerHTML=was},3500);
@@ -13882,7 +13990,7 @@ function xeReadLine(){
     if(!gemKey()){openGemKey("Per llegir els tiquets cal la clau de Gemini. Escriu-la aquí i torna-ho a provar.");return}
     var e=xeEx();if(!e)return;
     var typed=(e.hand||[]).length||Object.keys(xeTouched).some(function(k){return xeTouched[k]&&k!=="notes"});
-    var all=typed&&confirm(t("Vols que torni a llegir també els camps que has canviat a mà?\n\nD'acord: es tornen a llegir tots.\nCancel·la: els teus es queden com estan."));
+    var all=typed&&confirm(uiT("Vols que torni a llegir també els camps que has canviat a mà?\n\nD'acord: es tornen a llegir tots.\nCancel·la: els teus es queden com estan."));
     exRead(xeSessId,xeId,all);
   });
   var miss=exReading[x.id]?[]:exMissing(x),nb=$$("xeNeed");
@@ -13913,7 +14021,7 @@ function xeCropEnd(){
 async function xeApply(op){
   var im=xeImg();if(!im)return;
   var src=xeEdits[im.id]||await exFull(im);
-  if(!src){alert(t("La imatge sencera encara no és en aquest aparell ni a Drive. Es podrà girar o retallar quan s'hagi pujat."));return}
+  if(!src){alert(uiT("La imatge sencera encara no és en aquest aparell ni a Drive. Es podrà girar o retallar quan s'hagi pujat."));return}
   var d=await exTransform(src,op);
   if(d)xeEdits[im.id]=d;
   xeCropEnd();xeUpLabel();xeRenderStrip();
@@ -13926,7 +14034,7 @@ function xeClose(){
 async function xeSave(){
   var x=xeEx();if(!x){xeClose();return}
   var miss=exReading[x.id]?[]:exMissing(Object.assign({},x,{pay:$$("xePay").value}));
-  if(miss.length&&!confirm("A aquesta despesa li falta "+miss.map(function(k){return EX_MISS[k][1]}).join(" i ")+t(".\n\nVols desar-la igualment?")))return;
+  if(miss.length&&!confirm("A aquesta despesa li falta "+miss.map(function(k){return EX_MISS[k][1]}).join(" i ")+".\n\nVols desar-la igualment?"))return;
   var sessId=xeSessId,id=xeId,p={},rv=x.readVals||{};
   XE_F.forEach(function(f){p[f[1]]=$$(f[0]).value.trim()});
   p.currency=(p.currency||"EUR").toUpperCase();
@@ -13978,7 +14086,7 @@ async function xeAddFiles(files,extra){
 }
 function xeImgRemove(){
   var x=xeEx(),im=xeImg();if(!x||!im||exImgs(x).length<2)return;
-  if(!confirm(t("Vols treure aquesta foto de la despesa?")+(im.driveId?t("\n\nAnirà a la paperera de Drive."):"")))return;
+  if(!confirm(uiT("Vols treure aquesta foto de la despesa?")+(im.driveId?uiT("\n\nAnirà a la paperera de Drive."):"")))return;
   exDropImg(xeSessId,im);delete xeEdits[im.id];
   exPatch(xeSessId,xeId,{imgs:exImgs(x).filter(function(m){return m.id!==im.id})});
   // xeReadLine too: it draws the "Falta…" box, and the paper just removed may be the one that is now missing
@@ -14002,14 +14110,14 @@ function xeImgToggle(){
 function xeDelete(){
   var x=xeEx();if(!x)return;
   var up=exImgs(x).some(function(m){return m.driveId});
-  if(!confirm(t("Vols eliminar aquesta despesa?")+(up?t("\n\nEls tiquets aniran a la paperera de Drive."):"")))return;
+  if(!confirm(uiT("Vols eliminar aquesta despesa?")+(up?uiT("\n\nEls tiquets aniran a la paperera de Drive."):"")))return;
   exRemove(xeSessId,xeId);
   xeClose();
 }
 function wireXe(){
   if(xeWired)return;xeWired=true;
   $$("xeCancel").addEventListener("click",function(){
-    if(Object.keys(xeEdits).length&&!confirm(t("Vols descartar els canvis de la imatge?")))return;
+    if(Object.keys(xeEdits).length&&!confirm(uiT("Vols descartar els canvis de la imatge?")))return;
     xeClose();
   });
   $$("xeSave").addEventListener("click",xeSave);
@@ -14045,7 +14153,7 @@ function wireXe(){
     if(im.driveId){window.open("https://drive.google.com/file/d/"+encodeURIComponent(im.driveId)+"/view","_blank","noopener");return}
     var w=window.open("","_blank");                       // now, while the tap still counts
     var b=im.qid?await mqBlob(im.qid):null;
-    if(!b){if(w)w.close();alert(t("Aquest PDF és a l'aparell on el vas afegir. Es podrà obrir des d'aquí quan s'hagi pujat a Drive."));return}
+    if(!b){if(w)w.close();alert(uiT("Aquest PDF és a l'aparell on el vas afegir. Es podrà obrir des d'aquí quan s'hagi pujat a Drive."));return}
     var u=URL.createObjectURL(b.type?b:new Blob([b],{type:"application/pdf"}));
     if(w)w.location=u;else window.open(u,"_blank");
   });
@@ -14088,7 +14196,7 @@ function renderAll(){renderSidebar();renderContent();uiApply()}
 // and defer the real load to right after the browser gets to paint it.
 uiApply();                       // the shell is in the page already; translate it before it is seen
 (function(){var sel=$$("uiLangSel");if(sel)sel.value=uiLang()})();
-$$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><div style=\"font-size:13px;color:var(--tx3)\">"+t("Carregant les sessions…")+"</div></div>";
+$$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><div style=\"font-size:13px;color:var(--tx3)\">"+uiT("Carregant les sessions…")+"</div></div>";
 (async function(){
   sessions=orderSessions(await loadSessions());
   markSeen();

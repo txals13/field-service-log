@@ -119,10 +119,31 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
       been and gone by then. There was one, the sign-in line in `driveInfo`,
       and it is wrapped in `t()` instead. Any new code that writes text after
       a render needs one or the other.
-  - **Still Catalan whatever the picker says**: strings carrying data inside
-    them (`"Sessions (2)"`, `"🟢 Oberta · 1 entrada"`, `"■ 0 problemes"`,
-    the weekday in a date). Same shape of problem as the 29 dialog fragments:
-    they need a single string with a placeholder, which is a code change.
+  - **The strings with data inside them, done too** (2026-11-05). They cannot
+    be keys, because the key would change with the number, so:
+    - `pl(n,one,many)` now translates the word it picks. One change, **27 call
+      sites**, plurals and all: "2 entrades" / "2 entradas" / "2 entries".
+    - the rest became **one string with a placeholder**:
+      `uiT("Vols enviar «{x}» a la paperera?").replace("{x}", name)`. Never
+      fragments glued to a value — the word order is not the same in every
+      language, and a sentence that is half Catalan and half English is worse
+      than one in the wrong language.
+    - the weekday of each day heading follows the interface
+      (`toLocaleDateString(uiLang())`); the report keeps its own.
+    - A checker looks for any `alert`/`confirm` where one literal is wrapped
+      and another is not — exactly those half-and-half sentences. It is down to
+      two, and both are false positives (a `"err"` compared against, and pl()
+      arguments, which pl translates itself).
+  - **`t()` is called `uiT()`** (2026-11-05). A one-letter name in a file this
+    size was asking for it: `var t=langNative(lang)` shadowed the translator
+    inside `ensureLabels`, and `t("…")` there was a TypeError waiting for the
+    first person to export a report in a new language. Renaming removed the
+    whole class of bug instead of that one instance.
+  - **What is left in Catalan:** anything whose variable half is itself still
+    Catalan — the language names from `langInto` ("a l'anglès") and the
+    expense-gap words in `EX_MISS`. Those dialogs are deliberately left
+    unwrapped and whole in Catalan rather than mixed. Localising `LANGS` and
+    `EX_MISS` would free them.
   - 299 translations each for es and en, hand-written. Eight strings are
     deliberately absent (brand names, `u/min`, `EUR`, `FSL1.…`): absent means
     Catalan, which for those is right.

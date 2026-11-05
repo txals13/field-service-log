@@ -88,10 +88,25 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
     content pane are rebuilt from code, and put the same strings back), and in
     `openNewModal`, which rewrites its own title and button. Any new place that
     redraws labels needs the same call.
-  - `t(s)` is the same lookup for strings built in code. **The 307 strings of
-    the static markup are done; the ones built in JS are not** — 92 `alert`s,
-    26 `confirm`s and the generated HTML are still Catalan whatever the picker
-    says. That is the next pass, and `t()` is already there for it.
+  - `t(s)` is the same lookup for strings built in code. **The dialogs are
+    done too** (2026-11-05): every `alert` and `confirm` literal was found by
+    scanning the argument expression — a small state machine, not a regex,
+    because those calls run over several lines and concatenate variables — and
+    wrapped **by file position, backwards**, each span checked against the text
+    it was found with before anything was written. 130 literals, 117 distinct
+    strings, translated into es and en.
+    - **29 were deliberately left alone.** They are mid-sentence fragments
+      glued to a variable (`"Vols enviar «"` + name + `"» a la paperera?"`).
+      Translating a fragment on its own gives broken word order in any
+      language whose clauses do not fall in the Catalan order, so these need
+      their call sites rewritten around a single string with a placeholder.
+      That is a code change, not a translation, and it is the next pass.
+    - Note the keys are the **decoded** strings: the source says
+      `"llic\u00e8ncia"`, what `t()` is handed is `llicència`.
+  - **Still Catalan whatever the picker says: the generated HTML** — everything
+    the code builds into `innerHTML` or writes with `textContent`, such as the
+    notes inside the key and licence modals. The DOM pass catches those only
+    when the exact string is already in the table from the markup.
   - 299 translations each for es and en, hand-written. Eight strings are
     deliberately absent (brand names, `u/min`, `EUR`, `FSL1.…`): absent means
     Catalan, which for those is right.

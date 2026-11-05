@@ -126,6 +126,64 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
       appeared. When checking a translation, turn on every optional thing
       first — the new layout, the expenses module — or a third of the app is
       invisible to the sweep.
+
+### The reports were checked against all this (2026-11-06)
+
+The interface's language and the report's are two separate systems, and the
+whole point is that they stay separate: a Catalan technician writes a report
+for a German client. After translating the interface, the reports were gone
+over to make sure nothing had leaked.
+
+- **No `uiT` and no `pl` inside any report builder** — `buildReportHTML`,
+  `buildDocxDocument`, `buildPdfBlob`, `buildTimesheetBlob`, `exportXLSX`,
+  `buildHistoryHTML`. The five `uiT` calls that a first scan seemed to find
+  inside `buildPdfBlob` are `alert`s to the technician ("the Arabic font could
+  not be loaded"), which belong in the interface's language; a brace-matcher
+  that over-ran had attributed the rest to the wrong function.
+- **`revNo()` is interface-only.** All ten of its uses are the visit header,
+  the ⋮ menu, the signature preview and the revisions modal. The reports
+  print their own revision label from `RPT[lang]`.
+- **The signature preview renders the report inside an `iframe`**, and a
+  MutationObserver on the main document does not reach into another document,
+  so `uiWatch` cannot touch report content. **If a preview is ever rendered
+  straight into a modal instead of an iframe, the pass WILL translate it** —
+  that is the one way this could break, and it is worth remembering.
+- **Checked end to end** with the interface in English and the report in
+  Catalan: the HTML comes out `lang="ca"`, titled "Informe de servei tècnic",
+  with Hora / Gravetat / Etiqueta / Descripció / Adjunts as its columns, and
+  the Word file reads "Informe de servei tècnic · Posada en marxa · Rev. 01 ·
+  CLIENT · PERSONA DE CONTACTE · UBICACIÓ · EQUIP". Not one English word in
+  either.
+
+### The sweep, and the three things it turned up (2026-11-05)
+
+Every screen behind the ⋮ menu was opened in turn, with the new layout and
+the expenses module ON, and the text collected. It found three faults, each
+of which had been hiding the next:
+
+1. **The pass was in the wrong place.** `renderContent` is called from eleven
+   places and `renderSidebar` from five; only one of each is `renderAll`,
+   where the call sat. The other fifteen redrew their text in Catalan behind
+   it. Both functions are now **wrapped** so the pass runs whoever calls them.
+2. **Windows are filled after they are shown**, long after any render, so each
+   would have needed its own call — a rule that would be forgotten by the
+   third new modal. A `MutationObserver` (`uiWatch`) translates whatever
+   changes inside a `.modal-back` instead. It coalesces with **`setTimeout`,
+   not `requestAnimationFrame`**: a page in a background tab never gets a
+   frame, and the window would sit untranslated until it came to the front —
+   which cost an hour of looking in the wrong place. `uiApply` also stopped
+   writing nodes whose text would not change, or the write would trip the
+   observer that called it and the two would chase each other for ever.
+3. **"Looks Catalan" is not a test.** Filtering collected text by accents and
+   Catalan function words kept missing short labels — Dia, Pausa, Arribada,
+   Sortida, Ara, Visites. The check that works is collecting every screen in
+   Catalan, again in English, and keeping what came out **the same**.
+
+After that: the timesheet columns, the counters, the production-test and
+history screens, the sidebar's licence line and `Rev. 01`. What is left the
+same in both is meant to be: product codes, `OEE`, `PDF`, file formats, and
+the machine-history preview, which is drawn in the REPORT's language on
+purpose, not the interface's.
   - **The strings with data inside them, done too** (2026-11-05). They cannot
     be keys, because the key would change with the number, so:
     - `pl(n,one,many)` now translates the word it picks. One change, **27 call

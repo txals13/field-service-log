@@ -5376,8 +5376,8 @@ function zipIsCurrent(s){
 function renderDelModal(){
   var s=pendingDel;if(!s)return;
   var n=(s.entries||[]).length;
-  $$("delDesc").innerHTML="Estàs a punt d'eliminar <strong>"+esc(s.client||"aquesta sessió")+"</strong>"+(s.machine?" — "+esc(s.machine):"")
-    +(n?" amb "+(n===1?"la seva entrada":"les seves "+n+" entrades"):"")+".";
+  $$("delDesc").innerHTML=uiT("Estàs a punt d'eliminar")+" <strong>"+esc(s.client||uiT("aquesta sessió"))+"</strong>"+(s.machine?" — "+esc(s.machine):"")
+    +(n?" "+uiT("amb")+" "+(n===1?uiT("la seva entrada"):uiT("les seves {n} entrades").replace("{n}",n)):"")+".";
   var ok=zipIsCurrent(s);
   $$("delZipSt").innerHTML=ok
     ? "<span style=\"color:var(--green)\">&#10003; <strong>ZIP del projecte exportat el "+esc(fts(s.zipAt))+"</strong>, després de l'últim canvi: n'hi ha una còpia completa.</span>"
@@ -5690,7 +5690,7 @@ var APP_VERSION="2026-11-05 · 1";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
-  v.textContent="Versió "+APP_VERSION+(w?" · "+w:"");
+  v.textContent=uiT("Versió")+" "+APP_VERSION+(w?" · "+w:"");
 }
 verLine();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
@@ -7298,7 +7298,57 @@ es:{
   " per revisar":" por revisar",
   "cap tiquet":"ningún tique",
   "🧪 Disseny nou: sí":"🧪 Diseño nuevo: sí",
-  "— Encara no hi ha entrades. Registra la primera acció o incidència. —":"— Todavía no hay entradas. Registra la primera acción o incidencia. —"
+  "— Encara no hi ha entrades. Registra la primera acció o incidència. —":"— Todavía no hay entradas. Registra la primera acción o incidencia. —",
+  "✍ Signatures de l'informe":"✍ Firmas del informe",
+  "✍ Desa la signatura":"✍ Guarda la firma",
+  "📄 Desa i genera el PDF":"📄 Guarda y genera el PDF",
+  "Queda lligada a la {r}: si se n'emet una de nova, es torna a signar.":"Queda ligada a la {r}: si se emite una nueva, se vuelve a firmar.",
+  "⚠ No s'ha pogut llegir el fitxer del Calendari laboral. Inicia la sessió amb Google, o fes servir ↑ Importa JSON amb una còpia exportada d'allà (⚙ Exporta còpia).":"⚠ No se ha podido leer el archivo de Calendari laboral. Inicia sesión con Google, o usa ↑ Importa JSON con una copia exportada de allí (⚙ Exporta còpia).",
+  "No hi ha dies fitxats en aquest interval.":"No hay días fichados en este intervalo.",
+  "Hores de màquina":"Horas de máquina",
+  "Cap visita anterior d'aquesta màquina amb lectures: aquesta serà la primera.":"Ninguna visita anterior de esta máquina con lecturas: esta será la primera.",
+  "Encara no n'hi ha cap. Una prova registra la producció durant un període —unitats, rebuig i aturades— i en calcula l'OEE.":"Todavía no hay ninguna. Una prueba registra la producción durante un periodo —unidades, rechazo y paradas— y calcula su OEE.",
+  "Encara no n'hi ha cap. Fotografia cada tiquet el mateix dia: el paper tèrmic s'esborra. La foto es desa a la visita, Gemini la llegeix i es puja a la carpeta tiquets/ de Drive.":"Todavía no hay ninguno. Fotografía cada tique el mismo día: el papel térmico se borra. La foto se guarda en la visita, Gemini la lee y se sube a la carpeta tiquets/ de Drive.",
+  "S'agrupen per client i màquina tal com els escrius.":"Se agrupan por cliente y máquina tal como los escribes.",
+  "L'imprimeix o el desa com a PDF per enviar-lo, {l}, com l'informe d'aquesta sessió":"Lo imprime o lo guarda como PDF para enviarlo, {l}, como el informe de esta sesión",
+  "Inicia la sessió amb Google per veure la carpeta d'aquesta sessió.":"Inicia sesión con Google para ver la carpeta de esta sesión.",
+  "Estàs a punt d'eliminar":"Estás a punto de eliminar",
+  "aquesta sessió":"esta sesión",
+  "amb":"con",
+  "la seva entrada":"su entrada",
+  "les seves {n} entrades":"sus {n} entradas",
+  "No s'ha exportat cap ZIP del projecte des de l'últim canvi.":"No se ha exportado ningún ZIP del proyecto desde el último cambio.",
+  "Només aquest fitxer conté les fotos i els vídeos, i es pot tornar a importar sencer.":"Solo este archivo contiene las fotos y los vídeos, y se puede volver a importar entero.",
+  "No has iniciat la sessió, així que no es toca la carpeta de Drive d'aquesta sessió (si en té).":"No has iniciado sesión, así que no se toca la carpeta de Drive de esta sesión (si tiene).",
+  "Nom / càrrec":"Nombre / cargo",
+  "Tècnic":"Técnico",
+  "Versió":"Versión",
+  "Cada fila ha de dir quin dia és":"Cada fila debe decir qué día es",
+  "Ritme de producció en":"Ritmo de producción en",
+  "Producte total":"Producto total",
+  "Arribada":"Llegada",
+  "Sortida":"Salida",
+  "Ara":"Ahora",
+  "🗑 Elimina igualment":"🗑 Elimina igualmente",
+  "recanvis urgents":"recambios urgentes",
+  "resoltes":"resueltas",
+  "obertes":"abiertas",
+  "Visites":"Visitas",
+  "✓ tot OK":"✓ todo OK",
+  "Dia":"Día",
+  "Destinació":"Destino",
+  "H. treball":"H. trabajo",
+  "H. viatge":"H. viaje",
+  "Tornada":"Vuelta",
+  "caduca en {n} dies":"caduca en {n} días",
+  "CADUCADA fa {n} dies":"CADUCADA hace {n} días",
+  "prova":"prueba",
+  "prova acabada":"prueba terminada",
+  "dia":"día",
+  "dies":"días",
+  "tècnic":"técnico",
+  "tècnics":"técnicos",
+  "Revisió":"Revisión"
 },
 en:{
   "Es desa només en aquest aparell i no viatja enlloc: ni a Drive, ni als ZIP, ni a les còpies de seguretat — per això cal escriure-la un cop a cada aparell. No li cal cobertura: es comprova aquí mateix, i per tant funciona en una planta sense senyal. El nom del titular surt al peu de cada informe.":"It is kept on this device only and goes nowhere else: not to Drive, not into the ZIPs, not into the backups — which is why it has to be entered once on each device. It needs no signal: it is checked right here, so it works in a plant with no coverage. The licence holder's name appears at the foot of every report.",
@@ -7860,7 +7910,61 @@ en:{
   " per revisar":" to check",
   "cap tiquet":"no tickets",
   "🧪 Disseny nou: sí":"🧪 New layout: yes",
-  "— Encara no hi ha entrades. Registra la primera acció o incidència. —":"— No entries yet. Record the first action or incident. —"
+  "— Encara no hi ha entrades. Registra la primera acció o incidència. —":"— No entries yet. Record the first action or incident. —",
+  "✍ Signatures de l'informe":"✍ The report's signatures",
+  "✍ Desa la signatura":"✍ Save the signature",
+  "📄 Desa i genera el PDF":"📄 Save and make the PDF",
+  "Queda lligada a la {r}: si se n'emet una de nova, es torna a signar.":"It is tied to {r}: if a new one is issued, it is signed again.",
+  "⚠ No s'ha pogut llegir el fitxer del Calendari laboral. Inicia la sessió amb Google, o fes servir ↑ Importa JSON amb una còpia exportada d'allà (⚙ Exporta còpia).":"⚠ The Calendari laboral file could not be read. Sign in with Google, or use ↑ Importa JSON with a copy exported from there (⚙ Exporta còpia).",
+  "No hi ha dies fitxats en aquest interval.":"No days were clocked in this range.",
+  "Hores de màquina":"Machine hours",
+  "Cap visita anterior d'aquesta màquina amb lectures: aquesta serà la primera.":"No earlier visit to this machine has readings: this will be the first.",
+  "Encara no n'hi ha cap. Una prova registra la producció durant un període —unitats, rebuig i aturades— i en calcula l'OEE.":"There are none yet. A test records the output over a period — units, rejects and stoppages — and works out its OEE.",
+  "Encara no n'hi ha cap. Fotografia cada tiquet el mateix dia: el paper tèrmic s'esborra. La foto es desa a la visita, Gemini la llegeix i es puja a la carpeta tiquets/ de Drive.":"There are none yet. Photograph each ticket the same day: thermal paper fades. The photo is kept with the visit, Gemini reads it, and it goes up to the tiquets/ folder in Drive.",
+  "S'agrupen per client i màquina tal com els escrius.":"They are grouped by client and machine exactly as you type them.",
+  "L'imprimeix o el desa com a PDF per enviar-lo, {l}, com l'informe d'aquesta sessió":"Prints it or saves it as a PDF to send, {l}, like this session's report",
+  "Inicia la sessió amb Google per veure la carpeta d'aquesta sessió.":"Sign in with Google to see this session's folder.",
+  "Estàs a punt d'eliminar":"You are about to delete",
+  "aquesta sessió":"this session",
+  "amb":"with",
+  "la seva entrada":"its entry",
+  "les seves {n} entrades":"its {n} entries",
+  "No s'ha exportat cap ZIP del projecte des de l'últim canvi.":"No project ZIP has been exported since the last change.",
+  "Només aquest fitxer conté les fotos i els vídeos, i es pot tornar a importar sencer.":"Only this file holds the photos and the videos, and it can be imported back whole.",
+  "No has iniciat la sessió, així que no es toca la carpeta de Drive d'aquesta sessió (si en té).":"You are not signed in, so this session's Drive folder is left alone (if it has one).",
+  "Nom / càrrec":"Name / role",
+  "Tècnic":"Technician",
+  "Versió":"Version",
+  "Cada fila ha de dir quin dia és":"Each row has to say which day it is",
+  "Ritme de producció en":"Output rate in",
+  "Producte total":"Total output",
+  "Arribada":"Arrival",
+  "Sortida":"Departure",
+  "Ara":"Now",
+  "🗑 Elimina igualment":"🗑 Delete anyway",
+  "recanvis urgents":"urgent parts",
+  "resoltes":"resolved",
+  "obertes":"open",
+  "Visites":"Visits",
+  "✓ tot OK":"✓ all OK",
+  "■ Prob.":"■ Issues",
+  "Informe":"Report",
+  "Dia":"Day",
+  "Destinació":"Destination",
+  "H. treball":"Work h",
+  "H. viatge":"Travel h",
+  "Pausa":"Break",
+  "Tornada":"Return",
+  "caduca en {n} dies":"expires in {n} days",
+  "CADUCADA fa {n} dies":"EXPIRED {n} days ago",
+  "caducada":"expired",
+  "prova":"trial",
+  "prova acabada":"trial over",
+  "dia":"day",
+  "dies":"days",
+  "tècnic":"technician",
+  "tècnics":"technicians",
+  "Revisió":"Revision"
 }};   // UI[lang][catalan]; ca is the source, so it has no table
 function uiLang(){
   try{var l=localStorage.getItem(LS_UILANG);if(l&&(l==="ca"||UI[l]))return l}catch(e){}
@@ -7886,17 +7990,41 @@ function uiApply(root){
     if(n.parentNode&&/^(SCRIPT|STYLE|TEXTAREA)$/.test(n.parentNode.nodeName))continue;
     k=n.nodeValue;
     v=tab[k.trim()];
-    if(v)hits.push([n,k.replace(k.trim(),v)]);     // keep the spacing around it
+    if(v&&v!==k.trim())hits.push([n,k.replace(k.trim(),v)]);   // keep the spacing around it
   }
   hits.forEach(function(h){h[0].nodeValue=h[1]});
   var all=root.querySelectorAll("["+UI_ATTR.join("],[")+"]");
   Array.prototype.forEach.call(all,function(el){
     UI_ATTR.forEach(function(a){
       var x=el.getAttribute(a);
-      if(x&&tab[x.trim()])el.setAttribute(a,tab[x.trim()]);
+      if(x&&tab[x.trim()]&&tab[x.trim()]!==x.trim())el.setAttribute(a,tab[x.trim()]);
     });
   });
 }
+// Every window is filled and then shown, long after the pass at boot, so each
+// one would need its own uiApply — a rule that gets forgotten by the third new
+// modal. This watches them instead: anything that changes inside one is
+// translated, once per frame. Catalan sets nothing up at all.
+function uiWatch(){
+  if(uiLang()==="ca"||!window.MutationObserver)return;
+  var queued=null,pend=[];
+  function flush(){queued=null;var l=pend;pend=[];l.forEach(function(el){uiApply(el)})}
+  var obs=new MutationObserver(function(ms){
+    for(var i=0;i<ms.length;i++){
+      var el=ms[i].target;
+      while(el&&el.classList&&!el.classList.contains("modal-back"))el=el.parentNode;
+      if(el&&el.classList&&pend.indexOf(el)<0&&getComputedStyle(el).display!=="none")pend.push(el);
+    }
+    // setTimeout, not requestAnimationFrame: a page in a background tab
+    // never gets a frame, and the window would stay untranslated until it
+    // came to the front.
+    if(pend.length&&!queued)queued=setTimeout(flush,0);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll(".modal-back"),function(el){
+    obs.observe(el,{attributes:true,attributeFilter:["style"],childList:true,subtree:true,characterData:true});
+  });
+}
+
 // Changing it reloads: half the page is already drawn, and a reload is both
 // honest and cheaper than hunting down every rendered string.
 function setUiLang(l){
@@ -8003,11 +8131,11 @@ function licStamp(){
 }
 function licWords(){
   var st=licState();
-  if(st.kind==="ok")   return lic.n+(lic.s?" \u00b7 "+lic.s+(lic.s==1?" t\u00e8cnic":" t\u00e8cnics"):"")+(st.days<30?" \u00b7 caduca en "+st.days+" dies":"");
-  if(st.kind==="grace")return lic.n+" \u00b7 CADUCADA fa "+(-st.days)+" dies";
-  if(st.kind==="expired")return lic.n+" \u00b7 caducada";
-  if(st.kind==="trial")return "prova, "+st.days+(st.days==1?" dia":" dies");
-  if(st.kind==="none") return "prova acabada";
+  if(st.kind==="ok")   return lic.n+(lic.s?" \u00b7 "+pl(lic.s,"t\u00e8cnic","t\u00e8cnics"):"")+(st.days<30?" \u00b7 "+uiT("caduca en {n} dies").replace("{n}",st.days):"");
+  if(st.kind==="grace")return lic.n+" \u00b7 "+uiT("CADUCADA fa {n} dies").replace("{n}",-st.days);
+  if(st.kind==="expired")return lic.n+" \u00b7 "+uiT("caducada");
+  if(st.kind==="trial")return uiT("prova")+", "+pl(st.days,"dia","dies");
+  if(st.kind==="none") return uiT("prova acabada");
   return "";
 }
 async function licBoot(){
@@ -8189,7 +8317,7 @@ function wireDaySummary(btnId,fieldId){
 // what tells us whether the session has moved on since.
 function revList(s){return (s&&s.revisions)||[]}
 function curRev(s){var r=revList(s);return r.length?r[r.length-1]:null}
-function revNo(n){return "Rev. "+("0"+n).slice(-2)}
+function revNo(n){return uiT("Rev.")+" "+("0"+n).slice(-2)}
 function dmy(isoDate){var p=String(isoDate||"").slice(0,10).split("-");return p.length===3?p[2]+"/"+p[1]+"/"+p[0]:""}
 function todayISO(){var d=new Date();function p(n){return("0"+n).slice(-2)}return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())}
 // "The end date": the day the work actually finished — the last entry's — with
@@ -8436,7 +8564,7 @@ async function openReview(kind){
   var fr=document.createElement("iframe");fr.setAttribute("title","Informe");
   doc.appendChild(fr);
   var gR=revSign(s,rev)||{};
-  doc.appendChild(pvPadsEl("rep",s,gR,"Queda lligada a la "+revNo(rev.n)+": si se n'emet una de nova, es torna a signar."));
+  doc.appendChild(pvPadsEl("rep",s,gR,uiT("Queda lligada a la {r}: si se n'emet una de nova, es torna a signar.").replace("{r}",revNo(rev.n))));
   pv.parts.push({kind:"rep",g:gR});
   pvShow();
   fr.addEventListener("load",function(){
@@ -8805,11 +8933,11 @@ function openMachineHistory(){
   wireMh();
   var v=mhRender(cur,machineSessions(cur),RPT.ca,false);
   $$("mhTitle").textContent=v.title;
-  $$("mhNote").innerHTML=v.note+" S'agrupen per client i màquina tal com els escrius.";
+  $$("mhNote").innerHTML=v.note+" "+uiT("S'agrupen per client i màquina tal com els escrius.");
   $$("mhBody").innerHTML=v.body;
   var lang=reportLang(cur);
   $$("mhPrint").innerHTML="&#128424; Imprimeix"+(lang!=="ca"?" · "+esc(langNative(lang)):"");
-  $$("mhPrint").title="L'imprimeix o el desa com a PDF per enviar-lo, "+langInto(lang)+", com l'informe d'aquesta sessió";
+  $$("mhPrint").title=uiT("L'imprimeix o el desa com a PDF per enviar-lo, {l}, com l'informe d'aquesta sessió").replace("{l}",langIntoUI(lang));
   $$("mhBack").style.display="flex";
 }
 // On paper, in the report's language: the one picked for THIS session's report
@@ -14278,7 +14406,7 @@ function wireXe(){
 document.addEventListener("click",function(){var m=$$("expMenu");if(m)m.style.display="none"});
 
 // ── RENDER ALL ────────────────────────────────────────────────────────────────
-function renderAll(){renderSidebar();renderContent();uiApply()}
+function renderAll(){renderSidebar();renderContent()}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 // Parsing localStorage (JSON.parse) and building the first render can take
@@ -14287,7 +14415,16 @@ function renderAll(){renderSidebar();renderContent();uiApply()}
 // e.g. a tap on the hamburger right after paint would queue behind it and
 // feel stuck. Show a lightweight placeholder immediately (cheap, no parsing)
 // and defer the real load to right after the browser gets to paint it.
+// renderContent is called from eleven places and renderSidebar from five;
+// only one of each is renderAll. Every one of them redraws text, so the pass
+// belongs inside them rather than beside one caller.
+(function(){
+  var rc=renderContent,rs=renderSidebar;
+  renderContent=function(){var r=rc.apply(this,arguments);uiApply($$("content"));return r};
+  renderSidebar=function(){var r=rs.apply(this,arguments);uiApply($$("sidebar"));return r};
+})();
 uiApply();                       // the shell is in the page already; translate it before it is seen
+uiWatch();                       // and every window, as it is filled
 (function(){var sel=$$("uiLangSel");if(sel)sel.value=uiLang()})();
 $$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><div style=\"font-size:13px;color:var(--tx3)\">"+uiT("Carregant les sessions…")+"</div></div>";
 (async function(){

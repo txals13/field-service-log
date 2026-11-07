@@ -1559,7 +1559,8 @@ Field Service Log/
   `"fit"` replaced on this visit, `"urg"` recommended soon, `"prev"`
   recommended as preventive. A part with no `st` (everything saved before) is
   `"fit"`: the machine history already called them all "fitted". `partSt(p)`
-  is the only reader.
+  is the only reader. (Two more statuses since: `"quo"` on 2026-10-18 and
+  `"inf"` on 2026-11-07 — `PART_STS` holds the five.)
   - **Set where the part is added.** The drawing's quantity panel has three
     buttons instead of "✓ Afegeix" (one tap adds AND says what it is); the
     last one used is highlighted and Enter repeats it (`lastPartSt`, session
@@ -2156,7 +2157,9 @@ Now (`syncTick`, `scheduleSync`):
     `machineNo`, `year`, `gClient`, `gEquip`, `gVisit` (ca/es/en; the other
     languages are translated again on the next export).
   - `reportMetaGroups(s,R,V)` builds the three groups (number, year and
-    manual only when there is one; no manual in the validation report);
+    manual only when there is one; no manual in the validation report).
+    Since 2026-11-07 it is `reportMetaGroups(s,R)` and carries no manual at
+    all — see "What the client does not get";
     `pdfMetaGroups` draws them in three columns, label over value; the HTML
     `.meta` grid and the Word meta table do the same. `pdfMetaBlock` stays
     for the timesheet. The Excel's session sheet gets the number and year.
@@ -2682,6 +2685,114 @@ with the app driven in the browser against it:
 
 That also makes three independent implementations of the licence check that
 agree: the app's WebCrypto, the Python issuer, and this.
+
+---
+
+## What the client does not get (2026-11-06/07)
+
+Four changes that all turn on the same question: what belongs in the document
+the client receives, and what only looks like it does.
+
+### Internal entries and internal notes (2026-11-06)
+
+An entry can be marked internal (`e.intern`) and the session has a second
+notes field, `s.notesInt`. Both stay in the app, in the project ZIP and in the
+machine history, and appear **nowhere** in the client's report: not the row,
+not its spare parts, not its photos, and not in the counters at the top.
+Before this, what could not be said to the client either went unwritten or
+went softened into the general notes, which the client reads, and the next
+visit started blind.
+
+The four builders are **not** trusted to filter it themselves. `clientCopy(s)`
+returns a shallow copy whose `entries` never held the internal ones and whose
+`notesInt` is deleted, and it is the FIRST statement of `buildReportHTML`,
+`buildPdfBlob`, `buildXlsxBlob` and `buildDocxDocument`. So no report path can
+leak one by forgetting a guard, and a visit with nothing marked comes out
+exactly as before. `gemDaySummary` starts with it too — what it writes are the
+notes the client will read.
+
+UI: `#btnIntern` (🔒) in the composer's button row arms `composeIntern` for
+the NEXT entry only and disarms itself on add — a switch left on would quietly
+drop entries from the report. While armed it says so in words, in
+`#internBanner`. `#eIntern`, under a "Visibilitat" field in the edit modal,
+marks or unmarks one already written. The log shows a `.log-int` badge and a
+dashed left border. Before signing, `#pvIntern` says how many internal entries
+stay out of this report and whether any of them carries spare parts, which
+leave with it.
+
+### The internal report (2026-11-07)
+
+`↓ Informe › 🔒 Informe intern (PDF)` (`fmt==="internpdf"`), shown only when
+`hasIntern(s)`. One PDF with every internal entry and the internal notes, so
+that what cannot go to the client can still go to somebody.
+
+It reuses `buildPdfBlob` with `opts.intern` rather than duplicating ~300 lines
+of entry-table drawing: `var I=!!(opts&&opts.intern);` then
+`s=I?internCopy(s):clientCopy(s);` is the single exception to the unconditional `clientCopy` above, and the only
+one. `internCopy(s)` keeps ONLY the internal entries, moves `notesInt` into
+`notes` and drops `prodTests` (production tests are the client's business).
+`V` (validation) is forced off when `I`.
+
+- Never translated: `internLang()` = the app's UI language. Nobody outside
+  reads it, and this way none of its text travels to the model. In the ZIP it
+  is built from `s`, not from the localized `R.s`.
+- No signature block (`if(!I){…}`): it is not a document anybody signs.
+- The only way this document can go wrong is by reaching the client, so it
+  says so three times: the file is `INTERN_…` (`internFileName`), page one
+  carries a red band "ÚS INTERN — NO ENVIAR AL CLIENT", and the same red line
+  is stamped in every page footer.
+- ZIP: `["intern","🔒 Informe intern"]` in `ZP_ITEMS`, `intern:hasIntern(s)`
+  in `has`, built inside `if(archive)` — ticked by default in the project ZIP,
+  which is internal documentation, and absent from the Word + media ZIP, which
+  is what gets handed over.
+
+### A fifth part status: named, not asked for (2026-11-07)
+
+`st:"inf"` (ℹ Informatiu, grey). Picking a position off the drawing used to
+mean ordering it, so there was no way to write "the passador that is wearing
+is this one" without putting it on somebody's order. An informative part
+behaves like any other INSIDE its entry — listed with its reference, balloon
+coloured on the drawing — and appears in none of the three lists the reports
+end with, in none of the Excel's order sheets (only `Detall`) and in no
+machine history (`if(st==="quo"||st==="inf")return`).
+
+`PART_STS` is now the single source of truth: `partSt(p)` validates against it
+instead of listing the states again. Grey on purpose — the other four colours
+all mean somebody has to act. In the viewer's confirm bar the ℹ button goes
+**last and apart** from the other four, for the same reason.
+`hasSetPart` ignores informative assemblies: the fasteners reminder below is
+about assemblies that were ordered.
+
+### The reminders that close the parts section
+
+`partsNotes(s,R)` returns them in one place, because each of the four formats
+used to write them with its own `if` and they had to stay in the same order:
+
+- `R.setNote` when `hasSetPart(s)` — an assembly ordered whole arrives as the
+  maker builds it, and the fasteners and seals inside it have no balloon of
+  their own, so reading the drawing is not reading the delivery note.
+- `manualNoteOf(s,R)` — which manual the parts were read against, and that its
+  latest updates should be checked.
+
+The manual's name **left the report header** on 2026-11-07
+(`reportMetaGroups` lost its `V` parameter with it): a manual's file name is
+longer than any of the three narrow columns and cost the Equipment group a
+line, and the header is for identifying the visit. The name now appears
+exactly once in a report, inside that reminder — which is where knowing it is
+worth anything — and the `Manual` row left the Excel's session sheet too,
+which already prints that same reminder at the bottom.
+
+Because the header no longer carries it, the parts section prints its notes
+**even when the three summary lists are empty** (HTML and PDF used to return
+early; Word already did this). Otherwise a visit whose only parts are
+informative — none of which reaches a list — would say nothing about the
+manual they came from. A visit with no parts at all says nothing either:
+`manualNoteOf` returns "" unless `collectSessionParts(s).length`, since
+nothing was read off any manual.
+
+Verified in the browser with the real builders: the name once in the HTML, the
+PDF (text-extracted), the Word (`document.xml`) and the Excel, always after
+the parts and never in the header; the validation and internal PDFs unchanged.
 
 ---
 

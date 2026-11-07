@@ -3005,47 +3005,55 @@ function addMarks(list){
 // -- Marking a whole drawing --
 // Taking the conjunt as one line means every part on the sheet, so every
 // balloon is washed over, along with the name and the number it was taken by.
-// Every number on a sheet appears twice: once on its balloon and once in the
-// parts list printed beside the title block, where the Pos. and quantity
-// columns are nothing but these same numbers. The two are told apart by the
-// shape the list has and a drawing has not: its numbers stand in straight
-// columns, one per line, line after line, while a balloon sits wherever its
-// part is. So the lines of the list are found first -- by the reference codes
-// on them, which are the drawing's own and are printed nowhere else on the
-// sheet -- and then, among the numbers sitting on those lines, a stack of
-// them at one and the same x is a column of the list and everything else is a
-// balloon that happens to be level with it. Neither the gap to the next cell
-// nor a box around the whole table can do this: balloons cluster as tightly as
-// the columns do, and a single row of the list running on into the drawing
-// would take every balloon beside the table down with it. On the older
-// manuals, whose lists live on pages of their own, nothing is found and every
-// number on the sheet is a balloon.
-function listCellsOf(texts,poses){
-  var cells=[];
-  var refs=viewerPickItems.filter(function(it){
+// Everything that is wanted is on the drawing, and everything that is not is
+// in the parts list printed beside the title block: the same numbers again in
+// the Pos. and quantity columns, and descriptions that read like the drawing's
+// own name, since the first row of a list is often the part the drawing is of
+// ("CHAPA ACOMPAÑADORA" against "CHAPA ACOMPAÑADORA DCHA. FTO. 1, 2").
+// So the list is located first, as a band: the lines it occupies, found by the
+// reference codes on them, which are the drawing's own and are printed nowhere
+// else on the sheet; and where its first column begins, found by the one shape
+// a list has and a drawing has not -- its numbers stand in a straight column,
+// one per line, line after line, while a balloon sits wherever its part is.
+// Level with one of those lines and at or past that column is a cell of the
+// list. Everything else is the drawing. (A box around the whole table will not
+// do: one row running on into the drawing would take every balloon down the
+// side of the table with it. Nor will the gap to the next cell: balloons
+// cluster as tightly as the columns of a list do.) On the older manuals, whose
+// lists live on pages of their own, no band is found and the whole sheet is
+// drawing.
+function listBandOf(texts,poses){
+  var rows=viewerPickItems.filter(function(it){
     return Object.prototype.hasOwnProperty.call(texts,it.str);
   });
-  if(refs.length<3)return cells;
+  if(rows.length<3)return null;
   var onRow=viewerPickItems.filter(function(it){
     if(!Object.prototype.hasOwnProperty.call(poses,it.str))return false;
     var cy=it.y+it.h/2;
-    return refs.some(function(r){return Math.abs((r.y+r.h/2)-cy)<Math.max(r.h,it.h)*.6});
+    return rows.some(function(r){return Math.abs((r.y+r.h/2)-cy)<Math.max(r.h,it.h)*.6});
   });
   var cols=[];
   onRow.forEach(function(it){
     var c=null;
     for(var i=0;i<cols.length;i++)if(Math.abs(cols[i].x-it.x)<Math.max(2,it.h*.5)){c=cols[i];break}
-    if(!c){c={x:it.x,items:[]};cols.push(c)}
-    c.items.push(it);
+    if(!c){c={x:it.x,n:0};cols.push(c)}
+    c.n++;
   });
-  var need=Math.max(3,Math.round(refs.length*.4));
-  cols.forEach(function(c){if(c.items.length>=need)cells=cells.concat(c.items)});
-  return cells;
+  var need=Math.max(3,Math.round(rows.length*.4)),left=null;
+  cols.forEach(function(c){if(c.n>=need&&(left==null||c.x<left))left=c.x});
+  // a list too short for a column to show itself: at least its references on
+  if(left==null)rows.forEach(function(r){if(left==null||r.x<left)left=r.x});
+  return {rows:rows,left:left};
+}
+function inList(it,band){
+  if(!band||it.x+it.w<band.left)return false;
+  var cy=it.y+it.h/2;
+  return band.rows.some(function(r){return Math.abs((r.y+r.h/2)-cy)<Math.max(r.h,it.h)*.6});
 }
 function boxOf(it){return {x:it.x,y:it.y,w:it.w,h:it.h}}
-function balloonsOf(poses,cells){
+function balloonsOf(poses,band){
   return viewerPickItems.filter(function(it){
-    return Object.prototype.hasOwnProperty.call(poses,it.str)&&cells.indexOf(it)<0;
+    return Object.prototype.hasOwnProperty.call(poses,it.str)&&!inList(it,band);
   }).map(boxOf);
 }
 // The drawing's name and number as the title block prints them, each line
@@ -3054,12 +3062,12 @@ function balloonsOf(poses,cells){
 // character in a run of its own, so "ALMACÉN NEUMÁTICO" reaches us in five
 // pieces. The line's own ends are the box, and everything between them --
 // accents included -- falls inside it.
-function titleBoxesOf(name,num,cells){
+function titleBoxesOf(name,num,band){
   function norm(t){return (t||"").trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").toUpperCase()}
   var n=norm(name),r=norm(num),lines=[];
   viewerPickItems.forEach(function(it){
     var t=norm(it.str);
-    if(!t||cells.indexOf(it)>=0)return;
+    if(!t||inList(it,band))return;
     if(!((r&&t===r)||(n&&t.length>3&&n.indexOf(t)>=0)))return;
     var cy=it.y+it.h/2,l=null;
     for(var i=0;i<lines.length;i++)if(Math.abs(lines[i].cy-cy)<Math.max(lines[i].h,it.h)*.6){l=lines[i];break}
@@ -3077,8 +3085,8 @@ function markWholeDrawing(r){
     if(row.ref)texts[String(row.ref).trim()]=1;
     if(row.denominacio)texts[String(row.denominacio).trim()]=1;
   })});
-  var cells=listCellsOf(texts,poses);
-  var boxes=balloonsOf(poses,cells).concat(titleBoxesOf(r.denominacio,r.ref,cells));
+  var band=listBandOf(texts,poses);
+  var boxes=balloonsOf(poses,band).concat(titleBoxesOf(r.denominacio,r.ref,band));
   addMarks(boxes.map(function(b){return partMark(b,cv)}));
 }
 function setDrawStatus(msg){var el=$$("drawStatus");if(!el)return;el.textContent=msg||"";clearTimeout(setDrawStatus._t);if(msg)setDrawStatus._t=setTimeout(function(){el.textContent=""},3500)}

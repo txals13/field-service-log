@@ -110,6 +110,12 @@ mark{background:var(--goldbg);color:var(--goldtx);padding:0 1px;border-radius:2p
 .log-tag{font-size:10px;padding:1px 6px;border-radius:20px;background:var(--bluebg);color:var(--blue);font-family:monospace}
 .log-text{font-size:13px;line-height:1.45;word-break:break-word}
 .log-edited{font-size:10px;color:var(--tx3);font-style:italic}
+.log-int{font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px;background:var(--bg2);color:var(--tx1);font-family:monospace}
+/* the severity colour stays; the dashed edge is what says "not for the client" */
+.log-entry.intern{border-left-style:dashed;border-left-width:3px}
+.int-bar{font-size:11.5px;font-weight:600;color:var(--gold);background:var(--goldbg);border:1px dashed var(--gold);border-radius:6px;padding:6px 9px}
+.int-lbl{font-size:11px;color:var(--tx3);margin-top:8px;display:flex;gap:5px;align-items:center}
+#btnIntern.on{background:var(--goldbg);border-color:var(--gold);color:var(--gold)}
 .log-actions{display:flex;gap:2px;flex-shrink:0;opacity:0;align-self:flex-start;margin-top:2px}
 .log-entry:hover .log-actions{opacity:1}
 @media(max-width:640px){.log-actions{opacity:1}}
@@ -510,9 +516,10 @@ textarea{resize:none;line-height:1.4}
   .m2-sheet-hdr{position:sticky;top:0;z-index:1;align-items:center;gap:8px;background:var(--bg1);padding:10px 0;border-bottom:1px solid var(--br);order:-2}
   .m2-sheet-hdr span{flex:1;font-weight:700;font-size:15px}
   body.m2:not(.m2-compose) #m2CompHdr,body.m2:not(.m2-notes) #m2NotesHdr{display:none}
-  body.m2.m2-compose #notesIn,body.m2.m2-compose #notesBtns{display:none}
+  body.m2.m2-compose #notesIn,body.m2.m2-compose #notesBtns,body.m2.m2-compose #notesIntIn,body.m2.m2-compose #notesIntLbl{display:none}
   body.m2.m2-notes .input-row,body.m2.m2-notes #pThumbs{display:none}
-  body.m2.m2-notes #notesIn{min-height:50vh;font-size:16px}
+  body.m2.m2-notes #notesIn{min-height:34vh;font-size:16px}
+  body.m2.m2-notes #notesIntIn{min-height:18vh;font-size:16px}
   body.m2 .sv #pThumbs{order:2}
   body.m2 .sv .input-row{order:1;flex-wrap:wrap;gap:10px}
   body.m2 .sv .input-row>.input-ctrl{flex-direction:row;flex-wrap:wrap;width:100%;gap:8px}
@@ -797,6 +804,9 @@ textarea{resize:none;line-height:1.4}
   <div class="modal-back" id="pvBack" style="display:none">
     <div class="modal pv-modal">
       <div class="modal-title" style="margin-bottom:8px">&#128065; <span id="pvTitle">Revisa i signa</span></div>
+      <!-- What is being left out of the copy on screen. Said here, in front of
+           the pads, because this is the last moment before it is signed. -->
+      <div id="pvIntern" class="int-bar" style="display:none;margin-bottom:8px"></div>
       <div id="pvScroll" class="pv-scroll"><div id="pvDoc"></div></div>
       <div class="modal-actions">
         <button id="pvCancel">Tanca</button>
@@ -1178,6 +1188,12 @@ textarea{resize:none;line-height:1.4}
       <div class="field"><label>Gravetat</label>
         <select id="eSev"><option value="info">&#9675; Info</option><option value="ok">&#9679; OK</option><option value="warning">&#9650; Avís</option><option value="issue">&#9632; Problema</option></select>
       </div>
+      <div class="field"><label>Visibilitat</label>
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <input type="checkbox" id="eIntern" style="width:auto;margin:3px 0 0;flex:none">
+          <label for="eIntern" style="font-size:12px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--tx2);line-height:1.45"><span>&#128274;</span> Entrada interna &mdash; es queda a l'app i no surt a l'informe del client (ni els seus recanvis ni les seves fotos)</label>
+        </div>
+      </div>
       <div class="field"><label>Etiqueta (opcional)</label><input type="text" id="eTag" placeholder="p. ex. ELEC, MEC, PLC" list="tagOptions" autocomplete="off">
         <select id="eTagSel" style="margin-top:6px;display:none"></select>
       </div>
@@ -1366,6 +1382,15 @@ var fImgs=[], fixOn=false;
 var accessToken=null, tokenExp=0, driveFileId=null, rootFolderId=null;
 var isLoggedIn=false, saveTimer=null, isDirty=false, savingDrive=false, savePending=false;
 var editingId=null, eImgs=[], eParts=[], pendingDel=null, dInst=null;
+// Armed for the NEXT entry only: internal is the exception, not a mode. It
+// resets with every entry added, because a switch left on would quietly keep
+// whole entries out of the report, which is the one mistake this must not make.
+var composeIntern=false;
+function paintIntern(){
+  var b=$$("btnIntern"),bar=$$("internBanner");
+  if(b)b.className="btn-sm"+(composeIntern?" on":"");
+  if(bar)bar.style.display=composeIntern?"block":"none";
+}
 var manuals=[], mfPdfFile=null, mfJsonFile=null, mfParsed=null;
 var pdfjsReadyP=null, viewerDoc=null, viewerNumPages=0, viewerPage=1, viewerPdfId=null, viewerRenderTask=null, viewerZoom=1;
 var viewerPickMode=false, viewerRows=[], viewerSubgrups=[], viewerPickItems=[], pickReturnEdit=false;
@@ -1524,6 +1549,34 @@ function partsReportHTML(parts,R){
   return "<table style=\"margin-top:6px;border-collapse:collapse;width:100%;border:1px solid #e5e7eb\">"
     +"<thead><tr><th style=\""+th+";text-align:right\">"+esc(R.qty)+"</th><th style=\""+th+"\">"+esc(R.ref)+"</th><th style=\""+th+"\">"+esc(R.part)+"</th><th style=\""+th+"\">"+esc(R.st)+"</th></tr></thead>"
     +"<tbody>"+rows+"</tbody></table>";
+}
+// ── WHAT THE CLIENT DOES NOT SEE (2026-11-07) ────────────────────────────────
+// An entry marked internal stays in the app, in the ZIP and in the history,
+// and never reaches the client's copy: how their own people work, what we can
+// see coming and could sell them, what was already wrong before we got there,
+// what to bring next time. With nowhere to put it, that was either written
+// softly into the general notes -- which the client reads -- or not written at
+// all, and the next visit started blind.
+//
+// The four builders are not trusted to filter it themselves: each one is
+// handed a session that never had the internal entries in it, so no report
+// path can leak one by forgetting. Everything else about them is unchanged, so
+// a visit with nothing marked comes out exactly as it did before. The internal
+// general notes live in a field of their own (`notesInt`) that no builder
+// reads, which is why they cannot be printed by accident either.
+function isIntern(e){return !!(e&&e.intern)}
+function internCount(s){return ((s&&s.entries)||[]).filter(isIntern).length}
+// Internal entries carrying spare parts: those parts leave the client's lists
+// with their entry, and a part nobody orders is worth saying out loud.
+function internParts(s){
+  return ((s&&s.entries)||[]).filter(function(e){return isIntern(e)&&(e.parts||[]).length}).length;
+}
+function clientCopy(s){
+  if(!s)return s;
+  var o=Object.assign({},s);
+  o.entries=(s.entries||[]).filter(function(e){return !isIntern(e)});
+  delete o.notesInt;
+  return o;
 }
 // Which manual the parts were looked up in. A manual is revised, and whoever
 // orders from this list has to know which one it was read against and that it
@@ -4267,7 +4320,7 @@ function renderLogArea(){
         logArea.appendChild(hd);
       }
       var sm=SM[e.severity]||SM.info;
-      var div=document.createElement("div");div.className="log-entry sev-"+e.severity;
+      var div=document.createElement("div");div.className="log-entry sev-"+e.severity+(isIntern(e)?" intern":"");
       var imgs=logThumbsHTML(e.images,false);
       div.innerHTML="<span class=\"log-dot\" style=\"color:"+sm.dc+"\">"+sm.dot+"</span>"
         +"<div class=\"log-body\" style=\"flex:1;min-width:0\">"
@@ -4275,6 +4328,7 @@ function renderLogArea(){
         +"<span class=\"log-ts\">"+(e.tsFromPhoto?"📷 ":"")+highlightText(fts(e.ts).split(" ")[1]||fts(e.ts),filterTxt)+"</span>"
         +"<span class=\"log-sev\" style=\"background:"+sm.bg+";color:"+sm.tx+"\">"+highlightText(sm.label,filterTxt)+"</span>"
         +(e.tag?"<span class=\"log-tag\">"+highlightText(e.tag,filterTxt)+"</span>":"")
+        +(isIntern(e)?"<span class=\"log-int\">\uD83D\uDD12 "+esc(uiT("INTERN"))+"</span>":"")
         +(e.editedAt?"<span class=\"log-edited\">editat</span>":"")
         +"</div>"
         +"<div class=\"log-text\">"+highlightText(e.text||"",filterTxt)+"</div>"
@@ -4473,6 +4527,7 @@ function renderContent(){
         +"<input type=\"text\" id=\"tagIn\" placeholder=\"Etiqueta…\" class=\"inp-tag\" list=\"tagOptions\" autocomplete=\"off\">"
         +"<select id=\"tagSel\" class=\"inp-tag\" style=\"display:none\" title=\"Els conjunts del manual vinculat\"></select>"
         +"</div>"
+        +"<div id=\"internBanner\" class=\"int-bar\" style=\"display:none\"><span>🔒</span> Aquesta entrada no sortirà a l'informe del client</div>"
         +"<textarea id=\"entIn\" rows=\"3\" placeholder=\"Descripció (opcional si hi ha foto)… Ctrl+Retorn per afegir\"></textarea>"
         +"<div class=\"input-ctrl\">"
         +"<button class=\"btn-gold btn-sm\" id=\"btnAdd\">↵ Afegeix</button>"
@@ -4485,6 +4540,7 @@ function renderContent(){
           :"<button class=\"btn-sm\" id=\"btnPhoto\" title=\"Afegeix una foto o un vídeo\">📷</button>")
         +"<button class=\"btn-sm\" id=\"btnRec\" title=\"Grava una nota de veu\">🎙</button>"
         +"<button class=\"btn-sm\" id=\"entCorr\" title=\"Corregeix ortografia i gramàtica de la descripció\">✓</button>"
+        +"<button class=\"btn-sm\" id=\"btnIntern\" title=\"Entrada interna: es queda a l'app i no surt a l'informe del client\">🔒</button>"
         +"<input type=\"file\" id=\"fileIn\" accept=\"image/*,video/*\" multiple style=\"display:none\">"
         +"<input type=\"file\" id=\"camIn\" accept=\"image/*\" capture=\"environment\" style=\"display:none\">"
         // No `capture` (2026-10-18): the browser's own recorder has no slow
@@ -4498,6 +4554,8 @@ function renderContent(){
         +"<button class=\"btn-sm\" id=\"notesCorr\" title=\"Corregeix ortografia i gramàtica de les notes\">✓ Corregeix</button>"
         +"<button class=\"btn-sm\" id=\"notesDays\" title=\"Proposa una línia de resum per a cada dia, a partir de les entrades\">✨ Resum per dies</button>"
         +"</div>"
+        +"<div class=\"int-lbl\" id=\"notesIntLbl\"><span>🔒</span> Notes internes — no surten a l'informe</div>"
+        +"<textarea id=\"notesIntIn\" class=\"inp-notes\" placeholder=\"Per a tu i per a la propera visita…\"></textarea>"
         +"</div>"
       :"<div class=\"closed-bar\"><span>🔴 Sessió tancada el "+(active.closedAt?fts(active.closedAt):"—")+"</span></div>")
     // status bar
@@ -4585,6 +4643,13 @@ function renderContent(){
     wireCorrect("entCorr","entIn",true);
     wireCorrect("notesCorr","notesIn");
     wireDaySummary("notesDays","notesIn");
+    var bi=$$("btnIntern");if(bi)bi.addEventListener("click",function(){composeIntern=!composeIntern;paintIntern()});
+    paintIntern();
+    var nii=$$("notesIntIn");
+    if(nii){
+      nii.value=active.notesInt||"";autoH(nii);
+      nii.addEventListener("input",function(e){autoH(e.target);sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{notesInt:e.target.value}):s});scheduleSave()});
+    }
   }
   m2Wire(active,isOpen);
 }
@@ -5514,16 +5579,17 @@ function addEntry(){
   var text=entIn.value.trim();
   if(!text&&!pImgs.length)return;
   var active=sessions.find(function(s){return s.id===aid});if(!active||active.status!=="open")return;
-  var captText=text||(pImgs.length?"[Multimèdia — afegeix-hi una descripció]":""),captSev=$$("sevSel").value,captTag=$$("tagIn").value.trim(),waited=0;
+  var captText=text||(pImgs.length?"[Multimèdia — afegeix-hi una descripció]":""),captSev=$$("sevSel").value,captTag=$$("tagIn").value.trim(),captInt=composeIntern,waited=0;
   function tryAdd(){
     if(pExif>0&&waited<3000){var b=$$("btnAdd");if(b){b.disabled=true;b.textContent="Processant…"}waited+=150;setTimeout(tryAdd,150);return}
     var b2=$$("btnAdd");if(b2){b2.disabled=false;b2.innerHTML="↵ Afegeix"}
     var imgs=pImgs.slice(),pts=earliestTs(imgs);
     var entry={id:uid(),ts:pts||now(),text:captText,severity:captSev,tag:captTag,images:imgs};
+    if(captInt)entry.intern=true;
     autoNameMedia(imgs,shortDesc(text,captTag));
     if(pts)entry.tsFromPhoto=true;
     sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{entries:sortEntries((s.entries||[]).concat([entry]))}):s});
-    entIn.value="";var ti=$$("tagIn");if(ti)ti.value="";pImgs=[];
+    entIn.value="";var ti=$$("tagIn");if(ti)ti.value="";pImgs=[];composeIntern=false;
     if(m2Sheet==="compose")m2Hide();
     logToBottom=true;   // the new entry is at the end: go and show it
     scheduleSave();renderAll();
@@ -5586,6 +5652,7 @@ function openEdit(entryId){
   $$("eTs").value=tsToInput(entry.ts);
   $$("eSev").value=entry.severity||"info";
   $$("eTag").value=entry.tag||"";
+  $$("eIntern").checked=isIntern(entry);
   $$("eText").value=entry.text||"";
   var fx=entry.fix||null;
   fixOn=!!fx;fImgs=fx&&fx.images?fx.images.slice():[];
@@ -5617,6 +5684,7 @@ function saveEdit(){
   if(!text&&!eImgs.length){alert(uiT("La descripció no pot quedar buida."));return}
   if(!editingId)return;
   var entId=editingId,newSev=$$("eSev").value,newTag=$$("eTag").value.trim(),waited=0;
+  var newInt=!!($$("eIntern")&&$$("eIntern").checked);
   var captText=text||(eImgs.length?"[Multimèdia — afegeix-hi una descripció]":"");
   // Only touch the timestamp if the field was actually changed: untouched, the
   // original keeps its seconds (the field only shows minutes). A hand-set time
@@ -5637,6 +5705,7 @@ function saveEdit(){
     var had=((entry0&&entry0.images)||[]).concat((entry0&&entry0.fix&&entry0.fix.images)||[]);
     queueTrash(aid,had.map(function(im){return im.driveId}).filter(function(id){return id&&!kept[id]}));
     sessions=sessions.map(function(s){if(s.id!==aid)return s;return Object.assign({},s,{entries:sortEntries((s.entries||[]).map(function(en){if(en.id!==entId)return en;var up=Object.assign({},en,{text:captText,severity:newSev,tag:newTag,images:eImgs.slice(),parts:eParts.slice(),editedAt:now()});
+      if(newInt)up.intern=true;else delete up.intern;
       var cl=($$("eCloses")&&$$("eCloses").value)||"";
       if(cl){var pp=cl.split("|");up.closes={s:pp[0],e:pp[1]}}else delete up.closes;
       // A hand-set time wins for good (tsManual): otherwise the photo would
@@ -7625,6 +7694,17 @@ es:{
   "Dibuixos":"Dibujos",
   "Dades de la visita":"Datos de la visita",
   "Notes generals":"Notas generales",
+  "Entrada interna: es queda a l'app i no surt a l'informe del client":"Entrada interna: se queda en la app y no sale en el informe del cliente",
+  "Aquesta entrada no sortirà a l'informe del client":"Esta entrada no saldrá en el informe del cliente",
+  "Notes internes — no surten a l'informe":"Notas internas — no salen en el informe",
+  "Per a tu i per a la propera visita…":"Para ti y para la próxima visita…",
+  "Visibilitat":"Visibilidad",
+  "Entrada interna — es queda a l'app i no surt a l'informe del client (ni els seus recanvis ni les seves fotos)":"Entrada interna — se queda en la app y no sale en el informe del cliente (ni sus recambios ni sus fotos)",
+  "INTERN":"INTERNA",
+  "Hi ha 1 entrada interna que no surt d'aquest informe.":"Hay 1 entrada interna que no sale en este informe.",
+  "Hi ha {n} entrades internes que no surten d'aquest informe.":"Hay {n} entradas internas que no salen en este informe.",
+  "Una porta recanvis, que tampoc hi surten.":"Una lleva recambios, que tampoco salen.",
+  "{p} porten recanvis, que tampoc hi surten.":"{p} llevan recambios, que tampoco salen.",
   "Desa a Drive":"Guarda en Drive",
   "Sincronitza ara":"Sincroniza ahora",
   "Tanca la visita":"Cierra la visita",
@@ -8236,6 +8316,17 @@ en:{
   "Dibuixos":"Drawings",
   "Dades de la visita":"The visit's details",
   "Notes generals":"General notes",
+  "Entrada interna: es queda a l'app i no surt a l'informe del client":"Internal entry: stays in the app and never reaches the client's report",
+  "Aquesta entrada no sortirà a l'informe del client":"This entry will not appear in the client's report",
+  "Notes internes — no surten a l'informe":"Internal notes — not in the report",
+  "Per a tu i per a la propera visita…":"For you and for the next visit…",
+  "Visibilitat":"Visibility",
+  "Entrada interna — es queda a l'app i no surt a l'informe del client (ni els seus recanvis ni les seves fotos)":"Internal entry — stays in the app and never reaches the client's report (nor its spare parts or photos)",
+  "INTERN":"INTERNAL",
+  "Hi ha 1 entrada interna que no surt d'aquest informe.":"1 internal entry is left out of this report.",
+  "Hi ha {n} entrades internes que no surten d'aquest informe.":"{n} internal entries are left out of this report.",
+  "Una porta recanvis, que tampoc hi surten.":"One of them carries spare parts, which are left out too.",
+  "{p} porten recanvis, que tampoc hi surten.":"{p} of them carry spare parts, which are left out too.",
   "Desa a Drive":"Save to Drive",
   "Sincronitza ara":"Sync now",
   "Tanca la visita":"Close the visit",
@@ -8669,6 +8760,7 @@ function gemDayLines(raw,days){
   return [];
 }
 async function gemDaySummary(s){
+  s=clientCopy(s);   // it writes the notes the client reads
   try{await populateTagOptions()}catch(e){}   // so a tag can be given its conjunt's name
   var days=daySummaryInput(s);
   if(!days.length)return null;
@@ -8971,6 +9063,7 @@ async function openReview(kind){
   pvWire();
   pv.sid=s.id;pv.rev=rev;pv.parts=[];
   var doc=$$("pvDoc");doc.innerHTML="";
+  $$("pvIntern").style.display="none";
   $$("pvGen").innerHTML="&#128196; Desa i genera el PDF";
   $$("pvSave").innerHTML="&#9997; Desa la signatura";
   if(kind==="ts"){
@@ -8985,6 +9078,15 @@ async function openReview(kind){
     return;
   }
   $$("pvTitle").textContent="Informe · "+revNo(rev.n);
+  (function(){
+    var n=internCount(s),ip=internParts(s),el=$$("pvIntern");
+    if(!n)return;
+    var t=n===1?uiT("Hi ha 1 entrada interna que no surt d'aquest informe.")
+               :uiT("Hi ha {n} entrades internes que no surten d'aquest informe.").replace("{n}",n);
+    if(ip)t+=" "+(ip===1?uiT("Una porta recanvis, que tampoc hi surten.")
+                        :uiT("{p} porten recanvis, que tampoc hi surten.").replace("{p}",ip));
+    el.textContent="\uD83D\uDD12 "+t;el.style.display="block";
+  })();
   var fr=document.createElement("iframe");fr.setAttribute("title","Informe");
   doc.appendChild(fr);
   var gR=revSign(s,rev)||{};
@@ -10599,6 +10701,7 @@ function repH2(title,col,extra){
   return "<h2 style=\"font-size:15px;font-weight:600;color:#1f2937;margin:28px 0 8px;padding:1px 0 1px 10px;border-left:3px solid #"+col+(extra?";"+extra:"")+"\">"+esc(title)+"</h2>";
 }
 function buildReportHTML(s,forPrint,lang,rev,opts){
+  s=clientCopy(s);
   var local=!!(opts&&opts.local);
   lang=RPT[lang]?lang:"ca";
   var R=RPT[lang],tm=TM[s.type]||TM.commissioning,tl=R.types[s.type]||R.types.commissioning;
@@ -12272,6 +12375,7 @@ async function exportPDF(s,R,base){
 // opts.validation: the production-test report — same header, data and
 // signatures, but the tests instead of the log, the counters and the photos.
 async function buildPdfBlob(s,lang,rev,opts){
+  s=clientCopy(s);
   var V=!!(opts&&opts.validation),local=!!(opts&&opts.local);
   var L=await loadPdfLibs();
   if(!L)return null;
@@ -12783,6 +12887,7 @@ async function exportXLSX(s,R,base){
 // Returns the spare-parts workbook, or null when the library fails or there are
 // no parts (the ZIP just leaves it out then, without nagging).
 async function buildXlsxBlob(s,lang,rev){
+  s=clientCopy(s);
   var items=collectSessionParts(s),ptTests=s.prodTests||[];
   if(!items.length&&!ptTests.length)return null;
   var X=await loadXlsxLib();
@@ -12905,6 +13010,7 @@ async function exportDOCX(s,R,base){
 // breaks will still fall where Word decides — that's the one thing this can't
 // control.
 async function buildDocxDocument(D,s,lang,rev,opts){
+  s=clientCopy(s);
   var local=!!(opts&&opts.local);
   var R=RPT[lang]||RPT.ca;
   var tl=R.types[s.type]||R.types.commissioning,entries=s.entries||[];

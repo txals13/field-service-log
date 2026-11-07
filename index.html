@@ -2750,7 +2750,7 @@ async function openDrawings(targetPage,pickMode,purpose){
   if(!sess||!sess.manualRef){alert(uiT("Primer vincula un manual de recanvis a aquesta sessió."));return}
   if(!isLoggedIn){alert(uiT("Inicia la sessió amb Google per obrir els dibuixos."));return}
   var ref=sess.manualRef;
-  viewerPickMode=!!pickMode;viewerPickItems=[];lastPickMark=null;viewerMarks=[];
+  viewerPickMode=!!pickMode;viewerPickItems=[];lastPickMark=null;
   $$("drawPickHint").style.display=viewerPickMode?"block":"none";
   $$("drawPickHint").innerHTML=(viewerPickPurpose==="text")
     ? "&#127919; Toca un número de posició per escriure'n el nom a la descripció."
@@ -2974,22 +2974,13 @@ function paintPartMarks(){
   box.style.width=cv.offsetWidth+"px";box.style.height=cv.offsetHeight+"px";
   box.style.transform=cv.style.transform;box.style.transformOrigin=cv.style.transformOrigin;
   if(!viewerPickMode||viewerPickPurpose!=="part")return;
-  // Everything here is a fraction of the sheet, and the sheet is wider than it
-  // is tall, so a sideways measure taken off the box's height is divided by
-  // that ratio to come out square on screen.
-  var ar=cv.offsetWidth?cv.offsetHeight/cv.offsetWidth:1;
+  var w=cv.offsetWidth||1,h=cv.offsetHeight||1;
   viewerMarks.forEach(function(m){
     if(m.p!==viewerPage)return;
-    // The stored box is the digits alone, and on an A1 sheet shrunk to the
-    // width of a phone that is three pixels across. Grown to about the size of
-    // the balloon drawn around it, and never under a fingertip's worth of the
-    // sheet, it is something you can actually see and the number still reads
-    // through it.
-    var ex=Math.max(m.h*.75*ar,(.008-m.w)/2),ey=Math.max(m.h*.35,(.008/ar-m.h)/2);
-    var d=document.createElement("div");
+    var b=markRect(m,w,h),d=document.createElement("div");
     d.className="draw-mark";
-    d.style.left=((m.x-ex)*100)+"%";d.style.top=((m.y-ey)*100)+"%";
-    d.style.width=((m.w+ex*2)*100)+"%";d.style.height=((m.h+ey*2)*100)+"%";
+    d.style.left=(b.x/w*100)+"%";d.style.top=(b.y/h*100)+"%";
+    d.style.width=(b.w/w*100)+"%";d.style.height=(b.h/h*100)+"%";
     box.appendChild(d);
   });
 }
@@ -3118,6 +3109,122 @@ function markWholeDrawing(r){
   var boxes=balloonsOf(poses,band).concat(titleBoxesOf(r.denominacio,r.ref,band));
   addMarks(boxes.map(function(b){return partMark(b,cv)}));
 }
+// -- The sheet itself, filed with the entry (2026-11-07) --
+// Picking a part off a drawing files the drawing with the entry as well, marks
+// and all, exactly like a photograph taken on site: that is what lets whoever
+// reads the report see WHICH part was changed and where on the machine it
+// sits. One shot per drawing -- picking another part off the same sheet
+// replaces it -- so the report carries the sheet's last state, with every
+// balloon that was taken from it coloured in.
+// It is rendered on its own at a size worth printing, not copied off the
+// canvas on screen: that one is at whatever zoom the sheet is being read at,
+// which on a phone is a few hundred pixels across.
+var SHOT_W=2000;
+var MARK_COL="#16a34a", MARK_FILL="rgba(22,163,74,.3)";   // as .draw-mark in the stylesheet
+function drawingShotName(page){
+  var sg=viewerOwning()[0],bits=["Dibuix"];
+  if(sg&&sg.num)bits.push(sg.num);
+  if(sg&&sg.name)bits.push(sg.name);
+  if(bits.length===1)bits.push("p. "+page);
+  return bits.join(" ").replace(/[\\/:*?"<>|]/g,"-").replace(/\s+/g," ").trim().slice(0,90).replace(/[ .]+$/,"")+".jpg";
+}
+// How big a mark is drawn, on screen and in the shot alike. The box kept with
+// the mark is the digits alone, and on an A1 sheet shrunk to the width of a
+// phone that is three pixels across; grown to about the size of the balloon
+// drawn around it, and never under a fingertip's worth of the sheet, it is
+// something you can actually see and the number still reads through it.
+// Everything here is a fraction of the sheet, and the sheet is wider than it
+// is tall, so a sideways measure taken off the box's height is divided by that
+// ratio to come out square.
+function markRect(m,w,h){
+  var ar=h/w;
+  var ex=Math.max(m.h*.75*ar,(.008-m.w)/2),ey=Math.max(m.h*.35,(.008/ar-m.h)/2);
+  return {x:(m.x-ex)*w,y:(m.y-ey)*h,w:(m.w+ex*2)*w,h:(m.h+ey*2)*h};
+}
+// The sheet drawn clean, once, at the size the shot is kept at. Held for the
+// page on screen only: at this width a page is megabytes, and the marks on a
+// sheet are made while that sheet is the one being read.
+// The intent is "print" on purpose. A page already drawn once for the screen
+// cannot be drawn again on the display intent -- the second render simply
+// never finishes -- and the print intent has a state of its own.
+var shotBase=null;
+function shotBaseOf(page){
+  if(shotBase&&shotBase.page===page)return shotBase.promise;
+  var pr=viewerDoc.getPage(page).then(function(pdfPage){
+    var vp0=pdfPage.getViewport({scale:1});
+    var vp=pdfPage.getViewport({scale:SHOT_W/vp0.width});
+    var cv=document.createElement("canvas");
+    cv.width=vp.width;cv.height=vp.height;
+    var ctx=cv.getContext("2d");
+    ctx.fillStyle="#fff";ctx.fillRect(0,0,cv.width,cv.height);  // a PDF page is transparent wherever there is no ink
+    return pdfPage.render({canvasContext:ctx,viewport:vp,intent:"print"}).promise.then(function(){return cv});
+  });
+  shotBase={page:page,promise:pr};
+  return pr;
+}
+// Drawing the sheet takes seconds, the marks take none: the sheet is drawn on
+// the first part picked off it and every part after that only repaints the
+// marks over the copy already in hand. The entry cannot be saved while this is
+// running (busy), so what is on the sheet reaches the report with it.
+var shotSeq=0;
+async function captureDrawingShot(){
+  if(!viewerDoc||!viewerPickMode||viewerPickPurpose!=="part"||!editingId)return;
+  var page=viewerPage,entry=editingId,seq=++shotSeq,B=MB.edit;
+  B.busy(1);
+  try{
+    var base=await shotBaseOf(page);
+    var cv=document.createElement("canvas");
+    cv.width=base.width;cv.height=base.height;
+    var ctx=cv.getContext("2d");
+    ctx.drawImage(base,0,0);
+    viewerMarks.forEach(function(m){
+      if(m.p!==page)return;
+      var b=markRect(m,cv.width,cv.height),r=Math.min(b.w,b.h)*.3;
+      ctx.fillStyle=MARK_FILL;ctx.strokeStyle=MARK_COL;ctx.lineWidth=Math.max(1,b.h*.09);
+      ctx.beginPath();
+      if(ctx.roundRect)ctx.roundRect(b.x,b.y,b.w,b.h,r);
+      else{ctx.moveTo(b.x+r,b.y);ctx.arcTo(b.x+b.w,b.y,b.x+b.w,b.y+b.h,r);ctx.arcTo(b.x+b.w,b.y+b.h,b.x,b.y+b.h,r);ctx.arcTo(b.x,b.y+b.h,b.x,b.y,r);ctx.arcTo(b.x,b.y,b.x+b.w,b.y,r);ctx.closePath()}
+      ctx.fill();ctx.stroke();
+    });
+    var blob=await new Promise(function(res){cv.toBlob(res,"image/jpeg",.85)});
+    // a slower shot must not land on top of a newer one
+    if(blob&&seq===shotSeq&&editingId===entry)putDrawingShot(page,new File([blob],drawingShotName(page),{type:"image/jpeg"}));
+  }catch(e){}
+  B.busy(-1);
+}
+// No capturedAt on a shot: the entry takes its time from the PHOTOS in it, and
+// the moment a drawing was marked says nothing about when the work was done.
+function putDrawingShot(page,file){
+  var B=MB.edit,list=B.get().slice(),at=-1;
+  for(var i=0;i<list.length;i++)if(list[i].drawPage===page){at=i;break}
+  var img={data:null,type:"image",name:file.name,uploadStatus:"",drawPage:page};
+  fileCache.set(img,file);
+  if(at>=0){
+    // the shot it replaces may already be on Drive: it goes to the trash queue
+    // so the session's folder does not fill up with every state of the sheet
+    var sess=sessions.find(function(x){return x.id===aid});
+    if(list[at].driveId&&sess)queueTrash(sess.id,[list[at].driveId]);
+    list[at]=img;
+  } else list.push(img);
+  B.set(list);renderThumbs("edit");
+  B.busy(1);
+  makeLocalImageData(file).then(function(d){img.data=d;B.busy(-1);renderThumbs("edit")});
+}
+// The shots go up on closing the viewer, not on every part picked: a drawing
+// is read for several parts at a time and only its last state is kept.
+function uploadDrawingShots(){
+  var sess=sessions.find(function(x){return x.id===aid});
+  if(!sess||!isLoggedIn)return;
+  MB.edit.get().forEach(function(img){
+    if(!img.drawPage||img.uploadStatus==="ok"||img.uploadStatus==="loading")return;
+    var file=fileCache.get(img);if(!file)return;
+    img.uploadStatus="loading";renderThumbs("edit");
+    uploadMedia(sess,file,"photos").then(function(r){
+      if(r)mediaUploaded(img,r);else img.uploadStatus="err";
+      renderThumbs("edit");scheduleSave();
+    });
+  });
+}
 function setDrawStatus(msg){var el=$$("drawStatus");if(!el)return;el.textContent=msg||"";clearTimeout(setDrawStatus._t);if(msg)setDrawStatus._t=setTimeout(function(){el.textContent=""},3500)}
 function itemDist2(it,bx,by){var cx=it.x+it.w/2,cy=it.y+it.h/2;return(cx-bx)*(cx-bx)+(cy-by)*(cy-by)}
 function attemptPick(clientX,clientY){
@@ -3151,6 +3258,7 @@ function addResolvedPart(r,qty,st){
   // the conjunt as one line -- the whole drawing.
   if(r.set)markWholeDrawing(r);
   else if(lastPickMark)addMarks([lastPickMark]);
+  captureDrawingShot();
   setDrawStatus("✓ Afegit ("+PST_APP[st]+"): "+(r.set?"conjunt "+(r.ref||r.denominacio):"Pos "+r.pos)+(cant?" ×"+cant:"")+". Toca'n un altre, o tanca per tornar.");
 }
 // Writes "<denomination> - <reference>" into the description at the caret the
@@ -3306,6 +3414,7 @@ function showPickChoices(pos,rows,offPage){
 }
 $$("drawCanvas").addEventListener("click",function(e){if(viewerPickMode)attemptPick(e.clientX,e.clientY)});
 function closeDrawings(){
+  uploadDrawingShots();
   $$("drawBack").style.display="none";viewerPickMode=false;
   $$("drawPickHint").style.display="none";
   var dc=$$("drawChoices");if(dc)dc.style.display="none";
@@ -5426,6 +5535,7 @@ function openEdit(entryId){
   var active=sessions.find(function(s){return s.id===aid});if(!active)return;
   var entry=(active.entries||[]).find(function(x){return x.id===entryId});if(!entry)return;
   editingId=entryId;eImgs=(entry.images||[]).slice();
+  viewerMarks=[];shotBase=null;   // the marks are this entry's, and start fresh with it
   eParts=(entry.parts||[]).map(function(p){return Object.assign({},p)});
   $$("eTs").value=tsToInput(entry.ts);
   $$("eSev").value=entry.severity||"info";

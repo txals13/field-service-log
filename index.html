@@ -8569,6 +8569,22 @@ var GEM_DAYS="Ets un tècnic de servei de camp que redacta les notes generals d'
   +"No toquis el que vagi entre cometes, ni codis, referències ni noms de peces (per exemple 3025.1478 o 6208-2RS). "
   +"Respon NOMÉS amb JSON: {\"days\":[{\"date\":\"AAAA-MM-DD\",\"line\":\"...\"}]}, un element per cada dia rebut i en el mateix ordre.";
 var SEV_WORD={issue:"PROBLEMA",warning:"AVÍS",ok:"OK",info:"INFO"};
+// A tag picked from the dropdown holds the conjunt's NUMBER, because that is
+// what is worth having on screen and in the reports. In a sentence somebody
+// has to read, a number says nothing, so the summary is given the name the
+// dropdown showed when it was picked. A tag typed by hand is left as it is.
+function tagLabel(tag){
+  var t=String(tag||"").trim();
+  if(!t)return "";
+  for(var i=0;i<tagOpts.length;i++){
+    if(tagOpts[i].v!==t)continue;
+    // the dropdown spells the number out after the name when the name does not
+    // already carry it; here it would only end up back in the sentence
+    var esc=t.replace(/[.*+?^${}()|[\\]\\\\]/g,"\\$&"),l=tagOpts[i].l;
+    return l.replace(new RegExp("\\s*" + "\\(" + esc + "\\)" + "\\s*$"),"").trim()||l;
+  }
+  return t;
+}
 function daySummaryInput(s){
   var en=s.entries||[],out=[];
   dayGroups(en).forEach(function(g){
@@ -8576,7 +8592,7 @@ function daySummaryInput(s){
     var lines=["## "+g.key];
     g.idx.forEach(function(i){
       var e=en[i],t=String(e.text||"").trim();
-      var l="- "+timeOf(e.ts)+" ["+(SEV_WORD[e.severity]||"INFO")+"]"+(e.tag?" ["+e.tag+"]":"")+" "+(t||"(sense text)");
+      var l="- "+timeOf(e.ts)+" ["+(SEV_WORD[e.severity]||"INFO")+"]"+(e.tag?" ["+tagLabel(e.tag)+"]":"")+" "+(t||"(sense text)");
       if(e.fix)l+=" → resolució ("+(SEV_WORD[e.fix.severity]||"OK")+")"+(e.fix.text?": "+String(e.fix.text).trim():"");
       lines.push(l);
     });
@@ -8626,6 +8642,7 @@ function gemDayLines(raw,days){
   return out;
 }
 async function gemDaySummary(s){
+  try{await populateTagOptions()}catch(e){}   // so a tag can be given its conjunt's name
   var days=daySummaryInput(s);
   if(!days.length)return null;
   var raw=await gemAsk(GEM_DAYS,days.map(function(d){return d.text}).join("\n\n"),true);

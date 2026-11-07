@@ -8639,30 +8639,43 @@ function gemDayLines(raw,days){
   }
   function txt(d){return String((d&&(d.line||d.text))||"").replace(/\s+/g," ").trim()}
   arr=arr.filter(function(d){return txt(d)});
-  var got={};
-  arr.forEach(function(d){var k=dayKeyIn(d.date||d.dia||d.day);if(k)got[k]=txt(d)});
-  var out=days.filter(function(d){return got[d.key]}).map(function(d){return dmy(d.key)+": "+got[d.key]});
-  if(!out.length&&arr.length===days.length)out=days.map(function(d,i){return dmy(d.key)+": "+txt(arr[i])});
-  return out;
+  var got={},anyDate=false;
+  arr.forEach(function(d){var k=dayKeyIn(d.date||d.dia||d.day);if(k){anyDate=true;got[k]=txt(d)}});
+  var hit=days.filter(function(d){return got[d.key]});
+  if(hit.length)return hit.map(function(d){return {key:d.key,line:got[d.key]}});
+  // Nothing matched. Taking the lines in the order they were asked for is only
+  // safe when not one date could be read at all: if the model did write dates
+  // and none of them is a day of this visit, pairing by order would put each
+  // line under the wrong date, which is worse than no summary.
+  if(!anyDate&&arr.length===days.length)return days.map(function(d,i){return {key:d.key,line:txt(arr[i])}});
+  return [];
 }
 async function gemDaySummary(s){
   try{await populateTagOptions()}catch(e){}   // so a tag can be given its conjunt's name
   var days=daySummaryInput(s);
   if(!days.length)return null;
   var raw=await gemAsk(GEM_DAYS,days.map(function(d){return d.text}).join("\n\n"),true);
-  var lines=gemDayLines(raw,days);
+  var got=gemDayLines(raw,days);
   // what it did answer goes in the message: without it there is no telling a
   // refusal from an answer in a shape this cannot read
-  if(!lines.length)throw new Error("el model no ha tornat cap resum \u2014 ha contestat: "
+  if(!got.length)throw new Error("el model no ha tornat cap resum \u2014 ha contestat: "
     +(String(raw).replace(/\s+/g," ").trim().slice(0,160)||"(res)"));
-  return {lines:lines,dates:days.map(function(d){return dmy(d.key)})};
+  // Only the days it did answer for: a day left out keeps whatever line the
+  // notes already had for it instead of losing it.
+  return {lines:got.map(function(g){return dmy(g.key)+": "+g.line}),
+          dates:got.map(function(g){return dmy(g.key)})};
 }
 // The new day lines go on top; any earlier line for one of those same days is
 // dropped, everything else is kept below, in its order.
 function mergeDayLines(notes,sum){
+  function norm(d){
+    var m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(d).trim());
+    return m?("0"+m[1]).slice(-2)+"/"+("0"+m[2]).slice(-2)+"/"+m[3]:String(d).trim();
+  }
+  var drop={};sum.dates.forEach(function(d){drop[norm(d)]=1});
   var keep=String(notes||"").split("\n").filter(function(l){
-    var m=l.match(/^\s*(\d{2}\/\d{2}\/\d{4})\s*[:—–-]/);
-    return !(m&&sum.dates.indexOf(m[1])>=0);
+    var m=l.match(/^\s*(\d{1,2}\/\d{1,2}\/\d{4})\s*[:\u2014\u2013-]/);
+    return !(m&&drop[norm(m[1])]);
   }).join("\n").replace(/^\s+|\s+$/g,"");
   return sum.lines.join("\n")+(keep?"\n\n"+keep:"");
 }

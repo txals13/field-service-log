@@ -8667,6 +8667,16 @@ async function gemDaySummary(s){
 }
 // The new day lines go on top; any earlier line for one of those same days is
 // dropped, everything else is kept below, in its order.
+// -- A day's note, read as a day and what was done (2026-11-07) --
+// The notes are one line per day, "07/11/2026: ...", and a day's line is
+// longer than it is wide: left alone it wraps back to the margin, under the
+// date, and three days read as one block of text. Every format sets the date
+// in a column of its own and hangs the rest of the line beside it. A line
+// with no date in front is left as it is.
+function noteDateSplit(line){
+  var m=/^\s*(\d{1,2}\/\d{1,2}\/\d{4})\s*([:\u2014\u2013-])\s*([\s\S]*)$/.exec(String(line||""));
+  return m?{date:m[1]+m[2],rest:m[3]}:null;
+}
 function mergeDayLines(notes,sum){
   function norm(d){
     var m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(d).trim());
@@ -10556,6 +10566,18 @@ function pdfProdSection(doc,s,R,lang,y,M,CW,H,full){
   return y;
 }
 // A section title in the HTML report: a colour bar on the left.
+// The date in a column of its own, so what was done that day keeps clear of it
+// however long it runs.
+function notesHTML(notes){
+  var ls=String(notes).trim().split(/\r?\n/);
+  return "<div style=\"font-size:13px;line-height:1.55\">"+ls.map(function(l){
+    var d=noteDateSplit(l);
+    if(!d)return "<div style=\"min-height:.6em\">"+esc(l)+"</div>";
+    return "<div style=\"display:flex;gap:.45em\">"
+      +"<span style=\"white-space:nowrap;font-weight:600;color:#374151\">"+esc(d.date)+"</span>"
+      +"<span>"+esc(d.rest)+"</span></div>";
+  }).join("")+"</div>";
+}
 function repH2(title,col,extra){
   return "<h2 style=\"font-size:15px;font-weight:600;color:#1f2937;margin:28px 0 8px;padding:1px 0 1px 10px;border-left:3px solid #"+col+(extra?";"+extra:"")+"\">"+esc(title)+"</h2>";
 }
@@ -10629,8 +10651,7 @@ function buildReportHTML(s,forPrint,lang,rev,opts){
     +"</div>"
     +ctrHTML(s,R,lang)
     // the summary of the visit, near the top; its line breaks kept (one line per day)
-    +(s.notes&&String(s.notes).trim()?repH2(R.notes,"f59e0b")
-      +"<div style=\"font-size:13px;line-height:1.55;white-space:pre-line\">"+esc(String(s.notes).trim())+"</div>":"")
+    +(s.notes&&String(s.notes).trim()?repH2(R.notes,"f59e0b")+notesHTML(s.notes):"")
     +incidentsHTML(s,R,lang)
     +(function(){
       // ONE table and one header (the columns line up); each day its own
@@ -12291,8 +12312,20 @@ async function buildPdfBlob(s,lang,rev,opts){
     if(y>H-40){doc.addPage();y=M}
     y=pdfH2(doc,R.notes,M,y,[245,158,11])+1.4;
     pdfFont(doc,ar,s.notes,"normal");doc.setFontSize(8.5);doc.setTextColor(55,65,81);
-    var nl=doc.splitTextToSize(String(s.notes).trim(),CW),nr=startsRtl(s.notes);
-    nl.forEach(function(l){if(y>H-15){doc.addPage();y=M}doc.text(l,M+(nr?CW-doc.getTextWidth(l):0),y);y+=4});
+    var nr=startsRtl(s.notes);
+    String(s.notes).trim().split(/\r?\n/).forEach(function(line){
+      var d=nr?null:noteDateSplit(line),ind=0;
+      // measured in the face the date is set in, or the text would sit on it
+      if(d){doc.setFont("helvetica","bold");ind=doc.getTextWidth(d.date+" ");pdfFont(doc,ar,line,"normal")}
+      var nl=doc.splitTextToSize(d?d.rest:line,CW-ind);
+      nl.forEach(function(l,i){
+        if(y>H-15){doc.addPage();y=M}
+        if(d&&i===0){doc.setFont("helvetica","bold");doc.text(d.date,M,y);pdfFont(doc,ar,l,"normal")}
+        doc.text(l,M+ind+(nr?CW-ind-doc.getTextWidth(l):0),y);
+        y+=4;
+      });
+      if(!nl.length)y+=4;
+    });
     doc.setFont("helvetica","normal");doc.setTextColor(0,0,0);
     y+=4;
   }
@@ -13058,7 +13091,14 @@ async function buildDocxDocument(D,s,lang,rev,opts){
   var notesCh=(function(){
     var t=String(s.notes||"").trim();if(!t)return [];
     return [wordH2(R.notes,"F59E0B")]
-      .concat(t.split(/\r?\n/).map(function(l){return P({spacing:{after:40},children:[T({text:l,size:hp(8.5),font:"Arial",color:"374151"})]})}))
+      .concat(t.split(/\r?\n/).map(function(l){
+        var d=noteDateSplit(l);
+        if(!d)return P({spacing:{after:40},children:[T({text:l,size:hp(8.5),font:"Arial",color:"374151"})]});
+        // hanging: the date sits in the margin the rest of the line is held off
+        return P({spacing:{after:40},indent:{left:1150,hanging:1150},children:[
+          T({text:d.date+" ",bold:true,size:hp(8.5),font:"Arial",color:"374151"}),
+          T({text:d.rest,size:hp(8.5),font:"Arial",color:"374151"})]});
+      }))
       .concat([P({spacing:{after:60},children:[T({text:""})]})]);
   })();
   // The incidents summary, under the counters, as in the PDF.

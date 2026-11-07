@@ -297,7 +297,7 @@ textarea{resize:none;line-height:1.4}
 .log-parts .pn{color:var(--tx1);min-width:0}
 /* replaced on this visit, or recommended (urgent / preventive) */
 .log-parts .ps,.eparts .ps-sel{font-size:10.5px;font-weight:600;white-space:nowrap}
-.ps-fit{color:var(--green)}.ps-urg{color:var(--red)}.ps-prev{color:var(--orange)}.ps-quo{color:var(--blue)}
+.ps-fit{color:var(--green)}.ps-urg{color:var(--red)}.ps-prev{color:var(--orange)}.ps-quo{color:var(--blue)}.ps-inf{color:var(--tx2)}
 /* What has already been taken off the drawing on screen. A layer of its own
    over the canvas, not paint on the canvas: the page is redrawn on every zoom
    and every page turn, and pdf.js finishes those renders when it finishes, so
@@ -1224,7 +1224,7 @@ textarea{resize:none;line-height:1.4}
           <input type="text" class="pf-ref" id="pfRef" placeholder="Ref.">
           <input type="text" class="pf-cant" id="pfCant" placeholder="Qt.">
           <input type="text" class="pf-den" id="pfDen" placeholder="Denominació">
-          <select id="pfSt" title="Canviat en aquesta visita, o recomanat" style="font-size:12px;padding:5px 7px"><option value="fit">🔧 Canviat</option><option value="urg">⚠ Recomanat · urgent</option><option value="prev">📋 Recomanat · preventiu</option><option value="quo">💬 Petició de cotització</option></select>
+          <select id="pfSt" title="Canviat en aquesta visita, o recomanat" style="font-size:12px;padding:5px 7px"><option value="fit">🔧 Canviat</option><option value="urg">⚠ Recomanat · urgent</option><option value="prev">📋 Recomanat · preventiu</option><option value="quo">💬 Petició de cotització</option><option value="inf">ℹ Només informatiu</option></select>
           <button class="btn-sm btn-gold" id="pfSave">Afegeix</button>
           <button class="btn-sm" id="pfCancel">Cancel·la</button>
         </div>
@@ -1417,11 +1417,19 @@ function esc(s){if(!s)return"";var d=document.createElement("div");d.textContent
 // "fitted" — so a missing `st` reads as "fit".
 // "quo" (2026-10-18): the client asks for a price — not replaced, not our
 // recommendation; it gets its own list in the reports and its own Excel sheet.
-var PART_STS=["fit","urg","prev","quo"];
-var PST_APP={fit:"🔧 Canviat",urg:"⚠ Urgent",prev:"📋 Preventiu",quo:"💬 Cotització"};
-var PST_TIP={fit:"Canviat en aquesta visita",urg:"Recomanat: convé canviar-lo aviat",prev:"Recomanat com a preventiu: per tenir-ne en estoc o canviar-lo en una parada",quo:"Petició de cotització: el client en demana el preu"};
-var PST_RGB={fit:[22,163,74],urg:[220,38,38],prev:[217,119,6],quo:[37,99,235]};
-var PST_HEX={fit:"16A34A",urg:"DC2626",prev:"D97706",quo:"2563EB"};
+// "inf" (2026-11-07): named, not asked for. Picking a part off the drawing
+// used to mean ordering it, so there was no way to write "this is the
+// passador that is wearing" or "the bearing I checked is this one" without
+// putting it on somebody's order. An informative part behaves like any other
+// INSIDE its entry — it is listed there with its reference and the balloon is
+// coloured on the drawing — and appears in NONE of the three lists the reports
+// end with, in none of the Excel's summary sheets and in no machine history.
+// Grey on purpose: the other four colours all mean somebody has to act.
+var PART_STS=["fit","urg","prev","quo","inf"];
+var PST_APP={fit:"🔧 Canviat",urg:"⚠ Urgent",prev:"📋 Preventiu",quo:"💬 Cotització",inf:"ℹ Informatiu"};
+var PST_TIP={fit:"Canviat en aquesta visita",urg:"Recomanat: convé canviar-lo aviat",prev:"Recomanat com a preventiu: per tenir-ne en estoc o canviar-lo en una parada",quo:"Petició de cotització: el client en demana el preu",inf:"Només informatiu: queda anotat dins l'entrada, però no es demana ni es recomana"};
+var PST_RGB={fit:[22,163,74],urg:[220,38,38],prev:[217,119,6],quo:[37,99,235],inf:[107,114,128]};
+var PST_HEX={fit:"16A34A",urg:"DC2626",prev:"D97706",quo:"2563EB",inf:"6B7280"};
 var lastPartSt="fit";   // the next part picked starts where the last one was left
 var lastPickMark=null;  // where the last tap landed on the sheet (see partMark)
 // What has been picked off the drawing on screen, washed over in colour so you
@@ -1516,7 +1524,7 @@ function pdfThumb(doc,src,x,y,w,h,vid,alias){
     doc.setFillColor(255,255,255);doc.triangle(cx-0.7,cy-1.2,cx-0.7,cy+1.2,cx+1.3,cy,"F");
   }
 }
-function partSt(p){return (p&&(p.st==="urg"||p.st==="prev"||p.st==="quo"))?p.st:"fit"}
+function partSt(p){var st=p&&p.st;return PART_STS.indexOf(st)>=0?st:"fit"}
 function partIsRec(p){var st=partSt(p);return st==="urg"||st==="prev"}
 // on-screen log view (uses the app's themed .log-parts grid)
 function partsBlockHTML(parts){
@@ -1616,7 +1624,8 @@ function manualNoteOf(s,R){
 // their own on the drawing, so reading the drawing is not reading the
 // delivery note. Whoever places the order has to know that.
 function hasSetPart(s){
-  return collectSessionParts(s).some(function(it){return it.part&&it.part.set});
+  // An informative conjunt was not ordered, so there is nothing to warn about.
+  return collectSessionParts(s).some(function(it){return it.part&&it.part.set&&partSt(it.part)!=="inf"});
 }
 // The reminders that close the parts section, in one place: every format
 // prints the same ones in the same order.
@@ -3439,7 +3448,10 @@ function confirmAndAdd(r){
   cancel.addEventListener("click",function(){done();setDrawStatus("")});
   row.appendChild(lab);row.appendChild(inp);row.appendChild(btns.fit);row.appendChild(btns.quo);
   var rl=document.createElement("span");rl.style.cssText="font-size:12px;color:var(--tx3);margin-left:4px";rl.textContent="Recomanat:";
-  row.appendChild(rl);row.appendChild(btns.urg);row.appendChild(btns.prev);row.appendChild(cancel);
+  row.appendChild(rl);row.appendChild(btns.urg);row.appendChild(btns.prev);
+  // Last, and apart from the other four: those three ask somebody for
+  // something, this one only says which part is being talked about.
+  row.appendChild(btns.inf);row.appendChild(cancel);
   box.appendChild(row);
   setTimeout(function(){focusField(inp,true)},30);
 }
@@ -7026,7 +7038,7 @@ var RPT={
       time:"Hora",entry1:"entrada",entryN:"entrades",noDate:"Sense data",ts:"Data i hora",severity:"Gravetat",tag:"Etiqueta",desc:"Descripció",att:"Adjunts",
       fix:"Com ha quedat",edited:"editat",noEntries:"Sense entrades",photos:"Fotos",annex:"Annex",week:"Setmana",notes:"Notes generals",
       sigTech:"Signatura del tècnic",sigCli:"Signatura del client / receptor",
-      qty:"QT.",ref:"REF.",part:"RECANVI",ctr:{title:"Comptadors de la màquina",read:"Lectura",arr:"Arribada",dep:"Sortida",hours:"Hores de màquina",units:"Producte total",date:"Data",since:"Des de la visita anterior",during:"Durant la visita",inW:"en",day1:"dia",days:"dies",perDay:"h/dia",perHour:"unitats/h",perMin:"unitats/min",h:"h",u:"unitats",reset:"el comptador ha baixat: s'ha canviat o reiniciat?"},incTitle:"Incidències d'aquesta visita",incWhen:"Quan",incWhat:"Incidència",incState:"Estat",stRes:"Resolt",stPend:"Pendent",stClosed:"Tancat",stRec:"recanvi recomanat",prevVisit:"visita anterior",closesPrev:"Tanca un problema de la visita del",resIn:"resolt en",st:"ESTAT",prio:"PRIORITAT",pstL:{fit:"Canviat",urg:"Recomanat · urgent",prev:"Recomanat · preventiu",quo:"Petició de cotització"},pst:{fit:"Canviat",urg:"Urgent",prev:"Preventiu",quo:"Cotització"},partsFit:"Recanvis canviats",partsRec:"Recanvis recomanats",recNote:"Urgent: convé canviar-lo aviat. Preventiu: per tenir-ne en estoc o canviar-lo en una parada programada.",partsQuo:"Cotització demanada pel client",quoNote:"Recanvis dels quals el client ha demanat el preu i el termini d'entrega aproximat.",setNote:"Un conjunt demanat sencer inclou elements que no apareixen al dibuix, com la tornilleria.",internTitle:"Informe intern",notesInt:"Notes internes",manualNote:"Els recanvis s'han demanat sobre la base del manual «{m}»; convé revisar-ne les últimes actualitzacions.",photoTag:"[foto]",openDrive:"Obre a Drive",
+      qty:"QT.",ref:"REF.",part:"RECANVI",ctr:{title:"Comptadors de la màquina",read:"Lectura",arr:"Arribada",dep:"Sortida",hours:"Hores de màquina",units:"Producte total",date:"Data",since:"Des de la visita anterior",during:"Durant la visita",inW:"en",day1:"dia",days:"dies",perDay:"h/dia",perHour:"unitats/h",perMin:"unitats/min",h:"h",u:"unitats",reset:"el comptador ha baixat: s'ha canviat o reiniciat?"},incTitle:"Incidències d'aquesta visita",incWhen:"Quan",incWhat:"Incidència",incState:"Estat",stRes:"Resolt",stPend:"Pendent",stClosed:"Tancat",stRec:"recanvi recomanat",prevVisit:"visita anterior",closesPrev:"Tanca un problema de la visita del",resIn:"resolt en",st:"ESTAT",prio:"PRIORITAT",pstL:{fit:"Canviat",urg:"Recomanat · urgent",prev:"Recomanat · preventiu",quo:"Petició de cotització",inf:"Només informatiu"},pst:{fit:"Canviat",urg:"Urgent",prev:"Preventiu",quo:"Cotització",inf:"Informatiu"},partsFit:"Recanvis canviats",partsRec:"Recanvis recomanats",recNote:"Urgent: convé canviar-lo aviat. Preventiu: per tenir-ne en estoc o canviar-lo en una parada programada.",partsQuo:"Cotització demanada pel client",quoNote:"Recanvis dels quals el client ha demanat el preu i el termini d'entrega aproximat.",setNote:"Un conjunt demanat sencer inclou elements que no apareixen al dibuix, com la tornilleria.",internTitle:"Informe intern",notesInt:"Notes internes",manualNote:"Els recanvis s'han demanat sobre la base del manual «{m}»; convé revisar-ne les últimes actualitzacions.",photoTag:"[foto]",openDrive:"Obre a Drive",
       voice:"nota de veu",video:"vídeo",photo:"foto",file:"fitxer",
       pre:{report:"informe",parts:"recanvis"},
       pt:{title:"Proves de producció",period:"Període",units:"Unitats",availS:"Disp.",perfS:"Rend.",qualS:"Qual.",rejS:"Rebuig",resultS:"Resultat",summaryNote:"El detall de cada prova —aturades, objectius i observacions— és a l'informe de validació.",test:"Prova",product:"Producte / format",nominal:"Velocitat nominal",start:"Inici",end:"Final",duration:"Durada",plannedStops:"Aturades planificades",downtime:"Aturades no planificades",run:"Temps en marxa",total:"Unitats totals",rejects:"Unitats rebutjades",good:"Unitats bones",speedAvg:"Velocitat mitjana",speedRun:"Velocitat en marxa",avail:"Disponibilitat",perf:"Rendiment",qual:"Qualitat",oee:"OEE",rejPct:"Rebuig",indicator:"Indicador",value:"Valor",target:"Objectiu",result:"Resultat",yes:"Compleix",no:"No compleix",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Aturades",kind:"Tipus",cause:"Causa",kinds:{machine:"Màquina",external:"Externa",planned:"Planificada"},notes:"Observacions",uph:"u/h",upm:"u/min",validation:"Informe de validació",file:"validacio"},
@@ -7043,7 +7055,7 @@ var RPT={
       time:"Hora",entry1:"entrada",entryN:"entradas",noDate:"Sin fecha",ts:"Fecha y hora",severity:"Gravedad",tag:"Etiqueta",desc:"Descripción",att:"Adjuntos",
       fix:"Cómo ha quedado",edited:"editado",noEntries:"Sin entradas",photos:"Fotos",annex:"Anexo",week:"Semana",notes:"Notas generales",
       sigTech:"Firma del técnico",sigCli:"Firma del cliente / receptor",
-      qty:"CANT.",ref:"REF.",part:"RECAMBIO",ctr:{title:"Contadores de la máquina",read:"Lectura",arr:"Llegada",dep:"Salida",hours:"Horas de máquina",units:"Producto total",date:"Fecha",since:"Desde la visita anterior",during:"Durante la visita",inW:"en",day1:"día",days:"días",perDay:"h/día",perHour:"unidades/h",perMin:"unidades/min",h:"h",u:"unidades",reset:"el contador ha bajado: ¿se ha cambiado o reiniciado?"},incTitle:"Incidencias de esta visita",incWhen:"Cuándo",incWhat:"Incidencia",incState:"Estado",stRes:"Resuelto",stPend:"Pendiente",stClosed:"Cerrado",stRec:"recambio recomendado",prevVisit:"visita anterior",closesPrev:"Cierra un problema de la visita del",resIn:"resuelto en",st:"ESTADO",prio:"PRIORIDAD",pstL:{fit:"Cambiado",urg:"Recomendado · urgente",prev:"Recomendado · preventivo",quo:"Solicitud de cotización"},pst:{fit:"Cambiado",urg:"Urgente",prev:"Preventivo",quo:"Cotización"},partsFit:"Recambios cambiados",partsRec:"Recambios recomendados",recNote:"Urgente: conviene cambiarlo pronto. Preventivo: para tenerlo en stock o cambiarlo en una parada programada.",partsQuo:"Cotización solicitada por el cliente",quoNote:"Recambios de los que el cliente ha pedido el precio y el plazo de entrega aproximado.",setNote:"Un conjunto pedido completo incluye elementos que no aparecen en el plano, como la tornillería.",internTitle:"Informe interno",notesInt:"Notas internas",manualNote:"Los recambios se han pedido sobre la base del manual «{m}»; conviene revisar sus últimas actualizaciones.",photoTag:"[foto]",openDrive:"Abrir en Drive",
+      qty:"CANT.",ref:"REF.",part:"RECAMBIO",ctr:{title:"Contadores de la máquina",read:"Lectura",arr:"Llegada",dep:"Salida",hours:"Horas de máquina",units:"Producto total",date:"Fecha",since:"Desde la visita anterior",during:"Durante la visita",inW:"en",day1:"día",days:"días",perDay:"h/día",perHour:"unidades/h",perMin:"unidades/min",h:"h",u:"unidades",reset:"el contador ha bajado: ¿se ha cambiado o reiniciado?"},incTitle:"Incidencias de esta visita",incWhen:"Cuándo",incWhat:"Incidencia",incState:"Estado",stRes:"Resuelto",stPend:"Pendiente",stClosed:"Cerrado",stRec:"recambio recomendado",prevVisit:"visita anterior",closesPrev:"Cierra un problema de la visita del",resIn:"resuelto en",st:"ESTADO",prio:"PRIORIDAD",pstL:{fit:"Cambiado",urg:"Recomendado · urgente",prev:"Recomendado · preventivo",quo:"Solicitud de cotización",inf:"Solo informativo"},pst:{fit:"Cambiado",urg:"Urgente",prev:"Preventivo",quo:"Cotización",inf:"Informativo"},partsFit:"Recambios cambiados",partsRec:"Recambios recomendados",recNote:"Urgente: conviene cambiarlo pronto. Preventivo: para tenerlo en stock o cambiarlo en una parada programada.",partsQuo:"Cotización solicitada por el cliente",quoNote:"Recambios de los que el cliente ha pedido el precio y el plazo de entrega aproximado.",setNote:"Un conjunto pedido completo incluye elementos que no aparecen en el plano, como la tornillería.",internTitle:"Informe interno",notesInt:"Notas internas",manualNote:"Los recambios se han pedido sobre la base del manual «{m}»; conviene revisar sus últimas actualizaciones.",photoTag:"[foto]",openDrive:"Abrir en Drive",
       voice:"nota de voz",video:"vídeo",photo:"foto",file:"archivo",
       pre:{report:"informe",parts:"recambios"},
       pt:{title:"Pruebas de producción",period:"Período",units:"Unidades",availS:"Disp.",perfS:"Rend.",qualS:"Cal.",rejS:"Rechazo",resultS:"Resultado",summaryNote:"El detalle de cada prueba —paradas, objetivos y observaciones— está en el informe de validación.",test:"Prueba",product:"Producto / formato",nominal:"Velocidad nominal",start:"Inicio",end:"Final",duration:"Duración",plannedStops:"Paradas planificadas",downtime:"Paradas no planificadas",run:"Tiempo en marcha",total:"Unidades totales",rejects:"Unidades rechazadas",good:"Unidades buenas",speedAvg:"Velocidad media",speedRun:"Velocidad en marcha",avail:"Disponibilidad",perf:"Rendimiento",qual:"Calidad",oee:"OEE",rejPct:"Rechazo",indicator:"Indicador",value:"Valor",target:"Objetivo",result:"Resultado",yes:"Cumple",no:"No cumple",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Paradas",kind:"Tipo",cause:"Causa",kinds:{machine:"Máquina",external:"Externa",planned:"Planificada"},notes:"Observaciones",uph:"u/h",upm:"u/min",validation:"Informe de validación",file:"validacion"},
@@ -7060,7 +7072,7 @@ var RPT={
       time:"Time",entry1:"entry",entryN:"entries",noDate:"No date",ts:"Timestamp",severity:"Severity",tag:"Tag",desc:"Description",att:"Attachments",
       fix:"Outcome",edited:"edited",noEntries:"No entries",photos:"Photos",annex:"Annex",week:"Week",notes:"General notes",
       sigTech:"Technician signature",sigCli:"Client / Recipient signature",
-      qty:"QTY",ref:"REF.",part:"SPARE PART",ctr:{title:"Machine counters",read:"Reading",arr:"Arrival",dep:"Departure",hours:"Machine hours",units:"Total output",date:"Date",since:"Since the previous visit",during:"During the visit",inW:"in",day1:"day",days:"days",perDay:"h/day",perHour:"units/h",perMin:"units/min",h:"h",u:"units",reset:"the counter went down: replaced or reset?"},incTitle:"Issues on this visit",incWhen:"When",incWhat:"Issue",incState:"Status",stRes:"Resolved",stPend:"Open",stClosed:"Closed",stRec:"spare part recommended",prevVisit:"earlier visit",closesPrev:"Closes an issue from the visit of",resIn:"resolved in",st:"STATUS",prio:"PRIORITY",pstL:{fit:"Replaced",urg:"Recommended · urgent",prev:"Recommended · preventive",quo:"Quotation request"},pst:{fit:"Replaced",urg:"Urgent",prev:"Preventive",quo:"Quotation"},partsFit:"Spare parts replaced",partsRec:"Recommended spare parts",recNote:"Urgent: should be replaced soon. Preventive: to keep in stock or replace at a planned stop.",partsQuo:"Quotation requested by the client",quoNote:"Spare parts the client has asked the price and an approximate delivery time for.",setNote:"An assembly ordered as a whole includes items that are not shown on the drawing, such as fasteners.",internTitle:"Internal report",notesInt:"Internal notes",manualNote:"The spare parts were taken from manual “{m}”; its latest updates should be checked.",photoTag:"[photo]",openDrive:"Open in Drive",
+      qty:"QTY",ref:"REF.",part:"SPARE PART",ctr:{title:"Machine counters",read:"Reading",arr:"Arrival",dep:"Departure",hours:"Machine hours",units:"Total output",date:"Date",since:"Since the previous visit",during:"During the visit",inW:"in",day1:"day",days:"days",perDay:"h/day",perHour:"units/h",perMin:"units/min",h:"h",u:"units",reset:"the counter went down: replaced or reset?"},incTitle:"Issues on this visit",incWhen:"When",incWhat:"Issue",incState:"Status",stRes:"Resolved",stPend:"Open",stClosed:"Closed",stRec:"spare part recommended",prevVisit:"earlier visit",closesPrev:"Closes an issue from the visit of",resIn:"resolved in",st:"STATUS",prio:"PRIORITY",pstL:{fit:"Replaced",urg:"Recommended · urgent",prev:"Recommended · preventive",quo:"Quotation request",inf:"For reference only"},pst:{fit:"Replaced",urg:"Urgent",prev:"Preventive",quo:"Quotation",inf:"Reference"},partsFit:"Spare parts replaced",partsRec:"Recommended spare parts",recNote:"Urgent: should be replaced soon. Preventive: to keep in stock or replace at a planned stop.",partsQuo:"Quotation requested by the client",quoNote:"Spare parts the client has asked the price and an approximate delivery time for.",setNote:"An assembly ordered as a whole includes items that are not shown on the drawing, such as fasteners.",internTitle:"Internal report",notesInt:"Internal notes",manualNote:"The spare parts were taken from manual “{m}”; its latest updates should be checked.",photoTag:"[photo]",openDrive:"Open in Drive",
       voice:"voice note",video:"video",photo:"photo",file:"file",
       pre:{report:"report",parts:"spare_parts"},
       pt:{title:"Production tests",period:"Period",units:"Units",availS:"Avail.",perfS:"Perf.",qualS:"Qual.",rejS:"Reject",resultS:"Result",summaryNote:"Each test in full — stops, targets and remarks — is in the validation report.",test:"Test",product:"Product / format",nominal:"Nominal speed",start:"Start",end:"End",duration:"Duration",plannedStops:"Planned stops",downtime:"Unplanned stops",run:"Run time",total:"Total units",rejects:"Rejected units",good:"Good units",speedAvg:"Average speed",speedRun:"Running speed",avail:"Availability",perf:"Performance",qual:"Quality",oee:"OEE",rejPct:"Reject rate",indicator:"Indicator",value:"Value",target:"Target",result:"Result",yes:"Met",no:"Not met",pass:"PASSED",fail:"NOT PASSED",stops:"Stops",kind:"Type",cause:"Cause",kinds:{machine:"Machine",external:"External",planned:"Planned"},notes:"Remarks",uph:"u/h",upm:"u/min",validation:"Validation report",file:"validation"},
@@ -7435,6 +7447,9 @@ es:{
   "RESULTATS":"RESULTADOS",
   "✂ Retalla":"✂ Recorta",
   "🔧 Canviat":"🔧 Cambiado",
+  "ℹ Informatiu":"ℹ Informativo",
+  "ℹ Només informatiu":"ℹ Solo informativo",
+  "Només informatiu: queda anotat dins l'entrada, però no es demana ni es recomana":"Solo informativo: queda anotado dentro de la entrada, pero no se pide ni se recomienda",
   "4 xifres":"4 cifras",
   "ATURADES":"PARADAS",
   "Columnes":"Columnas",
@@ -8038,6 +8053,9 @@ en:{
   "✂ Retalla":"✂ Crop",
   "📄 Informe":"📄 Report",
   "🔧 Canviat":"🔧 Changed",
+  "ℹ Informatiu":"ℹ Reference",
+  "ℹ Només informatiu":"ℹ For reference only",
+  "Només informatiu: queda anotat dins l'entrada, però no es demana ni es recomana":"For reference only: it is noted inside the entry, but nothing is asked for or recommended",
   "🗑 Elimina":"🗑 Delete",
   "4 xifres":"4 digits",
   "ATURADES":"STOPPAGES",
@@ -9372,7 +9390,7 @@ function mhRender(cur,all,L,forPrint){
   all.forEach(function(x){
     collectSessionParts(x).forEach(function(it){
       var k=(it.part.ref||it.part.denominacio||"?"),ts=String(it.entry.ts),st=partSt(it.part);
-      if(st==="quo")return;
+      if(st==="quo"||st==="inf")return;   // neither was fitted nor recommended
       if(st!=="fit"){
         if(!recs[k]||ts>recs[k].ts)recs[k]={ref:it.part.ref||"",den:it.part.denominacio||"",qty:it.part.cant||"",st:st,ts:ts};
         return;

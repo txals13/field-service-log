@@ -1578,6 +1578,30 @@ function clientCopy(s){
   delete o.notesInt;
   return o;
 }
+// The other half of the same rule, and the document it builds: the internal
+// entries ALONE, with the internal notes standing in for the general ones --
+// in this document they ARE the general notes -- and the production tests left
+// out, because a test is something the client is shown.
+function internCopy(s){
+  if(!s)return s;
+  var o=Object.assign({},s);
+  o.entries=(s.entries||[]).filter(isIntern);
+  o.notes=s.notesInt||"";
+  delete o.notesInt;
+  delete o.prodTests;
+  return o;
+}
+function hasIntern(s){return internCount(s)>0||!!String((s&&s.notesInt)||"").trim()}
+// Written in the language of the APP, not the client's: nobody outside reads
+// it, so there is nothing to translate and nothing to send to a model. The
+// entries keep the words they were typed in, which is what a technician
+// reading it next year wants.
+function internLang(){var l=uiLang();return RPT[l]?l:"ca"}
+function internFileName(s,rev){
+  // It has to read wrong at a glance in a folder listing beside the client's
+  // report, because that is where the mistake would happen.
+  return "INTERN_"+reportBase(s,internLang(),rev&&rev.n)+".pdf";
+}
 // Which manual the parts were looked up in. A manual is revised, and whoever
 // orders from this list has to know which one it was read against and that it
 // may have moved on since. A visit with no manual linked had its parts typed
@@ -4481,7 +4505,7 @@ function renderContent(){
       ?"<div class=\"exp-rev\"><span>Etiquetes en "+esc(langNative(reportLang(active)))+"</span>"
         +"<button data-lbl=\"1\" title=\"Les ha traduïdes Gemini i surten a cada fila de cada pàgina: val la pena mirar-les un cop\">Revisa-les…</button></div>"
       :"")
-    +"<button data-fmt=\"pdf\">📄 PDF</button><button data-fmt=\"docx\">📄 Word (DOCX)</button><button data-fmt=\"html\">📄 HTML</button><button data-fmt=\"xlsx\">📊 Recanvis (Excel)</button><button data-fmt=\"timesheet\">🧾 Full d'hores…</button>"+((active.prodTests||[]).length?"<button data-fmt=\"valpdf\">📈 Informe de validació (PDF)</button>":"")+"<button data-fmt=\"zip\" title=\"Tot: tots els informes, els fitxers multimèdia i session.json — la còpia que es pot tornar a importar\">🗄 ZIP del projecte (arxiu)</button><button data-fmt=\"zipdocx\" title=\"L'informe Word amb totes les fotos, vídeos i notes de veu — per lliurar. No es pot tornar a importar.\">📦 ZIP Word + multimèdia</button></div></div>"
+    +"<button data-fmt=\"pdf\">📄 PDF</button><button data-fmt=\"docx\">📄 Word (DOCX)</button><button data-fmt=\"html\">📄 HTML</button><button data-fmt=\"xlsx\">📊 Recanvis (Excel)</button><button data-fmt=\"timesheet\">🧾 Full d'hores…</button>"+((active.prodTests||[]).length?"<button data-fmt=\"valpdf\">📈 Informe de validació (PDF)</button>":"")+(hasIntern(active)?"<button data-fmt=\"internpdf\" title=\"Les entrades internes i les notes internes, en un PDF a part. No és per al client.\">🔒 Informe intern (PDF)</button>":"")+"<button data-fmt=\"zip\" title=\"Tot: tots els informes, els fitxers multimèdia i session.json — la còpia que es pot tornar a importar\">🗄 ZIP del projecte (arxiu)</button><button data-fmt=\"zipdocx\" title=\"L'informe Word amb totes les fotos, vídeos i notes de veu — per lliurar. No es pot tornar a importar.\">📦 ZIP Word + multimèdia</button></div></div>"
     +"<button class=\"btn-sm m2-dk\" id=\"btnM2More2\" title=\"Historial, carpeta, manual, full d'hores, dades de la visita…\">&#8942; Més</button>"
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSync\" title=\"Sincronitza ara\">⟳</button>":"")
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSessSync\" title=\"Recrea les carpetes de Drive i puja-hi les fotos que hi faltin, d'aquesta sessió\">&#9729; Desa</button>":"")
@@ -7002,7 +7026,7 @@ var RPT={
       time:"Hora",entry1:"entrada",entryN:"entrades",noDate:"Sense data",ts:"Data i hora",severity:"Gravetat",tag:"Etiqueta",desc:"Descripció",att:"Adjunts",
       fix:"Com ha quedat",edited:"editat",noEntries:"Sense entrades",photos:"Fotos",annex:"Annex",week:"Setmana",notes:"Notes generals",
       sigTech:"Signatura del tècnic",sigCli:"Signatura del client / receptor",
-      qty:"QT.",ref:"REF.",part:"RECANVI",ctr:{title:"Comptadors de la màquina",read:"Lectura",arr:"Arribada",dep:"Sortida",hours:"Hores de màquina",units:"Producte total",date:"Data",since:"Des de la visita anterior",during:"Durant la visita",inW:"en",day1:"dia",days:"dies",perDay:"h/dia",perHour:"unitats/h",perMin:"unitats/min",h:"h",u:"unitats",reset:"el comptador ha baixat: s'ha canviat o reiniciat?"},incTitle:"Incidències d'aquesta visita",incWhen:"Quan",incWhat:"Incidència",incState:"Estat",stRes:"Resolt",stPend:"Pendent",stClosed:"Tancat",stRec:"recanvi recomanat",prevVisit:"visita anterior",closesPrev:"Tanca un problema de la visita del",resIn:"resolt en",st:"ESTAT",prio:"PRIORITAT",pstL:{fit:"Canviat",urg:"Recomanat · urgent",prev:"Recomanat · preventiu",quo:"Petició de cotització"},pst:{fit:"Canviat",urg:"Urgent",prev:"Preventiu",quo:"Cotització"},partsFit:"Recanvis canviats",partsRec:"Recanvis recomanats",recNote:"Urgent: convé canviar-lo aviat. Preventiu: per tenir-ne en estoc o canviar-lo en una parada programada.",partsQuo:"Cotització demanada pel client",quoNote:"Recanvis dels quals el client ha demanat el preu i el termini d'entrega aproximat.",setNote:"Un conjunt demanat sencer inclou elements que no apareixen al dibuix, com la tornilleria.",manualNote:"Els recanvis s'han demanat sobre la base del manual «{m}»; convé revisar-ne les últimes actualitzacions.",photoTag:"[foto]",openDrive:"Obre a Drive",
+      qty:"QT.",ref:"REF.",part:"RECANVI",ctr:{title:"Comptadors de la màquina",read:"Lectura",arr:"Arribada",dep:"Sortida",hours:"Hores de màquina",units:"Producte total",date:"Data",since:"Des de la visita anterior",during:"Durant la visita",inW:"en",day1:"dia",days:"dies",perDay:"h/dia",perHour:"unitats/h",perMin:"unitats/min",h:"h",u:"unitats",reset:"el comptador ha baixat: s'ha canviat o reiniciat?"},incTitle:"Incidències d'aquesta visita",incWhen:"Quan",incWhat:"Incidència",incState:"Estat",stRes:"Resolt",stPend:"Pendent",stClosed:"Tancat",stRec:"recanvi recomanat",prevVisit:"visita anterior",closesPrev:"Tanca un problema de la visita del",resIn:"resolt en",st:"ESTAT",prio:"PRIORITAT",pstL:{fit:"Canviat",urg:"Recomanat · urgent",prev:"Recomanat · preventiu",quo:"Petició de cotització"},pst:{fit:"Canviat",urg:"Urgent",prev:"Preventiu",quo:"Cotització"},partsFit:"Recanvis canviats",partsRec:"Recanvis recomanats",recNote:"Urgent: convé canviar-lo aviat. Preventiu: per tenir-ne en estoc o canviar-lo en una parada programada.",partsQuo:"Cotització demanada pel client",quoNote:"Recanvis dels quals el client ha demanat el preu i el termini d'entrega aproximat.",setNote:"Un conjunt demanat sencer inclou elements que no apareixen al dibuix, com la tornilleria.",internTitle:"Informe intern",notesInt:"Notes internes",manualNote:"Els recanvis s'han demanat sobre la base del manual «{m}»; convé revisar-ne les últimes actualitzacions.",photoTag:"[foto]",openDrive:"Obre a Drive",
       voice:"nota de veu",video:"vídeo",photo:"foto",file:"fitxer",
       pre:{report:"informe",parts:"recanvis"},
       pt:{title:"Proves de producció",period:"Període",units:"Unitats",availS:"Disp.",perfS:"Rend.",qualS:"Qual.",rejS:"Rebuig",resultS:"Resultat",summaryNote:"El detall de cada prova —aturades, objectius i observacions— és a l'informe de validació.",test:"Prova",product:"Producte / format",nominal:"Velocitat nominal",start:"Inici",end:"Final",duration:"Durada",plannedStops:"Aturades planificades",downtime:"Aturades no planificades",run:"Temps en marxa",total:"Unitats totals",rejects:"Unitats rebutjades",good:"Unitats bones",speedAvg:"Velocitat mitjana",speedRun:"Velocitat en marxa",avail:"Disponibilitat",perf:"Rendiment",qual:"Qualitat",oee:"OEE",rejPct:"Rebuig",indicator:"Indicador",value:"Valor",target:"Objectiu",result:"Resultat",yes:"Compleix",no:"No compleix",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Aturades",kind:"Tipus",cause:"Causa",kinds:{machine:"Màquina",external:"Externa",planned:"Planificada"},notes:"Observacions",uph:"u/h",upm:"u/min",validation:"Informe de validació",file:"validacio"},
@@ -7019,7 +7043,7 @@ var RPT={
       time:"Hora",entry1:"entrada",entryN:"entradas",noDate:"Sin fecha",ts:"Fecha y hora",severity:"Gravedad",tag:"Etiqueta",desc:"Descripción",att:"Adjuntos",
       fix:"Cómo ha quedado",edited:"editado",noEntries:"Sin entradas",photos:"Fotos",annex:"Anexo",week:"Semana",notes:"Notas generales",
       sigTech:"Firma del técnico",sigCli:"Firma del cliente / receptor",
-      qty:"CANT.",ref:"REF.",part:"RECAMBIO",ctr:{title:"Contadores de la máquina",read:"Lectura",arr:"Llegada",dep:"Salida",hours:"Horas de máquina",units:"Producto total",date:"Fecha",since:"Desde la visita anterior",during:"Durante la visita",inW:"en",day1:"día",days:"días",perDay:"h/día",perHour:"unidades/h",perMin:"unidades/min",h:"h",u:"unidades",reset:"el contador ha bajado: ¿se ha cambiado o reiniciado?"},incTitle:"Incidencias de esta visita",incWhen:"Cuándo",incWhat:"Incidencia",incState:"Estado",stRes:"Resuelto",stPend:"Pendiente",stClosed:"Cerrado",stRec:"recambio recomendado",prevVisit:"visita anterior",closesPrev:"Cierra un problema de la visita del",resIn:"resuelto en",st:"ESTADO",prio:"PRIORIDAD",pstL:{fit:"Cambiado",urg:"Recomendado · urgente",prev:"Recomendado · preventivo",quo:"Solicitud de cotización"},pst:{fit:"Cambiado",urg:"Urgente",prev:"Preventivo",quo:"Cotización"},partsFit:"Recambios cambiados",partsRec:"Recambios recomendados",recNote:"Urgente: conviene cambiarlo pronto. Preventivo: para tenerlo en stock o cambiarlo en una parada programada.",partsQuo:"Cotización solicitada por el cliente",quoNote:"Recambios de los que el cliente ha pedido el precio y el plazo de entrega aproximado.",setNote:"Un conjunto pedido completo incluye elementos que no aparecen en el plano, como la tornillería.",manualNote:"Los recambios se han pedido sobre la base del manual «{m}»; conviene revisar sus últimas actualizaciones.",photoTag:"[foto]",openDrive:"Abrir en Drive",
+      qty:"CANT.",ref:"REF.",part:"RECAMBIO",ctr:{title:"Contadores de la máquina",read:"Lectura",arr:"Llegada",dep:"Salida",hours:"Horas de máquina",units:"Producto total",date:"Fecha",since:"Desde la visita anterior",during:"Durante la visita",inW:"en",day1:"día",days:"días",perDay:"h/día",perHour:"unidades/h",perMin:"unidades/min",h:"h",u:"unidades",reset:"el contador ha bajado: ¿se ha cambiado o reiniciado?"},incTitle:"Incidencias de esta visita",incWhen:"Cuándo",incWhat:"Incidencia",incState:"Estado",stRes:"Resuelto",stPend:"Pendiente",stClosed:"Cerrado",stRec:"recambio recomendado",prevVisit:"visita anterior",closesPrev:"Cierra un problema de la visita del",resIn:"resuelto en",st:"ESTADO",prio:"PRIORIDAD",pstL:{fit:"Cambiado",urg:"Recomendado · urgente",prev:"Recomendado · preventivo",quo:"Solicitud de cotización"},pst:{fit:"Cambiado",urg:"Urgente",prev:"Preventivo",quo:"Cotización"},partsFit:"Recambios cambiados",partsRec:"Recambios recomendados",recNote:"Urgente: conviene cambiarlo pronto. Preventivo: para tenerlo en stock o cambiarlo en una parada programada.",partsQuo:"Cotización solicitada por el cliente",quoNote:"Recambios de los que el cliente ha pedido el precio y el plazo de entrega aproximado.",setNote:"Un conjunto pedido completo incluye elementos que no aparecen en el plano, como la tornillería.",internTitle:"Informe interno",notesInt:"Notas internas",manualNote:"Los recambios se han pedido sobre la base del manual «{m}»; conviene revisar sus últimas actualizaciones.",photoTag:"[foto]",openDrive:"Abrir en Drive",
       voice:"nota de voz",video:"vídeo",photo:"foto",file:"archivo",
       pre:{report:"informe",parts:"recambios"},
       pt:{title:"Pruebas de producción",period:"Período",units:"Unidades",availS:"Disp.",perfS:"Rend.",qualS:"Cal.",rejS:"Rechazo",resultS:"Resultado",summaryNote:"El detalle de cada prueba —paradas, objetivos y observaciones— está en el informe de validación.",test:"Prueba",product:"Producto / formato",nominal:"Velocidad nominal",start:"Inicio",end:"Final",duration:"Duración",plannedStops:"Paradas planificadas",downtime:"Paradas no planificadas",run:"Tiempo en marcha",total:"Unidades totales",rejects:"Unidades rechazadas",good:"Unidades buenas",speedAvg:"Velocidad media",speedRun:"Velocidad en marcha",avail:"Disponibilidad",perf:"Rendimiento",qual:"Calidad",oee:"OEE",rejPct:"Rechazo",indicator:"Indicador",value:"Valor",target:"Objetivo",result:"Resultado",yes:"Cumple",no:"No cumple",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Paradas",kind:"Tipo",cause:"Causa",kinds:{machine:"Máquina",external:"Externa",planned:"Planificada"},notes:"Observaciones",uph:"u/h",upm:"u/min",validation:"Informe de validación",file:"validacion"},
@@ -7036,7 +7060,7 @@ var RPT={
       time:"Time",entry1:"entry",entryN:"entries",noDate:"No date",ts:"Timestamp",severity:"Severity",tag:"Tag",desc:"Description",att:"Attachments",
       fix:"Outcome",edited:"edited",noEntries:"No entries",photos:"Photos",annex:"Annex",week:"Week",notes:"General notes",
       sigTech:"Technician signature",sigCli:"Client / Recipient signature",
-      qty:"QTY",ref:"REF.",part:"SPARE PART",ctr:{title:"Machine counters",read:"Reading",arr:"Arrival",dep:"Departure",hours:"Machine hours",units:"Total output",date:"Date",since:"Since the previous visit",during:"During the visit",inW:"in",day1:"day",days:"days",perDay:"h/day",perHour:"units/h",perMin:"units/min",h:"h",u:"units",reset:"the counter went down: replaced or reset?"},incTitle:"Issues on this visit",incWhen:"When",incWhat:"Issue",incState:"Status",stRes:"Resolved",stPend:"Open",stClosed:"Closed",stRec:"spare part recommended",prevVisit:"earlier visit",closesPrev:"Closes an issue from the visit of",resIn:"resolved in",st:"STATUS",prio:"PRIORITY",pstL:{fit:"Replaced",urg:"Recommended · urgent",prev:"Recommended · preventive",quo:"Quotation request"},pst:{fit:"Replaced",urg:"Urgent",prev:"Preventive",quo:"Quotation"},partsFit:"Spare parts replaced",partsRec:"Recommended spare parts",recNote:"Urgent: should be replaced soon. Preventive: to keep in stock or replace at a planned stop.",partsQuo:"Quotation requested by the client",quoNote:"Spare parts the client has asked the price and an approximate delivery time for.",setNote:"An assembly ordered as a whole includes items that are not shown on the drawing, such as fasteners.",manualNote:"The spare parts were taken from manual “{m}”; its latest updates should be checked.",photoTag:"[photo]",openDrive:"Open in Drive",
+      qty:"QTY",ref:"REF.",part:"SPARE PART",ctr:{title:"Machine counters",read:"Reading",arr:"Arrival",dep:"Departure",hours:"Machine hours",units:"Total output",date:"Date",since:"Since the previous visit",during:"During the visit",inW:"in",day1:"day",days:"days",perDay:"h/day",perHour:"units/h",perMin:"units/min",h:"h",u:"units",reset:"the counter went down: replaced or reset?"},incTitle:"Issues on this visit",incWhen:"When",incWhat:"Issue",incState:"Status",stRes:"Resolved",stPend:"Open",stClosed:"Closed",stRec:"spare part recommended",prevVisit:"earlier visit",closesPrev:"Closes an issue from the visit of",resIn:"resolved in",st:"STATUS",prio:"PRIORITY",pstL:{fit:"Replaced",urg:"Recommended · urgent",prev:"Recommended · preventive",quo:"Quotation request"},pst:{fit:"Replaced",urg:"Urgent",prev:"Preventive",quo:"Quotation"},partsFit:"Spare parts replaced",partsRec:"Recommended spare parts",recNote:"Urgent: should be replaced soon. Preventive: to keep in stock or replace at a planned stop.",partsQuo:"Quotation requested by the client",quoNote:"Spare parts the client has asked the price and an approximate delivery time for.",setNote:"An assembly ordered as a whole includes items that are not shown on the drawing, such as fasteners.",internTitle:"Internal report",notesInt:"Internal notes",manualNote:"The spare parts were taken from manual “{m}”; its latest updates should be checked.",photoTag:"[photo]",openDrive:"Open in Drive",
       voice:"voice note",video:"video",photo:"photo",file:"file",
       pre:{report:"report",parts:"spare_parts"},
       pt:{title:"Production tests",period:"Period",units:"Units",availS:"Avail.",perfS:"Perf.",qualS:"Qual.",rejS:"Reject",resultS:"Result",summaryNote:"Each test in full — stops, targets and remarks — is in the validation report.",test:"Test",product:"Product / format",nominal:"Nominal speed",start:"Start",end:"End",duration:"Duration",plannedStops:"Planned stops",downtime:"Unplanned stops",run:"Run time",total:"Total units",rejects:"Rejected units",good:"Good units",speedAvg:"Average speed",speedRun:"Running speed",avail:"Availability",perf:"Performance",qual:"Quality",oee:"OEE",rejPct:"Reject rate",indicator:"Indicator",value:"Value",target:"Target",result:"Result",yes:"Met",no:"Not met",pass:"PASSED",fail:"NOT PASSED",stops:"Stops",kind:"Type",cause:"Cause",kinds:{machine:"Machine",external:"External",planned:"Planned"},notes:"Remarks",uph:"u/h",upm:"u/min",validation:"Validation report",file:"validation"},
@@ -7694,6 +7718,11 @@ es:{
   "Dibuixos":"Dibujos",
   "Dades de la visita":"Datos de la visita",
   "Notes generals":"Notas generales",
+  "ÚS INTERN — NO ENVIAR AL CLIENT":"USO INTERNO — NO ENVIAR AL CLIENTE",
+  "🔒 Informe intern (PDF)":"🔒 Informe interno (PDF)",
+  "🔒 Informe intern":"🔒 Informe interno",
+  "Les entrades internes i les notes internes, en un PDF a part. No és per al client.":"Las entradas internas y las notas internas, en un PDF aparte. No es para el cliente.",
+  "Aquesta visita no té cap entrada interna ni cap nota interna.":"Esta visita no tiene ninguna entrada interna ni ninguna nota interna.",
   "Entrada interna: es queda a l'app i no surt a l'informe del client":"Entrada interna: se queda en la app y no sale en el informe del cliente",
   "Aquesta entrada no sortirà a l'informe del client":"Esta entrada no saldrá en el informe del cliente",
   "Notes internes — no surten a l'informe":"Notas internas — no salen en el informe",
@@ -8316,6 +8345,11 @@ en:{
   "Dibuixos":"Drawings",
   "Dades de la visita":"The visit's details",
   "Notes generals":"General notes",
+  "ÚS INTERN — NO ENVIAR AL CLIENT":"INTERNAL USE — DO NOT SEND TO THE CLIENT",
+  "🔒 Informe intern (PDF)":"🔒 Internal report (PDF)",
+  "🔒 Informe intern":"🔒 Internal report",
+  "Les entrades internes i les notes internes, en un PDF a part. No és per al client.":"The internal entries and the internal notes, in a PDF of their own. Not for the client.",
+  "Aquesta visita no té cap entrada interna ni cap nota interna.":"This visit has no internal entries and no internal notes.",
   "Entrada interna: es queda a l'app i no surt a l'informe del client":"Internal entry: stays in the app and never reaches the client's report",
   "Aquesta entrada no sortirà a l'informe del client":"This entry will not appear in the client's report",
   "Notes internes — no surten a l'informe":"Internal notes — not in the report",
@@ -10847,6 +10881,20 @@ async function exportRep(s,fmt){
   // over the frozen sheet without showing what was in it and left no way to
   // redo one from the menu at all.
   if(fmt==="timesheet"){openTimesheet();return}
+  // The internal report asks nothing and translates nothing: it is not handed
+  // over, so it needs no revision of its own and no language but ours. It is
+  // stamped with whichever revision the visit is on, so that it can be read
+  // beside the client's copy of the same day.
+  if(fmt==="internpdf"){
+    if(!hasIntern(s)){alert(uiT("Aquesta visita no té cap entrada interna ni cap nota interna."));return}
+    expBusy("Informe intern…");
+    try{
+      var ib=await buildPdfBlob(s,internLang(),curRev(s),{intern:true});
+      if(!ib){alert(uiT("No s'ha pogut carregar la llibreria PDF. Comprova la connexió."));return}
+      await saveReport(s,ib,internFileName(s,curRev(s)),"application/pdf");
+    }finally{expBusy("")}
+    return;
+  }
   if(fmt==="zip"){openZipPick(s);return}
   if(fmt==="zipdocx"){exportSessionZip(s,"docx");return}
   if(fmt==="xlsx"&&!collectSessionParts(s).length&&!(s.prodTests||[]).length){alert(uiT("Aquesta sessió encara no té recanvis ni proves de producció.\n\nTria els recanvis d'un dibuix o afegeix-los a mà en una entrada."));return}
@@ -12374,9 +12422,13 @@ async function exportPDF(s,R,base){
 // Returns the report as PDF bytes so both the download and the ZIP can use it.
 // opts.validation: the production-test report — same header, data and
 // signatures, but the tests instead of the log, the counters and the photos.
+// opts.intern: the same document built from the internal entries instead —
+// the only place that is ever given anything the client's copy leaves out, and
+// the only builder that takes the flag. The other three filter unconditionally.
 async function buildPdfBlob(s,lang,rev,opts){
-  s=clientCopy(s);
-  var V=!!(opts&&opts.validation),local=!!(opts&&opts.local);
+  var I=!!(opts&&opts.intern);
+  s=I?internCopy(s):clientCopy(s);
+  var V=!!(opts&&opts.validation)&&!I,local=!!(opts&&opts.local);
   var L=await loadPdfLibs();
   if(!L)return null;
   var R=RPT[lang]||RPT.ca;
@@ -12404,11 +12456,22 @@ async function buildPdfBlob(s,lang,rev,opts){
 
   // header
   doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(17,24,39);
-  doc.text(V&&R.pt?R.pt.validation:R.title,M,y+6);
+  doc.text(I?(R.internTitle||"Informe intern"):(V&&R.pt?R.pt.validation:R.title),M,y+6);
   doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(107,114,128);
   doc.text(revLine(R,rev,tl),M,y+12);
   doc.setDrawColor(245,158,11);doc.setLineWidth(0.8);doc.line(M,y+15,W-M,y+15);
   y+=21;
+  // Said on the page, not only in the file name: the one way this document can
+  // go wrong is reaching the client, and then whoever opens it has to see at
+  // once that it was never meant for them.
+  if(I){
+    doc.setFillColor(254,242,242);doc.setDrawColor(220,38,38);doc.setLineWidth(0.3);
+    doc.roundedRect(M,y-4.5,CW,7,1,1,"FD");
+    doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setTextColor(185,28,28);
+    doc.text(uiT("ÚS INTERN — NO ENVIAR AL CLIENT"),M+3,y+0.6);
+    doc.setFont("helvetica","normal");doc.setTextColor(0,0,0);
+    y+=9;
+  }
 
   // the details in three groups (the manual is left out of the validation
   // report: it has nothing to do with a production test)
@@ -12431,7 +12494,7 @@ async function buildPdfBlob(s,lang,rev,opts){
   // and the photos last, as an annex.
   if(s.notes&&String(s.notes).trim()&&!V){
     if(y>H-40){doc.addPage();y=M}
-    y=pdfH2(doc,R.notes,M,y,[245,158,11])+1.4;
+    y=pdfH2(doc,I?(R.notesInt||R.notes):R.notes,M,y,[245,158,11])+1.4;
     pdfFont(doc,ar,s.notes,"normal");doc.setFontSize(8.5);doc.setTextColor(55,65,81);
     var nr=startsRtl(s.notes);
     String(s.notes).trim().split(/\r?\n/).forEach(function(line){
@@ -12722,6 +12785,7 @@ async function buildPdfBlob(s,lang,rev,opts){
   // same empty line as always, for signing the printout. The box is taller when
   // there is ink to sit on the line, so it needs more room before deciding
   // whether the page still fits it.
+  if(!I){
   var gs=revSign(s,rev)||{};
   // Kept small (2026-10-13: "they take up too much of the page"): 14 mm high,
   // at most 45 mm wide — a signature, not an illustration.
@@ -12750,6 +12814,7 @@ async function buildPdfBlob(s,lang,rev,opts){
     if(b[1]){doc.setFontSize(8.5);doc.setTextColor(17,24,39);pdfFont(doc,ar,b[1],"bold");doc.text(b[1],b[3],y+8.2)}
   });
   doc.setFont("helvetica","normal");
+  }
 
   if(!V){
   // photo appendix (shots: gathered before the table)
@@ -12800,6 +12865,11 @@ async function buildPdfBlob(s,lang,rev,opts){
   var n=doc.internal.getNumberOfPages();
   for(var p=1;p<=n;p++){
     doc.setPage(p);doc.setFontSize(7.5);doc.setTextColor(156,163,175);
+    if(I){
+      doc.setFont("helvetica","bold");doc.setTextColor(185,28,28);
+      doc.text(uiT("ÚS INTERN — NO ENVIAR AL CLIENT"),M,H-10);
+      doc.setFont("helvetica","normal");doc.setTextColor(156,163,175);
+    }
     doc.text("ID: "+s.id,M,H-6);
     var lst=licStamp();if(lst)doc.text(lst,W/2,H-6,{align:"center"});
     doc.text(p+" / "+n,W-M,H-6,{align:"right"});
@@ -13519,14 +13589,14 @@ async function collectDriveFiles(token,folderId,pathPrefix,out){
 // do not ask: they always make the whole ZIP.
 var ZP_KEY="fsl_v6_zippick";
 var ZP_ITEMS=[["json","🗃 Dades de la visita (session.json, per poder-la tornar a importar)"],["pdf","📄 Informe PDF"],["docx","📝 Informe Word (.docx)"],["html","🌐 Informe HTML"],["xlsx","📊 Recanvis (Excel)"],
-  ["val","✅ Informe de validació"],["hist","📜 Historial de la màquina (HTML)"],["ts","🕒 Full d'hores"],["media","📷 Fotos, vídeos i notes de veu"],["exp","💶 Tiquets de les despeses"],["revs","🗂 Revisions anteriors"],["manual","📚 Manual de recanvis"]];
+  ["val","✅ Informe de validació"],["intern","🔒 Informe intern"],["hist","📜 Historial de la màquina (HTML)"],["ts","🕒 Full d'hores"],["media","📷 Fotos, vídeos i notes de veu"],["exp","💶 Tiquets de les despeses"],["revs","🗂 Revisions anteriors"],["manual","📚 Manual de recanvis"]];
 // everything ticked the first time, except the machine history: an extra (2026-10-24)
 function zpGet(){var o={};ZP_ITEMS.forEach(function(it){o[it[0]]=it[0]!=="hist"});try{var v=JSON.parse(localStorage.getItem(ZP_KEY)||"null");if(v)Object.keys(o).forEach(function(k){if(k in v)o[k]=!!v[k]})}catch(e){}return o}
 function zpSet(o){try{localStorage.setItem(ZP_KEY,JSON.stringify(o))}catch(e){}}
 var zpSess=null,zpWired=false;
 function openZipPick(s){
   zpSess=s;
-  var o=zpGet(),has={hist:machineSessions(s).length>0,val:!!(s.prodTests||[]).length,ts:!!(s.timesheet&&s.timesheet.rows&&s.timesheet.rows.length),manual:!!(s.manualRef&&s.manualRef.pdfId),xlsx:!!collectSessionParts(s).length,exp:!!(s.expenses||[]).length};
+  var o=zpGet(),has={hist:machineSessions(s).length>0,val:!!(s.prodTests||[]).length,intern:hasIntern(s),ts:!!(s.timesheet&&s.timesheet.rows&&s.timesheet.rows.length),manual:!!(s.manualRef&&s.manualRef.pdfId),xlsx:!!collectSessionParts(s).length,exp:!!(s.expenses||[]).length};
   var row=function(k,l,on,dis,why){return "<label style=\"display:flex;align-items:center;gap:8px;font-size:13px"+(dis?";opacity:.5":"")+"\"><input type=\"checkbox\" data-zp=\""+k+"\""+(on?" checked":"")+(dis?" disabled":"")+">"+l+(why?" <span style=\"color:var(--tx3);font-size:11px\">("+why+")</span>":"")+"</label>"};
   $$("zipPickList").innerHTML=ZP_ITEMS.map(function(it){var k=it[0],no=(k in has)&&!has[k];return row(k,it[1],o[k]&&!no,no,no?"no n'hi ha":"")}).join("");
   function note(){
@@ -13609,6 +13679,9 @@ async function exportSessionZip(s,kind,pick){
       if(want("pdf")){var pdfBlob=await buildPdfBlob(R.s,R.lang,R.rev,{local:true}); if(pdfBlob)zip.file(P.report+"_"+base+".pdf",pdfBlob)}
       if(want("xlsx")){var xlsxBlob=await buildXlsxBlob(R.s,R.lang,R.rev); if(xlsxBlob)zip.file(P.parts+"_"+base+".xlsx",xlsxBlob)}
       if(want("val")&&(R.s.prodTests||[]).length){var valBlob=await buildPdfBlob(R.s,R.lang,R.rev,{validation:true});if(valBlob)zip.file(RPT[R.lang].pt.file+"_"+base+".pdf",valBlob)}
+      // From `s`, not `R.s`: the internal entries keep the words they were
+      // typed in, and this document is never translated for anybody.
+      if(want("intern")&&hasIntern(s)){var inBlob=await buildPdfBlob(s,internLang(),R.rev,{intern:true});if(inBlob)zip.file(internFileName(s,R.rev),inBlob)}
       // only when ticked: archiving (no pick) keeps the ZIP it always made
       if(pick&&pick.hist){expBusy("Historial…");var hi=await buildHistoryHTML(s,R.lang);if(hi)zip.file(hi.name,hi.blob)}
       // The sheet has its own language and its own words: same treatment here

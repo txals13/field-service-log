@@ -1616,7 +1616,8 @@ function internFileName(s,rev){
 // in by hand, and then there is nothing to point at.
 function manualNoteOf(s,R){
   var ref=s&&s.manualRef,base=ref&&(ref.base||ref.pdfName||ref.serial);
-  return base?R.manualNote.replace("{m}",base):"";
+  if(!base||!collectSessionParts(s).length)return "";
+  return R.manualNote.replace("{m}",base);
 }
 // A conjunt asked for whole (set:true) is ONE line with its name and
 // reference, and what arrives is the assembly as the maker builds it: the
@@ -1639,7 +1640,8 @@ function partsNotes(s,R){
 // The two lists under the entries, summed by reference: replaced on this visit,
 // and recommended (urgent first) — the client's copy of what we advise.
 function partsSummaryHTML(s,R){
-  var S=partsSummary(s);if(!S.fit.length&&!S.rec.length&&!S.quo.length)return "";
+  var S=partsSummary(s),N=partsNotes(s,R);
+  if(!S.fit.length&&!S.rec.length&&!S.quo.length&&!N.length)return "";
   var td="padding:5px 6px;border:1px solid #e5e7eb;font-size:12px";
   function block(title,col,list,prio,note){
     var head=(prio?[R.prio]:[]).concat([R.qty,R.ref,R.part]);
@@ -1657,7 +1659,7 @@ function partsSummaryHTML(s,R){
   return (S.fit.length?block(R.partsFit,PST_HEX.fit,S.fit,false,""):"")
     +(S.rec.length?block(R.partsRec,PST_HEX.urg,S.rec,true,R.recNote):"")
     +(S.quo.length?block(R.partsQuo,PST_HEX.quo,S.quo,false,R.quoNote):"")
-    +partsNotes(s,R).map(function(n){
+    +N.map(function(n){
       return "<div style=\"font-size:11px;color:#6b7280;margin-top:8px\">"+esc(n)+"</div>";
     }).join("");
 }
@@ -7033,7 +7035,7 @@ var RPT={
       types:{commissioning:"Posada en marxa",maintenance:"Manteniment",retrofit:"Millora / Retrofit",production:"Prova de producció"},
       sev:{info:"INFO",ok:"OK",warning:"AVÍS",issue:"PROBLEMA"},
       client:"Client",contact:"Persona de contacte",project:"Número de projecte",machine:"Màquina / Equip",machineNo:"Núm. de màquina / equip",phone:"Telèfon",email:"Correu electrònic",year:"Any de fabricació",gClient:"Client",gEquip:"Equip",gVisit:"Visita",location:"Ubicació",tech:"Tècnic",
-      start:"Inici",status:"Estat",manual:"Manual",open:"Oberta",closed:"Tancada",
+      start:"Inici",status:"Estat",open:"Oberta",closed:"Tancada",
       issues:"Problemes",warnings:"Avisos",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resolt",resN:"resolts",resolved:"Resolts",
       time:"Hora",entry1:"entrada",entryN:"entrades",noDate:"Sense data",ts:"Data i hora",severity:"Gravetat",tag:"Etiqueta",desc:"Descripció",att:"Adjunts",
       fix:"Com ha quedat",edited:"editat",noEntries:"Sense entrades",photos:"Fotos",annex:"Annex",week:"Setmana",notes:"Notes generals",
@@ -7050,7 +7052,7 @@ var RPT={
       types:{commissioning:"Puesta en marcha",maintenance:"Mantenimiento",retrofit:"Mejora / Retrofit",production:"Prueba de producción"},
       sev:{info:"INFO",ok:"OK",warning:"AVISO",issue:"PROBLEMA"},
       client:"Cliente",contact:"Persona de contacto",project:"Número de proyecto",machine:"Máquina / Equipo",machineNo:"N.º de máquina / equipo",phone:"Teléfono",email:"Correo electrónico",year:"Año de fabricación",gClient:"Cliente",gEquip:"Equipo",gVisit:"Visita",location:"Ubicación",tech:"Técnico",
-      start:"Inicio",status:"Estado",manual:"Manual",open:"Abierta",closed:"Cerrada",
+      start:"Inicio",status:"Estado",open:"Abierta",closed:"Cerrada",
       issues:"Problemas",warnings:"Avisos",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resuelto",resN:"resueltos",resolved:"Resueltos",
       time:"Hora",entry1:"entrada",entryN:"entradas",noDate:"Sin fecha",ts:"Fecha y hora",severity:"Gravedad",tag:"Etiqueta",desc:"Descripción",att:"Adjuntos",
       fix:"Cómo ha quedado",edited:"editado",noEntries:"Sin entradas",photos:"Fotos",annex:"Anexo",week:"Semana",notes:"Notas generales",
@@ -7067,7 +7069,7 @@ var RPT={
       types:{commissioning:"Commissioning",maintenance:"Maintenance",retrofit:"Upgrade / Retrofit",production:"Production test"},
       sev:{info:"INFO",ok:"OK",warning:"WARNING",issue:"ISSUE"},
       client:"Client",contact:"Contact",project:"Project Number",machine:"Machine / Equipment",machineNo:"Machine / equipment no.",phone:"Phone",email:"Email",year:"Year of manufacture",gClient:"Client",gEquip:"Equipment",gVisit:"Visit",location:"Location",tech:"Technician",
-      start:"Start",status:"Status",manual:"Manual",open:"Open",closed:"Closed",
+      start:"Start",status:"Status",open:"Open",closed:"Closed",
       issues:"Issues",warnings:"Warnings",ok:"OK",total:"Total",revLbl:"Rev.",res1:"resolved",resN:"resolved",resolved:"Resolved",
       time:"Time",entry1:"entry",entryN:"entries",noDate:"No date",ts:"Timestamp",severity:"Severity",tag:"Tag",desc:"Description",att:"Attachments",
       fix:"Outcome",edited:"edited",noEntries:"No entries",photos:"Photos",annex:"Annex",week:"Week",notes:"General notes",
@@ -10644,7 +10646,8 @@ function pdfIncSection(doc,s,R,lang,y,M,CW,H,ar){
   return doc.lastAutoTable.finalY+7;
 }
 function pdfPartsSection(doc,s,R,y,M,CW,H,ar){
-  var S=partsSummary(s);if(!S.fit.length&&!S.rec.length&&!S.quo.length)return y;
+  var S=partsSummary(s),N=partsNotes(s,R);
+  if(!S.fit.length&&!S.rec.length&&!S.quo.length&&!N.length)return y;
   function block(title,st,list,prio,note){
     if(y>H-40){doc.addPage();y=M}
     var c=PST_RGB[st],o=prio?1:0,cs={};
@@ -10673,7 +10676,7 @@ function pdfPartsSection(doc,s,R,y,M,CW,H,ar){
   if(S.fit.length)block(R.partsFit,"fit",S.fit,false,"");
   if(S.rec.length)block(R.partsRec,"urg",S.rec,true,R.recNote);
   if(S.quo.length)block(R.partsQuo,"quo",S.quo,false,R.quoNote);
-  partsNotes(s,R).forEach(function(n){
+  N.forEach(function(n){
     if(y>H-30){doc.addPage();y=M}
     doc.setFont("helvetica","italic");doc.setFontSize(7.5);doc.setTextColor(107,114,128);
     doc.splitTextToSize(n,CW).forEach(function(l){doc.text(l,M,y);y+=3.5});
@@ -10810,7 +10813,7 @@ function buildReportHTML(s,forPrint,lang,rev,opts){
     +"<h1>"+esc(R.title)+"</h1>"
     +"<div style=\"color:#6b7280;font-size:13px\">"+esc(revLine(R,rev,tl))+"</div></div>"
     // the details in three groups: client, equipment, visit
-    +"<div class=\"meta\">"+reportMetaGroups(s,R,false).map(function(g){
+    +"<div class=\"meta\">"+reportMetaGroups(s,R).map(function(g){
       return "<div><div class=\"mg\">"+esc(g.t)+"</div>"
         +g.rows.map(function(p){return "<div class=\"ml\">"+esc(p[0])+"</div><div class=\"mv\">"+(p[2]?"<a href=\""+esc(p[2])+"\" style=\"color:inherit\">"+esc(p[1])+"</a>":esc(p[1]))+"</div>"}).join("")+"</div>";
     }).join("")+"</div>"
@@ -12273,16 +12276,20 @@ function pdfFont(doc,ar,txt,style){
 // field for its number; reorganise the title area if it suits." Client,
 // Equipment and Visit side by side, label over value — so each group reads
 // on its own and a long address or machine name wraps in its own column. The
-// number, the year and the manual only show when there is one.
-function reportMetaGroups(s,R,V){
+// number and the year only show when there is one.
+//
+// The manual is NOT here (2026-11-07): its file name is long enough to cost
+// the narrow columns a line, and the header is for identifying the visit. It
+// belongs next to the parts, in the reminder that already says which manual
+// they were read against and that its version should be checked.
+function reportMetaGroups(s,R){
   function opt(l,v){return v?[[l,String(v)]]:[]}
   return [
     {t:R.gClient||"Client",rows:[[R.client,s.client||"—"],[R.contact,contactLine(s)||"—"]]
       .concat(s.contactPhone?[[R.phone||"Phone",String(s.contactPhone),"tel:"+String(s.contactPhone).replace(/[^\d+]/g,"")]]:[],
               s.contactEmail?[[R.email||"Email",String(s.contactEmail),"mailto:"+String(s.contactEmail)]]:[],
               [[R.location,s.location||"—"]])},
-    {t:R.gEquip||"Equipment",rows:[[R.machine,s.machine||"—"]].concat(opt(R.machineNo,s.machineNo),opt(R.year,s.year),
-      V?[]:opt(R.manual,s.manualRef&&(s.manualRef.base||s.manualRef.serial)))},
+    {t:R.gEquip||"Equipment",rows:[[R.machine,s.machine||"—"]].concat(opt(R.machineNo,s.machineNo),opt(R.year,s.year))},
     {t:R.gVisit||"Visit",rows:[[R.project,s.project||"—"],[R.tech,s.tech||"—"],[R.start,fts(s.createdAt)],[R.status,s.status==="open"?R.open:R.closed]]}
   ];
 }
@@ -12491,9 +12498,8 @@ async function buildPdfBlob(s,lang,rev,opts){
     y+=9;
   }
 
-  // the details in three groups (the manual is left out of the validation
-  // report: it has nothing to do with a production test)
-  y=pdfMetaGroups(doc,reportMetaGroups(s,R,V),M,CW,y,ar);
+  // the details in three groups
+  y=pdfMetaGroups(doc,reportMetaGroups(s,R),M,CW,y,ar);
 
   if(!V){
   // counters
@@ -13009,7 +13015,7 @@ async function buildXlsxBlob(s,lang,rev){
   // Sheet 3 — who/what/when this list belongs to
   var info=[[R.client,s.client||""],[R.contact,contactLine(s)]].concat(s.contactPhone?[[R.phone,s.contactPhone]]:[],s.contactEmail?[[R.email,s.contactEmail]]:[]).concat([[C.project,s.project||""],[R.machine,s.machine||""]].concat(s.machineNo?[[R.machineNo,s.machineNo]]:[],s.year?[[R.year,s.year]]:[],[[R.location,s.location||""],
             [R.tech,s.tech||""],[C.type,R.types[s.type]||R.types.commissioning],[R.start,fts(s.createdAt)],
-            [R.status,s.status==="open"?R.open:R.closed],[R.manual,(s.manualRef&&(s.manualRef.base||s.manualRef.serial))||""],
+            [R.status,s.status==="open"?R.open:R.closed],
             [R.revLbl,rev?("0"+rev.n).slice(-2)+" · "+dmy(rev.date):""],
             [C.gen,fts(new Date().toISOString())],[C.lines,items.length],[C.refs,summarizeParts(items).length]]));
   (function(){var cc=s.counters||{},K=R.ctr;if(!K)return;
@@ -13267,7 +13273,7 @@ async function buildDocxDocument(D,s,lang,rev,opts){
   var mGap=6,mCol=(CW-mGap*2)/3,metaCols=[mCol+mGap,mCol+mGap,mCol].map(tw);
   var metaTable=new D.Table({width:{size:tw(CW),type:D.WidthType.DXA},columnWidths:metaCols,
     layout:D.TableLayoutType.FIXED,borders:{top:NONE,bottom:NONE,left:NONE,right:NONE,insideHorizontal:NONE,insideVertical:NONE},
-    rows:[new D.TableRow({children:reportMetaGroups(s,R,false).map(function(g,gi){
+    rows:[new D.TableRow({children:reportMetaGroups(s,R).map(function(g,gi){
       var ch=[P({spacing:{after:60},border:{bottom:{style:D.BorderStyle.SINGLE,size:4,color:"F59E0B",space:1}},
         children:[T({text:String(g.t).toUpperCase(),bold:true,size:hp(7.5),font:"Arial",color:"B45309"})]})];
       g.rows.forEach(function(p){

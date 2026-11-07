@@ -54,7 +54,7 @@
 <header>
   <div class="logo">⚙ Field Service Log</div>
   <h1>Manual d'ús</h1>
-  <p class="sub">Com fer servir l'aplicació, de la primera entrada fins a l'arxiu. Actualitzat el 4 d'octubre de 2026.</p>
+  <p class="sub">Com fer servir l'aplicació, de la primera entrada fins a l'arxiu. Actualitzat el 7 de novembre de 2026.</p>
 </header>
 
 <nav class="toc">
@@ -163,8 +163,13 @@
 <h3>Corregir el text</h3>
 <p><span class="btn">✓</span> corregeix l'ortografia i la gramàtica de la descripció; tornar-lo a prémer desfà la correcció. No toca el que va entre cometes ni les referències. Mai es fa sol: només quan el prems.</p>
 
+<h3>Entrades internes</h3>
+<p>El botó <span class="btn">🔒</span> de la fila de botons marca l'entrada que estàs escrivint com a <strong>interna</strong>: es queda a l'app, al ZIP del projecte i a l'historial de la màquina, però <strong>no surt enlloc de l'informe del client</strong> &mdash; ni la seva fila, ni els seus recanvis, ni les seves fotos, i no compta als comptadors de problemes, avisos, resolts i OK de dalt.</p>
+<p>És per al que no es pot dir al client i la propera visita ha de saber: que la peça la va muntar malament un altre, que el client no vol pagar la reparació de fons, que la màquina treballa fora d'especificació des de fa mesos.</p>
+<p>Mentre està armat, el botó queda marcat i a sobre del quadre surt un avís en groc, <strong>«🔒 Aquesta entrada no sortirà a l'informe del client»</strong>. S'arma <strong>només per a l'entrada següent</strong>: en afegir-la es desarma tot sol. És a propòsit &mdash; un interruptor oblidat deixaria entrades fora de l'informe sense que te n'adonessis. A la llista, una entrada interna porta l'etiqueta <strong>🔒 INTERN</strong> i una ratlla discontínua a l'esquerra.</p>
 <h3>Notes generals</h3>
 <p>Sota el quadre hi ha «Notes generals d'aquesta sessió», amb el seu propi <span class="btn">✓ Corregeix</span>. Surten a l'informe.</p>
+<p>A sota hi ha les <strong>«🔒 Notes internes &mdash; no surten a l'informe»</strong>, un camp a part que cap informe del client no llegeix. Hi va el que abans o no s'escrivia, o s'escrivia suau a les notes generals, que les llegeix el client.</p>
 <p><span class="btn">✨ Resum per dies</span> proposa un resum de la visita amb una línia per a cada dia, feta a partir de les entrades d'aquell dia (i de les proves de producció). Cada línia comença amb la data, per exemple <code>12/10/2026: Canvi del rodament del motor, provat i correcte.</code> Les línies van a dalt de tot de les notes i el que ja hi havies escrit es queda a sota. Pots retocar el text com vulguis. Tornar-lo a prémer just després desfà el resum. Si el tornes a fer més endavant, substitueix les línies dels mateixos dies i no toca la resta. Fa servir la mateixa clau de Gemini que el corrector.</p>
 
 <h3>Buscar dins la visita</h3>
@@ -178,6 +183,7 @@
   <li><strong>Canviar la data i l'hora</strong>, i arrodonir-les amb <span class="btn">:05</span>, <span class="btn">:15</span> o <span class="btn">:00</span> (als 5 minuts, al quart o a l'hora en punt més propers). Mai s'arrodoneix sol. Una hora posada a mà mana sobre la de la foto.</li>
   <li>Afegir o treure fotos, vídeos i notes de veu, i canviar-los el nom. El nom nou també es canvia a Drive. Un fitxer tret va a la paperera de Drive.</li>
   <li>Afegir recanvis (vegeu <a href="#recanvis">recanvis</a>).</li>
+  <li><strong>Visibilitat</strong>: la casella «🔒 Entrada interna» marca o desmarca una entrada ja escrita.</li>
 </ul>
 
 <h3>Com ha quedat: tancar un problema</h3>
@@ -201,21 +207,24 @@
 </ul>
 <h3>Un conjunt sencer</h3>
 <p>Cada dibuix del manual és un conjunt amb nom i referència pròpia (per exemple <em>Motorización · ZO-266-00</em>). Quan tries des del dibuix, a sota de l'avís groc hi ha <span class="btn">📦 Conjunt sencer: …</span> amb el conjunt de la pàgina que tens a la pantalla, i, si en té, també el conjunt gran al qual pertany. En tocar-lo, s'afegeix <strong>com una sola línia</strong>: quantitat 1, la referència i el nom, sense la llista de peces. Tries si és canviat o recomanat com amb qualsevol recanvi, i surt igual a l'informe, a l'Excel i a l'historial. A l'app el reconeixes per la icona 📦.</p>
+<p>Quan la visita demana algun conjunt sencer, sota les llistes de recanvis de l'informe s'hi afegeix l'avís <em>«Un conjunt demanat sencer inclou elements que no apareixen al dibuix, com la tornilleria.»</em> &mdash; el que arriba és el conjunt tal com el munta el fabricant, i la tornilleria i les juntes que el formen no tenen número propi al dibuix: llegir el dibuix no és llegir el que es rebrà. Surt als quatre formats i, a l'Excel, al full de la sessió. Un conjunt marcat de només informatiu no el fa sortir, perquè no s'ha demanat.</p>
 <p>Amb <span class="btn">📐 Insereix un recanvi des del dibuix</span>, el mateix botó escriu el nom i la referència del conjunt a la descripció.</p>
-<h3>Canviat o recomanat</h3>
+<h3>Canviat, recomanat o només informatiu</h3>
 <p>Cada recanvi té un estat:</p>
 <ul>
   <li><span class="btn">🔧 Canviat</span>: l'has canviat en aquesta visita.</li>
   <li><span class="btn">⚠ Urgent</span>: el recomanes, i convé canviar-lo aviat.</li>
   <li><span class="btn">📋 Preventiu</span>: el recomanes com a preventiu, per tenir-ne en estoc o canviar-lo en una parada programada.</li>
   <li><span class="btn">💬 Cotització</span>: el client en demana el preu. No és una recomanació teva: va a part.</li>
+  <li><span class="btn">ℹ Informatiu</span>: <strong>no el demanes a ningú</strong>. Només dius de quin recanvi parles: que el passador que es veu gastat és aquest, que el rodament que has comprovat és aquell. Queda dins de l'entrada amb la seva referència i el globus es pinta al dibuix igual que els altres, però no entra a cap llista de l'informe, a cap full de comanda de l'Excel ni a l'historial de la màquina.</li>
 </ul>
-<p>Quan tries des del dibuix, aquests quatre botons substitueixen «Afegeix»: un sol toc l'afegeix i diu què és. El darrer que has fet servir queda marcat, i <kbd>Enter</kbd> el repeteix. Al formulari de <span class="btn">🔧 Afegeix un recanvi</span> hi ha el mateix selector. Per canviar-ho després, edita l'entrada: cada recanvi té el seu selector al costat.</p>
+<p>Quan tries des del dibuix, aquests cinc botons substitueixen «Afegeix»: un sol toc l'afegeix i diu què és. <span class="btn">ℹ Informatiu</span> va <strong>l'últim i separat</strong> dels altres quatre, i és gris: els altres quatre colors volen dir que algú ha d'actuar, i aquest no demana res. El darrer que has fet servir queda marcat, i <kbd>Enter</kbd> el repeteix. Al formulari de <span class="btn">🔧 Afegeix un recanvi</span> hi ha el mateix selector, on surt com a «ℹ Només informatiu». Per canviar-ho després, edita l'entrada: cada recanvi té el seu selector al costat.</p>
 <p>Els recanvis que ja tenies d'abans compten com a canviats.</p>
 <h3>On surten</h3>
 <ul>
-  <li><strong>A l'informe</strong> (PDF, Word i HTML): dins de cada entrada, la taula de recanvis té la columna <em>Estat</em>, amb el nom curt i en color (Canviat, Urgent, Preventiu, Cotització) perquè el nom del recanvi hi càpiga sencer. Després de les entrades hi ha els resums sumats per referència: <strong>Recanvis canviats</strong>, <strong>Recanvis recomanats</strong> (amb la prioritat i els urgents primer) i <strong>Cotització demanada pel client</strong>. El client en té així la còpia de les recomanacions i del que ha demanat.</li>
-  <li><strong>A l'Excel de recanvis</strong>: el full <em>Recomanats</em> (prioritat, quantitat, referència i denominació) és el que s'envia a l'empresa per cotitzar. El full <em>Cotització</em> té els recanvis dels quals el client ha demanat el preu. També hi ha el full <em>Canviats</em>, i el <em>Detall</em> té la columna <em>Estat</em>.</li>
+  <li><strong>A l'informe</strong> (PDF, Word i HTML): dins de cada entrada, la taula de recanvis té la columna <em>Estat</em>, amb el nom curt i en color (Canviat, Urgent, Preventiu, Cotització, Informatiu) perquè el nom del recanvi hi càpiga sencer. Després de les entrades hi ha els resums sumats per referència: <strong>Recanvis canviats</strong>, <strong>Recanvis recomanats</strong> (amb la prioritat i els urgents primer) i <strong>Cotització demanada pel client</strong>. El client en té així la còpia de les recomanacions i del que ha demanat. <strong>Els informatius no surten a cap d'aquests tres resums</strong>: només dins de la seva entrada.</li>
+  <li><strong>A l'Excel de recanvis</strong>: el full <em>Recomanats</em> (prioritat, quantitat, referència i denominació) és el que s'envia a l'empresa per cotitzar. El full <em>Cotització</em> té els recanvis dels quals el client ha demanat el preu. També hi ha el full <em>Canviats</em>, i el <em>Detall</em> té la columna <em>Estat</em>. Els informatius només són al <em>Detall</em>, perquè els altres fulls són fulls de comanda.</li>
+  <li><strong>Al final de les llistes</strong> hi van els recordatoris que toquin: el del <a href="#recanvis">conjunt sencer</a> i el del manual, que diu sobre quin manual s'han demanat els recanvis i que convé revisar-ne les últimes actualitzacions. El nom del manual surt aquí i no a la capçalera de l'informe.</li>
   <li><strong>A l'historial de la màquina</strong>: vegeu <a href="#historial">historial</a>.</li>
 </ul>
 
@@ -241,10 +250,11 @@
   <tr><td>📄 HTML</td><td>Es pot obrir a qualsevol navegador. Com el PDF: els noms dels fitxers a cada entrada i les fotos en gran al final.</td></tr>
   <tr><td>📊 Recanvis (Excel)</td><td>Els recanvis de la visita: un full de recomanats per cotitzar, un de canviats, el detall i les dades de la sessió.</td></tr>
   <tr><td>🧾 Full d'hores…</td><td>Obre el full d'hores per signar (vegeu <a href="#hores">full d'hores</a>).</td></tr>
+  <tr><td>🔒 Informe intern (PDF)</td><td>Les entrades internes i les notes internes, en un PDF a part. <strong>No és per al client.</strong> Només surt al menú si la visita té alguna cosa interna.</td></tr>
   <tr><td>🗄 ZIP del projecte (arxiu)</td><td>Tot: tots els informes, totes les revisions anteriors, les fotos, els vídeos, les notes de veu i les dades de la visita. <strong>És l'única còpia que es pot tornar a importar.</strong> Cada foto, vídeo o nota de veu de la visita hi entra encara que ja no sigui a la carpeta (l'app el busca a Drive, també a la paperera). Si en falta algun que ja no es pot trobar, l'app avisa amb el nom del fitxer: no esborris la visita fins que el tinguis.</td></tr>
   <tr><td>📦 ZIP Word + multimèdia</td><td>L'informe Word amb tots els fitxers, per lliurar. No es pot tornar a importar.</td></tr>
 </table></div>
-<p><strong>Triar què va al ZIP del projecte.</strong> Quan l'exportes des del menú, primer surt una llista per marcar què hi vols: informe PDF, Word, HTML, Excel de recanvis, informe de validació, historial de la màquina, full d'hores, fotos, vídeos i notes de veu, tiquets de les despeses, revisions anteriors i manual de recanvis. Les <strong>dades de la visita</strong> (<code>session.json</code>) també es poden treure: és el que permet tornar a importar la visita, però a qui li envies el ZIP (l'empresa, el client) no li cal. Surten marcades per defecte, menys l'<strong>historial de la màquina</strong>, que és opcional (vegeu <a href="#historial">Historial de la màquina</a>). El que la visita no té surt en gris. L'app recorda l'última tria. Si treus les dades de la visita, la multimèdia, els tiquets de les despeses o les revisions anteriors, el ZIP no compta com a còpia completa per esborrar la visita, perquè això no es pot refer (i sense les dades, a més, no es pot tornar a importar). Quan arxives visites o fas el ZIP des de la finestra d'esborrar, no pregunta: el ZIP va sencer.</p>
+<p><strong>Triar què va al ZIP del projecte.</strong> Quan l'exportes des del menú, primer surt una llista per marcar què hi vols: informe PDF, Word, HTML, Excel de recanvis, informe de validació, informe intern, historial de la màquina, full d'hores, fotos, vídeos i notes de veu, tiquets de les despeses, revisions anteriors i manual de recanvis. Les <strong>dades de la visita</strong> (<code>session.json</code>) també es poden treure: és el que permet tornar a importar la visita, però a qui li envies el ZIP (l'empresa, el client) no li cal. Surten marcades per defecte, menys l'<strong>historial de la màquina</strong>, que és opcional (vegeu <a href="#historial">Historial de la màquina</a>). El que la visita no té surt en gris. L'app recorda l'última tria. Si treus les dades de la visita, la multimèdia, els tiquets de les despeses o les revisions anteriors, el ZIP no compta com a còpia completa per esborrar la visita, perquè això no es pot refer (i sense les dades, a més, no es pot tornar a importar). Quan arxives visites o fas el ZIP des de la finestra d'esborrar, no pregunta: el ZIP va sencer.</p>
 <p><strong>L'ordre de l'informe</strong>, igual al PDF, al Word i a l'HTML: les dades de la visita, els comptadors de la màquina, les <strong>notes generals</strong> (el resum de la visita, amb una línia per dia si fas servir ✨ Resum per dies), les incidències, el registre per dies, els recanvis canviats i recomanats, les proves de producció i les signatures. Les fotos grans van al final, com a annex, en una pàgina a part.</p>
 <p><strong>Incidències d'aquesta visita.</strong> Sota els comptadors, una taula petita amb tots els problemes i avisos de la visita: la gravetat, quan, què era i com ha quedat («Resolt» amb la data i l'hora, o «Pendent», amb «recanvi recomanat» si n'hi ha). També hi surten els problemes de visites anteriors que s'han tancat en aquesta. Si la visita no té ni problemes ni avisos, la taula no hi surt.</p>
 <p><strong>Al registre</strong>, el bloc «Com ha quedat» d'una incidència resolta diu també quant va trigar a resoldre's («resolt en 2 h 28 min»). Una entrada que tanca un problema d'una visita anterior porta un requadre gris amb aquell problema: la data i el projecte de la visita, la gravetat i el text com es va escriure (traduït, si l'informe va en un altre idioma).</p>
@@ -262,6 +272,12 @@
   <li><strong>Els informes que exportes des de l'app</strong> (els que van a la carpeta de la visita): l'obren a <strong>Drive</strong>, des de qualsevol lloc (ordinador, mòbil, Drive al web).</li>
   <li><strong>Els informes de dins del ZIP del projecte</strong>: l'obren de <strong>la mateixa carpeta</strong>, a <code>photos/</code>, <code>videos/</code> o <code>audio/</code>, al costat de l'informe. Així l'arxiu es pot revisar <strong>sense connexió</strong>, i continua funcionant quan la visita ja s'ha esborrat de Drive. Descomprimeix el ZIP abans d'obrir l'informe. Amb el PDF, ho fa Adobe Acrobat Reader (i la majoria de visors d'escriptori), després de preguntar-t'ho; el visor de PDF de Chrome i Edge no obre fitxers des d'un PDF, i en aquest cas val més l'HTML o el Word.</li>
 </ul>
+
+<h3>L'informe intern</h3>
+<p><span class="btn">↓ Informe › 🔒 Informe intern (PDF)</span> és un sol PDF amb <strong>totes les entrades marcades d'internes i les notes internes</strong>, per passar-ho a algú: al company que hi anirà la propera vegada, al cap. El fa el mateix constructor que l'informe del client, amb les entrades internes a dins i les notes internes fent de notes generals. No hi van les proves de producció, que són cosa del client, ni les signatures, perquè no és un document que ningú signi. Només surt al menú quan la visita té alguna entrada interna o alguna nota interna.</p>
+<p><strong>No es tradueix mai</strong>: va en l'idioma de l'app. No el llegeix ningú de fora, i així tampoc no viatja cap text cap al model de traducció.</p>
+<p>L'única manera que té aquest document de sortir malament és arribar al client, i per això ho diu tres vegades: el fitxer es diu <code>INTERN_…</code>, la primera pàgina porta una franja vermella <strong>«ÚS INTERN &mdash; NO ENVIAR AL CLIENT»</strong> i la mateixa línia vermella es repeteix al peu de cada full.</p>
+<p>Al <strong>ZIP del projecte</strong> hi va marcat de sèrie, perquè el ZIP del projecte és documentació interna. Al <strong>ZIP Word + multimèdia</strong>, que és el que es lliura, no hi entra.</p>
 
 <h3>Els noms dels fitxers</h3>
 <p>Porten el client, el número de projecte i la màquina, la revisió i l'idioma. Per exemple:</p>
@@ -287,7 +303,7 @@
 <h3>Revisar i signar l'informe o el full d'hores</h3>
 <p><span class="btn">Revisa i signa</span> és la primera opció de <span class="btn">↓ Informe</span> (i, al disseny nou, la primera de la llista). Si la visita té full d'hores, primer tries quin document vols: <strong>📄 Informe</strong> o <strong>🕒 Full d'hores</strong> (al costat de cada un diu si ja està signat). Si no en té, s'obre directament l'informe.</p>
 <ul>
-  <li><strong>Informe:</strong> surt sencer a pantalla, en l'idioma del client, tal com el rebrà, per ensenyar-l'hi i explicar-l'hi. Els noms de les fotos et porten a la foto gran del final.</li>
+  <li><strong>Informe:</strong> surt sencer a pantalla, en l'idioma del client, tal com el rebrà, per ensenyar-l'hi i explicar-l'hi. Els noms de les fotos et porten a la foto gran del final. Si la visita té <a href="#registre">entrades internes</a>, a dalt diu quantes queden fora d'aquest informe i si alguna porta recanvis, que marxen amb ella: abans de signar has de saber què no hi ha.</li>
   <li><strong>Full d'hores:</strong> surt tal com sortirà en PDF, amb la data de signatura, que es posa sola el dia que es signa. El full es continua podent signar també des del seu formulari, com sempre.</li>
 </ul>
 <p>Al final hi ha els dos requadres per signar amb el dit o el llapis: tècnic i client. El nom del client ja ve posat amb la persona de contacte, i el pots canviar. Quan acabeu:</p>
@@ -362,7 +378,7 @@
 <h3>Als documents</h3>
 <ul>
   <li><strong>Dins de l'informe</strong> de la visita (PDF, Word i HTML), un <strong>resum compacte</strong>: una fila per prova amb el producte, el període, les unitats, el rebuig, la disponibilitat, el rendiment, la qualitat, l'OEE i el resultat. A l'Excel hi ha un full amb una fila per prova i un altre amb les aturades.</li>
-  <li><strong>Informe de validació</strong> (PDF): <span class="btn">↓ Informe › 📈 Informe de validació</span>, o el botó de la llista de proves. Porta les dades de la visita (sense el manual de recanvis, que aquí no hi pinta res), el full complet de cada prova (dades, indicadors amb objectius, aturades i observacions) i les signatures; no hi surt el registre d'incidències. També va dins del ZIP del projecte.</li>
+  <li><strong>Informe de validació</strong> (PDF): <span class="btn">↓ Informe › 📈 Informe de validació</span>, o el botó de la llista de proves. Porta les dades de la visita, el full complet de cada prova (dades, indicadors amb objectius, aturades i observacions) i les signatures; no hi surt el registre d'incidències. També va dins del ZIP del projecte.</li>
 </ul>
 <p>El nom de les proves, les causes i les observacions surten tal com les escrius: no es tradueixen.</p>
 
@@ -455,10 +471,11 @@ P-2026-171 Taxi - VTC (2) comprovant.jpg</pre>
   <li><strong>El resum de dalt</strong>: quantes visites hi ha hagut, quantes incidències queden obertes, quantes s'han resolt i quants recanvis urgents falten per canviar.</li>
   <li><strong>⚠ Què queda obert</strong>: els problemes i avisos de totes les visites (també l'actual) que encara no s'han resolt, del més antic al més nou, amb la data, el projecte i quant fa que estan oberts. Si fa més de tres mesos, surt en vermell.</li>
   <li><strong>Visites</strong>: una línia de temps, de la més nova a la més antiga. El punt és daurat per a la visita actual, taronja si la visita encara té alguna cosa oberta i gris si no. Cada fitxa té les dates, el tipus, el projecte i la revisió i, a sota, les incidències d'aquella visita amb el seu estat: <span class="sev-ok">✓ Resolt</span>, <span class="sev-ok">✓ Tancat el…</span> (amb el projecte de la visita que el va tancar) o <span class="sev-w">⚠ Pendent</span>. També hi surten els problemes de visites anteriors que s'hi van tancar. Una visita sense incidències diu «✓ tot OK». Tocar una fitxa obre aquella visita.</li>
-  <li><strong>Recanvis muntats</strong>: tots els recanvis canviats a la màquina, del més recent al més antic. Els recomanats no hi surten.</li>
+  <li><strong>Recanvis muntats</strong>: tots els recanvis canviats a la màquina, del més recent al més antic. Els recomanats no hi surten. Tampoc els de cotització ni els informatius: l'historial recull el que s'ha canviat i el que s'ha recomanat, i aquells dos no són ni una cosa ni l'altra.</li>
   <li><strong>Recanvis recomanats</strong>: el que s'ha recomanat en qualsevol visita, primer els urgents pendents i després els preventius. Quan en una visita posterior canvies aquella referència, surt amb ✓ i «canviat el…». El número del títol diu quants en queden de pendents sobre el total.</li>
 </ul>
 <p>Els textos surten sencers, mai tallats. El títol fa servir el nom de la màquina i del client tal com els vas escriure l'última vegada.</p>
+<p>Les <a href="#registre">entrades internes</a> <strong>sí</strong> que surten a l'historial: l'historial és per a tu, no per al client, i és justament el lloc on la propera visita ha de trobar-les.</p>
 <h3>Les visites arxivades hi continuen</h3>
 <p>No cal tornar a importar els informes antics. Cada visita deixa un registre petit a l'historial: les dades de la visita, els problemes i avisos amb com van quedar, els recanvis i els comptadors. No hi van fotos ni vídeos. Quan l'arxives i l'esborres de l'app, el registre es queda, i la visita surt a l'historial amb <strong>🗄 arxivada</strong>. Tocar-la obre el seu ZIP a Drive. Els seus problemes oberts es poden tancar des d'una visita nova, i l'informe en mostra el text com sempre.</p>
 <p>Si esborres una visita que <em>no</em> s'ha arxivat (una de prova, per exemple), també desapareix de l'historial.</p>

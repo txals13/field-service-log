@@ -8590,14 +8590,50 @@ function daySummaryInput(s){
   });
   return out;
 }
+// -- Reading back the day lines (2026-11-07) --
+// The shape asked for is {"days":[{"date","line"}]}, and what comes back is
+// not always that: a bare array, an object keyed by date, a date written the
+// other way round, or -- on a long visit -- JSON cut off mid-way, which used
+// to throw the whole answer away and leave "no summary". So: whatever whole
+// {date,line} pairs are in there are taken, dates are read in either order,
+// and if none of them match the days asked for but the count is right, the
+// lines are taken in order, which is the order the prompt demands.
+function dayKeyIn(v){
+  var t=String(v==null?"":v).trim(),m;
+  if((m=/^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(t)))return m[1]+"-"+("0"+m[2]).slice(-2)+"-"+("0"+m[3]).slice(-2);
+  if((m=/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/.exec(t)))return m[3]+"-"+("0"+m[2]).slice(-2)+"-"+("0"+m[1]).slice(-2);
+  return "";
+}
+function gemDayLines(raw,days){
+  var j=null;
+  try{j=JSON.parse(raw)}catch(e){
+    var m=String(raw).match(/[\[{][\s\S]*[\]}]/);
+    if(m)try{j=JSON.parse(m[0])}catch(e2){}
+  }
+  var arr=(j&&j.days)||(Array.isArray(j)?j:null);
+  if(!arr&&j&&typeof j==="object")arr=Object.keys(j).filter(function(k){return typeof j[k]==="string"})
+    .map(function(k){return {date:k,line:j[k]}});
+  if(!arr||!arr.length){        // unclosed JSON: pick the pairs that did arrive
+    arr=[];var re=/\{[^{}]*\}/g,mm;
+    while((mm=re.exec(String(raw)))){try{var o=JSON.parse(mm[0]);if(o&&(o.line||o.text))arr.push(o)}catch(e3){}}
+  }
+  function txt(d){return String((d&&(d.line||d.text))||"").replace(/\s+/g," ").trim()}
+  arr=arr.filter(function(d){return txt(d)});
+  var got={};
+  arr.forEach(function(d){var k=dayKeyIn(d.date||d.dia||d.day);if(k)got[k]=txt(d)});
+  var out=days.filter(function(d){return got[d.key]}).map(function(d){return dmy(d.key)+": "+got[d.key]});
+  if(!out.length&&arr.length===days.length)out=days.map(function(d,i){return dmy(d.key)+": "+txt(arr[i])});
+  return out;
+}
 async function gemDaySummary(s){
   var days=daySummaryInput(s);
   if(!days.length)return null;
   var raw=await gemAsk(GEM_DAYS,days.map(function(d){return d.text}).join("\n\n"),true);
-  var j=null;try{j=JSON.parse(raw)}catch(e){var m=raw.match(/\{[\s\S]*\}/);if(m)try{j=JSON.parse(m[0])}catch(e2){}}
-  var got={};((j&&j.days)||[]).forEach(function(d){if(d&&d.date&&d.line)got[String(d.date).slice(0,10)]=String(d.line).replace(/\s+/g," ").trim()});
-  var lines=days.filter(function(d){return got[d.key]}).map(function(d){return dmy(d.key)+": "+got[d.key]});
-  if(!lines.length)throw new Error("el model no ha tornat cap resum");
+  var lines=gemDayLines(raw,days);
+  // what it did answer goes in the message: without it there is no telling a
+  // refusal from an answer in a shape this cannot read
+  if(!lines.length)throw new Error("el model no ha tornat cap resum \u2014 ha contestat: "
+    +(String(raw).replace(/\s+/g," ").trim().slice(0,160)||"(res)"));
   return {lines:lines,dates:days.map(function(d){return dmy(d.key)})};
 }
 // The new day lines go on top; any earlier line for one of those same days is

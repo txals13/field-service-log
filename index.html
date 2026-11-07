@@ -1567,6 +1567,18 @@ function entryMatches(e,rawQuery){
     ||fts(e.ts).toLowerCase().includes(q); // "10/03/25 15:30:00" — same format shown on screen
 }
 function $$(id){return document.getElementById(id)}
+// -- Where the keyboard comes from (2026-11-07) --
+// On a phone, focusing a field from code brings the soft keyboard up with it:
+// half the screen goes, the page jumps, and none of it was asked for -- the
+// screen had only just been opened. So on a touch device the app never takes
+// the focus itself; the keyboard waits until a field is tapped. Where there is
+// no soft keyboard, focus costs nothing and the field is still put under the
+// cursor, so a desktop keeps typing straight into the box that just opened.
+var SOFT_KB=(function(){try{return matchMedia("(pointer: coarse)").matches}catch(e){return false}})();
+function focusField(el,select){
+  if(!el||SOFT_KB)return;
+  try{el.focus();if(select&&el.select)el.select()}catch(e){}
+}
 // "1 entrada" / "3 entrades" — a count glued to a plural reads wrong in Catalan
 function pl(n,one,many){return n+" "+uiT(n===1?one:many)}
 // Grows a textarea to fit its text. Two traps: a hidden element measures 0
@@ -3321,7 +3333,7 @@ function confirmAndAdd(r){
   var rl=document.createElement("span");rl.style.cssText="font-size:12px;color:var(--tx3);margin-left:4px";rl.textContent="Recomanat:";
   row.appendChild(rl);row.appendChild(btns.urg);row.appendChild(btns.prev);row.appendChild(cancel);
   box.appendChild(row);
-  setTimeout(function(){inp.focus();inp.select()},30);
+  setTimeout(function(){focusField(inp,true)},30);
 }
 // Scope a tapped Pos to the SUBGRUP (drawing) that owns the current page — a
 // single drawing's Pos numbering is unique, so this resolves to exactly one
@@ -3425,7 +3437,10 @@ function closeDrawings(){
     if(editingId){
       $$("editBack").style.display="flex";rEParts();
       autoH($$("eText")); // text inserted while hidden couldn't be measured
-      if(textPickCaret!=null){var ta=$$("eText");try{ta.focus();ta.setSelectionRange(textPickCaret,textPickCaret)}catch(e){}textPickCaret=null}
+      // the caret is only put back where it was if the field is taken up
+      // again; where it isn't, the remembered position stays for the next
+      // piece of text picked off a drawing
+      if(textPickCaret!=null&&!SOFT_KB){var ta=$$("eText");try{ta.focus();ta.setSelectionRange(textPickCaret,textPickCaret)}catch(e){}textPickCaret=null}
     }
   }
 }
@@ -5554,7 +5569,7 @@ function openEdit(entryId){
   fillTagTargets();populateTagOptions(); // keep the grup dropdown fresh when the modal opens
   $$("editBack").style.display="flex";
   autoH($$("eText")); // only once visible — a hidden textarea measures 0 and would collapse
-  setTimeout(function(){$$("eText").focus()},80);
+  setTimeout(function(){focusField($$("eText"))},80);
 }
 // The resolution is offered where it makes sense — on a problem or a warning —
 // and stays visible once written, whatever the severity ends up being, so it
@@ -5634,7 +5649,7 @@ $$("eRec").addEventListener("click",function(){if(mediaRec&&recBk==="edit")stopR
 $$("eSev").addEventListener("change",renderFixUI);
 wireCorrect("eCorr","eText");
 wireCorrect("fCorr","fText");
-$$("fixAdd").addEventListener("click",function(){fixOn=true;renderFixUI();rFThumbs();setTimeout(function(){$$("fText").focus()},50)});
+$$("fixAdd").addEventListener("click",function(){fixOn=true;renderFixUI();rFThumbs();setTimeout(function(){focusField($$("fText"))},50)});
 $$("fixDel").addEventListener("click",function(){
   if(($$("fText").value.trim()||fImgs.length)&&!confirm(uiT("Vols treure la resolució d'aquesta entrada? El problema i la seva descripció es queden com estan.")))return;
   fixOn=false;fImgs=[];$$("fText").value="";renderFixUI();
@@ -5646,7 +5661,7 @@ showCaptureButtons();
 $$("fFileIn").addEventListener("change",function(e){handleFiles(e,"fix")});
 $$("fRec").addEventListener("click",function(){if(mediaRec&&recBk==="fix")stopRec();else if(!mediaRec)startRec("fix")});
 $$("eTagSel").addEventListener("change",function(){if(this.value)$$("eTag").value=this.value;this.selectedIndex=0});
-$$("ePartAdd").addEventListener("click",function(){var f=$$("ePartForm");f.style.display="flex";$$("pfSt").value=lastPartSt;$$("pfPos").focus()});
+$$("ePartAdd").addEventListener("click",function(){var f=$$("ePartForm");f.style.display="flex";$$("pfSt").value=lastPartSt;focusField($$("pfPos"))});
 $$("pfCancel").addEventListener("click",clearPartForm);
 $$("pfSave").addEventListener("click",function(){
   var pos=$$("pfPos").value.trim(),ref=$$("pfRef").value.trim(),cant=$$("pfCant").value.trim(),den=$$("pfDen").value.trim();
@@ -5879,7 +5894,7 @@ function m2Wire(active,isOpen){
       var on=!document.body.classList.contains("m2-find");
       document.body.classList.toggle("m2-find",on);
       var fi=$$("filtIn");
-      if(on&&fi)fi.focus();
+      if(on)focusField(fi);
       if(!on&&fi&&fi.value){fi.value="";filterTxt="";renderLogArea()}
     });
     $$("btnM2More").addEventListener("click",function(){openM2More()});
@@ -5903,7 +5918,7 @@ function m2Wire(active,isOpen){
   function paint(){Array.prototype.forEach.call(sev.querySelectorAll("button"),function(b){b.classList.toggle("on",b.dataset.sev===sel.value)})}
   sev.addEventListener("click",function(e){var b=e.target.closest("[data-sev]");if(!b)return;sel.value=b.dataset.sev;paint()});
   paint();
-  $$("m2Ent").addEventListener("click",function(){m2Show("compose");var t=$$("entIn");if(t)t.focus()});
+  $$("m2Ent").addEventListener("click",function(){m2Show("compose");focusField($$("entIn"))});
   // Photo: the camera, and the entry made with it — describe it later. Only
   // when the composer is empty: anything already typed or attached there is
   // somebody's half-written entry, so the photo joins it instead.
@@ -5950,7 +5965,7 @@ function openM2More(){
       $$("manualChip")?it("&#128218;","Manual de recanvis",/Vincula|Link/.test($$("manualChip").textContent)?uiT("sense vincular"):"",click("manualChip")):null,
       $$("drawingsChip")?it("&#128208;","Dibuixos","",click("drawingsChip")):null,
       it("&#9998;","Dades de la visita",a.contact||"",function(){openNewModal(a)}),
-      isOpen&&m2On()?it("&#128221;","Notes generals",(a.notes||"").trim()?"":uiT("buides"),function(){m2Show("notes");var t=$$("notesIn");if(t)t.focus()}):null,
+      isOpen&&m2On()?it("&#128221;","Notes generals",(a.notes||"").trim()?"":uiT("buides"),function(){m2Show("notes");focusField($$("notesIn"))}):null,
       $$("btnSessSync")?it("&#9729;","Desa a Drive",uiT("fotos que hi faltin"),click("btnSessSync")):null,
       $$("btnSync")?it("&#10227;","Sincronitza ara","",click("btnSync")):null,
       isOpen?it("&#9632;","Tanca la visita","",click("btnClose")):it("&#8634;","Reobre la visita","",click("btnReopen")),
@@ -6389,8 +6404,8 @@ function wirePt(){
         ptPatch({stops:stops,end:now_,running:false});break;
     }
     ptFillTimes();ptRenderStops();ptRenderLive();ptRenderRes();
-    if(focusI!=null){var ci=document.querySelector("#ptStops [data-i=\""+focusI+"\"] [data-k=cause]");if(ci)ci.focus()}
-    if(b.dataset.live==="end"){var f=$$(ptNum($$("ptCs").value)!=null?"ptCe":"ptTotal");if(f)f.focus()}
+    if(focusI!=null)focusField(document.querySelector("#ptStops [data-i=\""+focusI+"\"] [data-k=cause]"));
+    if(b.dataset.live==="end")focusField($$(ptNum($$("ptCs").value)!=null?"ptCe":"ptTotal"));
   });
 }
 // A page of its own beside the app, so it can be read alongside it.
@@ -6572,7 +6587,7 @@ function openNewModal(editSess){
   $$("nContactEmail").value=editSess?(editSess.contactEmail||""):"";
   $$("nType").value=editSess?(editSess.type||"commissioning"):"commissioning";
   uiApply($$("newBack"));
-  $$("newBack").style.display="flex";setTimeout(function(){$$("nClient").focus()},80);
+  $$("newBack").style.display="flex";setTimeout(function(){focusField($$("nClient"))},80);
 }
 function closeNewModal(){$$("newBack").style.display="none";editingSessId=null}
 // Keeps the Drive folder name in sync when client/machine/tech change, so
@@ -7047,7 +7062,7 @@ function openGemKey(msg){
        :"Aquest navegador encara no en té cap. La treus d'AI Studio, del projecte que tingui la facturació activada."));
   $$("gemIn").value="";
   $$("gemBack").style.display="flex";
-  setTimeout(function(){var i=$$("gemIn");if(i)i.focus()},30);
+  setTimeout(function(){focusField($$("gemIn"))},30);
 }
 // ── THE INTERFACE'S LANGUAGE ────────────────────────────────────
 // The report's language is the CLIENT's, picked per visit. This is a different
@@ -8488,7 +8503,7 @@ function openLic(msg){
                           :"Aquest aparell no t\u00e9 llic\u00e8ncia."));
   $$("licIn").value="";
   $$("licBack").style.display="flex";
-  setTimeout(function(){var i=$$("licIn");if(i)i.focus()},30);
+  setTimeout(function(){focusField($$("licIn"))},30);
 }
 function wireCorrect(btnId,fieldId,compact){
   var b=$$(btnId),f=$$(fieldId);

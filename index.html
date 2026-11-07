@@ -1522,6 +1522,14 @@ function partsReportHTML(parts,R){
     +"<thead><tr><th style=\""+th+";text-align:right\">"+esc(R.qty)+"</th><th style=\""+th+"\">"+esc(R.ref)+"</th><th style=\""+th+"\">"+esc(R.part)+"</th><th style=\""+th+"\">"+esc(R.st)+"</th></tr></thead>"
     +"<tbody>"+rows+"</tbody></table>";
 }
+// Which manual the parts were looked up in. A manual is revised, and whoever
+// orders from this list has to know which one it was read against and that it
+// may have moved on since. A visit with no manual linked had its parts typed
+// in by hand, and then there is nothing to point at.
+function manualNoteOf(s,R){
+  var ref=s&&s.manualRef,base=ref&&(ref.base||ref.pdfName||ref.serial);
+  return base?R.manualNote.replace("{m}",base):"";
+}
 // The two lists under the entries, summed by reference: replaced on this visit,
 // and recommended (urgent first) — the client's copy of what we advise.
 function partsSummaryHTML(s,R){
@@ -1540,9 +1548,11 @@ function partsSummaryHTML(s,R){
       }).join("")+"</tbody></table>"
       +(note?"<div style=\"font-size:11px;color:#6b7280;margin-top:6px\">"+esc(note)+"</div>":"");
   }
+  var mn=manualNoteOf(s,R);
   return (S.fit.length?block(R.partsFit,PST_HEX.fit,S.fit,false,""):"")
     +(S.rec.length?block(R.partsRec,PST_HEX.urg,S.rec,true,R.recNote):"")
-    +(S.quo.length?block(R.partsQuo,PST_HEX.quo,S.quo,false,R.quoNote):"");
+    +(S.quo.length?block(R.partsQuo,PST_HEX.quo,S.quo,false,R.quoNote):"")
+    +(mn?"<div style=\"font-size:11px;color:#6b7280;margin-top:8px\">"+esc(mn)+"</div>":"");
 }
 function highlightText(text,query){
   var e=esc(text);
@@ -6902,7 +6912,7 @@ var RPT={
       time:"Hora",entry1:"entrada",entryN:"entrades",noDate:"Sense data",ts:"Data i hora",severity:"Gravetat",tag:"Etiqueta",desc:"Descripció",att:"Adjunts",
       fix:"Com ha quedat",edited:"editat",noEntries:"Sense entrades",photos:"Fotos",annex:"Annex",week:"Setmana",notes:"Notes generals",
       sigTech:"Signatura del tècnic",sigCli:"Signatura del client / receptor",
-      qty:"QT.",ref:"REF.",part:"RECANVI",ctr:{title:"Comptadors de la màquina",read:"Lectura",arr:"Arribada",dep:"Sortida",hours:"Hores de màquina",units:"Producte total",date:"Data",since:"Des de la visita anterior",during:"Durant la visita",inW:"en",day1:"dia",days:"dies",perDay:"h/dia",perHour:"unitats/h",perMin:"unitats/min",h:"h",u:"unitats",reset:"el comptador ha baixat: s'ha canviat o reiniciat?"},incTitle:"Incidències d'aquesta visita",incWhen:"Quan",incWhat:"Incidència",incState:"Estat",stRes:"Resolt",stPend:"Pendent",stClosed:"Tancat",stRec:"recanvi recomanat",prevVisit:"visita anterior",closesPrev:"Tanca un problema de la visita del",resIn:"resolt en",st:"ESTAT",prio:"PRIORITAT",pstL:{fit:"Canviat",urg:"Recomanat · urgent",prev:"Recomanat · preventiu",quo:"Petició de cotització"},pst:{fit:"Canviat",urg:"Urgent",prev:"Preventiu",quo:"Cotització"},partsFit:"Recanvis canviats",partsRec:"Recanvis recomanats",recNote:"Urgent: convé canviar-lo aviat. Preventiu: per tenir-ne en estoc o canviar-lo en una parada programada.",partsQuo:"Cotització demanada pel client",quoNote:"Recanvis dels quals el client ha demanat el preu.",photoTag:"[foto]",openDrive:"Obre a Drive",
+      qty:"QT.",ref:"REF.",part:"RECANVI",ctr:{title:"Comptadors de la màquina",read:"Lectura",arr:"Arribada",dep:"Sortida",hours:"Hores de màquina",units:"Producte total",date:"Data",since:"Des de la visita anterior",during:"Durant la visita",inW:"en",day1:"dia",days:"dies",perDay:"h/dia",perHour:"unitats/h",perMin:"unitats/min",h:"h",u:"unitats",reset:"el comptador ha baixat: s'ha canviat o reiniciat?"},incTitle:"Incidències d'aquesta visita",incWhen:"Quan",incWhat:"Incidència",incState:"Estat",stRes:"Resolt",stPend:"Pendent",stClosed:"Tancat",stRec:"recanvi recomanat",prevVisit:"visita anterior",closesPrev:"Tanca un problema de la visita del",resIn:"resolt en",st:"ESTAT",prio:"PRIORITAT",pstL:{fit:"Canviat",urg:"Recomanat · urgent",prev:"Recomanat · preventiu",quo:"Petició de cotització"},pst:{fit:"Canviat",urg:"Urgent",prev:"Preventiu",quo:"Cotització"},partsFit:"Recanvis canviats",partsRec:"Recanvis recomanats",recNote:"Urgent: convé canviar-lo aviat. Preventiu: per tenir-ne en estoc o canviar-lo en una parada programada.",partsQuo:"Cotització demanada pel client",quoNote:"Recanvis dels quals el client ha demanat el preu i el termini d'entrega aproximat.",manualNote:"Els recanvis s'han demanat sobre la base del manual «{m}»; convé revisar-ne les últimes actualitzacions.",photoTag:"[foto]",openDrive:"Obre a Drive",
       voice:"nota de veu",video:"vídeo",photo:"foto",file:"fitxer",
       pre:{report:"informe",parts:"recanvis"},
       pt:{title:"Proves de producció",period:"Període",units:"Unitats",availS:"Disp.",perfS:"Rend.",qualS:"Qual.",rejS:"Rebuig",resultS:"Resultat",summaryNote:"El detall de cada prova —aturades, objectius i observacions— és a l'informe de validació.",test:"Prova",product:"Producte / format",nominal:"Velocitat nominal",start:"Inici",end:"Final",duration:"Durada",plannedStops:"Aturades planificades",downtime:"Aturades no planificades",run:"Temps en marxa",total:"Unitats totals",rejects:"Unitats rebutjades",good:"Unitats bones",speedAvg:"Velocitat mitjana",speedRun:"Velocitat en marxa",avail:"Disponibilitat",perf:"Rendiment",qual:"Qualitat",oee:"OEE",rejPct:"Rebuig",indicator:"Indicador",value:"Valor",target:"Objectiu",result:"Resultat",yes:"Compleix",no:"No compleix",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Aturades",kind:"Tipus",cause:"Causa",kinds:{machine:"Màquina",external:"Externa",planned:"Planificada"},notes:"Observacions",uph:"u/h",upm:"u/min",validation:"Informe de validació",file:"validacio"},
@@ -6919,7 +6929,7 @@ var RPT={
       time:"Hora",entry1:"entrada",entryN:"entradas",noDate:"Sin fecha",ts:"Fecha y hora",severity:"Gravedad",tag:"Etiqueta",desc:"Descripción",att:"Adjuntos",
       fix:"Cómo ha quedado",edited:"editado",noEntries:"Sin entradas",photos:"Fotos",annex:"Anexo",week:"Semana",notes:"Notas generales",
       sigTech:"Firma del técnico",sigCli:"Firma del cliente / receptor",
-      qty:"CANT.",ref:"REF.",part:"RECAMBIO",ctr:{title:"Contadores de la máquina",read:"Lectura",arr:"Llegada",dep:"Salida",hours:"Horas de máquina",units:"Producto total",date:"Fecha",since:"Desde la visita anterior",during:"Durante la visita",inW:"en",day1:"día",days:"días",perDay:"h/día",perHour:"unidades/h",perMin:"unidades/min",h:"h",u:"unidades",reset:"el contador ha bajado: ¿se ha cambiado o reiniciado?"},incTitle:"Incidencias de esta visita",incWhen:"Cuándo",incWhat:"Incidencia",incState:"Estado",stRes:"Resuelto",stPend:"Pendiente",stClosed:"Cerrado",stRec:"recambio recomendado",prevVisit:"visita anterior",closesPrev:"Cierra un problema de la visita del",resIn:"resuelto en",st:"ESTADO",prio:"PRIORIDAD",pstL:{fit:"Cambiado",urg:"Recomendado · urgente",prev:"Recomendado · preventivo",quo:"Solicitud de cotización"},pst:{fit:"Cambiado",urg:"Urgente",prev:"Preventivo",quo:"Cotización"},partsFit:"Recambios cambiados",partsRec:"Recambios recomendados",recNote:"Urgente: conviene cambiarlo pronto. Preventivo: para tenerlo en stock o cambiarlo en una parada programada.",partsQuo:"Cotización solicitada por el cliente",quoNote:"Recambios de los que el cliente ha pedido el precio.",photoTag:"[foto]",openDrive:"Abrir en Drive",
+      qty:"CANT.",ref:"REF.",part:"RECAMBIO",ctr:{title:"Contadores de la máquina",read:"Lectura",arr:"Llegada",dep:"Salida",hours:"Horas de máquina",units:"Producto total",date:"Fecha",since:"Desde la visita anterior",during:"Durante la visita",inW:"en",day1:"día",days:"días",perDay:"h/día",perHour:"unidades/h",perMin:"unidades/min",h:"h",u:"unidades",reset:"el contador ha bajado: ¿se ha cambiado o reiniciado?"},incTitle:"Incidencias de esta visita",incWhen:"Cuándo",incWhat:"Incidencia",incState:"Estado",stRes:"Resuelto",stPend:"Pendiente",stClosed:"Cerrado",stRec:"recambio recomendado",prevVisit:"visita anterior",closesPrev:"Cierra un problema de la visita del",resIn:"resuelto en",st:"ESTADO",prio:"PRIORIDAD",pstL:{fit:"Cambiado",urg:"Recomendado · urgente",prev:"Recomendado · preventivo",quo:"Solicitud de cotización"},pst:{fit:"Cambiado",urg:"Urgente",prev:"Preventivo",quo:"Cotización"},partsFit:"Recambios cambiados",partsRec:"Recambios recomendados",recNote:"Urgente: conviene cambiarlo pronto. Preventivo: para tenerlo en stock o cambiarlo en una parada programada.",partsQuo:"Cotización solicitada por el cliente",quoNote:"Recambios de los que el cliente ha pedido el precio y el plazo de entrega aproximado.",manualNote:"Los recambios se han pedido sobre la base del manual «{m}»; conviene revisar sus últimas actualizaciones.",photoTag:"[foto]",openDrive:"Abrir en Drive",
       voice:"nota de voz",video:"vídeo",photo:"foto",file:"archivo",
       pre:{report:"informe",parts:"recambios"},
       pt:{title:"Pruebas de producción",period:"Período",units:"Unidades",availS:"Disp.",perfS:"Rend.",qualS:"Cal.",rejS:"Rechazo",resultS:"Resultado",summaryNote:"El detalle de cada prueba —paradas, objetivos y observaciones— está en el informe de validación.",test:"Prueba",product:"Producto / formato",nominal:"Velocidad nominal",start:"Inicio",end:"Final",duration:"Duración",plannedStops:"Paradas planificadas",downtime:"Paradas no planificadas",run:"Tiempo en marcha",total:"Unidades totales",rejects:"Unidades rechazadas",good:"Unidades buenas",speedAvg:"Velocidad media",speedRun:"Velocidad en marcha",avail:"Disponibilidad",perf:"Rendimiento",qual:"Calidad",oee:"OEE",rejPct:"Rechazo",indicator:"Indicador",value:"Valor",target:"Objetivo",result:"Resultado",yes:"Cumple",no:"No cumple",pass:"SUPERADA",fail:"NO SUPERADA",stops:"Paradas",kind:"Tipo",cause:"Causa",kinds:{machine:"Máquina",external:"Externa",planned:"Planificada"},notes:"Observaciones",uph:"u/h",upm:"u/min",validation:"Informe de validación",file:"validacion"},
@@ -6936,7 +6946,7 @@ var RPT={
       time:"Time",entry1:"entry",entryN:"entries",noDate:"No date",ts:"Timestamp",severity:"Severity",tag:"Tag",desc:"Description",att:"Attachments",
       fix:"Outcome",edited:"edited",noEntries:"No entries",photos:"Photos",annex:"Annex",week:"Week",notes:"General notes",
       sigTech:"Technician signature",sigCli:"Client / Recipient signature",
-      qty:"QTY",ref:"REF.",part:"SPARE PART",ctr:{title:"Machine counters",read:"Reading",arr:"Arrival",dep:"Departure",hours:"Machine hours",units:"Total output",date:"Date",since:"Since the previous visit",during:"During the visit",inW:"in",day1:"day",days:"days",perDay:"h/day",perHour:"units/h",perMin:"units/min",h:"h",u:"units",reset:"the counter went down: replaced or reset?"},incTitle:"Issues on this visit",incWhen:"When",incWhat:"Issue",incState:"Status",stRes:"Resolved",stPend:"Open",stClosed:"Closed",stRec:"spare part recommended",prevVisit:"earlier visit",closesPrev:"Closes an issue from the visit of",resIn:"resolved in",st:"STATUS",prio:"PRIORITY",pstL:{fit:"Replaced",urg:"Recommended · urgent",prev:"Recommended · preventive",quo:"Quotation request"},pst:{fit:"Replaced",urg:"Urgent",prev:"Preventive",quo:"Quotation"},partsFit:"Spare parts replaced",partsRec:"Recommended spare parts",recNote:"Urgent: should be replaced soon. Preventive: to keep in stock or replace at a planned stop.",partsQuo:"Quotation requested by the client",quoNote:"Spare parts the client has asked to be quoted.",photoTag:"[photo]",openDrive:"Open in Drive",
+      qty:"QTY",ref:"REF.",part:"SPARE PART",ctr:{title:"Machine counters",read:"Reading",arr:"Arrival",dep:"Departure",hours:"Machine hours",units:"Total output",date:"Date",since:"Since the previous visit",during:"During the visit",inW:"in",day1:"day",days:"days",perDay:"h/day",perHour:"units/h",perMin:"units/min",h:"h",u:"units",reset:"the counter went down: replaced or reset?"},incTitle:"Issues on this visit",incWhen:"When",incWhat:"Issue",incState:"Status",stRes:"Resolved",stPend:"Open",stClosed:"Closed",stRec:"spare part recommended",prevVisit:"earlier visit",closesPrev:"Closes an issue from the visit of",resIn:"resolved in",st:"STATUS",prio:"PRIORITY",pstL:{fit:"Replaced",urg:"Recommended · urgent",prev:"Recommended · preventive",quo:"Quotation request"},pst:{fit:"Replaced",urg:"Urgent",prev:"Preventive",quo:"Quotation"},partsFit:"Spare parts replaced",partsRec:"Recommended spare parts",recNote:"Urgent: should be replaced soon. Preventive: to keep in stock or replace at a planned stop.",partsQuo:"Quotation requested by the client",quoNote:"Spare parts the client has asked the price and an approximate delivery time for.",manualNote:"The spare parts were taken from manual “{m}”; its latest updates should be checked.",photoTag:"[photo]",openDrive:"Open in Drive",
       voice:"voice note",video:"video",photo:"photo",file:"file",
       pre:{report:"report",parts:"spare_parts"},
       pt:{title:"Production tests",period:"Period",units:"Units",availS:"Avail.",perfS:"Perf.",qualS:"Qual.",rejS:"Reject",resultS:"Result",summaryNote:"Each test in full — stops, targets and remarks — is in the validation report.",test:"Test",product:"Product / format",nominal:"Nominal speed",start:"Start",end:"End",duration:"Duration",plannedStops:"Planned stops",downtime:"Unplanned stops",run:"Run time",total:"Total units",rejects:"Rejected units",good:"Good units",speedAvg:"Average speed",speedRun:"Running speed",avail:"Availability",perf:"Performance",qual:"Quality",oee:"OEE",rejPct:"Reject rate",indicator:"Indicator",value:"Value",target:"Target",result:"Result",yes:"Met",no:"Not met",pass:"PASSED",fail:"NOT PASSED",stops:"Stops",kind:"Type",cause:"Cause",kinds:{machine:"Machine",external:"External",planned:"Planned"},notes:"Remarks",uph:"u/h",upm:"u/min",validation:"Validation report",file:"validation"},
@@ -10408,6 +10418,14 @@ function pdfPartsSection(doc,s,R,y,M,CW,H,ar){
   if(S.fit.length)block(R.partsFit,"fit",S.fit,false,"");
   if(S.rec.length)block(R.partsRec,"urg",S.rec,true,R.recNote);
   if(S.quo.length)block(R.partsQuo,"quo",S.quo,false,R.quoNote);
+  var mn=manualNoteOf(s,R);
+  if(mn){
+    if(y>H-30){doc.addPage();y=M}
+    doc.setFont("helvetica","italic");doc.setFontSize(7.5);doc.setTextColor(107,114,128);
+    doc.splitTextToSize(mn,CW).forEach(function(l){doc.text(l,M,y);y+=3.5});
+    doc.setFont("helvetica","normal");
+    y+=4;
+  }
   return y;
 }
 function pdfProdSection(doc,s,R,lang,y,M,CW,H,full){
@@ -12686,6 +12704,7 @@ async function buildXlsxBlob(s,lang,rev){
     });
     var k=ctrReport(s,R,lang);if(k&&k.since)info.push([K.since,k.since.slice(k.since.indexOf(": ")+2)]);
   })();
+  (function(){var mn=manualNoteOf(s,R);if(mn)info.push(["",""],["",mn])})();
   var wsI=X.utils.aoa_to_sheet(info);
   wsI["!cols"]=autoCols(info);
 
@@ -13039,6 +13058,8 @@ async function buildDocxDocument(D,s,lang,rev,opts){
     if(S.fit.length)block(R.partsFit,"fit",S.fit,false,"");
     if(S.rec.length)block(R.partsRec,"urg",S.rec,true,R.recNote);
     if(S.quo.length)block(R.partsQuo,"quo",S.quo,false,R.quoNote);
+    var mn=manualNoteOf(s,R);
+    if(mn)children.push(P({spacing:{before:60,after:160},children:[T({text:mn,italics:true,size:hp(7.5),font:"Arial",color:"6B7280"})]}));
   })();
 
   // The production tests: one compact row each, as in the PDF; the full sheet

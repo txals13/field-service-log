@@ -1419,7 +1419,10 @@ function attItems(e){
     return {im:im,src:src||null,vid:im.type==="video",aud:im.type==="audio"};
   });
 }
-function attLine(a,R){return (a.vid?"» ":a.aud?"• ":"")+(a.im.name||R.file)}
+// Each name opens with a mark: the column is a stack of file names, one per
+// line, and without one a name that runs onto a second line reads as two
+// files and two short names read as one. A video keeps its own mark.
+function attLine(a,R){return (a.vid?"» ":"• ")+(a.im.name||R.file)}
 // Where a report's file opens (2026-10-18, "only when the ZIP is archived do
 // the links look for the file locally; working in the app, the exports link to
 // Drive"). Two kinds of report, one layout:
@@ -10514,8 +10517,8 @@ function buildReportHTML(s,forPrint,lang,rev,opts){
       var img=a.im;
       if(a.vid)return "<div style=\""+nmS+"\">» "+mediaA(img,esc(img.name||R.video))+"</div>";
       if(a.aud)return "<div style=\""+nmS+"\">• "+mediaA(img,esc(img.name||R.voice))+" <span style=\"color:#6b7280\">· "+fmtDur(img.duration)+"</span></div>";
-      if(!a.src)return "<div style=\""+nmS+"\">"+mediaA(img,esc(img.name||R.photo))+"</div>";
-      return "<div style=\""+nmS+"\">"+shotLink(img,e,a.src,esc(img.name||R.photo))+"</div>";
+      if(!a.src)return "<div style=\""+nmS+"\">• "+mediaA(img,esc(img.name||R.photo))+"</div>";
+      return "<div style=\""+nmS+"\">• "+shotLink(img,e,a.src,esc(img.name||R.photo))+"</div>";
     }).join("");
     return "<tr>"
       +"<td style=\"font-family:monospace;font-size:11px;white-space:nowrap;padding:5px 8px;border:1px solid #e5e7eb;color:#6b7280;width:1%\">"+timeOf(e.ts)+(e.tsFromPhoto?"<br>📷":"")+"</td>"

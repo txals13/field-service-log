@@ -3005,63 +3005,69 @@ function addMarks(list){
 // -- Marking a whole drawing --
 // Taking the conjunt as one line means every part on the sheet, so every
 // balloon is washed over, along with the name and the number it was taken by.
-// Every number on the sheet appears twice: once on its balloon and once in the
+// Every number on a sheet appears twice: once on its balloon and once in the
 // parts list printed beside the title block, where the Pos. and quantity
-// columns are nothing but these same numbers. What gives that list away are
-// the reference codes in it -- the drawing's own, and printed nowhere else on
-// the sheet -- and the list's box is grown from them: from each reference, out
-// along its own line through whatever sits next to it, stopping at the first
-// real gap. That is what reaches the Pos. and quantity columns before the
-// reference and the description after it, and what keeps the box from jumping
-// across the empty paper to a balloon that happens to sit at the same height.
-// Whatever falls inside is a cell of the list; whatever falls outside is a
-// balloon. (Telling the two apart by whether a number stands alone on its line
-// does not work: balloons are commonly strung out in a row along the edge of a
-// view.) On the older manuals, whose lists are on pages of their own, there is
-// no box and every number on the sheet is a balloon.
-function listBoxOf(texts){
-  var hits=viewerPickItems.filter(function(it){
+// columns are nothing but these same numbers. The two are told apart by the
+// shape the list has and a drawing has not: its numbers stand in straight
+// columns, one per line, line after line, while a balloon sits wherever its
+// part is. So the lines of the list are found first -- by the reference codes
+// on them, which are the drawing's own and are printed nowhere else on the
+// sheet -- and then, among the numbers sitting on those lines, a stack of
+// them at one and the same x is a column of the list and everything else is a
+// balloon that happens to be level with it. Neither the gap to the next cell
+// nor a box around the whole table can do this: balloons cluster as tightly as
+// the columns do, and a single row of the list running on into the drawing
+// would take every balloon beside the table down with it. On the older
+// manuals, whose lists live on pages of their own, nothing is found and every
+// number on the sheet is a balloon.
+function listCellsOf(texts,poses){
+  var cells=[];
+  var refs=viewerPickItems.filter(function(it){
     return Object.prototype.hasOwnProperty.call(texts,it.str);
   });
-  if(hits.length<3)return null;
-  var x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
-  hits.forEach(function(r){
-    var cy=r.y+r.h/2;
-    var line=viewerPickItems.filter(function(o){
-      return Math.abs((o.y+o.h/2)-cy)<Math.max(o.h,r.h)*.6;
-    }).sort(function(a,b){return a.x-b.x});
-    var i=line.indexOf(r);if(i<0)return;
-    var gap=r.h*8,a=i,b=i;   // eight characters of blank is wider than any column gap
-    while(a>0&&line[a].x-(line[a-1].x+line[a-1].w)<gap)a--;
-    while(b<line.length-1&&line[b+1].x-(line[b].x+line[b].w)<gap)b++;
-    for(var k=a;k<=b;k++){
-      x0=Math.min(x0,line[k].x);y0=Math.min(y0,line[k].y);
-      x1=Math.max(x1,line[k].x+line[k].w);y1=Math.max(y1,line[k].y+line[k].h);
-    }
+  if(refs.length<3)return cells;
+  var onRow=viewerPickItems.filter(function(it){
+    if(!Object.prototype.hasOwnProperty.call(poses,it.str))return false;
+    var cy=it.y+it.h/2;
+    return refs.some(function(r){return Math.abs((r.y+r.h/2)-cy)<Math.max(r.h,it.h)*.6});
   });
-  return {x0:x0,y0:y0,x1:x1,y1:y1};
+  var cols=[];
+  onRow.forEach(function(it){
+    var c=null;
+    for(var i=0;i<cols.length;i++)if(Math.abs(cols[i].x-it.x)<Math.max(2,it.h*.5)){c=cols[i];break}
+    if(!c){c={x:it.x,items:[]};cols.push(c)}
+    c.items.push(it);
+  });
+  var need=Math.max(3,Math.round(refs.length*.4));
+  cols.forEach(function(c){if(c.items.length>=need)cells=cells.concat(c.items)});
+  return cells;
 }
-function inBox(it,box){
-  if(!box)return false;
-  var cx=it.x+it.w/2,cy=it.y+it.h/2;
-  return cx>=box.x0&&cx<=box.x1&&cy>=box.y0&&cy<=box.y1;
-}
-function balloonsOf(poses,box){
+function boxOf(it){return {x:it.x,y:it.y,w:it.w,h:it.h}}
+function balloonsOf(poses,cells){
   return viewerPickItems.filter(function(it){
-    return Object.prototype.hasOwnProperty.call(poses,it.str)&&!inBox(it,box);
-  });
+    return Object.prototype.hasOwnProperty.call(poses,it.str)&&cells.indexOf(it)<0;
+  }).map(boxOf);
 }
-// The drawing's name and number as the title block prints them. A long name is
-// set over two lines, so each piece of it is matched on its own; a piece that
-// turns up inside the parts list is a part's description, not the title.
-function titleItemsOf(name,num,box){
+// The drawing's name and number as the title block prints them, each line
+// taken whole. One mark per text run would leave the name shot through with
+// holes: these sheets are plotted from AutoCAD, which puts every accented
+// character in a run of its own, so "ALMACÉN NEUMÁTICO" reaches us in five
+// pieces. The line's own ends are the box, and everything between them --
+// accents included -- falls inside it.
+function titleBoxesOf(name,num,cells){
   function norm(t){return (t||"").trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").toUpperCase()}
-  var n=norm(name),r=norm(num);
-  return viewerPickItems.filter(function(it){
+  var n=norm(name),r=norm(num),lines=[];
+  viewerPickItems.forEach(function(it){
     var t=norm(it.str);
-    if(!t||inBox(it,box))return false;
-    return (r&&t===r)||(n&&t.length>3&&n.indexOf(t)>=0);
+    if(!t||cells.indexOf(it)>=0)return;
+    if(!((r&&t===r)||(n&&t.length>3&&n.indexOf(t)>=0)))return;
+    var cy=it.y+it.h/2,l=null;
+    for(var i=0;i<lines.length;i++)if(Math.abs(lines[i].cy-cy)<Math.max(lines[i].h,it.h)*.6){l=lines[i];break}
+    if(!l){l={cy:cy,h:it.h,x0:it.x,y0:it.y,x1:it.x+it.w,y1:it.y+it.h};lines.push(l);return}
+    l.x0=Math.min(l.x0,it.x);l.y0=Math.min(l.y0,it.y);
+    l.x1=Math.max(l.x1,it.x+it.w);l.y1=Math.max(l.y1,it.y+it.h);
   });
+  return lines.map(function(l){return {x:l.x0,y:l.y0,w:l.x1-l.x0,h:l.y1-l.y0}});
 }
 function markWholeDrawing(r){
   var cv=$$("drawCanvas");if(!cv||!cv.width)return;
@@ -3071,9 +3077,9 @@ function markWholeDrawing(r){
     if(row.ref)texts[String(row.ref).trim()]=1;
     if(row.denominacio)texts[String(row.denominacio).trim()]=1;
   })});
-  var box=listBoxOf(texts);
-  var items=balloonsOf(poses,box).concat(titleItemsOf(r.denominacio,r.ref,box));
-  addMarks(items.map(function(it){return partMark(it,cv)}));
+  var cells=listCellsOf(texts,poses);
+  var boxes=balloonsOf(poses,cells).concat(titleBoxesOf(r.denominacio,r.ref,cells));
+  addMarks(boxes.map(function(b){return partMark(b,cv)}));
 }
 function setDrawStatus(msg){var el=$$("drawStatus");if(!el)return;el.textContent=msg||"";clearTimeout(setDrawStatus._t);if(msg)setDrawStatus._t=setTimeout(function(){el.textContent=""},3500)}
 function itemDist2(it,bx,by){var cx=it.x+it.w/2,cy=it.y+it.h/2;return(cx-bx)*(cx-bx)+(cy-by)*(cy-by)}

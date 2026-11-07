@@ -3005,37 +3005,74 @@ function addMarks(list){
 // -- Marking a whole drawing --
 // Taking the conjunt as one line means every part on the sheet, so every
 // balloon is washed over, along with the name and the number it was taken by.
-// A balloon is a number standing on its own: in the parts list printed on the
-// sheet the very same numbers sit in the Pos. and quantity columns, but there
-// they always have the rest of their row beside them on the same line.
-function balloonsOf(poses){
-  var out=[];
-  viewerPickItems.forEach(function(it){
-    if(!Object.prototype.hasOwnProperty.call(poses,it.str))return;
-    var cy=it.y+it.h/2,near=it.h*25;
-    var hasRow=viewerPickItems.some(function(o){
-      return o!==it&&Math.abs((o.y+o.h/2)-cy)<it.h*.6&&Math.abs(o.x-it.x)<near;
-    });
-    if(!hasRow)out.push(it);
+// Every number on the sheet appears twice: once on its balloon and once in the
+// parts list printed beside the title block, where the Pos. and quantity
+// columns are nothing but these same numbers. What gives that list away are
+// the reference codes in it -- the drawing's own, and printed nowhere else on
+// the sheet -- and the list's box is grown from them: from each reference, out
+// along its own line through whatever sits next to it, stopping at the first
+// real gap. That is what reaches the Pos. and quantity columns before the
+// reference and the description after it, and what keeps the box from jumping
+// across the empty paper to a balloon that happens to sit at the same height.
+// Whatever falls inside is a cell of the list; whatever falls outside is a
+// balloon. (Telling the two apart by whether a number stands alone on its line
+// does not work: balloons are commonly strung out in a row along the edge of a
+// view.) On the older manuals, whose lists are on pages of their own, there is
+// no box and every number on the sheet is a balloon.
+function listBoxOf(texts){
+  var hits=viewerPickItems.filter(function(it){
+    return Object.prototype.hasOwnProperty.call(texts,it.str);
   });
-  return out;
+  if(hits.length<3)return null;
+  var x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  hits.forEach(function(r){
+    var cy=r.y+r.h/2;
+    var line=viewerPickItems.filter(function(o){
+      return Math.abs((o.y+o.h/2)-cy)<Math.max(o.h,r.h)*.6;
+    }).sort(function(a,b){return a.x-b.x});
+    var i=line.indexOf(r);if(i<0)return;
+    var gap=r.h*8,a=i,b=i;   // eight characters of blank is wider than any column gap
+    while(a>0&&line[a].x-(line[a-1].x+line[a-1].w)<gap)a--;
+    while(b<line.length-1&&line[b+1].x-(line[b].x+line[b].w)<gap)b++;
+    for(var k=a;k<=b;k++){
+      x0=Math.min(x0,line[k].x);y0=Math.min(y0,line[k].y);
+      x1=Math.max(x1,line[k].x+line[k].w);y1=Math.max(y1,line[k].y+line[k].h);
+    }
+  });
+  return {x0:x0,y0:y0,x1:x1,y1:y1};
+}
+function inBox(it,box){
+  if(!box)return false;
+  var cx=it.x+it.w/2,cy=it.y+it.h/2;
+  return cx>=box.x0&&cx<=box.x1&&cy>=box.y0&&cy<=box.y1;
+}
+function balloonsOf(poses,box){
+  return viewerPickItems.filter(function(it){
+    return Object.prototype.hasOwnProperty.call(poses,it.str)&&!inBox(it,box);
+  });
 }
 // The drawing's name and number as the title block prints them. A long name is
-// set over two lines, so each piece of it is matched on its own.
-function titleItemsOf(name,num){
+// set over two lines, so each piece of it is matched on its own; a piece that
+// turns up inside the parts list is a part's description, not the title.
+function titleItemsOf(name,num,box){
   function norm(t){return (t||"").trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").toUpperCase()}
   var n=norm(name),r=norm(num);
   return viewerPickItems.filter(function(it){
     var t=norm(it.str);
-    if(!t)return false;
+    if(!t||inBox(it,box))return false;
     return (r&&t===r)||(n&&t.length>3&&n.indexOf(t)>=0);
   });
 }
 function markWholeDrawing(r){
   var cv=$$("drawCanvas");if(!cv||!cv.width)return;
-  var poses={};
-  viewerOwning().forEach(function(sg){(sg.rows||[]).forEach(function(row){poses[String(row.pos)]=1})});
-  var items=balloonsOf(poses).concat(titleItemsOf(r.denominacio,r.ref));
+  var poses={},texts={};
+  viewerOwning().forEach(function(sg){(sg.rows||[]).forEach(function(row){
+    poses[String(row.pos)]=1;
+    if(row.ref)texts[String(row.ref).trim()]=1;
+    if(row.denominacio)texts[String(row.denominacio).trim()]=1;
+  })});
+  var box=listBoxOf(texts);
+  var items=balloonsOf(poses,box).concat(titleItemsOf(r.denominacio,r.ref,box));
   addMarks(items.map(function(it){return partMark(it,cv)}));
 }
 function setDrawStatus(msg){var el=$$("drawStatus");if(!el)return;el.textContent=msg||"";clearTimeout(setDrawStatus._t);if(msg)setDrawStatus._t=setTimeout(function(){el.textContent=""},3500)}

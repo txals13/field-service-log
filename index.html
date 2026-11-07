@@ -3022,11 +3022,37 @@ function addMarks(list){
 // cluster as tightly as the columns of a list do.) On the older manuals, whose
 // lists live on pages of their own, no band is found and the whole sheet is
 // drawing.
+// The list's own header row -- ELEM. / CTDAD. / Nº DE PIEZA / DESCRIPCIÓN /
+// CAT. -- which is printed whether the list below it has sixty rows or one.
+// Three of those labels on one line is a list; the lone DENOMINACIÓN of the
+// title block is not. It is what gives the table's left edge away when the
+// list is too short for a column of numbers to show itself. (Only some of the
+// labels come through whole: an accented one arrives in pieces, since these
+// sheets are plotted from AutoCAD.)
+var LIST_HEAD=/^(ELEM|ELEMENTO|POS|CTDAD|CANT|CANTIDAD|UDS|CAT|CATEGORIA|DE PIEZA|N[º°]? ?DE PIEZA|DESCRIPCION|DENOMINACION|REFERENCIA)[.:]?$/;
+function listHeaderOf(){
+  var lines=[];
+  viewerPickItems.forEach(function(it){
+    var t=(it.str||"").trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").toUpperCase();
+    if(!LIST_HEAD.test(t))return;
+    var cy=it.y+it.h/2,l=null;
+    for(var i=0;i<lines.length;i++)if(Math.abs(lines[i].cy-cy)<Math.max(lines[i].h,it.h)*.6){l=lines[i];break}
+    if(!l){l={cy:cy,h:it.h,items:[]};lines.push(l)}
+    l.items.push(it);
+  });
+  var best=null;
+  lines.forEach(function(l){if(l.items.length>=3&&(!best||l.items.length>best.items.length))best=l});
+  if(!best)return null;
+  var left=best.items[0].x;
+  best.items.forEach(function(i){if(i.x<left)left=i.x});
+  return {items:best.items,left:left};
+}
 function listBandOf(texts,poses){
   var rows=viewerPickItems.filter(function(it){
     return Object.prototype.hasOwnProperty.call(texts,it.str);
   });
-  if(rows.length<3)return null;
+  var head=listHeaderOf();
+  if(!head&&rows.length<3)return null;
   var onRow=viewerPickItems.filter(function(it){
     if(!Object.prototype.hasOwnProperty.call(poses,it.str))return false;
     var cy=it.y+it.h/2;
@@ -3041,8 +3067,11 @@ function listBandOf(texts,poses){
   });
   var need=Math.max(3,Math.round(rows.length*.4)),left=null;
   cols.forEach(function(c){if(c.n>=need&&(left==null||c.x<left))left=c.x});
-  // a list too short for a column to show itself: at least its references on
+  // a list too short for a column to show itself: its printed header, else at
+  // least its references on
+  if(left==null&&head)left=head.left;
   if(left==null)rows.forEach(function(r){if(left==null||r.x<left)left=r.x});
+  if(head)rows=rows.concat(head.items);
   return {rows:rows,left:left};
 }
 function inList(it,band){

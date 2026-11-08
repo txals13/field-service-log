@@ -64,11 +64,28 @@ Una sola forma per a totes les menes: qui ho llegeix mira `fields[]` i després 
 fila, sense haver de saber res de la taula per endavant. `rows[].page` és, com a les
 llistes de peces, la pàgina **al manual original**.
 
-> **El remapatge i les taules no es porten.** Les taules viuen a pàgines que no són de
-> cap conjunt (la 128 dels recanvis recomanats, la 285 de la llista elèctrica), de
-> manera que un PDF retallat no les conté i no hi ha cap numeració on posar-les. Per a
-> la parella del field app, doncs: **manual sencer i renumeració desactivada**.
-> L'exportació avisa si s'intenta el contrari.
+## Pàgines marcades (`refs[]`)
+
+Una part del que el manual sap no és text: on són els punts de consignació, per on
+entra l'aire, quin quadre és quin, on comença cada secció. Són dibuixos i fotografies,
+i no hi ha res a extreure'n — però hi ha la pàgina, i un número de pàgina ja és prou,
+perquè el visor del field app obre qualsevol pàgina d'aquest mateix manual.
+
+```
+refs:[ { kind,            // location | section | procedure | other
+         page,            // pàgina al manual original
+         label } ]        // el nom que se li ha posat
+```
+
+Una pàgina, un punter: el recanvis-splitter no en deixa marcar dues vegades la mateixa.
+Al field app això és, de moment, una llista de dreceres — «ensenya'm els punts de
+consignació» obre la pàgina 110 del manual vinculat.
+
+> **El remapatge, les taules i les pàgines marcades no es porten.** Viuen a pàgines que
+> no són de cap conjunt (la 128 dels recanvis recomanats, la 285 de la llista
+> elèctrica, la 110 de la consignació), de manera que un PDF retallat no les conté i no
+> hi ha cap numeració on posar-les. Per a la parella del field app, doncs: **manual
+> sencer i renumeració desactivada**. L'exportació avisa si s'intenta el contrari.
 
 ## Restricció Drive: scope `drive.file`
 
@@ -134,8 +151,8 @@ Field Service Log/
 - **Offline:** cachejar el PDF del manual + el JSON a IndexedDB després de la 1a càrrega.
 - **Mida del manual:** si els manuals són molt grossos, optimització futura = exportar
   un PDF retallat AMB remapatge de `page` al JSON (feina extra al recanvis-splitter).
-  Compte: això i les `tables[]` són incompatibles — un PDF retallat no conté les seves
-  pàgines. Si algun dia es vol tot alhora, el retall haurà d'incloure-les.
+  Compte: això i les `tables[]` / `refs[]` són incompatibles — un PDF retallat no conté
+  les seves pàgines. Si algun dia es vol tot alhora, el retall haurà d'incloure-les.
 - **Precisió del toc a mòbil:** tolerància generosa al hit-test + confirmació + fallback llista.
 
 ## Ordre de construcció (per fases)

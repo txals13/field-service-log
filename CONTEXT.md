@@ -3109,8 +3109,29 @@ and everything dropped. The fix is to reserve the height rather than to chase
 it: `.pv-wait` puts a `min-height:72vh` on the iframe and on the pages box, and
 `fit()` (report) or the end of `pvRenderPdf` (timesheet, validation) takes it
 off once there is a real measurement, so whatever grows grows BELOW the fold.
-Measured in the preview: the pads start 649 px down a 783 px box and settle at
-765, with the scroll never leaving 0.
+Two things still showed through, both small enough to read as "fine
+adjustments" rather than as a jump:
+
+- **The reserve has to be the SCROLL BOX, measured.** 72vh is more than the box
+  on a laptop and less than it on a phone, and when it falls short the pads
+  peek in at the bottom and then slide away — the same jump in miniature.
+  `pvShow` now sets the `min-height` of whatever is still `.pv-wait` to
+  `#pvScroll`'s own `clientHeight`.
+- **The 4 mm of air at the foot of the iframe fed itself.** Once the iframe is
+  taller than its content, `documentElement.scrollHeight` reports the IFRAME,
+  so each of the three `fit()` passes added another 4 px and the document crept
+  down a step at a time: 760, 764, 768. `fit()` now ignores a difference of 8
+  px or less.
+- **A button that changes its label changes its width.** The confirmation is a
+  few characters shorter than "Desa la signatura", the flex row shares the
+  space out again, and all three buttons shuffle a couple of pixels — twice,
+  once each way. `pvSaved` pins the button to the width it has with its own
+  label before swapping the text.
+
+Measured in the preview, on a 390×844 phone with the new layout: opening leaves
+one adjustment, from the reserve to the real height, entirely below the fold
+(pads 676 → 763 in a 675 box, scroll never leaving 0); saving moves nothing at
+all — 52 samples, pads and all three buttons identical throughout.
 
 **Saving a signature no longer closes the window** (2026-11-08). `pvSave`
 commits and then re-enters `openReview(kind)`, so the document is redrawn from

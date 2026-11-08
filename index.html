@@ -9232,6 +9232,15 @@ function pvClose(){$$("pvBack").style.display="none";$$("pvDoc").innerHTML="";pv
 // after the window has been translated, and would otherwise sit in Catalan.
 function pvSaved(){
   var b=$$("pvSave");if(!b)return;
+  // Pinned to the width it has with its own label before the text is swapped:
+  // the confirmation is a few characters shorter, the row shares the space
+  // out again and the three buttons shuffle by a couple of pixels — twice,
+  // once each way. The button stays the size it was and nothing moves.
+  if(!b.style.minWidth){
+    var w=b.getBoundingClientRect().width;
+    if(w)b.style.minWidth=Math.ceil(w)+"px";
+    b.style.whiteSpace="nowrap";
+  }
   b.textContent=uiT("✓ Signatura desada");
   clearTimeout(pvSaved.tm);
   pvSaved.tm=setTimeout(function(){b.textContent=uiT("✍ Desa la signatura")},1800);
@@ -9413,10 +9422,10 @@ async function openReview(kind){
                                            :"És independent de la de l'informe: una revisió nova de l'informe no la toca."));
     pv.parts.push({kind:kind,g:g0});
     if(blob)pvRenderPdf(blob,pages).then(function(){
-      pages.classList.remove("pv-wait");
+      pages.classList.remove("pv-wait");pages.style.minHeight="";
       if(pv.anchor)pvToPads();
     });
-    else{pages.classList.remove("pv-wait");pages.innerHTML="<div class=\"ts-note\" style=\"padding:16px\">No s'ha pogut preparar el document (cal la llibreria PDF: comprova la connexió). Pots signar igualment.</div>"}
+    else{pages.classList.remove("pv-wait");pages.style.minHeight="";pages.innerHTML="<div class=\"ts-note\" style=\"padding:16px\">No s'ha pogut preparar el document (cal la llibreria PDF: comprova la connexió). Pots signar igualment.</div>"}
     pvShow();
     return;
   }
@@ -9446,10 +9455,15 @@ async function openReview(kind){
     st.textContent=(inked?"":".sig{display:none!important}")+"body{margin-top:16px!important;margin-bottom:16px!important}";
     d.head.appendChild(st);
     // as tall as the report, so the one scroll runs on to the pads
+    // The 4 mm of air at the foot used to feed itself: once the iframe is
+    // taller than its content, scrollHeight reports the IFRAME, so every
+    // re-measure added another 4 px and the document crept down a step at a
+    // time (760, 764, 768) — the fine adjustments you could see. Anything
+    // inside that margin is not a change worth moving the page for.
     function fit(){
-      fr.style.height=(d.documentElement.scrollHeight+4)+"px";
-      fr.classList.remove("pv-wait");
-      if(pv.anchor)pvToPads();
+      var h=d.documentElement.scrollHeight+4,now=parseFloat(fr.style.height)||0;
+      if(Math.abs(h-now)>8){fr.style.height=h+"px";if(pv.anchor)pvToPads()}
+      if(fr.classList.contains("pv-wait")){fr.classList.remove("pv-wait");fr.style.minHeight=""}
     }
     fit();setTimeout(fit,300);setTimeout(fit,1200);
     Array.prototype.forEach.call(d.images,function(im){if(!im.complete)im.addEventListener("load",fit)});
@@ -9473,6 +9487,16 @@ function pvToPads(){
 }
 function pvShow(){
   $$("pvBack").style.display="flex";
+  // The reserve is the SCROLL BOX, measured, not a guess in vh: 72vh is more
+  // than the box on a laptop and less than it on a phone, and when it falls
+  // short the pads peek in at the bottom and then slide away — the same jump
+  // in miniature. Now whatever has not been measured yet fills the view
+  // exactly, so there is nothing of the end of the document to see.
+  (function(){
+    var h=$$("pvScroll").clientHeight;
+    if(h)Array.prototype.forEach.call($$("pvDoc").querySelectorAll(".pv-wait"),
+      function(e){e.style.minHeight=h+"px"});
+  })();
   // Opening starts at the top of the document. A redraw after signing stays
   // where the signing was (pv.anchor) instead of jumping to the top and back.
   if(pv.anchor)setTimeout(pvToPads,0);else $$("pvScroll").scrollTop=0;

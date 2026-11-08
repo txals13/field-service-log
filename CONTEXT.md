@@ -2741,6 +2741,88 @@ agree: the app's WebCrypto, the Python issuer, and this.
 
 ---
 
+## The marked drawing goes with the report (2026-11-06)
+
+Seven commits, documented after the fact on 2026-11-08: `fe22189`, `25648e2`,
+`ef19bdf`, `3eb9f5f`, `fdd0480`, `5efb5a9`, `c9d917f`.
+
+### Marking what has been taken off the sheet
+
+Every position tapped in pick mode is washed green over the number
+(`.draw-mark`, `MARK_COL`/`MARK_FILL`); `markWholeDrawing` does every balloon on
+the page plus the name and number in the title block, because asking for the
+conjunt is asking for everything on the sheet.
+
+- The marks are a LAYER over the canvas (`#drawMarks`, positioned and sized to
+  it on every paint), not pixels painted into it. The page is re-rendered on
+  every zoom and every page turn, and pdf.js cancels a render when the next one
+  starts: anything painted into the bitmap is a race against the next redraw,
+  and with these sheets it lost.
+- A mark is kept as FRACTIONS of the page (`partMark`), so it lands in the same
+  place at any zoom, on any device. `markRect` grows the box from the digits
+  alone — three pixels across on an A1 shrunk to a phone — to about the size of
+  the balloon, never under a fingertip's worth of sheet, and squares it against
+  the sheet's aspect ratio.
+- `viewerMarks` lives as long as the ENTRY, not as long as the viewer
+  (cleared in the entry editor, with `shotBase`), so closing the drawings and
+  going back loses nothing.
+- What was tapped is marked, NOT every number that reads the same: a parts
+  list's quantity column is a stack of 1s and 2s and the sheet came out striped.
+
+### Telling a balloon from the printed parts list
+
+Four commits went into this, each a different idea, and the one that stands is
+the last. A balloon is not "a number alone on its line" (a row of balloons along
+the edge of a view is not alone) and not "a number with a gap either side"
+(balloons sit as close together as list columns). The list is found as a BAND:
+its lines by the drawing references printed in them (which appear nowhere else
+on the sheet), and where its first column starts by the shape a list has and a
+drawing does not — digits in a straight column, one per row, where a balloon
+falls wherever its part is. Anything on one of those lines and from that column
+rightwards is list, position, quantity, reference and description alike; the
+rest is drawing. Not a box around the whole table: one row running out into the
+drawing would take every balloon beside it with it. A sheet whose list is too
+short for a column to show (one part) is placed by the list's printed header
+instead (ELEM. / CTDAD. / Nº DE PIEZA / DESCRIPCIÓN / CAT.), three of those
+labels on one line; the lone DENOMINACIÓN of the title block is not a list. The
+title block's name and number are marked one box PER LINE: these sheets are
+plotted from AutoCAD, which puts every accented character in a text fragment of
+its own, and a box per fragment left the name full of holes.
+
+### The sheet as an attachment (`c9d917f`)
+
+Picking the first part off a drawing attaches that sheet to the entry **as one
+more photo**, marks and all — which is what lets whoever reads the report see
+which part was changed and where it is on the machine.
+
+- One per drawing (`img.drawPage`): picking another part off the same sheet
+  redraws it, so the report carries the sheet's last state with every balloon
+  taken off it. A replaced shot that had already reached Drive is sent to the
+  trash queue, so the folder does not fill up with every state of the sheet.
+- Drawn at paper size (`SHOT_W=2000`) in a canvas of its own — NOT a copy of
+  the on-screen canvas, which is at whatever zoom the sheet is being read at.
+- Rendered with intent `"print"`: a page already rendered for the screen cannot
+  be rendered again with the screen intent — the second call never returns.
+- Drawn ONCE per sheet (`shotBase`), every later part only repainting the marks
+  over the copy in hand; the entry cannot be saved while that runs (`B.busy`),
+  so the sheet reaches the report with it.
+- No `capturedAt`: the entry takes its time from the photos in it, and when a
+  drawing was marked says nothing about when the work was done.
+- Uploaded on CLOSING the viewer (`uploadDrawingShots`), not on every tap: a
+  drawing is read for several parts at a time and only its last state is kept.
+- Named `Dibuix <ref> <name>.jpg` from the owning conjunt, or `Dibuix p. N.jpg`.
+
+### Not here any more: a colour per part
+
+`fe22189` gave every part picked a colour from `PART_COLS`, carried by both the
+balloon and its row in the entry's list. `25648e2` removed it for the single
+green: the question on the sheet is "have I taken this one yet", and eight
+colours answered a question nobody was asking. `PART_COLS`, `partColHex`,
+`partColRgba`, `nextPartCol` and `p.col` are all gone — if an old session still
+carries `col` on a part, nothing reads it.
+
+---
+
 ## What the client does not get (2026-11-06/07)
 
 Four changes that all turn on the same question: what belongs in the document

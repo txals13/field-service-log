@@ -54,7 +54,7 @@
 <header>
   <div class="logo">⚙ Field Service Log</div>
   <h1>Manual d'ús</h1>
-  <p class="sub">Com fer servir l'aplicació, de la primera entrada fins a l'arxiu. Actualitzat el 7 de novembre de 2026.</p>
+  <p class="sub">Com fer servir l'aplicació, de la primera entrada fins a l'arxiu. Actualitzat el 8 de novembre de 2026.</p>
 </header>
 
 <nav class="toc">
@@ -102,7 +102,6 @@
 <h3>L'idioma de l'aplicació</h3>
 <p>A la barra lateral (<span class="btn">☰</span>), al costat del 🌐, tries l'idioma en què vols veure l'aplicació: català, castellà o anglès. Es recorda en aquell aparell i prou, i en canviar-lo la pàgina es torna a carregar.</p>
 <p>No té res a veure amb l'idioma dels informes, que es tria a cada visita des del menú <span class="btn">↓ Informe</span> i pot ser qualsevol dels 29. L'un és per a tu; l'altre, per al client.</p>
-<p>De moment hi ha parts que segueixen en català encara que triïs un altre idioma: els avisos i les preguntes que surten en una finestra del navegador.</p>
 
 <h3>La llicència</h3>
 <p>A la barra lateral (<span class="btn">☰</span>), <span class="btn">🔒 Llicència</span>: hi enganxes la llicència que has rebut, sencera, i prems <span class="btn">Desa</span>. Es fa un cop a cada aparell i es queda només en aquell navegador — no va a Drive, ni als ZIP, ni a les còpies de seguretat. No li cal cobertura: es comprova dins de la mateixa aplicació, i per tant va igual en una planta sense senyal. El nom del titular surt al peu de cada informe.</p>
@@ -211,6 +210,21 @@
 <p>Cada dibuix del manual és un conjunt amb nom i referència pròpia (per exemple <em>Motorización · ZO-266-00</em>). Quan tries des del dibuix, a sota de l'avís groc hi ha <span class="btn">📦 Conjunt sencer: …</span> amb el conjunt de la pàgina que tens a la pantalla, i, si en té, també el conjunt gran al qual pertany. En tocar-lo, s'afegeix <strong>com una sola línia</strong>: quantitat 1, la referència i el nom, sense la llista de peces. Tries si és canviat o recomanat com amb qualsevol recanvi, i surt igual a l'informe, a l'Excel i a l'historial. A l'app el reconeixes per la icona 📦.</p>
 <p>Quan la visita demana algun conjunt sencer, sota les llistes de recanvis de l'informe s'hi afegeix l'avís <em>«Un conjunt demanat sencer inclou elements que no apareixen al dibuix, com la tornilleria.»</em> &mdash; el que arriba és el conjunt tal com el munta el fabricant, i la tornilleria i les juntes que el formen no tenen número propi al dibuix: llegir el dibuix no és llegir el que es rebrà. Surt als quatre formats i, a l'Excel, al full de la sessió. Un conjunt marcat de només informatiu no el fa sortir, perquè no s'ha demanat.</p>
 <p>Amb <span class="btn">📐 Insereix un recanvi des del dibuix</span>, el mateix botó escriu el nom i la referència del conjunt a la descripció.</p>
+<h3>El que ja has tret del full queda marcat</h3>
+<p>Cada número que toques queda <strong>marcat en verd</strong> sobre el dibuix, amb un requadre translúcid que deixa llegir el número de sota. Amb <span class="btn">📦 Conjunt sencer</span> es marquen <strong>tots</strong> els globus de la pàgina, i també el nom i el número del requadre de títol, perquè demanar el conjunt és demanar tot el que hi ha al full.</p>
+<p>La <strong>llista impresa</strong> al costat del requadre de títol no es marca mai: hi ha els mateixos números a les columnes de posició i de quantitat, i marcar-los ompliria el full de verd sense dir res. L'app distingeix una cosa de l'altra per la forma: les xifres de la llista van en columna recta, una per fila, mentre que un globus cau allà on és la peça.</p>
+<p>Les marques duren <strong>mentre tens l'entrada oberta</strong>: pots tancar els dibuixos i tornar-hi sense perdre'n cap. Quan obres una altra entrada, el full torna a començar net.</p>
+
+<h3>El dibuix marcat va a l'informe</h3>
+<p>En triar el primer recanvi d'un dibuix, <strong>el full s'adjunta a l'entrada com una fotografia més</strong>, amb els globus marcats. És el que fa que qui llegeix l'informe vegi quina peça s'ha canviat i <strong>on és a la màquina</strong>, sense haver de buscar-la al manual.</p>
+<ul>
+  <li><strong>Un per dibuix.</strong> Si en treus més recanvis del mateix full, la imatge es refà, de manera que a l'informe hi va l'últim estat amb tots els globus que se n'han tret. La versió anterior que ja hagués pujat a Drive va a la paperera, perquè la carpeta no s'ompli de totes les passes.</li>
+  <li><strong>A mida de paper</strong>, no una còpia del que es veu a la pantalla: el full es torna a dibuixar a part, i per tant surt igual de net tant si l'estaves llegint molt ampliat al mòbil com si no.</li>
+  <li>Es diu <code>Dibuix &lt;referència&gt; &lt;nom del conjunt&gt;.jpg</code>, o <code>Dibuix p. N.jpg</code> si el full no té conjunt propi, i el pots reanomenar o treure com qualsevol altra foto.</li>
+  <li><strong>No canvia l'hora de l'entrada.</strong> L'hora surt de les fotos que has fet tu; el moment en què vas marcar un dibuix no diu res de quan es va fer la feina.</li>
+  <li>Es puja a Drive <strong>en tancar el visor</strong>, no a cada toc. Mentre s'està fent la imatge, l'entrada no es pot desar, i així el full hi arriba sempre.</li>
+</ul>
+
 <h3>Canviat, recomanat o només informatiu</h3>
 <p>Cada recanvi té un estat:</p>
 <ul>

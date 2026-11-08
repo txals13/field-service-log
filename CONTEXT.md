@@ -3157,6 +3157,29 @@ test.
 
 ---
 
+## The drawings open from the composer too (2026-11-08)
+
+Picking a part while writing the entry is the normal order of things — the
+sheet is in front of you — and until now the drawings could only be reached
+from the EDIT modal, so you had to add the entry first and reopen it. A `📐`
+button now sits in the composer's row beside the microphone, shown only when
+the visit has a manual linked.
+
+`drawTarget` ("edit" | "pend") says which of the two the viewer is feeding, and
+is the whole of the change: `addResolvedPart` pushes to `pParts` or `eParts`,
+`captureDrawingShot` / `putDrawingShot` / `uploadDrawingShots` work on `MB[tgt]`
+instead of `MB.edit`, and the capture's "a slower shot must not land on a newer
+one" guard checks the target as well as the entry. `rEParts` became
+`rPartsBox(boxId, list, redraw)` with one caller each, so the two lists are the
+same list.
+
+`addEntry` carries `pParts` onto the new entry and then clears the parts, the
+marks and `shotBase`, exactly as `openEdit` does for the entry it opens: the
+marks belong to one entry and the next starts on a clean sheet. `openEdit` also
+puts the target back to "edit", so the two never cross.
+
+---
+
 ## Test data
 `fsl_demo_data.json` — 10 sessions, 100 entries, 66 synthetic photos
 Sectors: automotive, pharma, steel, food, logistics, wind energy, chemical,

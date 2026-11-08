@@ -1401,6 +1401,13 @@ var pExif=0, pExifEdit=0, pExifFix=0;
 var corrPrev={};   // "✓ Corregeix": the text as it was, so one more tap undoes it
 // The resolution being edited: its media, and whether the entry has one at all.
 var fImgs=[], fixOn=false;
+// The drawings can be opened from the entry COMPOSER too, not only from the
+// edit modal (2026-11-08): picking a part while writing the entry is the
+// normal order of things — you have the sheet in front of you — and having to
+// add the entry first and reopen it to reach the drawings was backwards.
+// `drawTarget` says which of the two the viewer is feeding: its parts list and
+// its attachments. Everything else about the viewer is the same either way.
+var pParts=[], drawTarget="edit";
 var accessToken=null, tokenExp=0, driveFileId=null, rootFolderId=null;
 var isLoggedIn=false, saveTimer=null, isDirty=false, savingDrive=false, savePending=false;
 var editingId=null, eImgs=[], eParts=[], pendingDel=null, dInst=null;
@@ -3346,8 +3353,10 @@ function shotBaseOf(page){
 // running (busy), so what is on the sheet reaches the report with it.
 var shotSeq=0;
 async function captureDrawingShot(){
-  if(!viewerDoc||!viewerPickMode||viewerPickPurpose!=="part"||!editingId)return;
-  var page=viewerPage,entry=editingId,seq=++shotSeq,B=MB.edit;
+  if(!viewerDoc||!viewerPickMode||viewerPickPurpose!=="part")return;
+  var tgt=drawTarget;
+  if(tgt==="edit"&&!editingId)return;
+  var page=viewerPage,entry=editingId,seq=++shotSeq,B=MB[tgt];
   B.busy(1);
   try{
     var base=await shotBaseOf(page);
@@ -3366,14 +3375,15 @@ async function captureDrawingShot(){
     });
     var blob=await new Promise(function(res){cv.toBlob(res,"image/jpeg",.85)});
     // a slower shot must not land on top of a newer one
-    if(blob&&seq===shotSeq&&editingId===entry)putDrawingShot(page,new File([blob],drawingShotName(page),{type:"image/jpeg"}));
+    if(blob&&seq===shotSeq&&editingId===entry&&drawTarget===tgt)putDrawingShot(page,new File([blob],drawingShotName(page),{type:"image/jpeg"}),tgt);
   }catch(e){}
   B.busy(-1);
 }
 // No capturedAt on a shot: the entry takes its time from the PHOTOS in it, and
 // the moment a drawing was marked says nothing about when the work was done.
-function putDrawingShot(page,file){
-  var B=MB.edit,list=B.get().slice(),at=-1;
+function putDrawingShot(page,file,tgt){
+  tgt=tgt||drawTarget;
+  var B=MB[tgt],list=B.get().slice(),at=-1;
   for(var i=0;i<list.length;i++)if(list[i].drawPage===page){at=i;break}
   var img={data:null,type:"image",name:file.name,uploadStatus:"",drawPage:page};
   fileCache.set(img,file);
@@ -3384,22 +3394,23 @@ function putDrawingShot(page,file){
     if(list[at].driveId&&sess)queueTrash(sess.id,[list[at].driveId]);
     list[at]=img;
   } else list.push(img);
-  B.set(list);renderThumbs("edit");
+  B.set(list);renderThumbs(tgt);
   B.busy(1);
-  makeLocalImageData(file).then(function(d){img.data=d;B.busy(-1);renderThumbs("edit")});
+  makeLocalImageData(file).then(function(d){img.data=d;B.busy(-1);renderThumbs(tgt)});
 }
 // The shots go up on closing the viewer, not on every part picked: a drawing
 // is read for several parts at a time and only its last state is kept.
 function uploadDrawingShots(){
   var sess=sessions.find(function(x){return x.id===aid});
   if(!sess||!isLoggedIn)return;
-  MB.edit.get().forEach(function(img){
+  var tgt=drawTarget;
+  MB[tgt].get().forEach(function(img){
     if(!img.drawPage||img.uploadStatus==="ok"||img.uploadStatus==="loading")return;
     var file=fileCache.get(img);if(!file)return;
-    img.uploadStatus="loading";renderThumbs("edit");
+    img.uploadStatus="loading";renderThumbs(tgt);
     uploadMedia(sess,file,"photos").then(function(r){
       if(r)mediaUploaded(img,r);else img.uploadStatus="err";
-      renderThumbs("edit");scheduleSave();
+      renderThumbs(tgt);scheduleSave();
     });
   });
 }
@@ -3430,8 +3441,8 @@ function addResolvedPart(r,qty,st){
   st=PART_STS.indexOf(st)>=0?st:lastPartSt;lastPartSt=st;
   var np={pos:r.pos,ref:r.ref,cant:cant,denominacio:r.denominacio,conjunt:r.conjunt,grup:r.grup,page:r.page,st:st};
   if(r.set)np.set=true;
-  eParts.push(np);
-  rEParts();
+  if(drawTarget==="pend"){pParts.push(np);rPParts()}
+  else{eParts.push(np);rEParts()}
   // Colour what this just took off the sheet: the number tapped, or -- taking
   // the conjunt as one line -- the whole drawing.
   if(r.set)markWholeDrawing(r);
@@ -4603,6 +4614,7 @@ function renderContent(){
         +"<div class=\"m2-flx m2-sheet-hdr\" id=\"m2CompHdr\"><button class=\"btn-g\" data-m2close=\"1\" style=\"font-size:18px\">&#10005;</button><span>Entrada nova</span><button class=\"btn-gold\" id=\"m2Add\">Afegeix</button></div>"
         +"<div class=\"m2-flx m2-sheet-hdr\" id=\"m2NotesHdr\"><button class=\"btn-g\" data-m2close=\"1\" style=\"font-size:18px\">&#10005;</button><span>Notes generals</span></div>"
         +"<div id=\"pThumbs\" class=\"thumbs\"></div>"
+        +"<div id=\"pParts\" class=\"log-parts\"></div>"
         +"<div class=\"input-row\">"
         +"<div class=\"input-ctrl\">"
         +"<div class=\"m2-flx m2-sev\" id=\"m2Sev\">"
@@ -4624,6 +4636,7 @@ function renderContent(){
            +"<button class=\"btn-sm\" id=\"btnPhoto\" title=\"Tria una foto o un vídeo que ja tens\">🖼</button>"
           :"<button class=\"btn-sm\" id=\"btnPhoto\" title=\"Afegeix una foto o un vídeo\">📷</button>")
         +"<button class=\"btn-sm\" id=\"btnRec\" title=\"Grava una nota de veu\">🎙</button>"
+        +"<button class=\"btn-sm\" id=\"btnPickDraw\" style=\"display:none\" title=\"Obre els dibuixos del manual: toca una posició i el recanvi entra a l'entrada amb el full marcat\">📐</button>"
         +"<button class=\"btn-sm\" id=\"entCorr\" title=\"Corregeix ortografia i gramàtica de la descripció\">✓</button>"
         +"<button class=\"btn-sm\" id=\"btnIntern\" title=\"Entrada interna: es queda a l'app i no surt a l'informe del client\">🔒</button>"
         +"<input type=\"file\" id=\"fileIn\" accept=\"image/*,video/*\" multiple style=\"display:none\">"
@@ -4714,7 +4727,13 @@ function renderContent(){
   var fi=$$("filtIn");if(fi)fi.addEventListener("input",function(e){filterTxt=e.target.value;debLogRender()});
   if(isOpen){
     var ni=$$("notesIn");ni.value=active.notes||"";autoH(ni);
-    rThumbs();
+    rThumbs();rPParts();
+    (function(){
+      var b=$$("btnPickDraw");if(!b)return;
+      var sv=sessions.find(function(x){return x.id===aid});
+      b.style.display=(sv&&sv.manualRef)?"inline-block":"none";
+      b.addEventListener("click",function(){drawTarget="pend";openDrawings(undefined,true)});
+    })();
     $$("btnAdd").addEventListener("click",addEntry);
     $$("entIn").addEventListener("keydown",function(e){if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){e.preventDefault();addEntry()}});
     ni.addEventListener("input",function(e){autoH(e.target);sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{notes:e.target.value}):s});scheduleSave()});
@@ -4816,11 +4835,13 @@ function rThumbs(){renderThumbs("pend")}
 function rEThumbs(){renderThumbs("edit")}
 function rFThumbs(){renderThumbs("fix")}
 // spare parts list inside the edit modal (quantity editable, each row removable)
-function rEParts(){
-  var box=$$("eParts");if(!box)return;
+function rEParts(){rPartsBox("eParts",eParts,rEParts)}
+function rPParts(){rPartsBox("pParts",pParts,rPParts)}
+function rPartsBox(boxId,list,redraw){
+  var box=$$(boxId);if(!box)return;
   box.innerHTML="";
   box.className="eparts";
-  eParts.forEach(function(p,idx){
+  list.forEach(function(p,idx){
     var qi=document.createElement("input");
     qi.type="text";qi.className="pq-in";qi.inputMode="numeric";qi.value=p.cant||"";qi.title="Quantitat";
     // live edit, no re-render (that would steal focus mid-typing)
@@ -4832,7 +4853,7 @@ function rEParts(){
     ss.value=partSt(p);
     ss.addEventListener("change",function(){p.st=this.value;lastPartSt=this.value;this.className="ps-sel ps-"+this.value});
     var del=document.createElement("button");del.className="part-del";del.title="Treu";del.innerHTML="&#10005;";
-    del.addEventListener("click",function(){eParts.splice(idx,1);rEParts()});
+    del.addEventListener("click",function(){list.splice(idx,1);redraw()});
     box.appendChild(qi);box.appendChild(ref);box.appendChild(nm);box.appendChild(ss);box.appendChild(del);
   });
 }
@@ -5723,11 +5744,15 @@ function addEntry(){
     var b2=$$("btnAdd");if(b2){b2.disabled=false;b2.innerHTML="↵ Afegeix"}
     var imgs=pImgs.slice(),pts=earliestTs(imgs);
     var entry={id:uid(),ts:pts||now(),text:captText,severity:captSev,tag:captTag,images:imgs};
+    if(pParts.length)entry.parts=pParts.map(function(p){return Object.assign({},p)});
     if(captInt)entry.intern=true;
     autoNameMedia(imgs,shortDesc(text,captTag));
     if(pts)entry.tsFromPhoto=true;
     sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{entries:sortEntries((s.entries||[]).concat([entry]))}):s});
     entIn.value="";var ti=$$("tagIn");if(ti)ti.value="";pImgs=[];composeIntern=false;
+    // The marks on the sheet belonged to the entry just added, like the ones
+    // in the edit modal do (see openEdit): the next entry starts on a clean one.
+    pParts=[];viewerMarks=[];shotBase=null;drawTarget="edit";
     if(m2Sheet==="compose")m2Hide();
     logToBottom=true;   // the new entry is at the end: go and show it
     scheduleSave();renderAll();
@@ -5785,7 +5810,7 @@ function openEdit(entryId){
   var active=sessions.find(function(s){return s.id===aid});if(!active)return;
   var entry=(active.entries||[]).find(function(x){return x.id===entryId});if(!entry)return;
   editingId=entryId;eImgs=(entry.images||[]).slice();
-  viewerMarks=[];shotBase=null;   // the marks are this entry's, and start fresh with it
+  viewerMarks=[];shotBase=null;drawTarget="edit";   // the marks are this entry's, and start fresh with it
   eParts=(entry.parts||[]).map(function(p){return Object.assign({},p)});
   $$("eTs").value=tsToInput(entry.ts);
   $$("eSev").value=entry.severity||"info";
@@ -5913,8 +5938,9 @@ $$("pfSave").addEventListener("click",function(){
   clearPartForm();rEParts();
 });
 $$("pfDen").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();$$("pfSave").click()}});
-$$("ePickDraw").addEventListener("click",function(){openDrawings(undefined,true)});
+$$("ePickDraw").addEventListener("click",function(){drawTarget="edit";openDrawings(undefined,true)});
 $$("eTextPickDraw").addEventListener("click",function(){
+  drawTarget="edit";
   var ta=$$("eText");
   textPickCaret=(ta&&typeof ta.selectionStart==="number")?ta.selectionStart:(ta?ta.value.length:0);
   openDrawings(undefined,true,"text");
@@ -7518,6 +7544,7 @@ es:{
   "☁ Sincronitza-ho tot":"☁ Sincronízalo todo",
   "⚠ Recomanat · urgent":"⚠ Recomendado · urgente",
   "🔧 Afegeix un recanvi":"🔧 Añade un recambio",
+  "Obre els dibuixos del manual: toca una posició i el recanvi entra a l'entrada amb el full marcat":"Abre los planos del manual: toca una posición y el recambio entra en la entrada con la hoja marcada",
   "Cancel·la el retall":"Cancela el recorte",
   "Persona de contacte":"Persona de contacto",
   "Proves de producció":"Pruebas de producción",
@@ -8135,6 +8162,7 @@ en:{
   "☁ Sincronitza-ho tot":"☁ Sync everything",
   "⚠ Recomanat · urgent":"⚠ Recommended · urgent",
   "🔧 Afegeix un recanvi":"🔧 Add a part",
+  "Obre els dibuixos del manual: toca una posició i el recanvi entra a l'entrada amb el full marcat":"Opens the manual's drawings: tap a position and the part joins the entry with the marked sheet",
   "Cancel·la el retall":"Cancel the crop",
   "Etiqueta (opcional)":"Tag (optional)",
   "Persona de contacte":"Contact person",

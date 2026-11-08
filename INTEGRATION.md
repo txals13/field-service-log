@@ -64,6 +64,23 @@ Una sola forma per a totes les menes: qui ho llegeix mira `fields[]` i després 
 fila, sense haver de saber res de la taula per endavant. `rows[].page` és, com a les
 llistes de peces, la pàgina **al manual original**.
 
+## Fitxa de màquina (`machine`)
+
+`machine` ja no són només `serial`, `model` i `client`. El full de dades del manual
+diu qui l'ha feta i amb què s'alimenta, i tot això s'agafa amb el mateix 🎯 que el
+número de sèrie, apuntat a la pàgina que toqui (al BPF-140, la 8 per a les dades
+generals i la 15 per a potència i aire):
+
+```
+machine:{ serial, model, client, manufacturer, project, year, purpose, site,
+          voltage, freq, power, airBar, airLpm }     // tot text, tal com surt del full
+```
+
+Els valors són el text triat, no números parsejats («10 Kw», «6 (Bar)»): qui els
+necessiti com a número els neteja en llegir-los. Les claus que falten o són buides
+volen dir «no consta». Un catàleg antic només porta les tres primeres i segueix
+sent vàlid.
+
 ## Pàgines marcades (`refs[]`)
 
 Una part del que el manual sap no és text: on són els punts de consignació, per on

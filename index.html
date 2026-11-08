@@ -2961,11 +2961,11 @@ async function getManualCatalog(jsonId){
 }
 // -- The Tag field is a free text box: the tag is whatever this entry is about,
 //    the part of the machine or the kind of work, and it is the technician who
-//    knows. The dropdowns behind it only save typing the handful that come up
-//    again and again, so they hold a short generic list (2026-11-08).
-//    They used to hold the linked manual's conjunts: dozens of them, numbers
-//    rather than words, none of which anybody was going to use as a tag, and
-//    they crowded out the one place the generic ones belong.
+//    knows. Its own suggestion list holds a short generic set (2026-11-08); it
+//    used to hold the linked manual's conjunts, which are numbers, and which
+//    crowded out the one place the generic ones belong. The conjunts did not
+//    go anywhere: they are what the dropdown BESIDE the field is for, and that
+//    one is unchanged.
 //
 //    You read a WORD and the field gets a CODE. The two halves are different
 //    kinds of thing and are treated as such: the word is interface, so it is
@@ -2989,18 +2989,28 @@ var TAG_GEN=[
 //    when the daily summary is written. Nothing offers them for picking. --
 var tagOptKey=null, tagOpts=[];
 function fillTagTargets(){
-  var opts=TAG_GEN.map(function(t){return "<option value=\""+esc(t.v)+"\">"+esc(uiT(t.l))+"</option>"}).join("");
+  // The TEXT FIELD's own list: the generic ones. This is the box you type a
+  // tag into, so what it offers has to be the handful worth typing again and
+  // again — not the manual's conjunts, which are numbers and are what the
+  // dropdown below is for.
   var dl=$$("tagOptions");
-  if(dl)dl.innerHTML=opts;
+  if(dl)dl.innerHTML=TAG_GEN.map(function(t){
+    return "<option value=\""+esc(t.v)+"\">"+esc(uiT(t.l))+"</option>"}).join("");
+  // The DROPDOWNS: the linked manual's conjunts, and only when there is one.
+  var opts=tagOpts.map(function(o){return "<option value=\""+esc(o.v)+"\">"+esc(o.l)+"</option>"}).join("");
   // The composer's own select, rebuilt with the composer on every render.
-  // El rètol es tradueix aquí i no es deixa per a uiApply: populateTagOptions
-  // torna a omplir aquests dos desplegables quan la seva promesa es resol, que
-  // és després que uiApply ja hagi passat, i els deixava en català.
-  var cap="<option value=\"\">"+esc(uiT("▾ Etiqueta…"))+"</option>";
   var ts=$$("tagSel");
-  if(ts){ts.style.display="";ts.innerHTML=cap+opts}
+  if(ts){
+    if(tagOpts.length){ts.style.display="";ts.innerHTML="<option value=\"\">&#9662; Conjunt del manual…</option>"+opts}
+    else{ts.style.display="none";ts.innerHTML=""}
+  }
   var sel=$$("eTagSel");
-  if(sel){sel.style.display="";sel.innerHTML=cap+opts}
+  if(sel){
+    if(tagOpts.length){
+      sel.style.display="";
+      sel.innerHTML="<option value=\"\">&#9662; Tria un conjunt del manual…</option>"+opts;
+    }else{sel.style.display="none";sel.innerHTML=""}
+  }
 }
 // "A1 .1 .- ZÓCALO (ZO). - (BASTIDOR)" -> "ZÓCALO (ZO) - (BASTIDOR)": the
 // manual's own numbering prefix is noise in a dropdown.
@@ -4582,7 +4592,7 @@ function renderContent(){
           +"<button data-sev=\"warning\" style=\"color:var(--orange)\">▲ Avís</button><button data-sev=\"issue\" style=\"color:var(--red)\">■ Prob.</button></div>"
         +"<select id=\"sevSel\" class=\"sel-sev\"><option value=\"info\">○ Info</option><option value=\"ok\">● OK</option><option value=\"warning\">▲ Avís</option><option value=\"issue\">■ Problema</option></select>"
         +"<input type=\"text\" id=\"tagIn\" placeholder=\"Etiqueta…\" class=\"inp-tag\" list=\"tagOptions\" autocomplete=\"off\">"
-        +"<select id=\"tagSel\" class=\"inp-tag\" style=\"display:none\" title=\"Etiquetes gen&egrave;riques\"></select>"
+        +"<select id=\"tagSel\" class=\"inp-tag\" style=\"display:none\" title=\"Els conjunts del manual vinculat\"></select>"
         +"</div>"
         +"<div id=\"internBanner\" class=\"int-bar\" style=\"display:none\"><span>🔒</span> Aquesta entrada no sortirà a l'informe del client</div>"
         +"<textarea id=\"entIn\" rows=\"3\" placeholder=\"Descripció (opcional si hi ha foto)… Ctrl+Retorn per afegir\"></textarea>"
@@ -8088,7 +8098,6 @@ en:{
   "Nom de la prova":"Test name",
   "Què s'hi ha fet":"What was done",
   "✔ Com ha quedat":"✔ How it ended",
-  "▾ Etiqueta…":"▾ Tag…",
   "Mecànica":"Mechanical",
   "Elèctrica":"Electrical",
   "Automatització / PLC":"Automation / PLC",

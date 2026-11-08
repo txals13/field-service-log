@@ -3047,35 +3047,31 @@ line to `SHOTS` and a `<figure>` to the manual, not finding a phone.
 
 ---
 
-## Generic tags (2026-11-08)
+## Generic tags in the Tag field's own list (2026-11-08)
 
-The Tag field is a free text box and the dropdowns behind it (`#tagSel` in the
-composer, `#eTagSel` in the edit modal, the `#tagOptions` datalist behind both
-text inputs) hold a short fixed list, `TAG_GEN`. They used to hold the linked
-manual's conjunts: dozens of entries, numbers rather than words, none of which
-anybody was going to put in a tag, and they crowded out the generic ones. The
-dropdowns are now always there, not only when a manual is linked.
+The Tag field is a free text box, and the list it suggests while you type
+(`#tagOptions`, the datalist behind `#tagIn` in the composer and `#eTag` in the
+edit modal) now holds `TAG_GEN`: six generic ones, MEC, ELEC, PLC, HID, NEU,
+SEG. It used to hold the linked manual's conjunts — dozens of entries, numbers
+rather than words, which is not what you reach for when typing a tag, and they
+crowded out the one place the generic ones belong.
 
-**You read a word and the field gets a code** — `{v:"MEC", l:"Mecànica"}`, the
-same split the conjunt dropdown used to make between a name and a number. The
-two halves are different kinds of thing and are treated as such. The word is
-INTERFACE: it goes through `uiT` and whoever opens the list reads it in their
-own language (Mechanical / Mecánica). The code is DATA: it goes into the entry,
-into the report and into the machine's history, where it is what groups one
-visit's work with another's, so it is the same six letters whatever the
-interface is set to. Offering "SEG" here and "SAFE" there would have two
-technicians writing two different tags for the same thing and the history would
-stop lining up; the report translates tags on their way out, like the rest.
+**Only that list changed.** The DROPDOWNS beside the field (`#tagSel` in the
+composer, `#eTagSel` under the field in the edit modal) are the manual's
+conjunts exactly as before, shown only when the visit has a manual linked.
+Those two are how you tag an entry with a machine section, and they were not
+the problem.
 
-The dropdown's own first line is translated where it is BUILT, not left to
-`uiApply`: `populateTagOptions` refills both selects when its promise settles,
-which is after `uiApply` has already walked the content, and the composer's
-line was staying in Catalan on an English interface.
-
-`populateTagOptions` and `tagOpts` stay, now for one reader only: `tagLabel`,
-which spells a conjunt number out into its name when an OLD entry's tag holds
-one and the daily summary is being written. Nothing offers them for picking any
-more.
+You read a word and the field gets a code — `{v:"MEC", l:"Mecànica"}`, the same
+split the conjunt dropdown makes between a name and a number. The two halves
+are different kinds of thing and are treated as such. The word is INTERFACE: it
+goes through `uiT`, so whoever opens the list reads it in their own language
+(Mechanical / Mecánica). The code is DATA: it goes into the entry, into the
+report and into the machine's history, where it is what groups one visit's work
+with another's, so it is the same letters whatever the interface is set to.
+Offering "SEG" here and "SAFE" there would have two technicians writing two
+different tags for the same thing and the history would stop lining up; the
+report translates tags on their way out, like the rest of the text.
 
 ---
 

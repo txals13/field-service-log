@@ -1171,39 +1171,45 @@ Field Service Log/
   name at once (`driveRename`) or when the upload finishes:
   `mediaUploaded` replaced the five `img.name=r.name` that wrote the camera
   name back — which also lost a hand rename made during the upload.
-- **The outcome's photo is named as the outcome** (2026-11-08: "I added a
-  photo to an entry of how it turned out and the photo kept the same name"). It
-  did not, quite: with no text written in the resolution — the usual case,
-  because the photo IS the answer — the name fell back to the ENTRY's words
-  plus a hardcoded " - resolt", so in the Drive folder the before and the after
-  sat next to each other reading almost alike. `fixNameBase(entryText, entryTag,
-  fixText)` now builds both cases the same way: the resolution's own words when
-  it has any, the entry's otherwise, and ALWAYS the mark `_` + `uiT("resolt")`
-  — an underscore and no spaces, so it reads as part of the file name and not
-  as one more of the description's words, and translated, so it does not sit in
-  Catalan inside a file name for good (`_resuelto`, `_resolved`; "resolt" was
-  already in both tables for the incident counters). The mark is appended AFTER
-  `cleanName`, and `autoNameMedia` cleans at 60 characters instead of 40,
-  because trimmed with the rest a long description ate exactly the words worth
-  having. Used by both callers, the edit save and `renamePass`. Checked in the
-  preview across the three languages, with and without resolution text, with a
-  very long description and with two photos (which number after the mark,
-  "Canviat coixinet_resolt 1.jpg").
-  Then the mark did not arrive at all on the phone, and the reason was the
-  OTHER half of `autoNameMedia`: it only renames what `camName` recognises, and
-  `camName` knows the names it was taught — IMG_, PXL_, a bare date, ten digits
-  or more. A phone or a gallery app that calls the file anything else ("Foto
-  08-11-2026 14 30.jpg", "Resized_…") looked exactly like a name a person had
-  chosen, so the file kept it. Hence `autoNameMedia(list, base, force)`, with
-  `force` passed only for the resolution's photos on an edit save: there is
-  nothing to read into the name, a photo attached there IS the photo of how it
-  ended. `userNamed` (typed into the field under the thumbnail) still wins, and
-  the entry's own files keep the careful reading — those can also arrive from
-  the session's Drive folder already named by a person. `renamePass` is left
-  alone: it is the retro pass over old files and has no edit to take as intent,
-  so an old photo takes its mark the next time its entry is saved. Checked in
-  the preview through the real file input, EXIF and all, with four file names
-  and with a name typed by hand.
+- **The outcome's photo is named after the ENTRY, plus `_resolt`** (2026-11-08,
+  over several passes, and the passes are the lesson). What was asked for in
+  the end: the two photos of one problem must sit together in the Drive folder
+  and read as a pair — `Rodament motor principal joc.jpg` and
+  `Rodament motor principal joc_resolt.jpg`. So `fixNameBase(entryText,
+  entryTag)` takes the ENTRY's words, always, and appends `_` +
+  `uiT("resolt")`. Three things that were each got wrong first:
+  - **Not the resolution's own text.** The first try preferred it when there
+    was any. That gives the photo a different first word, so it sorts somewhere
+    else entirely and the pair is lost — and most of the time there is no
+    resolution text anyway, because the photo IS the answer.
+  - **The mark is `_resolt`, one word, no spaces**, so it reads as part of the
+    file name and not as one more of the description's words. It goes through
+    `uiT`, so it does not sit in Catalan inside a file name for good
+    (`_resuelto`, `_resolved`); "resolt" was already in both tables, from the
+    incident counters. It is appended AFTER `cleanName`, and `autoNameMedia`
+    cleans at 60 characters instead of 40, because trimmed with the rest a long
+    description ate exactly the words worth having.
+  - **`autoNameMedia(list, base, force)`.** The mark kept not arriving on the
+    phone, and the reason was the half of that function nobody had looked at:
+    it only renames what `camName` recognises, and `camName` knows the names it
+    was taught — IMG_, PXL_, a bare date, ten digits or more. A phone or a
+    gallery app that calls the file anything else ("Foto 08-11-2026 14 30.jpg",
+    "Resized_…") looked exactly like a name a person had chosen, so the file
+    kept it. `force` is passed only for the resolution's photos on an edit
+    save: there is nothing to read into the name, a photo attached there IS the
+    photo of how it ended. `userNamed` (typed into the field under the
+    thumbnail) still wins, and the entry's own files keep the careful reading —
+    those can also arrive from the session's Drive folder already named by a
+    person. `renamePass` is left alone: it is the retro pass over old files and
+    has no edit to take as intent, so an old photo takes its mark the next time
+    its entry is saved.
+
+  The method lesson: the first two passes were argued from reading the code and
+  from stub objects, and both were wrong about what actually happens on a
+  phone. What settled it was driving the REAL file input with a real File —
+  `handleFiles`, EXIF, the lot — and reading back what the session ended up
+  holding. Do that first next time there is a report of "the name did not
+  change".
 
 - **One order for the three report formats** (2026-10-17): header and visit
   data (+ entry counters), machine counters, GENERAL NOTES (moved up from the

@@ -5556,8 +5556,15 @@ function shortDesc(text,tag){
 // long description would eat the very words that make the name worth having.
 // An underscore and no spaces, so the mark reads as part of the file name and
 // not as another of the description's words.
-function fixNameBase(entryText,entryTag,fixText){
-  var base=shortDesc(fixText,"")||shortDesc(entryText,entryTag);
+// Always the ENTRY's words, never the resolution's (2026-11-08). The point of
+// the name is that the two photos of one problem sit together in the Drive
+// folder and read as a pair, "Cinta entrada patina.jpg" and "Cinta entrada
+// patina_resolt.jpg". Naming this one after the resolution's own text —which
+// is what it did first— gave it a different first word, so it sorted somewhere
+// else entirely and the pair was lost; and most of the time there is no
+// resolution text anyway, because the photo IS the answer.
+function fixNameBase(entryText,entryTag){
+  var base=shortDesc(entryText,entryTag);
   return base?base+"_"+cleanName(uiT("resolt")):"";
 }
 function camName(nm){
@@ -5585,7 +5592,7 @@ function renamePass(){
     (s.entries||[]).forEach(function(e){
       function want(list){return (list||[]).some(function(im){return im&&!im.userNamed&&!im.autoName&&camName(im.name)})}
       if(want(e.images)){var sd=shortDesc(e.text,e.tag);if(sd){autoNameMedia(e.images,sd);ch=true}}
-      if(e.fix&&want(e.fix.images)){var fd=fixNameBase(e.text,e.tag,e.fix.text);if(fd){autoNameMedia(e.fix.images,fd);ch=true}}
+      if(e.fix&&want(e.fix.images)){var fd=fixNameBase(e.text,e.tag);if(fd){autoNameMedia(e.fix.images,fd);ch=true}}
     });
     if(!ch)return s;
     any=true;return Object.assign({},s);          // a new object: the change is stamped and synced
@@ -5786,7 +5793,7 @@ function saveEdit(){
       else delete up.fix;
       var sd=shortDesc(text,newTag);
       autoNameMedia(up.images,sd);
-      if(up.fix)autoNameMedia(up.fix.images,fixNameBase(text,newTag,fixText),true);
+      if(up.fix)autoNameMedia(up.fix.images,fixNameBase(text,newTag),true);
       return up;}))})});
     closeEdit();scheduleSave();renderAll();
   }tryS();

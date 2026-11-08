@@ -3100,6 +3100,18 @@ says whether the line met the numbers it was bought to meet.
   counter under it — a screen stretched to a frame is a screen you cannot read
   the digits off.
 
+**Saving a signature no longer closes the window** (2026-11-08). `pvSave`
+commits and then re-enters `openReview(kind)`, so the document is redrawn from
+the session as it now stands, with the signature written into it; closing is
+the user's, with Tanca. The report's own `.sig` block had always been hidden in
+the preview (an empty pair of rules right above the pads is the same thing
+twice) and now comes back as soon as there is ink in it. Re-entering is safe
+because `setRevSign` deliberately leaves `updatedAt` alone, so
+`changedSinceRev` stays false and `ensureRevision` reuses the revision instead
+of asking to issue a new one. The button says so for a moment and both of its
+labels go through `uiT` by hand: that runs long after the window was
+translated.
+
 They are kept the way an ENTRY's photos are kept: a downscaled copy in the
 visit so they show without a network, the full file on Drive. Not the expenses'
 way (whole picture in IndexedDB, thumbnail in the visit) — that machinery

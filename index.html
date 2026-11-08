@@ -7588,6 +7588,7 @@ es:{
   "📷 Fes una foto":"📷 Haz una foto",
   "🕓 Full d'hores":"🕓 Hoja de horas",
   "📈 Informe de validació":"📈 Informe de validación",
+  "✓ Signatura desada":"✓ Firma guardada",
   "📷 Foto de la pantalla":"📷 Foto de la pantalla",
   "Vols treure aquesta foto?":"¿Quieres quitar esta foto?",
   "Informe de validació":"Informe de validación",
@@ -8209,6 +8210,7 @@ en:{
   "📷 Foto / vídeo":"📷 Photo / video",
   "🕓 Full d'hores":"🕓 Timesheet",
   "📈 Informe de validació":"📈 Validation report",
+  "✓ Signatura desada":"✓ Signature saved",
   "📷 Foto de la pantalla":"📷 Photo of the screen",
   "Vols treure aquesta foto?":"Remove this photo?",
   "Informe de validació":"Validation report",
@@ -9219,10 +9221,36 @@ function setRevSign(id,n,sign){
 // one document, with its pads.
 var pv={sid:null,rev:null,parts:[]},pvWired=false;
 function pvClose(){$$("pvBack").style.display="none";$$("pvDoc").innerHTML="";pv.sid=null;pv.rev=null;pv.parts=[]}
+// Saved, and said so on the button; the label comes back by itself. Both
+// strings go through uiT here and are not left to uiApply: this runs well
+// after the window has been translated, and would otherwise sit in Catalan.
+function pvSaved(){
+  var b=$$("pvSave");if(!b)return;
+  b.textContent=uiT("✓ Signatura desada");
+  clearTimeout(pvSaved.tm);
+  pvSaved.tm=setTimeout(function(){b.textContent=uiT("✍ Desa la signatura")},1800);
+}
 function pvWire(){
   if(pvWired)return;pvWired=true;
   $$("pvCancel").addEventListener("click",pvClose);
-  $$("pvSave").addEventListener("click",function(){if(pvCommit())pvClose()});
+  // Saving leaves the window OPEN and redraws the document with the signature
+  // now written into it (2026-11-08). It used to save and close, so to see
+  // what you had just signed you had to go back in — and the one thing worth
+  // looking at, the signature on the page, was hidden while the pads were up.
+  // Closing is now yours to do, with Tanca, once you have seen it.
+  $$("pvSave").addEventListener("click",async function(){
+    if(!pvCommit())return;
+    var b=$$("pvSave"),k=(pv.parts[0]||{}).kind||"rep";
+    b.disabled=true;
+    try{await openReview(k)}catch(e){}
+    b.disabled=false;
+    pvSaved();
+    // Back to where the signing happened, instead of the top of the document.
+    // Twice, because the report's iframe is still growing to its full height
+    // (see fit() below) and the first scroll would land short.
+    function toPads(){var el=$$("pvDoc").querySelector(".pv-sign");if(el)el.scrollIntoView({block:"start"})}
+    setTimeout(toPads,450);setTimeout(toPads,1400);
+  });
   $$("pvGen").addEventListener("click",function(){
     var id=pv.sid,ts=pv.parts.some(function(x){return x.kind==="ts"}),
         val=pv.parts.some(function(x){return x.kind==="val"});
@@ -9405,7 +9433,11 @@ async function openReview(kind){
   fr.addEventListener("load",function(){
     var d=fr.contentDocument;if(!d)return;
     var st=d.createElement("style");
-    st.textContent=".sig{display:none!important}body{margin-top:16px!important;margin-bottom:16px!important}";
+    // The report's own signature block is hidden while there is nothing in it:
+    // an empty pair of rules right above the pads is the same thing twice. Once
+    // signed it is exactly what there is to look at, so it comes back.
+    var inked=!!(gR.techSig||gR.cliSig);
+    st.textContent=(inked?"":".sig{display:none!important}")+"body{margin-top:16px!important;margin-bottom:16px!important}";
     d.head.appendChild(st);
     // as tall as the report, so the one scroll runs on to the pads
     function fit(){fr.style.height=(d.documentElement.scrollHeight+4)+"px"}

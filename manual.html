@@ -374,6 +374,7 @@
 <p><span class="btn">Revisa i signa</span> és la primera opció de <span class="btn">↓ Informe</span> (i, al disseny nou, la primera de la llista). Si la visita té full d'hores, primer tries quin document vols: <strong>📄 Informe</strong> o <strong>🕒 Full d'hores</strong> (al costat de cada un diu si ja està signat). Si no en té, s'obre directament l'informe.</p>
 <ul>
   <li><strong>Informe:</strong> surt sencer a pantalla, en l'idioma del client, tal com el rebrà, per ensenyar-l'hi i explicar-l'hi. Els noms de les fotos et porten a la foto gran del final. Si la visita té <a href="#registre">entrades internes</a>, a dalt diu quantes queden fora d'aquest informe i si alguna porta recanvis, que marxen amb ella: abans de signar has de saber què no hi ha.</li>
+  <li><strong>Informe de validació:</strong> si la visita té proves de producció, surt tal com sortirà en PDF, amb el full complet de cada prova i les fotos de la pantalla del comptador. <strong>La seva signatura és independent</strong> de la de l'informe: signar-lo no toca l'informe, i emetre una revisió nova de l'informe no el torna a deixar sense signar.</li>
   <li><strong>Full d'hores:</strong> surt tal com sortirà en PDF, amb la data de signatura, que es posa sola el dia que es signa. El full es continua podent signar també des del seu formulari, com sempre.</li>
 </ul>
 <p>Al final hi ha els dos requadres per signar amb el dit o el llapis: tècnic i client. El nom del client ja ve posat amb la persona de contacte, i el pots canviar. Quan acabeu:</p>
@@ -431,6 +432,7 @@
   <li>Cada parada: <span class="btn">⏸ Aturada</span> quan s'atura i <span class="btn">▶ Represa</span> quan torna a anar. L'aturada queda apuntada amb les hores; tria'n el tipus i escriu-ne la causa.</li>
   <li><span class="btn">■ Finalitza</span>: s'atura el rellotge i el cursor va a les unitats.</li>
   <li>Escriu els comptadors (inicial i final) o les unitats totals, i les rebutjades.</li>
+  <li><strong>Fotografia la pantalla del comptador</strong>, si la màquina en té: sota cada comptador hi ha <span class="btn">📷 Foto de la pantalla</span>, una per al principi i una per al final. Són opcionals, i van <strong>només a l'informe de validació</strong>, una al costat de l'altra, amb l'hora i la xifra a sota. És el que converteix un número escrit a mà en una prova: la pantalla de la màquina dient-ho.</li>
 </ol>
 <p>També es pot omplir tot després, a mà: les hores d'inici i final, les aturades amb <span class="btn">＋ Afegeix una aturada</span> i els comptadors. Les hores fetes en directe també es poden corregir.</p>
 <h3>Tipus d'aturada</h3>
@@ -458,6 +460,7 @@
   <li><strong>Informe de validació</strong> (PDF): <span class="btn">↓ Informe › 📈 Informe de validació</span>, o el botó de la llista de proves. Porta les dades de la visita, el full complet de cada prova (dades, indicadors amb objectius, aturades i observacions) i les signatures; no hi surt el registre d'incidències. També va dins del ZIP del projecte.</li>
 </ul>
 <p>El nom de les proves, les causes i les observacions surten tal com les escrius: no es tradueixen.</p>
+<p><strong>L'informe de validació se signa a part.</strong> Té la seva pròpia signatura, que no és la de l'informe de la visita: el pot signar una altra persona, un altre dia, o no signar-se. Emetre una revisió nova de l'informe no la toca, i signar la validació no posa tinta a l'informe. Es fa des de <span class="btn">Revisa i signa</span> (vegeu <a href="#revisions">revisions i signatura</a>).</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="despeses">12. Despeses</h2>

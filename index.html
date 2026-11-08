@@ -245,6 +245,9 @@ textarea{resize:none;line-height:1.4}
 .ts-tbl tr.off td{opacity:.35}
 .ts-tbl td.num{text-align:right}
 .ts-tbl input[type=checkbox]{width:17px;height:17px;accent-color:var(--gold);margin:0}
+.pt-shot{margin-top:6px}
+.pt-shot img{display:block;width:100%;max-width:150px;border-radius:6px;border:1px solid var(--br);margin-top:5px}
+.pt-shot .x{margin-left:6px;color:var(--red);cursor:pointer;font-size:12px}
 .ts-sig{border:1px dashed var(--br2);border-radius:8px;background:#fff;touch-action:none;width:100%;height:110px;display:block;cursor:crosshair}
 .ts-note{font-size:11px;color:var(--tx3)}
 .fol-row{display:flex;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid var(--br);font-size:12px}
@@ -799,6 +802,7 @@ textarea{resize:none;line-height:1.4}
       <div style="display:flex;flex-direction:column;gap:8px;margin:4px 0 6px">
         <button class="btn-gold" id="pvPickRep" style="text-align:left;padding:12px 14px;font-size:14px">&#128196; Informe <span id="pvPickRepSt" style="font-weight:400;opacity:.8"></span></button>
         <button id="pvPickTs" style="text-align:left;padding:12px 14px;font-size:14px">&#128339; Full d'hores <span id="pvPickTsSt" style="font-weight:400;opacity:.8"></span></button>
+        <button id="pvPickVal" style="text-align:left;padding:12px 14px;font-size:14px">&#128200; Informe de validaci&oacute; <span id="pvPickValSt" style="font-weight:400;opacity:.8"></span></button>
       </div>
       <div class="modal-actions"><button id="pvPickCancel">Cancel&middot;la</button></div>
     </div>
@@ -925,8 +929,16 @@ textarea{resize:none;line-height:1.4}
         <div class="field"><label>Velocitat nominal</label><div style="display:flex;gap:6px"><input type="text" id="ptNominal" inputmode="decimal" placeholder="1800" autocomplete="off" style="flex:1;min-width:0"><select id="ptUnit" title="Les velocitats d'aquesta prova, en unitats per hora o per minut" style="width:auto"><option value="h">u/h</option><option value="min">u/min</option></select></div></div>
         <div class="field"><label>Inici</label><input type="datetime-local" id="ptStart" step="60"></div>
         <div class="field"><label>Final</label><input type="datetime-local" id="ptEnd" step="60"></div>
-        <div class="field"><label>Comptador inicial</label><input type="text" id="ptCs" inputmode="numeric" placeholder="opcional" autocomplete="off"></div>
-        <div class="field"><label>Comptador final</label><input type="text" id="ptCe" inputmode="numeric" placeholder="opcional" autocomplete="off"></div>
+        <div class="field"><label>Comptador inicial</label><input type="text" id="ptCs" inputmode="numeric" placeholder="opcional" autocomplete="off">
+          <div class="pt-shot"><button class="btn-xs" id="ptShotSBtn" title="Fotografia la pantalla del comptador tal com es veu en comen&ccedil;ar">&#128247; Foto de la pantalla</button>
+            <input type="file" id="ptShotSIn" accept="image/*" capture="environment" style="display:none">
+            <div id="ptShotS"></div></div>
+        </div>
+        <div class="field"><label>Comptador final</label><input type="text" id="ptCe" inputmode="numeric" placeholder="opcional" autocomplete="off">
+          <div class="pt-shot"><button class="btn-xs" id="ptShotEBtn" title="Fotografia la pantalla del comptador tal com es veu en acabar">&#128247; Foto de la pantalla</button>
+            <input type="file" id="ptShotEIn" accept="image/*" capture="environment" style="display:none">
+            <div id="ptShotE"></div></div>
+        </div>
         <div class="field"><label>Unitats totals</label><input type="text" id="ptTotal" inputmode="numeric" autocomplete="off"></div>
         <div class="field"><label>Unitats rebutjades</label><input type="text" id="ptRej" inputmode="numeric" autocomplete="off"></div>
       </div>
@@ -6485,7 +6497,7 @@ function ptFill(){
    ["ptTotal","total"],["ptRej","rejects"],["ptNotes","notes"]].forEach(function(f){$$(f[0]).value=t[f[1]]||""});
   $$("ptCOee").value=c.oee||"";$$("ptCAv").value=c.avail||"";$$("ptCPf").value=c.perf||"";$$("ptCRj").value=c.rej||"";
   $$("ptUnit").value=ptUnit(t);$$("ptNominal").placeholder=ptUnit(t)==="min"?"30":"1800";
-  ptFillTimes();ptRenderStops();ptRenderLive();ptRenderRes();
+  ptFillTimes();ptRenderStops();ptRenderLive();ptRenderRes();ptRenderShots();
 }
 function ptCollect(){
   var t=ptTest();if(!t)return;
@@ -6561,6 +6573,63 @@ function ptRenderRes(){
   var cs=ptNum(t.counterStart),ce=ptNum(t.counterEnd);
   $$("ptTotal").placeholder=(cs!=null&&ce!=null)?"= "+ptN(ce-cs)+" (dels comptadors)":"";
 }
+// The counter screen, photographed (2026-11-08). The numbers typed into
+// "Comptador inicial" and "Comptador final" are what the whole validation
+// rests on, and a number typed by hand is only as good as the hand: the photo
+// of the machine's own screen is what makes it evidence. One at the start and
+// one at the end, both optional — a test done on a line with no screen to
+// photograph is still a test.
+//
+// Kept the way an entry's photos are kept: a downscaled copy in the visit so
+// it shows without a network, the full file on Drive. NOT the expenses' way
+// (whole picture in IndexedDB, thumbnail in the visit): that machinery exists
+// because a visit can carry dozens of tickets, and here there are two per test.
+function ptShotKey(w){return w==="s"?"shotStart":"shotEnd"}
+function ptShotName(t,w){
+  return cleanName((t&&t.name||"Prova")+" comptador "+(w==="s"?"inicial":"final"))+".jpg";
+}
+function ptRenderShots(){
+  var t=ptTest();
+  ["s","e"].forEach(function(w){
+    var box=$$("ptShot"+w.toUpperCase());if(!box)return;
+    var im=t&&t[ptShotKey(w)];
+    if(!im||!(im.data||im.driveId)){box.innerHTML="";return}
+    box.innerHTML="<div style=\"font-size:11px;color:var(--tx3)\">"+esc(im.name||"")
+      +"<span class=\"x\" data-x=\""+w+"\" title=\"Treu la foto\">&#10005;</span></div>"
+      +(im.data?"<img src=\""+im.data+"\" alt=\"\">":"");
+    var x=box.querySelector("[data-x]");
+    if(x)x.addEventListener("click",function(){ptShotDrop(w)});
+  });
+}
+function ptShotDrop(w){
+  var t=ptTest(),id=ptId;if(!t)return;
+  if(!confirm(uiT("Vols treure aquesta foto?")))return;
+  var im=t[ptShotKey(w)];
+  if(im&&im.driveId)queueTrash(ptSessId,[im.driveId]);
+  ptSetTests(function(l){return l.map(function(x){
+    if(x.id!==id)return x;
+    var o=Object.assign({},x);delete o[ptShotKey(w)];return o})});
+  ptRenderShots();
+}
+async function ptShotTake(w,file){
+  var t=ptTest(),id=ptId,sess=ptSess();if(!t||!file)return;
+  var im={id:uid(),type:"image",name:ptShotName(t,w),data:null,uploadStatus:(sess&&isLoggedIn)?"loading":""};
+  try{im.data=await makeLocalImageData(file)}catch(e){}
+  ptSetTests(function(l){return l.map(function(x){
+    if(x.id!==id)return x;
+    var o=Object.assign({},x);o[ptShotKey(w)]=im;return o})});
+  ptRenderShots();
+  if(sess&&isLoggedIn){
+    try{
+      var r=await uploadMedia(sess,file,"photos");
+      if(r)mediaUploaded(im,r);else im.uploadStatus="err";
+    }catch(e){im.uploadStatus="err"}
+    // the name is ours, not the camera's: keep it on Drive too
+    if(im.driveId&&im.name)driveRename(im.driveId,im.name);
+    ptSetTests(function(l){return l});   // stamp the change so it syncs
+    ptRenderShots();
+  }
+}
 function wirePt(){
   if(ptWired)return;ptWired=true;
   ["ptName","ptProduct","ptNominal","ptCs","ptCe","ptTotal","ptRej","ptNotes","ptCOee","ptCAv","ptCPf","ptCRj"].forEach(function(id){
@@ -6574,6 +6643,14 @@ function wirePt(){
     if(v!=null&&was!==to){var x=to==="min"?v/60:v*60;$$("ptNominal").value=String(Math.round(x*(to==="min"?10:1))/(to==="min"?10:1)).replace(".",",")}
     $$("ptNominal").placeholder=to==="min"?"30":"1800";
     rateSetDef(to);ptCollect();
+  });
+  ["s","e"].forEach(function(w){
+    var W=w.toUpperCase();
+    $$("ptShot"+W+"Btn").addEventListener("click",function(){$$("ptShot"+W+"In").click()});
+    $$("ptShot"+W+"In").addEventListener("change",function(e){
+      var f=(e.target.files||[])[0];e.target.value="";
+      if(f)ptShotTake(w,f);
+    });
   });
   $$("ptDone").addEventListener("click",ptClose);
   $$("ptBack").addEventListener("click",function(e){if(e.target===$$("ptBack"))ptClose()});
@@ -7510,6 +7587,14 @@ es:{
   "💶 Despeses: no":"💶 Gastos: no",
   "📷 Fes una foto":"📷 Haz una foto",
   "🕓 Full d'hores":"🕓 Hoja de horas",
+  "📈 Informe de validació":"📈 Informe de validación",
+  "📷 Foto de la pantalla":"📷 Foto de la pantalla",
+  "Vols treure aquesta foto?":"¿Quieres quitar esta foto?",
+  "Informe de validació":"Informe de validación",
+  "Signatures de l'informe de validació":"Firmas del informe de validación",
+  "És independent de la de l'informe: una revisió nova de l'informe no la toca.":"Es independiente de la del informe: una revisión nueva del informe no la toca.",
+  "Preparant l'informe de validació…":"Preparando el informe de validación…",
+  "No s'ha pogut preparar el document (cal la llibreria PDF: comprova la connexió). Pots signar igualment.":"No se ha podido preparar el documento (hace falta la librería PDF: comprueba la conexión). Puedes firmar igualmente.",
   "+ Nova visita":"+ Nueva visita",
   "Clau de l'API":"Clave de la API",
   "Nom i cognoms":"Nombre y apellidos",
@@ -8123,6 +8208,14 @@ en:{
   "📷 Fes una foto":"📷 Take a photo",
   "📷 Foto / vídeo":"📷 Photo / video",
   "🕓 Full d'hores":"🕓 Timesheet",
+  "📈 Informe de validació":"📈 Validation report",
+  "📷 Foto de la pantalla":"📷 Photo of the screen",
+  "Vols treure aquesta foto?":"Remove this photo?",
+  "Informe de validació":"Validation report",
+  "Signatures de l'informe de validació":"Validation report signatures",
+  "És independent de la de l'informe: una revisió nova de l'informe no la toca.":"It stands apart from the report's: a new revision of the report does not touch it.",
+  "Preparant l'informe de validació…":"Preparing the validation report…",
+  "No s'ha pogut preparar el document (cal la llibreria PDF: comprova la connexió). Pots signar igualment.":"The document could not be prepared (the PDF library is needed: check the connection). You can sign anyway.",
   "+ Nova visita":"+ New visit",
   "Clau de l'API":"API key",
   "Nom i cognoms":"Full name",
@@ -9131,18 +9224,19 @@ function pvWire(){
   $$("pvCancel").addEventListener("click",pvClose);
   $$("pvSave").addEventListener("click",function(){if(pvCommit())pvClose()});
   $$("pvGen").addEventListener("click",function(){
-    var id=pv.sid,ts=pv.parts.some(function(x){return x.kind==="ts"});
+    var id=pv.sid,ts=pv.parts.some(function(x){return x.kind==="ts"}),
+        val=pv.parts.some(function(x){return x.kind==="val"});
     if(!pvCommit())return;
     pvClose();
     var s=sessions.find(function(x){return x.id===id});if(!s)return;
-    if(ts)exportTimesheet(s);else exportRep(s,"pdf");
+    if(ts)exportTimesheet(s);else if(val)exportRep(s,"valpdf");else exportRep(s,"pdf");
   });
 }
 // The pads under one document: names, the two pads, and for the sheet its
 // sign date (filled with today on the first ink, unless typed).
 function pvPadsEl(kind,s,g,note){
   var k=kind,box=document.createElement("div");box.className="pv-sign";
-  box.innerHTML="<div style=\"display:flex;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap\"><strong style=\"font-size:13px\">&#9997; "+(k==="ts"?"Signatures del full d'hores":"Signatures de l'informe")+"</strong><span class=\"ts-note\">"+esc(note)+"</span></div>"
+  box.innerHTML="<div style=\"display:flex;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap\"><strong style=\"font-size:13px\">&#9997; "+(k==="ts"?"Signatures del full d'hores":k==="val"?"Signatures de l'informe de validació":"Signatures de l'informe")+"</strong><span class=\"ts-note\">"+esc(note)+"</span></div>"
     +(k==="ts"?"<div style=\"display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap\"><label for=\"pvDate_ts\" style=\"font-size:11px;color:var(--tx3)\">Data de signatura</label><input type=\"date\" id=\"pvDate_ts\" style=\"font-size:12px;padding:4px 8px\"><span class=\"ts-note\">es posa sola el dia que es signa; la pots canviar</span></div>":"")
     +"<div class=\"pv-pads\">"
     +["tech","cli"].map(function(w){
@@ -9179,6 +9273,12 @@ function pvCommit(){
       // signing is not a change to the visit: saved and synced, not stamped as an edit
       sessions=sessions.map(function(x){return x.id===s.id?Object.assign({},x,{timesheet:T}):x});
       saveLocal();isDirty=true;if(isLoggedIn)saveToDrive();
+    } else if(k==="val"){
+      // On the session, not on a revision: it is not the report's signature
+      // and a new revision of the report has nothing to say about it.
+      var V=Object.assign({},sig,{signedAt:now()});
+      sessions=sessions.map(function(x){return x.id===s.id?Object.assign({},x,{valSign:V}):x});
+      saveLocal();isDirty=true;if(isLoggedIn)saveToDrive();
     } else if(pv.rev){
       setRevSign(s.id,pv.rev.n,Object.assign(sig,{signedAt:now()}));
     }
@@ -9208,25 +9308,49 @@ async function pvRenderPdf(blob,box){
 function tsSigned(s){var T=s&&s.timesheet;return !!(T&&(T.techSig||T.cliSig))}
 // "Revisa i signa": the report straight away, or — when the visit has a
 // timesheet — a choice of the two.
+// The validation report signs on its own (2026-11-08). It is a different
+// document with a different reader: the report says what was done on the
+// visit, the validation report says whether the line met the numbers it was
+// bought to meet, and that is often signed by someone else, on another day, or
+// not at all. Sharing the report's signature meant issuing a new revision of
+// the report re-signed the validation too, and a validation signed on the spot
+// put ink on a report that was not finished yet.
+function valSigned(s){var g=s&&s.valSign;return !!(g&&(g.techSig||g.cliSig))}
 function openReviewSign(){
   var s=sessions.find(function(x){return x.id===aid});if(!s)return;
-  var T=s.timesheet;
-  if(!(T&&T.rows&&T.rows.length)){openReview("rep");return}
+  var T=s.timesheet,hasTs=!!(T&&T.rows&&T.rows.length),hasVal=!!(s.prodTests||[]).length;
+  if(!hasTs&&!hasVal){openReview("rep");return}
   $$("pvPickRepSt").textContent=revSign(s)?"· signat":"· sense signar";
   $$("pvPickTsSt").textContent=tsSigned(s)?"· signat":"· sense signar";
+  $$("pvPickValSt").textContent=valSigned(s)?"· signat":"· sense signar";
+  $$("pvPickTs").style.display=hasTs?"":"none";
+  $$("pvPickVal").style.display=hasVal?"":"none";
   if(!openReviewSign.wired){openReviewSign.wired=true;
     function close(){$$("pvPickBack").style.display="none"}
     $$("pvPickCancel").addEventListener("click",close);
     $$("pvPickBack").addEventListener("click",function(e){if(e.target===$$("pvPickBack"))close()});
     $$("pvPickRep").addEventListener("click",function(){close();openReview("rep")});
     $$("pvPickTs").addEventListener("click",function(){close();openReview("ts")});
+    $$("pvPickVal").addEventListener("click",function(){close();openReview("val")});
   }
   $$("pvPickBack").style.display="flex";
 }
 async function openReview(kind){
   var s=sessions.find(function(x){return x.id===aid});if(!s)return;
   var R=null,rev=null,blob=null,T0=s.timesheet;
-  if(kind==="ts"){
+  if(kind==="val"){
+    if(!await ensureLabels(reportLang(s)))return;
+    rev=await ensureRevision(s);if(!rev)return;   // the header carries it, as the export does
+    s=sessions.find(function(x){return x.id===aid})||s;
+    renderContent();
+    expBusy("Preparant l'informe de validació…");
+    try{
+      R=await reportSession(s);
+      if(R){R.rev=rev;blob=await buildPdfBlob(R.s,R.lang,rev,{validation:true})}
+    }catch(e){blob=null}
+    finally{expBusy("")}
+  }
+  else if(kind==="ts"){
     var tl=(T0.lang&&knownLang(T0.lang))?T0.lang:"ca";
     if(!await ensureLabels(tl))return;
     expBusy("Preparant el full…");
@@ -9248,14 +9372,17 @@ async function openReview(kind){
   $$("pvIntern").style.display="none";
   $$("pvGen").innerHTML="&#128196; Desa i genera el PDF";
   $$("pvSave").innerHTML="&#9997; Desa la signatura";
-  if(kind==="ts"){
-    $$("pvTitle").textContent="Full d'hores";
+  if(kind==="ts"||kind==="val"){
+    var isTs=kind==="ts";
+    $$("pvTitle").textContent=isTs?"Full d'hores":"Informe de validació";
     var pages=document.createElement("div");pages.className="pv-pages";
     doc.appendChild(pages);
-    doc.appendChild(pvPadsEl("ts",s,T0,"Si després canvies els dies, es torna a signar."));
-    pv.parts.push({kind:"ts",g:T0});
+    var g0=isTs?T0:(s.valSign||{});
+    doc.appendChild(pvPadsEl(kind,s,g0,isTs?"Si després canvies els dies, es torna a signar."
+                                           :"És independent de la de l'informe: una revisió nova de l'informe no la toca."));
+    pv.parts.push({kind:kind,g:g0});
     if(blob)pvRenderPdf(blob,pages);
-    else pages.innerHTML="<div class=\"ts-note\" style=\"padding:16px\">No s'ha pogut preparar el full (cal la llibreria PDF: comprova la connexió). Pots signar igualment.</div>";
+    else pages.innerHTML="<div class=\"ts-note\" style=\"padding:16px\">No s'ha pogut preparar el document (cal la llibreria PDF: comprova la connexió). Pots signar igualment.</div>";
     pvShow();
     return;
   }
@@ -10856,6 +10983,31 @@ function pdfProdSection(doc,s,R,lang,y,M,CW,H,full){
       doc.autoTable({startY:y,margin:{left:M,right:M},theme:"grid",styles:{fontSize:7.5,cellPadding:1.2},
         head:[[L.start,L.end,L.duration,L.kind,L.cause]],headStyles:{fillColor:[71,85,105],textColor:255},body:d.stops});
       y=doc.lastAutoTable.finalY+3;
+    }
+    // The counter screen as it was, at the start and at the end: the two
+    // numbers the whole validation rests on, with the machine's own display
+    // behind them. Only here — the visit's report carries the summary table,
+    // and this is the document that has to stand up on its own.
+    var shots=[[t.shotStart,L.start,t.start,t.counterStart],
+               [t.shotEnd,L.end,t.end,t.counterEnd]].filter(function(a){return a[0]&&a[0].data});
+    if(shots.length){
+      var gap=6,bw=(CW-gap)/2,bh=bw*0.70;
+      if(y+bh+14>H-15){doc.addPage();y=M}
+      shots.forEach(function(a,i){
+        var x=M+i*(bw+gap),im=a[0];
+        // inside the box and at its own proportions: a screen stretched to a
+        // frame is a screen you cannot read the digits off
+        try{
+          var pr=doc.getImageProperties(im.data);
+          var k=Math.min(bw/pr.width,bh/pr.height),iw=pr.width*k,ih=pr.height*k;
+          doc.addImage(im.data,x+(bw-iw)/2,y+(bh-ih)/2,iw,ih);
+        }catch(e){}
+        doc.setDrawColor(209,213,219);doc.setLineWidth(0.2);doc.rect(x,y,bw,bh);
+        var cap=a[1]+(a[2]?" · "+fts(a[2]):"")+(a[3]?" · "+String(a[3]):"");
+        doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor(107,114,128);
+        doc.text(doc.splitTextToSize(cap,bw)[0],x,y+bh+3.5);
+      });
+      y+=bh+9;
     }
     if(t.notes){
       if(y>H-25){doc.addPage();y=M}
@@ -12956,7 +13108,8 @@ async function buildPdfBlob(s,lang,rev,opts){
   // there is ink to sit on the line, so it needs more room before deciding
   // whether the page still fits it.
   if(!I){
-  var gs=revSign(s,rev)||{};
+  // The validation report has its own: see openReviewSign.
+  var gs=(V?s.valSign:revSign(s,rev))||{};
   // Kept small (2026-10-13: "they take up too much of the page"): 14 mm high,
   // at most 45 mm wide — a signature, not an illustration.
   var inked=!!(gs.techSig||gs.cliSig),sigH=inked?14:0,SIGW=45;

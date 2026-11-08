@@ -3075,6 +3075,39 @@ report translates tags on their way out, like the rest of the text.
 
 ---
 
+## The validation report stands on its own (2026-11-08)
+
+Two changes, one idea: the validation report is a different document for a
+different reader. The visit's report says what was done; the validation report
+says whether the line met the numbers it was bought to meet.
+
+- **Its own signature.** `s.valSign` on the session, written by `pvCommit` for
+  the new part kind `"val"`, read by the PDF (`gs=(V?s.valSign:revSign(s,rev))`).
+  Not on a revision, because it is not the report's: issuing a new revision of
+  the report used to re-sign the validation with it, and signing the validation
+  on the spot put ink on a report that was not finished. `openReviewSign` now
+  offers up to three documents and hides the ones the visit has not got; with
+  neither a timesheet nor a test it still goes straight to the report, as it
+  did. `openReview("val")` builds the PDF with `{validation:true}` and shows it
+  through `pvRenderPdf`, the same path the timesheet already used, and `pvGen`
+  exports `valpdf`.
+- **The counter screen, photographed.** `t.shotStart` / `t.shotEnd` on each
+  production test, taken under each counter field in the test window. The two
+  numbers the whole validation rests on are typed by hand, and a number typed
+  by hand is only as good as the hand; the machine's own display behind it is
+  what makes it evidence. Drawn ONLY in the validation report (`full`), side by
+  side, each inside its box at its own proportions with the time and the
+  counter under it — a screen stretched to a frame is a screen you cannot read
+  the digits off.
+
+They are kept the way an ENTRY's photos are kept: a downscaled copy in the
+visit so they show without a network, the full file on Drive. Not the expenses'
+way (whole picture in IndexedDB, thumbnail in the visit) — that machinery
+exists because a visit can carry dozens of tickets, and here there are two per
+test.
+
+---
+
 ## Test data
 `fsl_demo_data.json` — 10 sessions, 100 entries, 66 synthetic photos
 Sectors: automotive, pharma, steel, food, logistics, wind energy, chemical,

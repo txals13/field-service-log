@@ -98,9 +98,26 @@ Una pàgina, un punter: el recanvis-splitter no en deixa marcar dues vegades la 
 Al field app això és, de moment, una llista de dreceres — «ensenya'm els punts de
 consignació» obre la pàgina 110 del manual vinculat.
 
-> **El remapatge, les taules i les pàgines marcades no es porten.** Viuen a pàgines que
+## Mapa de fulls d'esquema (`sheets[]`)
+
+La llista de materials elèctrica diu a quin **full** és cada dispositiu (`full`: «90»,
+«211», «741A»), i un full no és una pàgina: l'annex d'esquemes té la seva numeració,
+impresa al caixetí de cada full, i on cau dins el PDF depèn del que el manual hi ha
+posat davant. El recanvis-splitter llegeix el caixetí de cada pàgina de l'annex i en fa
+el mapa:
+
+```
+sheets:[ { sheet:"90", page:245 } ]     // full d'esquema -> pàgina al manual original
+```
+
+Amb això, al field app un dispositiu de la llista (`tables[kind=electrical].rows[].full`)
+és a dos tocs del seu circuit: `full` → `sheets` → `page` → visor. Els números de full
+són text (poden dur lletra, «741A») i es comparen tal qual.
+
+> **El remapatge, les taules, les pàgines marcades i el mapa de fulls no es porten.** Viuen a pàgines que
 > no són de cap conjunt (la 128 dels recanvis recomanats, la 285 de la llista
-> elèctrica, la 110 de la consignació), de manera que un PDF retallat no les conté i no
+> elèctrica, la 110 de la consignació, tot l'annex d'esquemes), de manera que un PDF
+> retallat no les conté i no
 > hi ha cap numeració on posar-les. Per a la parella del field app, doncs: **manual
 > sencer i renumeració desactivada**. L'exportació avisa si s'intenta el contrari.
 
@@ -168,7 +185,7 @@ Field Service Log/
 - **Offline:** cachejar el PDF del manual + el JSON a IndexedDB després de la 1a càrrega.
 - **Mida del manual:** si els manuals són molt grossos, optimització futura = exportar
   un PDF retallat AMB remapatge de `page` al JSON (feina extra al recanvis-splitter).
-  Compte: això i les `tables[]` / `refs[]` són incompatibles — un PDF retallat no conté
+  Compte: això i les `tables[]` / `refs[]` / `sheets[]` són incompatibles — un PDF retallat no conté
   les seves pàgines. Si algun dia es vol tot alhora, el retall haurà d'incloure-les.
 - **Precisió del toc a mòbil:** tolerància generosa al hit-test + confirmació + fallback llista.
 

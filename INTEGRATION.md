@@ -39,6 +39,37 @@ recanvis), perquè els números de pàgina hi coincideixin.
 
 > Cap canvi necessari al recanvis-splitter: el JSON ja porta `page` a cada fila.
 
+## Taules de dades (`tables[]`)
+
+Un manual no porta només llistes de peces penjades d'un dibuix. Porta la llista de
+recanvis recomanats, la llista de materials elèctrica, els plans d'inspecció, neteja i
+lubricació, les peces de format, els punts de consignació… Totes són taules, i el
+recanvis-splitter les extreu amb el mateix motor que les llistes de peces: marques la
+regió al full, detecta les columnes i dius què és cadascuna. El resultat viatja al
+mateix `<Manual>.json`, al costat dels `conjunts`:
+
+```
+tables:[ {
+  kind,                      // spares | electrical | maint | format | spec |
+                             // signals | loto | parts | free
+  name,                      // com l'ha batejada qui ha fet l'extracció
+  pages:[…],                 // pàgines del manual original d'on surt
+  fields:[…],                // les claus que porten les files, en ordre
+  labels:{clau:"Ròtul"},     // només a les taules lliures, el ròtul tal com es va escriure
+  rows:[ { <clau>:valor, …, page } ]
+} ]
+```
+
+Una sola forma per a totes les menes: qui ho llegeix mira `fields[]` i després cada
+fila, sense haver de saber res de la taula per endavant. `rows[].page` és, com a les
+llistes de peces, la pàgina **al manual original**.
+
+> **El remapatge i les taules no es porten.** Les taules viuen a pàgines que no són de
+> cap conjunt (la 128 dels recanvis recomanats, la 285 de la llista elèctrica), de
+> manera que un PDF retallat no les conté i no hi ha cap numeració on posar-les. Per a
+> la parella del field app, doncs: **manual sencer i renumeració desactivada**.
+> L'exportació avisa si s'intenta el contrari.
+
 ## Restricció Drive: scope `drive.file`
 
 El field app només pot llegir fitxers que **ell mateix** ha creat. Conseqüència:
@@ -103,6 +134,8 @@ Field Service Log/
 - **Offline:** cachejar el PDF del manual + el JSON a IndexedDB després de la 1a càrrega.
 - **Mida del manual:** si els manuals són molt grossos, optimització futura = exportar
   un PDF retallat AMB remapatge de `page` al JSON (feina extra al recanvis-splitter).
+  Compte: això i les `tables[]` són incompatibles — un PDF retallat no conté les seves
+  pàgines. Si algun dia es vol tot alhora, el retall haurà d'incloure-les.
 - **Precisió del toc a mòbil:** tolerància generosa al hit-test + confirmació + fallback llista.
 
 ## Ordre de construcció (per fases)

@@ -670,6 +670,10 @@ textarea{resize:none;line-height:1.4}
       <div class="nv-sec">Visita</div>
       <div class="field"><label>Número de projecte</label><input type="text" id="nProject" placeholder="Núm. de projecte"></div>
       <div class="field"><label>Tècnic</label><input type="text" id="nTech" placeholder="Nom del tècnic"></div>
+      <div class="field"><label>Inici de la visita</label>
+        <input type="datetime-local" id="nStart">
+        <div style="font-size:11px;color:var(--tx3);margin-top:3px">Quan vas arribar. Si ho deixes en blanc, l'informe fa servir l'hora de la primera entrada.</div>
+      </div>
       <div class="field"><label>Tipus</label>
         <select id="nType">
           <option value="commissioning">Posada en marxa (COM)</option>
@@ -6724,6 +6728,7 @@ function openNewModal(editSess){
   $$("nContactPhone").value=editSess?(editSess.contactPhone||""):"";
   $$("nContactEmail").value=editSess?(editSess.contactEmail||""):"";
   $$("nType").value=editSess?(editSess.type||"commissioning"):"commissioning";
+  $$("nStart").value=editSess?tsToInput(editSess.startAt||""):"";
   uiApply($$("newBack"));
   $$("newBack").style.display="flex";setTimeout(function(){focusField($$("nClient"))},80);
 }
@@ -6759,18 +6764,22 @@ $$("nSave").addEventListener("click",function(){
   var cont=$$("nContact").value.trim(),crole=$$("nContactRole").value.trim();
   // how to reach them (2026-10-24)
   var cphone=$$("nContactPhone").value.trim(),cmail=$$("nContactEmail").value.trim();
+  // When the visit really started (2026-11-08). Empty is the normal case and
+  // means "work it out from the entries"; clearing the field goes back to that.
+  var startV=$$("nStart").value,startAt=startV?inputToTs(startV):"";
+  if(startV&&!startAt){alert(uiT("La data i hora d'inici no són vàlides."));return}
   if(editingSessId){
     var editId=editingSessId,old=sessions.find(function(s){return s.id===editId});
     var folderChanged=old&&(old.client!==c||old.machine!==m||(old.tech||"")!==tech);
-    sessions=sessions.map(function(s){return s.id===editId?Object.assign({},s,{client:c,project:proj,machine:m,machineNo:mno,year:year,location:loc,tech:tech,type:type,contact:cont,contactRole:crole,contactPhone:cphone,contactEmail:cmail}):s});
-    closeNewModal();["nClient","nProject","nMachine","nMachineNo","nYear","nLoc","nTech","nContact","nContactRole","nContactPhone","nContactEmail"].forEach(function(id){$$(id).value=""});
+    sessions=sessions.map(function(s){return s.id===editId?Object.assign({},s,{client:c,project:proj,machine:m,machineNo:mno,year:year,location:loc,tech:tech,type:type,contact:cont,contactRole:crole,contactPhone:cphone,contactEmail:cmail,startAt:startAt}):s});
+    closeNewModal();["nClient","nProject","nMachine","nMachineNo","nYear","nLoc","nTech","nContact","nContactRole","nContactPhone","nContactEmail","nStart"].forEach(function(id){$$(id).value=""});
     scheduleSave();renderAll();
     if(isLoggedIn&&old&&folderChanged)renameSessionFolder(old,{client:c,machine:m,tech:tech});
   } else {
-    var s={id:uid(),client:c,project:proj,machine:m,machineNo:mno,year:year,location:loc,tech:tech,type:type,contact:cont,contactRole:crole,contactPhone:cphone,contactEmail:cmail,status:"open",createdAt:now(),entries:[],notes:""};
+    var s={id:uid(),client:c,project:proj,machine:m,machineNo:mno,year:year,location:loc,tech:tech,type:type,contact:cont,contactRole:crole,contactPhone:cphone,contactEmail:cmail,startAt:startAt,status:"open",createdAt:now(),entries:[],notes:""};
     sessions=[s].concat(sessions);aid=s.id;
     if(type==="production")setTimeout(function(){openProdList(true)},0);
-    closeNewModal();["nClient","nProject","nMachine","nMachineNo","nYear","nLoc","nTech","nContact","nContactRole","nContactPhone","nContactEmail"].forEach(function(id){$$(id).value=""});
+    closeNewModal();["nClient","nProject","nMachine","nMachineNo","nYear","nLoc","nTech","nContact","nContactRole","nContactPhone","nContactEmail","nStart"].forEach(function(id){$$(id).value=""});
     scheduleSave();renderAll();
     if(isLoggedIn)ensureSessionFolders(s.id); // create Drive folders up front, not on first upload
   }
@@ -7363,6 +7372,9 @@ es:{
   "🗄 Arxiva sessions…":"🗄 Archiva sesiones…",
   "🗄 Tria la carpeta…":"🗄 Elige la carpeta…",
   "Any de fabricació":"Año de fabricación",
+  "Inici de la visita":"Inicio de la visita",
+  "Quan vas arribar. Si ho deixes en blanc, l'informe fa servir l'hora de la primera entrada.":"Cuándo llegaste. Si lo dejas en blanco, el informe usa la hora de la primera entrada.",
+  "La data i hora d'inici no són vàlides.":"La fecha y hora de inicio no son válidas.",
   "Comptador inicial":"Contador inicial",
   "Correu electrònic":"Correo electrónico",
   "Data de signatura":"Fecha de firma",
@@ -7963,6 +7975,9 @@ en:{
   "🗄 Arxiva sessions…":"🗄 Archive sessions…",
   "🗄 Tria la carpeta…":"🗄 Choose the folder…",
   "Any de fabricació":"Year of manufacture",
+  "Inici de la visita":"Start of the visit",
+  "Quan vas arribar. Si ho deixes en blanc, l'informe fa servir l'hora de la primera entrada.":"When you arrived. Left empty, the report uses the time of the first entry.",
+  "La data i hora d'inici no són vàlides.":"The start date and time are not valid.",
   "Comptador inicial":"Opening counter",
   "Correu electrònic":"Email",
   "Data de signatura":"Date signed",
@@ -8900,6 +8915,11 @@ function todayISO(){var d=new Date();function p(n){return("0"+n).slice(-2)}retur
 // Entries are kept sorted (`sortEntries`), so the first with an hour is the
 // earliest; the loop only skips one saved without.
 function sessionStartTs(s){
+  // Typed in by hand (2026-11-08): the visit can be written up after arriving
+  // at the client, or once back home, and then the first entry is not when the
+  // work started either. What is written wins over everything; empty means
+  // "work it out", which is what it says in the form.
+  if(s&&s.startAt)return s.startAt;
   var es=(s&&s.entries)||[];
   for(var i=0;i<es.length;i++){if(es[i]&&es[i].ts)return es[i].ts}
   return (s&&s.createdAt)||now();
@@ -11049,7 +11069,7 @@ function tsCollect(db,from,to){
 // back to the session's own dates when nothing is logged yet.
 function tsRange(s){
   var ds=(s.entries||[]).map(function(e){return (e.ts||"").slice(0,10)}).filter(Boolean).sort();
-  return {from:ds.length?ds[0]:(s.createdAt||now()).slice(0,10),
+  return {from:String(sessionStartTs(s)).slice(0,10),
           to:ds.length?ds[ds.length-1]:(s.closedAt||s.updatedAt||s.createdAt||now()).slice(0,10)};
 }
 // Local midnight + setDate, like tsCollect's own walk: the calendar field is

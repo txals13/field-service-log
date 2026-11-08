@@ -2516,6 +2516,25 @@ Now (`syncTick`, `scheduleSync`):
   to the 14th opens 11 → 15, a saved sheet keeps its 13 → 14, and the shift
   holds across a month end, New Year and 29 February 2028.
 
+- **The start, typed in** (2026-11-08: "I have to be able to change the
+  visit's start date — I can create the report after arriving at the client, or
+  even once I am back home"). The day before, `sessionStartTs` had been made to
+  read the first entry instead of `createdAt`; that still guesses, and the
+  first entry is not the arrival. `s.startAt`, an optional timestamp written in
+  the visit form (`#nStart`, a `datetime-local` under Visita, between the
+  technician and the type), now comes first in `sessionStartTs`: typed in →
+  first entry with an hour → `createdAt`. Empty is the normal case and the
+  field says so, so CLEARING it goes back to the automatic behaviour — which is
+  why the form writes `startAt` on both paths (create and edit) and an
+  unparseable value is refused rather than silently dropped. `tsRange(s).from`
+  is now `sessionStartTs(s)` sliced to a date, so the timesheet's window — and
+  the archived history record's `range` — start where the visit does; `.to` is
+  unchanged. `createdAt` is untouched and still orders the sidebar and stamps
+  the history record. Checked in the preview: the field opens empty, saves,
+  reopens with what was typed, clears back to the first entry; all four formats
+  print the typed start; the 🕐 chip follows after a save; and the label and
+  hint translate in ca/es/en.
+
 ### addEntry timeout for EXIF + upload
 Photo EXIF reading and video uploads are async. Use a safe timeout:
 ```js

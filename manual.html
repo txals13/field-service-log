@@ -121,12 +121,13 @@
   <tr><td><strong>Núm. de màquina / equip</strong></td><td>El número de sèrie o de màquina d'aquest equip en concret. Surt a la capçalera de la visita (🔧 … · Nº …), als informes i a l'historial de la màquina (N/S).</td></tr>
   <tr><td><strong>Any de fabricació</strong></td><td>Surt a la capçalera de la visita i als informes.</td></tr>
   <tr><td><strong>Ubicació</strong>, <strong>Tècnic</strong></td><td>Informatius; surten als informes.</td></tr>
+  <tr><td><strong>Inici de la visita</strong></td><td>Quan vas arribar. Deixa'l en blanc i l'app fa servir l'hora de la primera entrada; omple'l quan creïs la visita un cop ja ets al client o quan ja has tornat. Surt a la capçalera dels informes i marca el començament del full d'hores.</td></tr>
   <tr><td><strong>Tipus</strong></td><td>Posada en marxa (COM), Manteniment (MNT) o Millora / Retrofit (RET).</td></tr>
 </table></div>
 <p>Les dades es poden canviar més tard amb <span class="btn">✎</span>, al costat del nom del client.</p>
 <p>A la capçalera dels informes (PDF, Word i HTML) les dades surten en <strong>tres columnes</strong>: Client (client, persona de contacte, telèfon, correu, ubicació), Equip (màquina / equip, número, any de fabricació) i Visita (projecte, tècnic, inici, estat). El telèfon, el correu, el número i l'any només hi surten si n'hi ha. L'Excel de recanvis també els porta.</p>
 <p>El <strong>manual de recanvis</strong> no surt a la capçalera: el nom del fitxer és llarg i li robava una línia a la columna de l'equip. Va al final de l'apartat de recanvis, al recordatori que diu sobre quin manual s'han demanat i que convé revisar-ne les últimes actualitzacions.</p>
-<p>L'<strong>inici</strong> és l'hora de la <strong>primera entrada</strong>, no la de quan vas crear la visita a l'app. Si afegeixes una entrada més antiga que les que hi havia, l'inici la segueix, perquè una visita no pot començar després de la seva primera línia. Mentre la visita no té cap entrada, surt l'hora en què la vas crear. El rellotge 🕐 de la capçalera de la visita diu el mateix.</p>
+<p>L'<strong>inici</strong> no és mai l'hora en què vas crear la visita a l'app. Si has omplert <strong>Inici de la visita</strong> al formulari, és aquella; si no, és l'hora de la <strong>primera entrada</strong>, i si afegeixes una entrada més antiga que les que hi havia, l'inici la segueix, perquè una visita no pot començar després de la seva primera línia. Només quan no hi ha ni una cosa ni l'altra surt l'hora en què la vas crear. El rellotge 🕐 de la capçalera de la visita diu el mateix, i es pot canviar en qualsevol moment amb <span class="btn">✎</span>.</p>
 <div class="tip"><p>Escriu el client i la màquina sempre igual. Les majúscules, els accents, els espais i els guions no compten (<code>VLP-320-R</code> i <code>vlp 320 r</code> són la mateixa màquina), però la forma jurídica sí: «X, S.L.» i «X, S.A.» són clients diferents.</p></div>
 
 <h3>La llista de visites</h3>
@@ -330,7 +331,7 @@
 <h2 id="hores">10. Full d'hores</h2>
 <p>Les hores no s'escriuen aquí: venen de l'app <strong>Calendari laboral</strong>, on ja les fitxes. El full s'obre amb <span class="btn">🧾 Full d'hores</span> a la capçalera o des de <span class="btn">↓ Informe</span>.</p>
 <ol>
-  <li>Surten els dies fitxats del <strong>«Des de»</strong> al <strong>«Fins a»</strong>, que s'obren amb <strong>un dia abans de la primera entrada de la visita i un dia després de l'última</strong>: el viatge d'anada sol ser el dia abans i el de tornada el dia després, i aquells dos dies també es treballen. Si el viatge no va així, canvia les dates a mà; un cop desat el full, es queda amb les que hi hagis posat. Marca els dies que el client ha de signar. Vacances i festius no hi surten.</li>
+  <li>Surten els dies fitxats del <strong>«Des de»</strong> al <strong>«Fins a»</strong>, que s'obren amb <strong>un dia abans de l'inici de la visita i un dia després de l'última entrada</strong>: el viatge d'anada sol ser el dia abans i el de tornada el dia després, i aquells dos dies també es treballen. Si el viatge no va així, canvia les dates a mà; un cop desat el full, es queda amb les que hi hagis posat. Marca els dies que el client ha de signar. Vacances i festius no hi surten.</li>
   <li>Tria les columnes amb els botons de sobre la taula. La data sempre hi és. La tria es recorda per al full següent; <span class="btn">Restableix</span> les torna totes.</li>
   <li>Tria l'idioma del full; pot ser diferent del de l'informe.</li>
   <li>Escriu les observacions, si cal.</li>

@@ -1204,6 +1204,20 @@ Field Service Log/
     has no edit to take as intent, so an old photo takes its mark the next time
     its entry is saved.
 
+  - **The name is shown the moment the file is attached** (`nameEditMedia`),
+    not at save. The field under the thumbnail used to sit there with the
+    camera's name until Desa — the very name the renaming exists to remove, so
+    it read as if nothing worked. It runs at the end of `handleFiles` for the
+    `edit` and `fix` buckets, and on `change` (NOT `input`: a name is also a
+    rename on Drive, and half a word is not a name) of the description and the
+    tag, so a correction made in the same sitting carries to the names. It
+    calls `scheduleSave` because those image objects are the session's own —
+    the same reason the hand-rename field has always done so. The entry
+    composer is deliberately left out: there the description is still being
+    typed while the photo goes in, so it still names on Afegeix.
+    `autoNameMedia` returns how many it renamed, so nothing is repainted or
+    saved for nothing.
+
   The method lesson: the first two passes were argued from reading the code and
   from stub objects, and both were wrong about what actually happens on a
   phone. What settled it was driving the REAL file input with a real File —

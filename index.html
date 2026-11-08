@@ -5517,6 +5517,7 @@ function handleFiles(e,bk){
     }
   });
   e.target.value="";
+  if(bk==="edit"||bk==="fix")nameEditMedia();
 }
 
 // ── NAMES FROM THE DESCRIPTION (2026-10-17) ───────────────────────────────────
@@ -5524,7 +5525,7 @@ function handleFiles(e,bk){
 // (IMG_20261014_091200.jpg) is renamed after what the entry says — a very short
 // description: the first phrase, its first three or four words without the
 // little ones, numbered when the entry has several ("Rodament motor principal
-// joc 1.jpg"). The outcome's files take the outcome's text. Worked out here,
+// joc 1.jpg"). The outcome's files take the same words plus _resolt. Worked out here,
 // with no network and nothing sent anywhere; a name typed by hand is never
 // touched (`userNamed`), and an automatic one follows the description when it
 // is edited (`autoName`). On Drive the file is renamed too — at once, or when
@@ -5615,13 +5616,32 @@ function mediaExt(im){
 // arrive from the session's Drive folder already named by a person.
 function autoNameMedia(list,base,force){
   base=cleanName(base,60);if(!base)return;
-  var cand=(list||[]).filter(function(im){return im&&!im.userNamed&&(force||im.autoName||camName(im.name))});
+  var cand=(list||[]).filter(function(im){return im&&!im.userNamed&&(force||im.autoName||camName(im.name))}),n=0;
   cand.forEach(function(im,i){
     var nm=base+(cand.length>1?" "+(i+1):"")+mediaExt(im);
     if(im.name===nm)return;
-    im.name=nm;im.autoName=true;
+    im.name=nm;im.autoName=true;n++;
     if(im.driveId)driveRename(im.driveId,nm);
   });
+  return n;
+}
+// The name a file is going to keep, shown the MOMENT it is attached instead of
+// only after Desa (2026-11-08). The edit modal already knows the entry's
+// description, so there was never anything to wait for, and waiting left the
+// field under the thumbnail showing the camera's name — the very name all this
+// renaming exists to get rid of. Also on leaving the description or the tag,
+// so a correction made in the same sitting carries to the names.
+// Not in the entry composer: there the description is still being typed while
+// the photo goes in, and a name built from half a sentence is worse than none
+// — that one keeps naming on Afegeix.
+function nameEditMedia(){
+  if(!editingId)return;
+  var t=$$("eText").value.trim(),tg=$$("eTag").value.trim(),n=0;
+  n+=autoNameMedia(eImgs,shortDesc(t,tg));
+  if(fixOn)n+=autoNameMedia(fImgs,fixNameBase(t,tg),true);
+  if(!n)return;
+  renderThumbs("edit");if(fixOn)renderThumbs("fix");
+  scheduleSave();          // the image objects are the session's own
 }
 // An upload has finished: keep a name given meanwhile, and give it to Drive.
 function mediaUploaded(im,r){
@@ -5813,6 +5833,10 @@ $$("eCancel").addEventListener("click",closeEdit);
 $$("editBack").addEventListener("click",function(e){if(e.target===$$("editBack"))closeEdit()});
 $$("eSave").addEventListener("click",saveEdit);
 $$("eText").addEventListener("input",function(){autoH($$("eText"))});
+// On leaving the field, not on every keystroke: a name is also a rename on
+// Drive, and half a word is not a name.
+$$("eText").addEventListener("change",nameEditMedia);
+$$("eTag").addEventListener("change",nameEditMedia);
 $$("eTsRound").addEventListener("click",function(){tsRoundField(5)});
 $$("eTsRound15").addEventListener("click",function(){tsRoundField(15)});
 $$("eTsHour").addEventListener("click",function(){tsRoundField(60)});

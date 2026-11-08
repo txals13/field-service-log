@@ -11052,6 +11052,24 @@ function tsRange(s){
   return {from:ds.length?ds[0]:(s.createdAt||now()).slice(0,10),
           to:ds.length?ds[ds.length-1]:(s.closedAt||s.updatedAt||s.createdAt||now()).slice(0,10)};
 }
+// Local midnight + setDate, like tsCollect's own walk: the calendar field is
+// what moves, so a month end, a leap day or a DST night can't shift the day.
+function tsDayShift(iso,n){
+  var d=new Date(String(iso||"").slice(0,10)+"T00:00:00");
+  if(isNaN(d.getTime()))return String(iso||"").slice(0,10);
+  d.setDate(d.getDate()+n);
+  return tsIso(d);
+}
+// What the timesheet OPENS with (2026-11-08): the visit's window one day wider
+// on each side. The hours are not the hours of the work — the journey there is
+// normally the day before and the journey back the day after, and those two
+// days are worked too. Only the starting point: the range is a pair of date
+// fields, and what is changed there is saved with the sheet and wins from then
+// on, so a trip that does not look like this is corrected once.
+function tsDefaultRange(s){
+  var R=tsRange(s);
+  return {from:tsDayShift(R.from,-1),to:tsDayShift(R.to,1)};
+}
 
 var TSL={
   en:{title:"Timesheet",file:"timesheet",gen:"Generated on",period:"Period",daysN:"Days",
@@ -11635,7 +11653,7 @@ function openTimesheet(){
   var active=sessions.find(function(s){return s.id===aid});
   if(!active)return;
   tsSess=active;tsPick=null;tsAll=[];
-  var T=active.timesheet||{},R=tsRange(active);
+  var T=active.timesheet||{},R=tsDefaultRange(active);
   $$("tsFrom").value=T.from||R.from;
   $$("tsTo").value=T.to||R.to;
   // Built from the same table as the report's, so the sheet is not stuck at

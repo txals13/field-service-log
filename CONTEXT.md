@@ -2499,6 +2499,23 @@ Now (`syncTick`, `scheduleSync`):
   formats moved, the empty visit still falls back, and a first entry saved
   without an hour is skipped.
 
+- **The timesheet opens on the trip, not on the work** (2026-11-08: "the
+  timesheet should take the report's start date minus one day and its last
+  date plus one day by default — normally the journey is the day before and
+  the day after"). `openTimesheet` filled the two date fields from
+  `tsRange(active)`, the visit's first and last logged entry, so the two
+  travel days had to be typed in on every sheet. `tsDefaultRange(s)` =
+  `tsRange(s)` one day wider on each side, via `tsDayShift(iso,n)` (local
+  midnight + `setDate`, like `tsCollect`'s own walk, so a month end, a leap
+  day or a DST night cannot shift the day; an unparseable date comes back
+  unchanged). ONLY the default: `$$("tsFrom").value=T.from||R.from` still
+  prefers the saved sheet's own range, which `tsSave` writes, so a trip that
+  does not look like this is corrected once and stays corrected. `tsRange`
+  itself is untouched — the report's period and the history records still mean
+  the work. Checked in the preview by opening the modal: a visit of the 12th
+  to the 14th opens 11 → 15, a saved sheet keeps its 13 → 14, and the shift
+  holds across a month end, New Year and 29 February 2028.
+
 ### addEntry timeout for EXIF + upload
 Photo EXIF reading and video uploads are async. Use a safe timeout:
 ```js

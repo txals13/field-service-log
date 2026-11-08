@@ -64,6 +64,13 @@ Una sola forma per a totes les menes: qui ho llegeix mira `fields[]` i després 
 fila, sense haver de saber res de la taula per endavant. `rows[].page` és, com a les
 llistes de peces, la pàgina **al manual original**.
 
+Les **matrius** hi arriben com a taula lliure (`kind:"free"`) amb `labels`: la de
+manteniment de components comercials (p. 107 del BPF-140) té un camp `component` i
+tretze camps més, un per tasca, amb el ròtul de la tasca tal com el manual l'escriu
+en diagonal («Check hoses») i a cada cel·la el codi de periodicitat (D, S/W, M, B,
+T/Q, Bi, A) o res. El field app hi llegeix, per a un tipus de component, què toca
+fer i cada quan.
+
 ## Fitxa de màquina (`machine`)
 
 `machine` ja no són només `serial`, `model` i `client`. El full de dades del manual

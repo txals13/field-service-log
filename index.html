@@ -280,6 +280,12 @@ textarea{resize:none;line-height:1.4}
 .pv-modal{max-width:min(98vw,1100px);width:98vw;height:94vh;max-height:94vh;display:flex;flex-direction:column;padding:12px}
 .pv-scroll{flex:1;overflow:auto;position:relative;border:1px solid var(--br);border-radius:8px;background:#e5e7eb;-webkit-overflow-scrolling:touch}
 #pvDoc iframe{display:block;width:100%;border:0;background:#fff}
+/* El document encara no té alçada: ni l'iframe ha carregat ni el PDF s'ha
+   dibuixat. Sense reservar-la, els requadres de signar es col·loquen a dalt de
+   tot i la finestra s'obre pel final del document; en arribar l'alçada de debò
+   tot salta avall i sembla que la pantalla s'hagi refrescat. Amb la reserva,
+   el que creix ho fa per sota del que es veu. Se li treu quan ja es mesura. */
+#pvDoc iframe.pv-wait,#pvDoc .pv-pages.pv-wait{min-height:72vh}
 #pvDoc .pv-pages canvas{display:block;width:100%;max-width:900px;height:auto;margin:12px auto;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.25)}
 .pv-sign{background:var(--bg1);border-top:3px solid var(--gold);padding:14px}
 .pv-pads{display:grid;grid-template-columns:1fr;gap:12px}
@@ -9220,7 +9226,7 @@ function setRevSign(id,n,sign){
 // timesheet asks which one first (openReviewSign), and the screen shows that
 // one document, with its pads.
 var pv={sid:null,rev:null,parts:[]},pvWired=false;
-function pvClose(){$$("pvBack").style.display="none";$$("pvDoc").innerHTML="";pv.sid=null;pv.rev=null;pv.parts=[]}
+function pvClose(){$$("pvBack").style.display="none";$$("pvDoc").innerHTML="";pv.sid=null;pv.rev=null;pv.parts=[];pv.anchor=false}
 // Saved, and said so on the button; the label comes back by itself. Both
 // strings go through uiT here and are not left to uiApply: this runs well
 // after the window has been translated, and would otherwise sit in Catalan.
@@ -9242,14 +9248,11 @@ function pvWire(){
     if(!pvCommit())return;
     var b=$$("pvSave"),k=(pv.parts[0]||{}).kind||"rep";
     b.disabled=true;
+    pv.anchor=true;            // the pads stay put while the document is redrawn
     try{await openReview(k)}catch(e){}
     b.disabled=false;
     pvSaved();
-    // Back to where the signing happened, instead of the top of the document.
-    // Twice, because the report's iframe is still growing to its full height
-    // (see fit() below) and the first scroll would land short.
-    function toPads(){var el=$$("pvDoc").querySelector(".pv-sign");if(el)el.scrollIntoView({block:"start"})}
-    setTimeout(toPads,450);setTimeout(toPads,1400);
+    setTimeout(function(){pv.anchor=false},2500);
   });
   $$("pvGen").addEventListener("click",function(){
     var id=pv.sid,ts=pv.parts.some(function(x){return x.kind==="ts"}),
@@ -9403,14 +9406,17 @@ async function openReview(kind){
   if(kind==="ts"||kind==="val"){
     var isTs=kind==="ts";
     $$("pvTitle").textContent=isTs?"Full d'hores":"Informe de validació";
-    var pages=document.createElement("div");pages.className="pv-pages";
+    var pages=document.createElement("div");pages.className="pv-pages pv-wait";
     doc.appendChild(pages);
     var g0=isTs?T0:(s.valSign||{});
     doc.appendChild(pvPadsEl(kind,s,g0,isTs?"Si després canvies els dies, es torna a signar."
                                            :"És independent de la de l'informe: una revisió nova de l'informe no la toca."));
     pv.parts.push({kind:kind,g:g0});
-    if(blob)pvRenderPdf(blob,pages);
-    else pages.innerHTML="<div class=\"ts-note\" style=\"padding:16px\">No s'ha pogut preparar el document (cal la llibreria PDF: comprova la connexió). Pots signar igualment.</div>";
+    if(blob)pvRenderPdf(blob,pages).then(function(){
+      pages.classList.remove("pv-wait");
+      if(pv.anchor)pvToPads();
+    });
+    else{pages.classList.remove("pv-wait");pages.innerHTML="<div class=\"ts-note\" style=\"padding:16px\">No s'ha pogut preparar el document (cal la llibreria PDF: comprova la connexió). Pots signar igualment.</div>"}
     pvShow();
     return;
   }
@@ -9424,7 +9430,7 @@ async function openReview(kind){
                         :uiT("{p} porten recanvis, que tampoc hi surten.").replace("{p}",ip));
     el.textContent="\uD83D\uDD12 "+t;el.style.display="block";
   })();
-  var fr=document.createElement("iframe");fr.setAttribute("title","Informe");
+  var fr=document.createElement("iframe");fr.setAttribute("title","Informe");fr.className="pv-wait";
   doc.appendChild(fr);
   var gR=revSign(s,rev)||{};
   doc.appendChild(pvPadsEl("rep",s,gR,uiT("Queda lligada a la {r}: si se n'emet una de nova, es torna a signar.").replace("{r}",revNo(rev.n))));
@@ -9440,7 +9446,11 @@ async function openReview(kind){
     st.textContent=(inked?"":".sig{display:none!important}")+"body{margin-top:16px!important;margin-bottom:16px!important}";
     d.head.appendChild(st);
     // as tall as the report, so the one scroll runs on to the pads
-    function fit(){fr.style.height=(d.documentElement.scrollHeight+4)+"px"}
+    function fit(){
+      fr.style.height=(d.documentElement.scrollHeight+4)+"px";
+      fr.classList.remove("pv-wait");
+      if(pv.anchor)pvToPads();
+    }
     fit();setTimeout(fit,300);setTimeout(fit,1200);
     Array.prototype.forEach.call(d.images,function(im){if(!im.complete)im.addEventListener("load",fit)});
     // a photo's name jumps to the appendix: move the outer view there
@@ -9453,9 +9463,19 @@ async function openReview(kind){
   });
   fr.srcdoc=buildReportHTML(R.s,false,R.lang,rev);
 }
+// Back to the signature pads, wherever they have ended up. Used while the
+// document is still settling, so they stay put under the finger instead of
+// sliding as the page above them grows.
+function pvToPads(){
+  var sc=$$("pvScroll"),el=$$("pvDoc").querySelector(".pv-sign");
+  if(!sc||!el)return;
+  sc.scrollTop=Math.max(0,sc.scrollTop+el.getBoundingClientRect().top-sc.getBoundingClientRect().top-12);
+}
 function pvShow(){
   $$("pvBack").style.display="flex";
-  $$("pvScroll").scrollTop=0;
+  // Opening starts at the top of the document. A redraw after signing stays
+  // where the signing was (pv.anchor) instead of jumping to the top and back.
+  if(pv.anchor)setTimeout(pvToPads,0);else $$("pvScroll").scrollTop=0;
   setTimeout(pvInitPads,40);   // after the box has a size, or the canvases come up 0×0
 }
 // The client's contact as one line. Not translated, for the same reason the

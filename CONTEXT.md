@@ -3100,10 +3100,26 @@ says whether the line met the numbers it was bought to meet.
   counter under it — a screen stretched to a frame is a screen you cannot read
   the digits off.
 
+**Nothing in that window appears before it has its size** (2026-11-08: "first
+the bottom of the document comes up and then the beginning, it looks like a
+screen refresh"). The report's iframe and the PDF's canvases have no height
+until they load, so the signature pads laid out at the very top and the window
+opened showing the END of the document; a moment later the real height arrived
+and everything dropped. The fix is to reserve the height rather than to chase
+it: `.pv-wait` puts a `min-height:72vh` on the iframe and on the pages box, and
+`fit()` (report) or the end of `pvRenderPdf` (timesheet, validation) takes it
+off once there is a real measurement, so whatever grows grows BELOW the fold.
+Measured in the preview: the pads start 649 px down a 783 px box and settle at
+765, with the scroll never leaving 0.
+
 **Saving a signature no longer closes the window** (2026-11-08). `pvSave`
 commits and then re-enters `openReview(kind)`, so the document is redrawn from
 the session as it now stands, with the signature written into it; closing is
-the user's, with Tanca. The report's own `.sig` block had always been hidden in
+the user's, with Tanca. The redraw does not move the page either: `pv.anchor`
+makes `pvShow` and every later `fit()` keep the PADS where they are
+(`pvToPads`) instead of resetting the scroll to the top, so the signature
+appearing in the document above them pushes nothing around — measured at a
+constant 409 px through the whole redraw. The report's own `.sig` block had always been hidden in
 the preview (an empty pair of rules right above the pads is the same thing
 twice) and now comes back as soon as there is ink in it. Re-entering is safe
 because `setRevSign` deliberately leaves `updatedAt` alone, so

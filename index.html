@@ -5530,7 +5530,7 @@ function handleFiles(e,bk){
 // is edited (`autoName`). On Drive the file is renamed too — at once, or when
 // its upload finishes, which used to write the camera's name back.
 var NAME_STOP=" a al als amb de del dels d el els en es hi ho i l la les per pel pels que s un una uns unes ha han he hem molt mes més ja y con los las se muy por para lo the of and to with on in at an is are has was ";
-function cleanName(t){return String(t||"").replace(/[\\\/:*?"<>|#%{}~]+/g,"").replace(/\s+/g," ").trim().slice(0,40).trim()}
+function cleanName(t,max){return String(t||"").replace(/[\\\/:*?"<>|#%{}~]+/g,"").replace(/\s+/g," ").trim().slice(0,max||40).trim()}
 function shortDesc(text,tag){
   var t=String(text||"").trim();
   if(/^\[.*\]$/.test(t))t="";                    // "[Multimèdia — afegeix-hi una descripció]"
@@ -5543,6 +5543,20 @@ function shortDesc(text,tag){
   while(sel.length>1&&/^[\d.,]+$/.test(sel[sel.length-1]))sel.pop();   // never end on a number cut from its unit
   var out=sel.join(" ");
   return cleanName(out.charAt(0).toUpperCase()+out.slice(1));
+}
+// The name of a photo of the RESOLUTION says that that is what it is, in the
+// language the app is being read in. These files land in the same Drive folder
+// as the photos of the problem, one after the other, and the report lists them
+// by name: without the mark, "Cinta d'entrada patina.jpg" and "Cinta d'entrada
+// patina 2.jpg" leave whoever opens the folder guessing which is the before and
+// which the after. The resolution's own words come first when it has any; a
+// resolution that is nothing but a photo —the usual case, because the photo IS
+// the answer— falls back to the entry's, which at least says what it is about.
+// The mark goes on AFTER cleanName has had its say: trimmed with the rest, a
+// long description would eat the very words that make the name worth having.
+function fixNameBase(entryText,entryTag,fixText){
+  var base=shortDesc(fixText,"")||shortDesc(entryText,entryTag);
+  return base?base+" - "+cleanName(uiT("com ha quedat")):"";
 }
 function camName(nm){
   var b=String(nm||"").replace(/\.[^.]*$/,"");
@@ -5569,7 +5583,7 @@ function renamePass(){
     (s.entries||[]).forEach(function(e){
       function want(list){return (list||[]).some(function(im){return im&&!im.userNamed&&!im.autoName&&camName(im.name)})}
       if(want(e.images)){var sd=shortDesc(e.text,e.tag);if(sd){autoNameMedia(e.images,sd);ch=true}}
-      if(e.fix&&want(e.fix.images)){var fd=shortDesc(e.fix.text,"")||(shortDesc(e.text,e.tag)?shortDesc(e.text,e.tag)+" - resolt":"");if(fd){autoNameMedia(e.fix.images,fd);ch=true}}
+      if(e.fix&&want(e.fix.images)){var fd=fixNameBase(e.text,e.tag,e.fix.text);if(fd){autoNameMedia(e.fix.images,fd);ch=true}}
     });
     if(!ch)return s;
     any=true;return Object.assign({},s);          // a new object: the change is stamped and synced
@@ -5581,7 +5595,7 @@ function mediaExt(im){
   return m?"."+m[1].toLowerCase():(im.type==="video"?".mp4":im.type==="audio"?".webm":".jpg");
 }
 function autoNameMedia(list,base){
-  base=cleanName(base);if(!base)return;
+  base=cleanName(base,60);if(!base)return;
   var cand=(list||[]).filter(function(im){return im&&!im.userNamed&&(im.autoName||camName(im.name))});
   cand.forEach(function(im,i){
     var nm=base+(cand.length>1?" "+(i+1):"")+mediaExt(im);
@@ -5760,7 +5774,7 @@ function saveEdit(){
       else delete up.fix;
       var sd=shortDesc(text,newTag);
       autoNameMedia(up.images,sd);
-      if(up.fix)autoNameMedia(up.fix.images,shortDesc(fixText,"")||(sd?sd+" - resolt":""));
+      if(up.fix)autoNameMedia(up.fix.images,fixNameBase(text,newTag,fixText));
       return up;}))})});
     closeEdit();scheduleSave();renderAll();
   }tryS();
@@ -7405,6 +7419,7 @@ es:{
   "Nom de la prova":"Nombre de la prueba",
   "Què s'hi ha fet":"Qué se ha hecho",
   "✔ Com ha quedat":"✔ Cómo ha quedado",
+  "com ha quedat":"cómo ha quedado",
   "+ Nova revisió":"+ Nueva revisión",
   "Base imposable":"Base imponible",
   "Canvia el tema":"Cambia el tema",
@@ -8010,6 +8025,7 @@ en:{
   "Nom de la prova":"Test name",
   "Què s'hi ha fet":"What was done",
   "✔ Com ha quedat":"✔ How it ended",
+  "com ha quedat":"how it ended",
   "+ Nova revisió":"+ New revision",
   "Base imposable":"Net amount",
   "Canvia el tema":"Change the theme",

@@ -1166,12 +1166,28 @@ Field Service Log/
   from its unit — numbered when there are several, extension kept
   (`mediaExt`; NOT `extOf`, which already exists for a different job further
   down and, being declared later, silently won). On add (`addEntry`) and on
-  every edit save (the outcome's files from the outcome text, else
-  "<entry> - resolt"); `autoName` marks ours so they follow later edits,
+  every edit save (`fixNameBase`, below); `autoName` marks ours so they follow later edits,
   `userNamed` (set in `rNames`) protects a typed name for good. Drive gets the
   name at once (`driveRename`) or when the upload finishes:
   `mediaUploaded` replaced the five `img.name=r.name` that wrote the camera
   name back — which also lost a hand rename made during the upload.
+- **The outcome's photo is named as the outcome** (2026-11-08: "I added a
+  photo to an entry of how it turned out and the photo kept the same name"). It
+  did not, quite: with no text written in the resolution — the usual case,
+  because the photo IS the answer — the name fell back to the ENTRY's words
+  plus a hardcoded " - resolt", so in the Drive folder the before and the after
+  sat next to each other reading almost alike. `fixNameBase(entryText, entryTag,
+  fixText)` now builds both cases the same way: the resolution's own words when
+  it has any, the entry's otherwise, and ALWAYS the app's own name for the
+  thing, `uiT("com ha quedat")` — so the mark follows the interface language
+  (cómo ha quedado / how it ended) instead of being Catalan inside a file name
+  for good. The mark is appended AFTER `cleanName`, and `autoNameMedia` cleans
+  at 60 characters instead of 40, because trimmed with the rest a long
+  description ate exactly the words worth having. Used by both callers, the
+  edit save and `renamePass`. Checked in the preview across the three
+  languages, with and without resolution text, with a very long description and
+  with two photos (which number after the mark, "… - com ha quedat 1.jpg").
+
 - **One order for the three report formats** (2026-10-17): header and visit
   data (+ entry counters), machine counters, GENERAL NOTES (moved up from the
   end: with ✨ Resum per dies they are the visit's summary), incidents summary,

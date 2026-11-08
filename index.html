@@ -5554,9 +5554,11 @@ function shortDesc(text,tag){
 // the answer— falls back to the entry's, which at least says what it is about.
 // The mark goes on AFTER cleanName has had its say: trimmed with the rest, a
 // long description would eat the very words that make the name worth having.
+// An underscore and no spaces, so the mark reads as part of the file name and
+// not as another of the description's words.
 function fixNameBase(entryText,entryTag,fixText){
   var base=shortDesc(fixText,"")||shortDesc(entryText,entryTag);
-  return base?base+" - "+cleanName(uiT("com ha quedat")):"";
+  return base?base+"_"+cleanName(uiT("resolt")):"";
 }
 function camName(nm){
   var b=String(nm||"").replace(/\.[^.]*$/,"");
@@ -7419,7 +7421,6 @@ es:{
   "Nom de la prova":"Nombre de la prueba",
   "Què s'hi ha fet":"Qué se ha hecho",
   "✔ Com ha quedat":"✔ Cómo ha quedado",
-  "com ha quedat":"cómo ha quedado",
   "+ Nova revisió":"+ Nueva revisión",
   "Base imposable":"Base imponible",
   "Canvia el tema":"Cambia el tema",
@@ -8025,7 +8026,6 @@ en:{
   "Nom de la prova":"Test name",
   "Què s'hi ha fet":"What was done",
   "✔ Com ha quedat":"✔ How it ended",
-  "com ha quedat":"how it ended",
   "+ Nova revisió":"+ New revision",
   "Base imposable":"Net amount",
   "Canvia el tema":"Change the theme",

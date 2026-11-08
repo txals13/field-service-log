@@ -1178,15 +1178,17 @@ Field Service Log/
   plus a hardcoded " - resolt", so in the Drive folder the before and the after
   sat next to each other reading almost alike. `fixNameBase(entryText, entryTag,
   fixText)` now builds both cases the same way: the resolution's own words when
-  it has any, the entry's otherwise, and ALWAYS the app's own name for the
-  thing, `uiT("com ha quedat")` — so the mark follows the interface language
-  (cómo ha quedado / how it ended) instead of being Catalan inside a file name
-  for good. The mark is appended AFTER `cleanName`, and `autoNameMedia` cleans
-  at 60 characters instead of 40, because trimmed with the rest a long
-  description ate exactly the words worth having. Used by both callers, the
-  edit save and `renamePass`. Checked in the preview across the three
-  languages, with and without resolution text, with a very long description and
-  with two photos (which number after the mark, "… - com ha quedat 1.jpg").
+  it has any, the entry's otherwise, and ALWAYS the mark `_` + `uiT("resolt")`
+  — an underscore and no spaces, so it reads as part of the file name and not
+  as one more of the description's words, and translated, so it does not sit in
+  Catalan inside a file name for good (`_resuelto`, `_resolved`; "resolt" was
+  already in both tables for the incident counters). The mark is appended AFTER
+  `cleanName`, and `autoNameMedia` cleans at 60 characters instead of 40,
+  because trimmed with the rest a long description ate exactly the words worth
+  having. Used by both callers, the edit save and `renamePass`. Checked in the
+  preview across the three languages, with and without resolution text, with a
+  very long description and with two photos (which number after the mark,
+  "Canviat coixinet_resolt 1.jpg").
 
 - **One order for the three report formats** (2026-10-17): header and visit
   data (+ entry counters), machine counters, GENERAL NOTES (moved up from the

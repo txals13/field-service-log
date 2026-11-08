@@ -2940,6 +2940,60 @@ the parts and never in the header; the validation and internal PDFs unchanged.
 
 ---
 
+## The manual's screenshots (2026-11-08)
+
+`manual.html` shows the app, section by section, and the pictures are MADE, not
+taken: `python tools/captures.py` drives a headless Chrome and writes
+`manual-img/<name>-clar.webp` and `<name>-fosc.webp`. Adding one means adding a
+line to `SHOTS` and a `<figure>` to the manual, not finding a phone.
+
+- **Invented data, never a real visit.** The repository is public and a real
+  visit carries the client's name, the serial number of their machine and who
+  went. The demo is one maintenance visit to a made-up company, five entries,
+  one of them internal — the internal one is there on purpose, because it is
+  what makes 🔒 Informe intern appear in the report menu, and that menu is one
+  of the pictures.
+- **The DevTools protocol, not `chrome --screenshot`.** A headless Chrome will
+  not go below about 500 px wide (a Windows window's minimum), so every shot
+  came out with a narrow tablet's layout. `Emulation.setDeviceMetricsOverride`
+  does 390×844 properly, and with it come two things worth having: a clip
+  rectangle, so a shot can be one window or one strip of it, and a real signal
+  to wait for instead of a timer. The protocol needs a WebSocket, and there is
+  one in `tools/captures.py`, about sixty lines of standard library — a
+  dependency on PyPI would have been more code to trust, not less.
+  `Emulation.setTouchEmulationEnabled` matters too: without it `handheld()` is
+  false and the entry bar shows the folder button where a phone shows the
+  camera, which is the opposite of what the reader has in their hand.
+- **The async boot is cut out of the generated file.** `_shot.html` is
+  `index.html` minus the boot IIFE, because that boot waits on IndexedDB and
+  under a headless clock that promise never settles — every shot came out
+  saying "Carregant les sessions…". With it gone, the driver sets `sessions`,
+  `aid` and `isLoggedIn` and paints synchronously. `_shot.html` is deleted when
+  the run ends and is in `.gitignore` besides.
+- **All transitions are switched off** in the capture build. The sidebar opens
+  with a 0.25 s slide and the camera kept catching it halfway, half off-screen.
+- **The timesheet needs a calendar.** Its days come from the Calendari laboral
+  file on Drive, and without it the window is an orange error — no use to
+  anyone reading a manual. The driver writes three days (out, work, back)
+  straight into the `fsl_v6_cal` cache with `saveCalCache`, which is where
+  `tsRefresh` looks when Drive has nothing, and it back-dates `calCache.at` so
+  the copy is not stamped with today while the sheet says March.
+- **Light and dark, always both**, because the manual follows the system theme
+  and a dark screenshot on a white page (or the reverse) is a hole in the page.
+  The manual picks between them with `<picture>` + `media="(prefers-color-scheme:dark)"`,
+  which needs no script — and the manual has none. Note the app themes with a
+  `:root.light` CLASS, not a media query, so the driver sets the class; only
+  the manual itself reads the system setting.
+- **`sw.js` no longer answers a missing subresource with the app.** Without a
+  copy and without network it used to serve `index.html` to anything, which for
+  an image means the browser draws it broken AND we cache a page of HTML as a
+  picture. Now only navigations get that; everything else gets a 503. The
+  pictures are deliberately NOT in `SHELL`: they reach the cache the first time
+  the manual is read with coverage, and a list of file names to keep in step by
+  hand would rot in a month.
+
+---
+
 ## Test data
 `fsl_demo_data.json` — 10 sessions, 100 entries, 66 synthetic photos
 Sectors: automotive, pharma, steel, food, logistics, wind energy, chemical,

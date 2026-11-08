@@ -44,6 +44,13 @@
   th,td{border:1px solid var(--br);padding:6px 9px;text-align:left;vertical-align:top}
   th{background:var(--bg2);color:var(--tx)}
   .scroll{overflow-x:auto}
+  /* Captures de pantalla. Es fan amb tools/captures.py i sempre van per
+     parelles, una de clara i una de fosca: aquesta pàgina segueix el tema del
+     sistema, i una captura fosca damunt d'un full blanc (o al revés) canta. */
+  figure{margin:18px 0;padding:0}
+  figure img{display:block;width:100%;max-width:340px;height:auto;border:1px solid var(--br);border-radius:10px}
+  figure.ample img{max-width:470px}
+  figcaption{color:var(--tx3);font-size:13px;margin-top:7px;max-width:470px}
   .sev-i{color:var(--tx3)}.sev-ok{color:var(--green)}.sev-w{color:var(--orange)}.sev-p{color:var(--red)}
   footer{margin-top:50px;color:var(--tx3);font-size:13px;border-top:1px solid var(--br);padding-top:12px}
 </style>
@@ -95,6 +102,14 @@
 <p>També pots triar «Continua sense Drive». Llavors tot queda només en aquest dispositiu, i hi ha coses que no funcionen: els vídeos, els ZIP i la sincronització.</p>
 <div class="warn"><p>L'aplicació només veu els fitxers que ha creat ella mateixa a Drive. Una foto que posis a mà a la carpeta des de la web de Drive no la veu, si no l'hi dones tu (vegeu <a href="#carpeta">la carpeta de la sessió</a>).</p></div>
 
+<figure>
+  <picture>
+    <source srcset="manual-img/barra-lateral-fosc.webp" media="(prefers-color-scheme:dark)">
+    <img src="manual-img/barra-lateral-clar.webp" width="600" height="1142" loading="lazy" alt="La barra lateral de l'aplicació, amb el filtre de sessions, les opcions i la llista de visites">
+  </picture>
+  <figcaption>La barra lateral (<span class="btn">☰</span>): d'aquí surt gairebé tot el que no és una visita &mdash; l'idioma, la clau de Gemini, la llicència, els manuals de recanvis, les carpetes i l'arxiu. A sota hi ha la llista de visites.</figcaption>
+</figure>
+
 <h3>La clau de Gemini</h3>
 <p>El corrector (<span class="btn">✓</span>) i la traducció dels informes funcionen amb Gemini, i necessiten una clau. A la barra lateral (<span class="btn">☰</span>), <span class="btn">🔑 Clau de Gemini</span>: l'escrius un cop a cada dispositiu i es queda només en aquell navegador. No viatja amb les dades, ni a Drive ni als ZIP.</p>
 <p>Sense clau tot funciona igual, excepte corregir i traduir. Si un informe s'ha de traduir i no hi ha clau, l'app t'ho pregunta i el pots fer amb els textos tal com els vas escriure.</p>
@@ -129,12 +144,27 @@
 <p>L'<strong>inici</strong> no és mai l'hora en què vas crear la visita a l'app. Si has omplert <strong>Inici de la visita</strong> al formulari, és aquella; si no, és l'hora de la <strong>primera entrada</strong>, i si afegeixes una entrada més antiga que les que hi havia, l'inici la segueix, perquè una visita no pot començar després de la seva primera línia. Només quan no hi ha ni una cosa ni l'altra surt l'hora en què la vas crear. El rellotge 🕐 de la capçalera de la visita diu el mateix, i es pot canviar en qualsevol moment amb <span class="btn">✎</span>.</p>
 <div class="tip"><p>Escriu el client i la màquina sempre igual. Les majúscules, els accents, els espais i els guions no compten (<code>VLP-320-R</code> i <code>vlp 320 r</code> són la mateixa màquina), però la forma jurídica sí: «X, S.L.» i «X, S.A.» són clients diferents.</p></div>
 
+<figure>
+  <picture>
+    <source srcset="manual-img/visita-nova-fosc.webp" media="(prefers-color-scheme:dark)">
+    <img src="manual-img/visita-nova-clar.webp" width="780" height="1790" loading="lazy" alt="El formulari d'una visita nova, amb els apartats Client, Equip i Visita">
+  </picture>
+  <figcaption>El formulari de <span class="btn">+ Nova</span>. Els tres apartats són els mateixos que encapçalen els informes, i només hi ha dos camps obligatoris: el client i la màquina.</figcaption>
+</figure>
+
 <h3>La llista de visites</h3>
 <p>A la barra lateral hi ha totes les visites, <strong>de la més nova a la més antiga</strong>. Cada una mostra el client, el número de projecte (o la màquina, si encara no té projecte), si està oberta i quantes entrades té. El quadre «Filtra les sessions…» busca pel client, la màquina, el projecte, el tècnic i la ubicació, i també dins del text de totes les entrades: les entrades que coincideixen surten a sota de la seva visita i s'hi pot anar directament.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="registre">3. Escriure el registre</h2>
 <p>A baix de la pantalla de la visita hi ha el quadre per afegir entrades.</p>
+<figure>
+  <picture>
+    <source srcset="manual-img/registre-fosc.webp" media="(prefers-color-scheme:dark)">
+    <img src="manual-img/registre-clar.webp" width="780" height="1688" loading="lazy" alt="La pantalla d'una visita oberta: la capçalera amb les dades, el registre d'entrades i el quadre per escriure'n una de nova">
+  </picture>
+  <figcaption>La pantalla d'una visita. A dalt, les dades i els botons; al mig, el registre, una entrada per fila i amb el color de la gravetat; a baix, el quadre per escriure la següent.</figcaption>
+</figure>
 <ol>
   <li><strong>Gravetat</strong>:
     <span class="sev-i">○ Info</span> ·
@@ -145,6 +175,14 @@
   <li><strong>Descripció</strong>. Opcional si hi ha una foto: pots afegir la foto ara i escriure més tard.</li>
   <li><span class="btn">↵ Afegeix</span>, o <code>Ctrl+Retorn</code> a l'ordinador.</li>
 </ol>
+
+<figure>
+  <picture>
+    <source srcset="manual-img/entrada-nova-fosc.webp" media="(prefers-color-scheme:dark)">
+    <img src="manual-img/entrada-nova-clar.webp" width="780" height="680" loading="lazy" alt="El quadre d'una entrada nova: gravetat, etiqueta, descripció i els botons de foto, vídeo, galeria, veu, corrector i entrada interna">
+  </picture>
+  <figcaption>El quadre de l'entrada. Els botons de la dreta de <span class="btn">↵ Afegeix</span> són, per ordre: fer una foto, triar un vídeo, triar una imatge de la galeria, gravar una nota de veu, passar el corrector i marcar l'entrada com a interna.</figcaption>
+</figure>
 
 <h3>Fotos, vídeos i notes de veu</h3>
 <ul>
@@ -186,6 +224,14 @@
   <li>Afegir recanvis (vegeu <a href="#recanvis">recanvis</a>).</li>
   <li><strong>Visibilitat</strong>: la casella «🔒 Entrada interna» marca o desmarca una entrada ja escrita.</li>
 </ul>
+
+<figure>
+  <picture>
+    <source srcset="manual-img/entrada-editar-fosc.webp" media="(prefers-color-scheme:dark)">
+    <img src="manual-img/entrada-editar-clar.webp" width="780" height="1502" loading="lazy" alt="La finestra d'editar una entrada, amb la data i l'hora, els botons d'arrodonir, la gravetat, l'etiqueta i la descripció">
+  </picture>
+  <figcaption>L'editor d'una entrada. Els botons <span class="btn">:05</span>, <span class="btn">:15</span> i <span class="btn">:00</span> arrodoneixen l'hora; mai no s'arrodoneix sola.</figcaption>
+</figure>
 
 <h3>Com ha quedat: tancar un problema</h3>
 <p>Un <span class="sev-p">■ Problema</span> o un <span class="sev-w">▲ Avís</span> té el botó <span class="btn">✔ Afegeix com ha quedat</span>. Obre una resolució amb la seva pròpia gravetat, el seu text i els seus fitxers. L'entrada original no es toca: a l'informe surten totes dues coses a la mateixa fila, el problema i com va acabar.</p>
@@ -270,6 +316,13 @@
   <tr><td>🗄 ZIP del projecte (arxiu)</td><td>Tot: tots els informes, totes les revisions anteriors, les fotos, els vídeos, les notes de veu i les dades de la visita. <strong>És l'única còpia que es pot tornar a importar.</strong> Cada foto, vídeo o nota de veu de la visita hi entra encara que ja no sigui a la carpeta (l'app el busca a Drive, també a la paperera). Si en falta algun que ja no es pot trobar, l'app avisa amb el nom del fitxer: no esborris la visita fins que el tinguis.</td></tr>
   <tr><td>📦 ZIP Word + multimèdia</td><td>L'informe Word amb tots els fitxers, per lliurar. No es pot tornar a importar.</td></tr>
 </table></div>
+<figure>
+  <picture>
+    <source srcset="manual-img/menu-informe-fosc.webp" media="(prefers-color-scheme:dark)">
+    <img src="manual-img/menu-informe-clar.webp" width="600" height="852" loading="lazy" alt="El menú de l'informe, amb l'estat de signatura i de revisió, l'idioma de l'informe, l'idioma en què s'ha escrit i la llista de formats">
+  </picture>
+  <figcaption>El menú de <span class="btn">↓ Informe</span>. A dalt, si l'informe està signat i per quina revisió va; després els dos idiomes; i a sota els formats. <span class="btn">🔒 Informe intern</span> només hi surt si la visita té alguna cosa interna.</figcaption>
+</figure>
 <p><strong>Triar què va al ZIP del projecte.</strong> Quan l'exportes des del menú, primer surt una llista per marcar què hi vols: informe PDF, Word, HTML, Excel de recanvis, informe de validació, informe intern, historial de la màquina, full d'hores, fotos, vídeos i notes de veu, tiquets de les despeses, revisions anteriors i manual de recanvis. Les <strong>dades de la visita</strong> (<code>session.json</code>) també es poden treure: és el que permet tornar a importar la visita, però a qui li envies el ZIP (l'empresa, el client) no li cal. Surten marcades per defecte, menys l'<strong>historial de la màquina</strong>, que és opcional (vegeu <a href="#historial">Historial de la màquina</a>). El que la visita no té surt en gris. L'app recorda l'última tria. Si treus les dades de la visita, la multimèdia, els tiquets de les despeses o les revisions anteriors, el ZIP no compta com a còpia completa per esborrar la visita, perquè això no es pot refer (i sense les dades, a més, no es pot tornar a importar). Quan arxives visites o fas el ZIP des de la finestra d'esborrar, no pregunta: el ZIP va sencer.</p>
 <p><strong>L'ordre de l'informe</strong>, igual al PDF, al Word i a l'HTML: les dades de la visita, els comptadors de la màquina, les <strong>notes generals</strong> (el resum de la visita, amb una línia per dia si fas servir ✨ Resum per dies), les incidències, el registre per dies, els recanvis canviats i recomanats, les proves de producció i les signatures. Les fotos grans van al final, com a annex, en una pàgina a part.</p>
 <p><strong>Incidències d'aquesta visita.</strong> Sota els comptadors, una taula petita amb tots els problemes i avisos de la visita: la gravetat, quan, què era i com ha quedat («Resolt» amb la data i l'hora, o «Pendent», amb «recanvi recomanat» si n'hi ha). També hi surten els problemes de visites anteriors que s'han tancat en aquesta. Si la visita no té ni problemes ni avisos, la taula no hi surt.</p>
@@ -344,6 +397,13 @@
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="hores">10. Full d'hores</h2>
 <p>Les hores no s'escriuen aquí: venen de l'app <strong>Calendari laboral</strong>, on ja les fitxes. El full s'obre amb <span class="btn">🧾 Full d'hores</span> a la capçalera o des de <span class="btn">↓ Informe</span>.</p>
+<figure class="ample">
+  <picture>
+    <source srcset="manual-img/full-hores-fosc.webp" media="(prefers-color-scheme:dark)">
+    <img src="manual-img/full-hores-clar.webp" width="748" height="934" loading="lazy" alt="El full d'hores, amb les dates Des de i Fins a, els botons de les columnes i la taula dels dies fitxats">
+  </picture>
+  <figcaption>El full d'hores d'una visita d'un sol dia: s'obre amb el dia abans i el dia després, que són els del viatge. La taula ensenya els dies fitxats al Calendari laboral; marca els que el client ha de signar.</figcaption>
+</figure>
 <ol>
   <li>Surten els dies fitxats del <strong>«Des de»</strong> al <strong>«Fins a»</strong>, que s'obren amb <strong>un dia abans de l'inici de la visita i un dia després de l'última entrada</strong>: el viatge d'anada sol ser el dia abans i el de tornada el dia després, i aquells dos dies també es treballen. Si el viatge no va així, canvia les dates a mà; un cop desat el full, es queda amb les que hi hagis posat. Marca els dies que el client ha de signar. Vacances i festius no hi surten.</li>
   <li>Tria les columnes amb els botons de sobre la taula. La data sempre hi és. La tria es recorda per al full següent; <span class="btn">Restableix</span> les torna totes.</li>

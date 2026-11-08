@@ -64,8 +64,14 @@ async function respon(req){
   if(!copia){
     try{ return await xarxa; }
     catch(e){
-      /* sense còpia d'aquest recurs: si és una navegació, servim l'app sencera.
-         Provem les dues formes perquè segons com hi arribis la clau és una o
+      /* Sense còpia i sense xarxa. Si no és una navegació —una captura del
+         manual que encara no s'havia mirat mai, posem per cas— val més un
+         error net: servir-li l'app sencera li dóna un full d'HTML al lloc
+         d'una imatge, que el navegador dibuixa trencada igualment i que a
+         sobre desaríem com si fos bona. */
+      if(req.mode !== "navigate")
+        return new Response("Sense connexió", {status:503, headers:{"Content-Type":"text/plain;charset=utf-8"}});
+      /* Provem les dues formes perquè segons com hi arribis la clau és una o
          l'altra ("/" en obrir l'app, "/index.html" si t'hi apunten directament). */
       const home = (await cache.match("./index.html")) || (await cache.match("./"));
       return home || new Response("Sense connexió", {status:503, headers:{"Content-Type":"text/plain;charset=utf-8"}});

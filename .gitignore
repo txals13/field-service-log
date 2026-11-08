@@ -11,3 +11,7 @@ fsl-clau-privada.json
 # Els servidors de desenvolupament: hi ha els camins de les carpetes d'aquest
 # ordinador, i el repositori és públic. El fitxer es queda al disc.
 .claude/launch.json
+
+# El fitxer de treball de les captures del manual (tools/captures.py el fa i
+# el treu). No es publica: es una copia de index.html amb un guio a dins.
+_shot.html

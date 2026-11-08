@@ -2959,33 +2959,48 @@ async function getManualCatalog(jsonId){
   if(idb){try{var c=await idbGet(idb,key);if(c)return c}catch(e){}}
   throw new Error("no s'ha pogut carregar el catàleg (sense connexió i sense còpia local)");
 }
-// -- Tag suggestions: the linked manual's grup names (machine sections) feed a
-//    datalist behind both Tag inputs. Cache-first (no network on every render);
-//    rebuilt only when the session or its manual changes. --
+// -- The Tag field is a free text box: the tag is whatever this entry is about,
+//    the part of the machine or the kind of work, and it is the technician who
+//    knows. The dropdowns behind it only save typing the handful that come up
+//    again and again, so they hold a short generic list (2026-11-08).
+//    They used to hold the linked manual's conjunts: dozens of them, numbers
+//    rather than words, none of which anybody was going to use as a tag, and
+//    they crowded out the one place the generic ones belong.
+//
+//    You read a WORD and the field gets a CODE. The two halves are different
+//    kinds of thing and are treated as such: the word is interface, so it is
+//    translated and whoever opens the list reads it in their own language; the
+//    code is DATA — it goes into the entry, into the report and into the
+//    machine's history, where it is what groups one visit's work with
+//    another's — so it is the same six letters whatever the interface is set
+//    to. Offering "SEG" here and "SAFE" there would have two technicians
+//    writing two different tags for the same thing and the history would stop
+//    lining up. The report translates tags on their way out, like the rest.
+var TAG_GEN=[
+  {v:"MEC", l:"Mecànica"},
+  {v:"ELEC",l:"Elèctrica"},
+  {v:"PLC", l:"Automatització / PLC"},
+  {v:"HID", l:"Hidràulica"},
+  {v:"NEU", l:"Pneumàtica"},
+  {v:"SEG", l:"Seguretat"}
+];
+// -- The linked manual's conjunts are still read (populateTagOptions), but now
+//    only so tagLabel can spell out an old tag that holds a conjunt number
+//    when the daily summary is written. Nothing offers them for picking. --
 var tagOptKey=null, tagOpts=[];
-// You pick a conjunt by its NAME but the tag stores its NUMBER: "ZO" is a
-// usable tag, "A1 .1 .- ZÓCALO (ZO). - (BASTIDOR)" is not. Both controls put
-// the option's value (the number) into the field while showing the name.
-// The datalist autocompletes the entry bar; but a datalist FILTERS by the
-// field's current text, so on Edit (field already holding the old tag) it
-// looks empty — the edit modal gets a real <select> instead.
 function fillTagTargets(){
-  var opts=tagOpts.map(function(o){return "<option value=\""+esc(o.v)+"\">"+esc(o.l)+"</option>"}).join("");
+  var opts=TAG_GEN.map(function(t){return "<option value=\""+esc(t.v)+"\">"+esc(uiT(t.l))+"</option>"}).join("");
   var dl=$$("tagOptions");
   if(dl)dl.innerHTML=opts;
   // The composer's own select, rebuilt with the composer on every render.
+  // El rètol es tradueix aquí i no es deixa per a uiApply: populateTagOptions
+  // torna a omplir aquests dos desplegables quan la seva promesa es resol, que
+  // és després que uiApply ja hagi passat, i els deixava en català.
+  var cap="<option value=\"\">"+esc(uiT("▾ Etiqueta…"))+"</option>";
   var ts=$$("tagSel");
-  if(ts){
-    if(tagOpts.length){ts.style.display="";ts.innerHTML="<option value=\"\">&#9662; Conjunt del manual…</option>"+opts}
-    else{ts.style.display="none";ts.innerHTML=""}
-  }
+  if(ts){ts.style.display="";ts.innerHTML=cap+opts}
   var sel=$$("eTagSel");
-  if(sel){
-    if(tagOpts.length){
-      sel.style.display="";
-      sel.innerHTML="<option value=\"\">&#9662; Tria un conjunt del manual…</option>"+opts;
-    }else{sel.style.display="none";sel.innerHTML=""}
-  }
+  if(sel){sel.style.display="";sel.innerHTML=cap+opts}
 }
 // "A1 .1 .- ZÓCALO (ZO). - (BASTIDOR)" -> "ZÓCALO (ZO) - (BASTIDOR)": the
 // manual's own numbering prefix is noise in a dropdown.
@@ -4567,7 +4582,7 @@ function renderContent(){
           +"<button data-sev=\"warning\" style=\"color:var(--orange)\">▲ Avís</button><button data-sev=\"issue\" style=\"color:var(--red)\">■ Prob.</button></div>"
         +"<select id=\"sevSel\" class=\"sel-sev\"><option value=\"info\">○ Info</option><option value=\"ok\">● OK</option><option value=\"warning\">▲ Avís</option><option value=\"issue\">■ Problema</option></select>"
         +"<input type=\"text\" id=\"tagIn\" placeholder=\"Etiqueta…\" class=\"inp-tag\" list=\"tagOptions\" autocomplete=\"off\">"
-        +"<select id=\"tagSel\" class=\"inp-tag\" style=\"display:none\" title=\"Els conjunts del manual vinculat\"></select>"
+        +"<select id=\"tagSel\" class=\"inp-tag\" style=\"display:none\" title=\"Etiquetes gen&egrave;riques\"></select>"
         +"</div>"
         +"<div id=\"internBanner\" class=\"int-bar\" style=\"display:none\"><span>🔒</span> Aquesta entrada no sortirà a l'informe del client</div>"
         +"<textarea id=\"entIn\" rows=\"3\" placeholder=\"Descripció (opcional si hi ha foto)… Ctrl+Retorn per afegir\"></textarea>"
@@ -7462,6 +7477,12 @@ es:{
   "Nom de la prova":"Nombre de la prueba",
   "Què s'hi ha fet":"Qué se ha hecho",
   "✔ Com ha quedat":"✔ Cómo ha quedado",
+  "Mecànica":"Mecánica",
+  "Elèctrica":"Eléctrica",
+  "Automatització / PLC":"Automatización / PLC",
+  "Hidràulica":"Hidráulica",
+  "Pneumàtica":"Neumática",
+  "Seguretat":"Seguridad",
   "+ Nova revisió":"+ Nueva revisión",
   "Base imposable":"Base imponible",
   "Canvia el tema":"Cambia el tema",
@@ -8067,6 +8088,13 @@ en:{
   "Nom de la prova":"Test name",
   "Què s'hi ha fet":"What was done",
   "✔ Com ha quedat":"✔ How it ended",
+  "▾ Etiqueta…":"▾ Tag…",
+  "Mecànica":"Mechanical",
+  "Elèctrica":"Electrical",
+  "Automatització / PLC":"Automation / PLC",
+  "Hidràulica":"Hydraulics",
+  "Pneumàtica":"Pneumatics",
+  "Seguretat":"Safety",
   "+ Nova revisió":"+ New revision",
   "Base imposable":"Net amount",
   "Canvia el tema":"Change the theme",

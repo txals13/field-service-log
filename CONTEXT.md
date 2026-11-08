@@ -3047,6 +3047,38 @@ line to `SHOTS` and a `<figure>` to the manual, not finding a phone.
 
 ---
 
+## Generic tags (2026-11-08)
+
+The Tag field is a free text box and the dropdowns behind it (`#tagSel` in the
+composer, `#eTagSel` in the edit modal, the `#tagOptions` datalist behind both
+text inputs) hold a short fixed list, `TAG_GEN`. They used to hold the linked
+manual's conjunts: dozens of entries, numbers rather than words, none of which
+anybody was going to put in a tag, and they crowded out the generic ones. The
+dropdowns are now always there, not only when a manual is linked.
+
+**You read a word and the field gets a code** — `{v:"MEC", l:"Mecànica"}`, the
+same split the conjunt dropdown used to make between a name and a number. The
+two halves are different kinds of thing and are treated as such. The word is
+INTERFACE: it goes through `uiT` and whoever opens the list reads it in their
+own language (Mechanical / Mecánica). The code is DATA: it goes into the entry,
+into the report and into the machine's history, where it is what groups one
+visit's work with another's, so it is the same six letters whatever the
+interface is set to. Offering "SEG" here and "SAFE" there would have two
+technicians writing two different tags for the same thing and the history would
+stop lining up; the report translates tags on their way out, like the rest.
+
+The dropdown's own first line is translated where it is BUILT, not left to
+`uiApply`: `populateTagOptions` refills both selects when its promise settles,
+which is after `uiApply` has already walked the content, and the composer's
+line was staying in Catalan on an English interface.
+
+`populateTagOptions` and `tagOpts` stay, now for one reader only: `tagLabel`,
+which spells a conjunt number out into its name when an OLD entry's tag holds
+one and the daily summary is being written. Nothing offers them for picking any
+more.
+
+---
+
 ## Test data
 `fsl_demo_data.json` — 10 sessions, 100 entries, 66 synthetic photos
 Sectors: automotive, pharma, steel, food, logistics, wind energy, chemical,

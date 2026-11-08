@@ -5596,9 +5596,19 @@ function mediaExt(im){
   var m=/\.([A-Za-z0-9]{2,5})$/.exec(im.name||"");
   return m?"."+m[1].toLowerCase():(im.type==="video"?".mp4":im.type==="audio"?".webm":".jpg");
 }
-function autoNameMedia(list,base){
+// `force` renames the file whatever it is called. It is for the RESOLUTION's
+// photos (2026-11-08): `camName` only knows the names it has been taught —
+// IMG_, PXL_, a bare date, a long run of digits — and a phone that calls them
+// anything else ("Foto 08-11-2026 14 30.jpg", "Resized_…", a gallery app's own
+// wording) looked to the app like a name the technician had chosen, so the
+// photo kept it and the mark never arrived. In the resolution there is nothing
+// to guess: a photo attached there IS the photo of how it ended. A name typed
+// in the app (`userNamed`, set in `rNames`) is still never touched, and the
+// entry's own files keep the careful reading — that is where a file can also
+// arrive from the session's Drive folder already named by a person.
+function autoNameMedia(list,base,force){
   base=cleanName(base,60);if(!base)return;
-  var cand=(list||[]).filter(function(im){return im&&!im.userNamed&&(im.autoName||camName(im.name))});
+  var cand=(list||[]).filter(function(im){return im&&!im.userNamed&&(force||im.autoName||camName(im.name))});
   cand.forEach(function(im,i){
     var nm=base+(cand.length>1?" "+(i+1):"")+mediaExt(im);
     if(im.name===nm)return;
@@ -5776,7 +5786,7 @@ function saveEdit(){
       else delete up.fix;
       var sd=shortDesc(text,newTag);
       autoNameMedia(up.images,sd);
-      if(up.fix)autoNameMedia(up.fix.images,fixNameBase(text,newTag,fixText));
+      if(up.fix)autoNameMedia(up.fix.images,fixNameBase(text,newTag,fixText),true);
       return up;}))})});
     closeEdit();scheduleSave();renderAll();
   }tryS();

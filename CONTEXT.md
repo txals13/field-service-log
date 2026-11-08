@@ -1189,6 +1189,21 @@ Field Service Log/
   preview across the three languages, with and without resolution text, with a
   very long description and with two photos (which number after the mark,
   "Canviat coixinet_resolt 1.jpg").
+  Then the mark did not arrive at all on the phone, and the reason was the
+  OTHER half of `autoNameMedia`: it only renames what `camName` recognises, and
+  `camName` knows the names it was taught — IMG_, PXL_, a bare date, ten digits
+  or more. A phone or a gallery app that calls the file anything else ("Foto
+  08-11-2026 14 30.jpg", "Resized_…") looked exactly like a name a person had
+  chosen, so the file kept it. Hence `autoNameMedia(list, base, force)`, with
+  `force` passed only for the resolution's photos on an edit save: there is
+  nothing to read into the name, a photo attached there IS the photo of how it
+  ended. `userNamed` (typed into the field under the thumbnail) still wins, and
+  the entry's own files keep the careful reading — those can also arrive from
+  the session's Drive folder already named by a person. `renamePass` is left
+  alone: it is the retro pass over old files and has no edit to take as intent,
+  so an old photo takes its mark the next time its entry is saved. Checked in
+  the preview through the real file input, EXIF and all, with four file names
+  and with a name typed by hand.
 
 - **One order for the three report formats** (2026-10-17): header and visit
   data (+ entry counters), machine counters, GENERAL NOTES (moved up from the

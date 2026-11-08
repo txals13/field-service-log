@@ -2482,6 +2482,23 @@ Now (`syncTick`, `scheduleSync`):
   again in rAF: saving an edit redraws twice in a row, and rAF alone left the
   second redraw reading a fresh 0 (and never runs in a background tab).
 
+- **A visit that started after its own first line** (2026-11-08: "I added an
+  older entry to a report and the start date in the title did not change").
+  The header's "Inici" was `fts(s.createdAt)` — the moment the record was
+  opened in the app, which no entry can move. Add an entry dated before it (an
+  older one written up later, an hour corrected by hand) and the report claimed
+  the visit began after the first thing in its own log. `sessionStartTs(s)`,
+  the counterpart of `sessionEndDate(s)`: the first entry carrying an hour
+  (entries are kept sorted by `sortEntries`, so [0] is the earliest; the loop
+  only skips one saved without), `createdAt` while there are none. Used by
+  `reportMetaGroups` (so HTML, PDF and Word at once), by the Excel's session
+  sheet, and by the 🕐 chip in the visit header, which has to agree with the
+  report. `createdAt` still orders the sidebar and stamps the history record:
+  those are about the file, not about the work. Checked in the preview against
+  the real builders, with an entry two days older than the session: all four
+  formats moved, the empty visit still falls back, and a first entry saved
+  without an hour is skipped.
+
 ### addEntry timeout for EXIF + upload
 Photo EXIF reading and video uploads are async. Use a safe timeout:
 ```js

@@ -4532,7 +4532,7 @@ function renderContent(){
     +(contactLine(active)?"<span>🤝 "+esc(contactLine(active))+"</span>":"")
     +(active.contactPhone?"<a href=\"tel:"+esc(String(active.contactPhone).replace(/[^\d+]/g,""))+"\" style=\"color:inherit;text-decoration:none\" title=\"Truca\">📞 "+esc(active.contactPhone)+"</a>":"")
     +(active.contactEmail?"<a href=\"mailto:"+esc(active.contactEmail)+"\" style=\"color:inherit;text-decoration:none\" title=\"Escriu un correu\">✉ "+esc(active.contactEmail)+"</a>":"")
-    +"<span>🕐 "+fts(active.createdAt)+"</span>"
+    +"<span>🕐 "+fts(sessionStartTs(active))+"</span>"
     +manualChipHTML(active)
     +drawingsChipHTML(active)
     +mhChipHTML(active)
@@ -8890,6 +8890,20 @@ function curRev(s){var r=revList(s);return r.length?r[r.length-1]:null}
 function revNo(n){return uiT("Rev.")+" "+("0"+n).slice(-2)}
 function dmy(isoDate){var p=String(isoDate||"").slice(0,10).split("-");return p.length===3?p[2]+"/"+p[1]+"/"+p[0]:""}
 function todayISO(){var d=new Date();function p(n){return("0"+n).slice(-2)}return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())}
+// "The start": when the work actually began — the first entry's — with the
+// session's own date as the fallback while there are none. The visit's record
+// is opened in the app at some moment, but an entry can be dated before it:
+// an older one added afterwards, or an hour corrected by hand. What the report
+// calls "Inici" is when the work started, not when the file was created, and
+// before this it never moved — a visit created on Tuesday with Monday's first
+// entry claimed to have started on Tuesday, after its own first line.
+// Entries are kept sorted (`sortEntries`), so the first with an hour is the
+// earliest; the loop only skips one saved without.
+function sessionStartTs(s){
+  var es=(s&&s.entries)||[];
+  for(var i=0;i<es.length;i++){if(es[i]&&es[i].ts)return es[i].ts}
+  return (s&&s.createdAt)||now();
+}
 // "The end date": the day the work actually finished — the last entry's — with
 // the session's own date as the fallback while there are none.
 function sessionEndDate(s){
@@ -12290,7 +12304,7 @@ function reportMetaGroups(s,R){
               s.contactEmail?[[R.email||"Email",String(s.contactEmail),"mailto:"+String(s.contactEmail)]]:[],
               [[R.location,s.location||"—"]])},
     {t:R.gEquip||"Equipment",rows:[[R.machine,s.machine||"—"]].concat(opt(R.machineNo,s.machineNo),opt(R.year,s.year))},
-    {t:R.gVisit||"Visit",rows:[[R.project,s.project||"—"],[R.tech,s.tech||"—"],[R.start,fts(s.createdAt)],[R.status,s.status==="open"?R.open:R.closed]]}
+    {t:R.gVisit||"Visit",rows:[[R.project,s.project||"—"],[R.tech,s.tech||"—"],[R.start,fts(sessionStartTs(s))],[R.status,s.status==="open"?R.open:R.closed]]}
   ];
 }
 function pdfMetaGroups(doc,groups,M,CW,y,ar){
@@ -13014,7 +13028,7 @@ async function buildXlsxBlob(s,lang,rev){
 
   // Sheet 3 — who/what/when this list belongs to
   var info=[[R.client,s.client||""],[R.contact,contactLine(s)]].concat(s.contactPhone?[[R.phone,s.contactPhone]]:[],s.contactEmail?[[R.email,s.contactEmail]]:[]).concat([[C.project,s.project||""],[R.machine,s.machine||""]].concat(s.machineNo?[[R.machineNo,s.machineNo]]:[],s.year?[[R.year,s.year]]:[],[[R.location,s.location||""],
-            [R.tech,s.tech||""],[C.type,R.types[s.type]||R.types.commissioning],[R.start,fts(s.createdAt)],
+            [R.tech,s.tech||""],[C.type,R.types[s.type]||R.types.commissioning],[R.start,fts(sessionStartTs(s))],
             [R.status,s.status==="open"?R.open:R.closed],
             [R.revLbl,rev?("0"+rev.n).slice(-2)+" · "+dmy(rev.date):""],
             [C.gen,fts(new Date().toISOString())],[C.lines,items.length],[C.refs,summarizeParts(items).length]]));

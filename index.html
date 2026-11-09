@@ -9636,8 +9636,21 @@ async function openReview(kind){
     // an empty pair of rules right above the pads is the same thing twice. Once
     // signed it is exactly what there is to look at, so it comes back.
     var inked=!!(gR.techSig||gR.cliSig);
-    st.textContent=(inked?"":".sig{display:none!important}")+"body{margin-top:16px!important;margin-bottom:16px!important}";
+    // On a phone the report is wider than the frame -- the entries table with
+    // its no-wrap time and tag columns, the production-test table with its ten
+    // -- and the frame then pans sideways under the finger that meant to
+    // scroll down, leaving the left of the page off-screen and the right half
+    // blank: it looked like the report had come out wrong. The document is
+    // scaled to the frame's width instead (zoom, which the layout follows, so
+    // the height below stays right) and the frame is never allowed to pan.
+    st.textContent=(inked?"":".sig{display:none!important}")+"body{margin-top:16px!important;margin-bottom:16px!important}html{overflow-x:hidden}";
     d.head.appendChild(st);
+    function fitWidth(){
+      d.body.style.zoom="";
+      var cw=d.documentElement.clientWidth,sw=d.documentElement.scrollWidth;
+      if(cw&&sw>cw+2)d.body.style.zoom=String(Math.max(0.4,Math.floor((cw/sw)*990)/1000));
+    }
+    fitWidth();
     // as tall as the report, so the one scroll runs on to the pads
     // The 4 mm of air at the foot used to feed itself: once the iframe is
     // taller than its content, scrollHeight reports the IFRAME, so every
@@ -9645,6 +9658,7 @@ async function openReview(kind){
     // time (760, 764, 768) — the fine adjustments you could see. Anything
     // inside that margin is not a change worth moving the page for.
     function fit(){
+      fitWidth();
       var h=d.documentElement.scrollHeight+4,now=parseFloat(fr.style.height)||0;
       if(Math.abs(h-now)>8){fr.style.height=h+"px";if(pv.anchor)pvToPads()}
       if(fr.classList.contains("pv-wait")){fr.classList.remove("pv-wait");fr.style.minHeight=""}

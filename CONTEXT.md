@@ -3213,6 +3213,21 @@ meaningful unit here (the tag, the whole-assembly order), so the splitter now
 emits conjunt = grup = drawing.
 Not done yet (phase 2): tapping a tag ON a schematic sheet to resolve it.
 
+## The report preview fits the phone (2026-11-09)
+
+On a phone the report inside the signing preview (`pvBuild`'s iframe) is
+wider than the frame: the entries table has no-wrap time, severity and tag
+columns, and the production-test table has ten columns. The iframe then pans
+sideways under a finger that meant to scroll down, and what the user sees is
+the left of the page off-screen and the right half blank — reported as "the
+mobile app doesn't generate the reports right". The fix is in the iframe's
+`load` handler: `html{overflow-x:hidden}` so the frame can never pan, and
+`fitWidth()` — called first and from every `fit()` — sets `body.style.zoom`
+to clientWidth / scrollWidth (floored to 0.4) when the document is wider than
+the frame. `zoom` reflows, so the height `fit()` measures afterwards is the
+scaled one. Measured in the preview at 375 px: zoom 0.827, scrollWidth ==
+clientWidth, the whole entries table visible. The generated PDF is untouched.
+
 ## Test data
 `fsl_demo_data.json` — 10 sessions, 100 entries, 66 synthetic photos
 Sectors: automotive, pharma, steel, food, logistics, wind energy, chemical,

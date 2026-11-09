@@ -79,9 +79,23 @@ quatre ròtuls, el mateix caixetí EPLAN a cada esquema. El recanvis-splitter t�
 «⚡ Llegeix el manual» que fa una passada per totes les pàgines, reconstrueix l'índex
 de seccions a partir dels encapçalaments del cos (l'índex imprès no porta els números
 de pàgina al text) i dispara una recepta per secció: fitxa de màquina, recanvis
-recomanats, matriu de manteniment, pàgines clau, i a l'annex el mapa de fulls i la
-llista de materials elèctrica. Tot el que en surt és el mateix que a mà, als mateixos
-panells, i s'edita igual.
+recomanats, matriu de manteniment, pàgines clau, i a l'annex el mapa de fulls, la
+llista de materials elèctrica i **els dibuixos**. Tot el que en surt és el mateix que a
+mà, als mateixos panells, i s'edita igual.
+
+**Els dibuixos i la jerarquia.** Cada full de l'annex mecànic que porta la seva llista
+de peces és un dibuix: nom i número del caixetí, files de la capçalera impresa. La
+lectura automàtica els penja tots d'**un sol conjunt** (el de l'annex, amb el número
+de projecte), **un grup per dibuix** amb el seu nom, i un subgrup amb el número i les
+files. El field app no necessita que la jerarquia vulgui dir res: la resolució del toc
+és `row.page === pàgina && row.pos === token`, i la jerarquia només alimenta el
+selector de dibuixos — on una llista plana de dibuixos pel seu nom és el que el tècnic
+busca. Si algun dia cal agrupar per família (els `02.18.*`, els `04.35.*`), es fa al
+splitter sense tocar el contracte.
+
+> Enllaç pendent al field app: els refs de la llista de recanvis (`15-27--0-20`) i els
+> números dels dibuixos de peces de format (`1527-020`) són el mateix codi escrit de
+> dues maneres; comparar-los sense res que no sigui lletra o xifra els fa coincidir.
 
 L'índex viatja al JSON:
 

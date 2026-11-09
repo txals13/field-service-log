@@ -213,6 +213,10 @@ textarea{resize:none;line-height:1.4}
 .inp-notes{font-size:12px;padding:5px 9px;min-height:28px;resize:vertical}
 /* modals */
 .modal-back{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;justify-content:center;z-index:100}
+.dev-row{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid rgba(128,128,128,.25)}
+.dev-tag{font-family:monospace;font-weight:600;font-size:14px}
+.dev-den{font-size:12px;margin-top:2px}
+.dev-meta{font-size:11px;color:var(--tx3);margin-top:2px}
 @media(min-width:480px){.modal-back{align-items:center}}
 .modal{background:var(--bg1);border:1px solid var(--br2);border-radius:12px 12px 0 0;padding:20px;width:100%;max-width:460px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 @media(min-width:480px){.modal{border-radius:12px}}
@@ -1165,6 +1169,18 @@ textarea{resize:none;line-height:1.4}
   </div>
 
   <!-- Drawings viewer (linked manual PDF) -->
+  <div class="modal-back" id="devBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,640px);width:96vw;padding:14px;display:flex;flex-direction:column;max-height:88vh">
+      <div class="modal-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <span>&#9889; Dispositius elèctrics</span>
+        <span id="devManual" style="font-size:11px;color:var(--tx3);font-weight:400"></span>
+        <button class="btn-g btn-sm" id="devClose" style="margin-left:auto">&#10005;</button>
+      </div>
+      <input type="text" id="devQ" placeholder="Etiqueta, nom, fabricant o referència…" autocomplete="off" autocapitalize="characters" style="width:100%;box-sizing:border-box;font-size:15px;padding:8px 10px;margin-bottom:6px">
+      <div id="devStatus" style="font-size:11px;color:var(--tx3);margin-bottom:6px;min-height:14px"></div>
+      <div id="devList" style="overflow:auto;flex:1;min-height:100px"></div>
+    </div>
+  </div>
   <div class="modal-back" id="drawBack" style="display:none">
     <div class="modal" style="max-width:min(96vw,1100px);width:96vw;padding:14px;display:flex;flex-direction:column;overflow:hidden">
       <div class="modal-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
@@ -1241,6 +1257,7 @@ textarea{resize:none;line-height:1.4}
         <div id="eParts" class="log-parts"></div>
         <button class="btn-sm" id="ePartAdd" style="margin-top:6px">&#128295; Afegeix un recanvi</button>
         <button class="btn-sm" id="ePickDraw" style="margin-top:6px;display:none">&#128208; Tria des del dibuix</button>
+        <button class="btn-sm" id="ePickDev" style="margin-top:6px;display:none" title="Busca un dispositiu de l'esquema elèctric per l'etiqueta i afegeix-lo a l'entrada">&#9889; Dispositiu elèctric</button>
         <div id="ePartForm" class="part-form" style="display:none">
           <input type="text" class="pf-pos" id="pfPos" placeholder="Pos.">
           <input type="text" class="pf-ref" id="pfRef" placeholder="Ref.">
@@ -2678,7 +2695,7 @@ function catalogCounts(data){
   var conjunts=(data&&data.conjunts)||(data&&data.conjunt?[data.conjunt]:[]);
   var np=0;
   conjunts.forEach(function(c){(c.grups||[]).forEach(function(g){(g.subgrups||[]).forEach(function(sg){np+=(sg.rows||[]).length})})});
-  return {conjunts:conjunts.length,parts:np};
+  return {conjunts:conjunts.length,parts:np,devices:buildDeviceIndex(data).length};
 }
 async function getManualsFolder(token){
   var rootId=await getRootId(token);if(!rootId)return null;
@@ -2724,6 +2741,7 @@ function renderManualsList(){
     if(m.model)meta.push(esc(m.model));
     if(m.serial)meta.push("S/N "+esc(m.serial));
     meta.push((m.conjunts||0)+" conjunts");meta.push((m.parts||0)+" recanvis");
+    if(m.devices)meta.push(m.devices+" dispositius");
     row.innerHTML="<div class=\"mr-info\"><div class=\"mr-name\">"+esc(m.base||m.serial||"manual")+"</div>"
       +"<div class=\"mr-meta\">"+meta.join(" · ")+"</div></div>"
       +"<button class=\"mr-del\" title=\"Treu de la llista\">&#10005;</button>";
@@ -2737,7 +2755,7 @@ function mfRefresh(){
   $$("mfUpload").disabled=!(mfPdfFile&&mfJsonFile&&mfParsed);
   if(mfParsed){
     var c=catalogCounts(mfParsed),mac=mfParsed.machine||{};
-    $$("mfInfo").textContent="Catàleg: "+(mac.model||"—")+(mac.serial?" · S/N "+mac.serial:"")+" · "+c.conjunts+" conjunts · "+c.parts+" recanvis";
+    $$("mfInfo").textContent="Catàleg: "+(mac.model||"—")+(mac.serial?" · S/N "+mac.serial:"")+" · "+c.conjunts+" conjunts · "+c.parts+" recanvis"+(c.devices?" · "+c.devices+" dispositius":"");
   } else if(mfJsonFile){$$("mfInfo").textContent="Llegint el JSON…"}
   else $$("mfInfo").textContent="";
 }
@@ -2783,7 +2801,7 @@ async function uploadManual(){
     // keep the local catalog cache fresh — the drawings picker reads cat_<id>
     if(idb){try{await idbSet(idb,"cat_"+jsonId,mfParsed)}catch(e){}}
     var c=catalogCounts(mfParsed);
-    var entry={id:uid(),base:base,serial:mac.serial||"",model:mac.model||"",client:mac.client||"",folderId:folderId,pdfId:pdfId,pdfName:pdfName,jsonId:jsonId,jsonName:jsonName,conjunts:c.conjunts,parts:c.parts,uploadedAt:now()};
+    var entry={id:uid(),base:base,serial:mac.serial||"",model:mac.model||"",client:mac.client||"",folderId:folderId,pdfId:pdfId,pdfName:pdfName,jsonId:jsonId,jsonName:jsonName,conjunts:c.conjunts,parts:c.parts,devices:c.devices,uploadedAt:now()};
     var ex=manuals.findIndex(function(m){return m.folderId===folderId||m.base===base});
     if(ex>=0)manuals[ex]=entry;else manuals.push(entry);
     await saveManualsIndex(token);
@@ -2904,6 +2922,106 @@ async function getManualPdfBytes(pdfId){
   if(idb){try{await idbSet(idb,key,buf)}catch(e){}}
   return buf;
 }
+// -- Electrical devices. The manual's JSON carries the schematic's material
+//    list -- every device by its tag, with PRODEC's reference, its designation,
+//    maker and type, and the SHEET it is drawn on -- and a map from sheet
+//    numbers to pages of the same PDF the drawings come from. Together they
+//    turn the tag printed on a component ("520Q1") into the one thing a
+//    technician wants at the cabinet: what it is, what to order, and where in
+//    the schematic to look. The search is by any piece of text; the result
+//    goes into the entry as a part (the tag where a drawing would put its
+//    position), or opens the sheet in the viewer that already shows the
+//    drawings. Nothing about the report changes: a device is a part. --
+var devIndex=null, devIndexKey=null, devCurrent=[], devTarget="edit";
+function buildDeviceIndex(cat){
+  var sheets={};
+  ((cat&&cat.sheets)||[]).forEach(function(x){sheets[String(x.sheet).trim()]=x.page});
+  var list=[];
+  ((cat&&cat.tables)||[]).forEach(function(t){
+    if(t.kind!=="electrical")return;
+    (t.rows||[]).forEach(function(r){
+      var tag=(r.tag||"").toString().trim();if(!tag)return;
+      var full=(r.full||"").toString().trim();
+      list.push({tag:tag,ref:(r.ref||"").toString().trim(),den:(r.denominacio||"").toString().trim(),fab:(r.fab||"").toString().trim(),
+                 tipus:(r.tipus||"").toString().trim(),cant:(r.cant||"").toString().trim(),full:full,page:sheets[full]||null,srcPage:r.page||null});
+    });
+  });
+  return list;
+}
+async function getDeviceIndex(ref){
+  if(devIndex&&devIndexKey===ref.jsonId)return devIndex;
+  var cat=await getManualCatalog(ref.jsonId);
+  devIndex=buildDeviceIndex(cat);devIndexKey=ref.jsonId;
+  return devIndex;
+}
+function devNorm(v){return (v||"").toString().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase()}
+async function openDeviceSearch(target){
+  devTarget=target||"edit";
+  var sess=sessions.find(function(x){return x.id===aid});
+  if(!sess||!sess.manualRef){alert(uiT("Primer vincula un manual de recanvis a aquesta sessió."));return}
+  var ref=sess.manualRef;
+  $$("devManual").textContent=ref.base||ref.serial||"";
+  $$("devList").innerHTML="";$$("devStatus").textContent=uiT("Carregant…");
+  $$("devBack").style.display="flex";
+  var q=$$("devQ");q.value="";
+  try{
+    devCurrent=await getDeviceIndex(ref);
+    $$("devStatus").textContent=devCurrent.length
+      ? uiT("Escriu l'etiqueta del component (p. ex. 520Q1), o un tros del nom.")
+      : uiT("Aquest manual no porta la llista de materials elèctrica.");
+    renderDevList("");
+    try{q.focus()}catch(e){}
+  }catch(e){$$("devStatus").textContent=uiT("No s'ha pogut carregar el catàleg: ")+((e&&e.message)||e)}
+}
+function closeDeviceSearch(){$$("devBack").style.display="none"}
+function devHits(q){
+  q=devNorm(q).trim();
+  if(!q)return devCurrent.slice();
+  var hits=devCurrent.filter(function(d){
+    return devNorm(d.tag).indexOf(q)>=0||devNorm(d.den).indexOf(q)>=0||devNorm(d.fab).indexOf(q)>=0||devNorm(d.tipus).indexOf(q)>=0||devNorm(d.ref).indexOf(q)>=0;
+  });
+  // a tag that starts with what was typed comes first; then tags that contain it; then the rest
+  function rank(d){var t=devNorm(d.tag);return t.indexOf(q)===0?0:(t.indexOf(q)>=0?1:2)}
+  hits.sort(function(a,b){return rank(a)-rank(b)||a.tag.localeCompare(b.tag)});
+  return hits;
+}
+function renderDevList(q){
+  var box=$$("devList");box.innerHTML="";
+  var hits=devHits(q);
+  if(!devNorm(q).trim()&&hits.length>40){box.innerHTML="<div class=\"dev-meta\">"+hits.length+" "+uiT("dispositius. Escriu per buscar.")+"</div>";return}
+  if(!hits.length){box.innerHTML="<div class=\"dev-meta\">"+uiT("Cap dispositiu amb aquest text.")+"</div>";return}
+  hits.slice(0,40).forEach(function(d){
+    var row=document.createElement("div");row.className="dev-row";
+    var info=document.createElement("div");
+    var meta=[d.ref,[d.fab,d.tipus].filter(Boolean).join(" ")].filter(Boolean).join(" · ");
+    info.innerHTML="<div class=\"dev-tag\">"+esc(d.tag)+"</div><div class=\"dev-den\">"+esc(d.den)+"</div>"+(meta?"<div class=\"dev-meta\">"+esc(meta)+"</div>":"");
+    var add=document.createElement("button");add.className="btn-sm btn-gold";add.textContent=uiT("Afegeix");
+    add.addEventListener("click",function(){addDevicePart(d)});
+    var sheet=document.createElement("button");sheet.className="btn-sm";sheet.textContent="📐 "+(d.full?uiT("Full")+" "+d.full:uiT("Full"));
+    if(d.page){sheet.title=uiT("Obre el full de l'esquema");sheet.addEventListener("click",function(){closeDeviceSearch();drawTarget=devTarget;openDrawings(d.page,false)})}
+    else{sheet.disabled=true;sheet.title=uiT("Aquest full no és al mapa del manual.")}
+    row.appendChild(info);row.appendChild(add);row.appendChild(sheet);
+    box.appendChild(row);
+  });
+  if(hits.length>40){var more=document.createElement("div");more.className="dev-meta";more.textContent=(hits.length-40)+" "+uiT("més: afina la cerca.");box.appendChild(more)}
+}
+// A device enters the entry as a part: the tag where a drawing's position
+// would go, PRODEC's reference, the designation with maker and type behind it,
+// and the sheet's page so the history can point back at the schematic.
+function addDevicePart(d){
+  var den=d.den+((d.fab||d.tipus)?" · "+[d.fab,d.tipus].filter(Boolean).join(" "):"");
+  var np={pos:d.tag,ref:d.ref,cant:d.cant||"1",denominacio:den,conjunt:"Esquema elèctric",grup:d.full?("Full "+d.full):"",page:d.page||d.srcPage||null,st:lastPartSt,dev:true};
+  if(devTarget==="pend"){pParts.push(np);rPParts()}
+  else{eParts.push(np);rEParts()}
+  $$("devStatus").textContent="✓ "+uiT("Afegit")+": "+d.tag+" — "+d.den+". "+uiT("Busca'n un altre, o tanca per tornar.");
+}
+$$("devClose").addEventListener("click",closeDeviceSearch);
+$$("devBack").addEventListener("click",function(e){if(e.target===$$("devBack"))closeDeviceSearch()});
+$$("devQ").addEventListener("input",function(){renderDevList(this.value)});
+$$("devQ").addEventListener("keydown",function(e){
+  if(e.key==="Escape"){closeDeviceSearch();return}
+  if(e.key==="Enter"){e.preventDefault();var h=devHits(this.value);if(h.length===1||(h.length&&devNorm(h[0].tag)===devNorm(this.value).trim()))addDevicePart(h[0])}
+});
 async function openDrawings(targetPage,pickMode,purpose){
   viewerPickPurpose=purpose||"part";
   var sess=sessions.find(function(s){return s.id===aid});
@@ -4637,6 +4755,7 @@ function renderContent(){
           :"<button class=\"btn-sm\" id=\"btnPhoto\" title=\"Afegeix una foto o un vídeo\">📷</button>")
         +"<button class=\"btn-sm\" id=\"btnRec\" title=\"Grava una nota de veu\">🎙</button>"
         +"<button class=\"btn-sm\" id=\"btnPickDraw\" style=\"display:none\" title=\"Obre els dibuixos del manual: toca una posició i el recanvi entra a l'entrada amb el full marcat\">📐</button>"
+        +"<button class=\"btn-sm\" id=\"btnPickDev\" style=\"display:none\" title=\"Busca un dispositiu de l'esquema elèctric per l'etiqueta i afegeix-lo a l'entrada\">⚡</button>"
         +"<button class=\"btn-sm\" id=\"entCorr\" title=\"Corregeix ortografia i gramàtica de la descripció\">✓</button>"
         +"<button class=\"btn-sm\" id=\"btnIntern\" title=\"Entrada interna: es queda a l'app i no surt a l'informe del client\">🔒</button>"
         +"<input type=\"file\" id=\"fileIn\" accept=\"image/*,video/*\" multiple style=\"display:none\">"
@@ -4733,6 +4852,8 @@ function renderContent(){
       var sv=sessions.find(function(x){return x.id===aid});
       b.style.display=(sv&&sv.manualRef)?"inline-block":"none";
       b.addEventListener("click",function(){drawTarget="pend";openDrawings(undefined,true)});
+      var bd=$$("btnPickDev");
+      if(bd){bd.style.display=(sv&&sv.manualRef)?"inline-block":"none";bd.addEventListener("click",function(){openDeviceSearch("pend")})}
     })();
     $$("btnAdd").addEventListener("click",addEntry);
     $$("entIn").addEventListener("keydown",function(e){if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){e.preventDefault();addEntry()}});
@@ -5826,6 +5947,7 @@ function openEdit(entryId){
   var sessR=sessions.find(function(s){return s.id===aid});
   var hasManual=!!(sessR&&sessR.manualRef);
   $$("ePickDraw").style.display=hasManual?"inline-block":"none";
+  $$("ePickDev").style.display=hasManual?"inline-block":"none";
   $$("eTextPickDraw").style.display=hasManual?"inline-block":"none";
   fillTagTargets();populateTagOptions(); // keep the grup dropdown fresh when the modal opens
   $$("editBack").style.display="flex";
@@ -5939,6 +6061,7 @@ $$("pfSave").addEventListener("click",function(){
 });
 $$("pfDen").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();$$("pfSave").click()}});
 $$("ePickDraw").addEventListener("click",function(){drawTarget="edit";openDrawings(undefined,true)});
+$$("ePickDev").addEventListener("click",function(){openDeviceSearch("edit")});
 $$("eTextPickDraw").addEventListener("click",function(){
   drawTarget="edit";
   var ta=$$("eText");
@@ -7423,6 +7546,19 @@ function openGemKey(msg){
 // neither: it is already in the page when this runs.
 var UI={
 es:{
+  "⚡ Dispositiu elèctric":"⚡ Dispositivo eléctrico",
+  "Dispositius elèctrics":"Dispositivos eléctricos",
+  "Etiqueta, nom, fabricant o referència…":"Etiqueta, nombre, fabricante o referencia…",
+  "Escriu l'etiqueta del component (p. ex. 520Q1), o un tros del nom.":"Escribe la etiqueta del componente (p. ej. 520Q1), o parte del nombre.",
+  "Aquest manual no porta la llista de materials elèctrica.":"Este manual no trae la lista de materiales eléctrica.",
+  "Cap dispositiu amb aquest text.":"Ningún dispositivo con este texto.",
+  "dispositius. Escriu per buscar.":"dispositivos. Escribe para buscar.",
+  "més: afina la cerca.":"más: afina la búsqueda.",
+  "Full":"Hoja",
+  "Obre el full de l'esquema":"Abre la hoja del esquema",
+  "Aquest full no és al mapa del manual.":"Esta hoja no está en el mapa del manual.",
+  "Busca'n un altre, o tanca per tornar.":"Busca otro, o cierra para volver.",
+  "Busca un dispositiu de l'esquema elèctric per l'etiqueta i afegeix-lo a l'entrada":"Busca un dispositivo del esquema eléctrico por la etiqueta y añádelo a la entrada",
   "Es desa només en aquest aparell i no viatja enlloc: ni a Drive, ni als ZIP, ni a les còpies de seguretat — per això cal escriure-la un cop a cada aparell. No li cal cobertura: es comprova aquí mateix, i per tant funciona en una planta sense senyal. El nom del titular surt al peu de cada informe.":"Se guarda solo en este equipo y no viaja a ningún sitio: ni a Drive, ni a los ZIP, ni a las copias de seguridad — por eso hay que escribirla una vez en cada equipo. No necesita cobertura: se comprueba aquí mismo, y por tanto funciona en una planta sin señal. El nombre del titular sale al pie de cada informe.",
   "en una unitat d'aquest ordinador, tria-la un cop i cada «afegeix foto» s'obrirà ja dins la carpeta de la sessió. Només serveix per dir-li al diàleg on ha de començar: l'aplicació no llegeix res de la carpeta pel seu compte, i els fitxers hi entren perquè els tries tu.":"en una unidad de este ordenador, elígela una vez y cada «añade foto» se abrirá ya dentro de la carpeta de la sesión. Solo sirve para decirle al diálogo dónde debe empezar: la aplicación no lee nada de la carpeta por su cuenta, y los archivos entran porque los eliges tú.",
   "El corrector i la traducció dels informes van amb Gemini. La clau no viatja amb l'aplicació: es desa només en aquest navegador, i no va ni a Drive ni als ZIP ni a les còpies de seguretat — per això cal escriure-la un cop a cada dispositiu.":"El corrector y la traducción de los informes funcionan con Gemini. La clave no viaja con la aplicación: se guarda solo en este navegador, y no va ni a Drive ni a los ZIP ni a las copias de seguridad — por eso hay que escribirla una vez en cada dispositivo.",
@@ -8040,6 +8176,19 @@ es:{
   "Revisió":"Revisión"
 },
 en:{
+  "⚡ Dispositiu elèctric":"⚡ Electrical device",
+  "Dispositius elèctrics":"Electrical devices",
+  "Etiqueta, nom, fabricant o referència…":"Tag, name, manufacturer or reference…",
+  "Escriu l'etiqueta del component (p. ex. 520Q1), o un tros del nom.":"Type the component's tag (e.g. 520Q1), or part of its name.",
+  "Aquest manual no porta la llista de materials elèctrica.":"This manual carries no electrical material list.",
+  "Cap dispositiu amb aquest text.":"No device matches this text.",
+  "dispositius. Escriu per buscar.":"devices. Type to search.",
+  "més: afina la cerca.":"more: narrow the search.",
+  "Full":"Sheet",
+  "Obre el full de l'esquema":"Open the schematic sheet",
+  "Aquest full no és al mapa del manual.":"This sheet is not in the manual's map.",
+  "Busca'n un altre, o tanca per tornar.":"Look up another, or close to go back.",
+  "Busca un dispositiu de l'esquema elèctric per l'etiqueta i afegeix-lo a l'entrada":"Look up a device of the electrical schematic by its tag and add it to the entry",
   "Es desa només en aquest aparell i no viatja enlloc: ni a Drive, ni als ZIP, ni a les còpies de seguretat — per això cal escriure-la un cop a cada aparell. No li cal cobertura: es comprova aquí mateix, i per tant funciona en una planta sense senyal. El nom del titular surt al peu de cada informe.":"It is kept on this device only and goes nowhere else: not to Drive, not into the ZIPs, not into the backups — which is why it has to be entered once on each device. It needs no signal: it is checked right here, so it works in a plant with no coverage. The licence holder's name appears at the foot of every report.",
   "en una unitat d'aquest ordinador, tria-la un cop i cada «afegeix foto» s'obrirà ja dins la carpeta de la sessió. Només serveix per dir-li al diàleg on ha de començar: l'aplicació no llegeix res de la carpeta pel seu compte, i els fitxers hi entren perquè els tries tu.":"on a drive of this computer, pick it once and every “add photo” will open inside the session's folder. It only tells the dialog where to start: the app reads nothing from the folder by itself, and files get in because you choose them.",
   "El corrector i la traducció dels informes van amb Gemini. La clau no viatja amb l'aplicació: es desa només en aquest navegador, i no va ni a Drive ni als ZIP ni a les còpies de seguretat — per això cal escriure-la un cop a cada dispositiu.":"The corrector and the report translations run on Gemini. The key does not travel with the app: it is kept in this browser only, and goes neither to Drive nor into the ZIPs nor into the backups — which is why it has to be entered once on each device.",

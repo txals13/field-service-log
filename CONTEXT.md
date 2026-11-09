@@ -3180,6 +3180,29 @@ puts the target back to "edit", so the two never cross.
 
 ---
 
+## Electrical devices by tag (2026-11-09)
+
+The manual's JSON now carries the schematic's material list
+(`tables[kind=electrical]`: tag, PRODEC ref, designation, maker, type, sheet)
+and the sheet → page map (`sheets[]`), both produced by the splitter's
+automatic reading. `buildDeviceIndex(cat)` joins them into a flat list of
+devices with the page of their sheet; `getDeviceIndex(ref)` caches it per
+`manualRef.jsonId`. The entry editor and the composer each gain a button
+(`#ePickDev`, `#btnPickDev`, shown with the linked manual like the drawings
+ones) that opens `#devBack`, a search modal placed BEFORE `#drawBack` in the
+DOM so the viewer opens on top of it: typing filters by tag, designation,
+maker, type or reference (tags that start with the text first); **Afegeix**
+calls `addDevicePart(d)`, which pushes a part `{pos:tag, ref, cant, denominacio:
+"designation · maker type", conjunt:"Esquema elèctric", grup:"Full N", page,
+st, dev:true}` into `eParts` or `pParts` by `devTarget` — the same shape as a
+drawing's part, so reports, history and the part-status select need nothing
+new; **📐 Full** closes the search and `openDrawings(page,false)` shows the
+sheet. Enter with an exact tag adds it. `catalogCounts` also counts devices,
+and the manuals list and the upload summary show them. Strings are in `UI.es`
+/ `UI.en`. The viewer-specific side effects of `addResolvedPart` (marks,
+shots) are deliberately not run for a device: there is no balloon to colour.
+Not done yet (phase 2): tapping a tag ON a schematic sheet to resolve it.
+
 ## Test data
 `fsl_demo_data.json` — 10 sessions, 100 entries, 66 synthetic photos
 Sectors: automotive, pharma, steel, food, logistics, wind energy, chemical,

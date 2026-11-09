@@ -156,12 +156,14 @@ Amb això, al field app un dispositiu de la llista (`tables[kind=electrical].row
 és a dos tocs del seu circuit: `full` → `sheets` → `page` → visor. Els números de full
 són text (poden dur lletra, «741A») i es comparen tal qual.
 
-> **El remapatge, les taules, les pàgines marcades, el mapa de fulls i l'índex no es porten.** Viuen a pàgines que
-> no són de cap conjunt (la 128 dels recanvis recomanats, la 285 de la llista
-> elèctrica, la 110 de la consignació, tot l'annex d'esquemes), de manera que un PDF
-> retallat no les conté i no
-> hi ha cap numeració on posar-les. Per a la parella del field app, doncs: **manual
-> sencer i renumeració desactivada**. L'exportació avisa si s'intenta el contrari.
+> **Les dues parelles valen.** Amb la renumeració desactivada, la parella és el manual
+> sencer i el JSON porta les pàgines del manual. Amb la renumeració activada (des del
+> 2026-11-09), el PDF retallat porta **totes les pàgines que el JSON fa servir** —els
+> fulls dels dibuixos, les pàgines de les taules, les marcades, els fulls d'esquema i
+> l'inici de cada secció— i tot el JSON (`conjunts`, `tables`, `refs`, `sheets`,
+> `sections`, `portadaPage`) es renumera sobre aquell PDF. Abans, les taules i la resta
+> quedaven fora del JSON renumerat, i el field app deia que el manual no portava la
+> llista elèctrica.
 
 ## Restricció Drive: scope `drive.file`
 
@@ -227,8 +229,8 @@ Field Service Log/
 - **Offline:** cachejar el PDF del manual + el JSON a IndexedDB després de la 1a càrrega.
 - **Mida del manual:** si els manuals són molt grossos, optimització futura = exportar
   un PDF retallat AMB remapatge de `page` al JSON (feina extra al recanvis-splitter).
-  Compte: això i les `tables[]` / `refs[]` / `sheets[]` són incompatibles — un PDF retallat no conté
-  les seves pàgines. Si algun dia es vol tot alhora, el retall haurà d'incloure-les.
+  Fet (2026-11-09): el retall inclou totes les pàgines que el JSON fa servir, i tot
+  el JSON es renumera.
 - **Precisió del toc a mòbil:** tolerància generosa al hit-test + confirmació + fallback llista.
 
 ## Ordre de construcció (per fases)

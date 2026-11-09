@@ -213,6 +213,7 @@ textarea{resize:none;line-height:1.4}
 .inp-notes{font-size:12px;padding:5px 9px;min-height:28px;resize:vertical}
 /* modals */
 .modal-back{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;justify-content:center;z-index:100}
+#devBack{z-index:120}
 .dev-row{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid rgba(128,128,128,.25)}
 .dev-tag{font-family:monospace;font-weight:600;font-size:14px}
 .dev-den{font-size:12px;margin-top:2px}
@@ -2998,7 +2999,13 @@ function renderDevList(q){
     var add=document.createElement("button");add.className="btn-sm btn-gold";add.textContent=uiT("Afegeix");
     add.addEventListener("click",function(){addDevicePart(d)});
     var sheet=document.createElement("button");sheet.className="btn-sm";sheet.textContent="📐 "+(d.full?uiT("Full")+" "+d.full:uiT("Full"));
-    if(d.page){sheet.title=uiT("Obre el full de l'esquema");sheet.addEventListener("click",function(){closeDeviceSearch();drawTarget=devTarget;openDrawings(d.page,false)})}
+    if(d.page){sheet.title=uiT("Obre el full de l'esquema");sheet.addEventListener("click",function(){
+      closeDeviceSearch();drawTarget=devTarget;
+      // from the editor, the viewer goes on top the way a pick does: the edit
+      // modal is hidden and closeDrawings brings it back
+      if(editingId&&$$("editBack").style.display!=="none"){pickReturnEdit=true;$$("editBack").style.display="none"}
+      openDrawings(d.page,false);
+    })}
     else{sheet.disabled=true;sheet.title=uiT("Aquest full no és al mapa del manual.")}
     row.appendChild(info);row.appendChild(add);row.appendChild(sheet);
     box.appendChild(row);

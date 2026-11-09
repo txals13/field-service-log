@@ -85,13 +85,13 @@ mà, als mateixos panells, i s'edita igual.
 
 **Els dibuixos i la jerarquia.** Cada full de l'annex mecànic que porta la seva llista
 de peces és un dibuix: nom i número del caixetí, files de la capçalera impresa. La
-lectura automàtica els penja tots d'**un sol conjunt** (el de l'annex, amb el número
-de projecte), **un grup per dibuix** amb el seu nom, i un subgrup amb el número i les
-files. El field app no necessita que la jerarquia vulgui dir res: la resolució del toc
-és `row.page === pàgina && row.pos === token`, i la jerarquia només alimenta el
-selector de dibuixos — on una llista plana de dibuixos pel seu nom és el que el tècnic
-busca. Si algun dia cal agrupar per família (els `02.18.*`, els `04.35.*`), es fa al
-splitter sense tocar el contracte.
+lectura automàtica fa de **cada dibuix un conjunt**, amb un grup i un subgrup a sota
+que duen el mateix nom, el número i les files. El conjunt SÍ que vol dir alguna cosa al
+field app: el seu número és el que ofereix el camp Etiqueta («Tria un conjunt del
+manual»), i «📦 Conjunt sencer» és el que es demana quan un dibuix va com una sola
+línia. Un sol conjunt per a tot l'annex (provat primer) deixava una sola etiqueta —la
+màquina— i la màquina no és un conjunt. La resolució del toc, en canvi, no mira la
+jerarquia: és `row.page === pàgina && row.pos === token`.
 
 > Enllaç pendent al field app: els refs de la llista de recanvis (`15-27--0-20`) i els
 > números dels dibuixos de peces de format (`1527-020`) són el mateix codi escrit de

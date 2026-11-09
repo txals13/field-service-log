@@ -3201,6 +3201,16 @@ sheet. Enter with an exact tag adds it. `catalogCounts` also counts devices,
 and the manuals list and the upload summary show them. Strings are in `UI.es`
 / `UI.en`. The viewer-specific side effects of `addResolvedPart` (marks,
 shots) are deliberately not run for a device: there is no balloon to colour.
+The search modal has `z-index:120`: `#editBack` comes later in the DOM than the
+viewers and paints over them, so the search has to sit above it; **📐 Full**
+from the editor hides the edit modal the way a pick does (`pickReturnEdit`) so
+the viewer is on top, and `closeDrawings` brings the editor back.
+The splitter's automatic reading makes **one conjunt per drawing** (2026-11-09):
+a first version hung all 37 drawings from a single "MECHANICAL DRAWINGS"
+conjunt, which left the Tag dropdown with one option — the machine — and put
+"📦 Conjunt sencer: MECHANICAL DRAWINGS" in the viewer. The conjunt is a
+meaningful unit here (the tag, the whole-assembly order), so the splitter now
+emits conjunt = grup = drawing.
 Not done yet (phase 2): tapping a tag ON a schematic sheet to resolve it.
 
 ## Test data

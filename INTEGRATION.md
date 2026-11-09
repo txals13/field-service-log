@@ -71,6 +71,27 @@ en diagonal («Check hoses») i a cada cel·la el codi de periodicitat (D, S/W, 
 T/Q, Bi, A) o res. El field app hi llegeix, per a un tipus de component, què toca
 fer i cada quan.
 
+## Lectura automàtica i índex del manual (`sections[]`)
+
+Un manual PRODEC és el mateix manual cada vegada: la mateixa capçalera a cada pàgina
+del cos, els mateixos encapçalaments numerats, la llista de recanvis sota els mateixos
+quatre ròtuls, el mateix caixetí EPLAN a cada esquema. El recanvis-splitter té un botó
+«⚡ Llegeix el manual» que fa una passada per totes les pàgines, reconstrueix l'índex
+de seccions a partir dels encapçalaments del cos (l'índex imprès no porta els números
+de pàgina al text) i dispara una recepta per secció: fitxa de màquina, recanvis
+recomanats, matriu de manteniment, pàgines clau, i a l'annex el mapa de fulls i la
+llista de materials elèctrica. Tot el que en surt és el mateix que a mà, als mateixos
+panells, i s'edita igual.
+
+L'índex viatja al JSON:
+
+```
+sections:[ { num:"5.9", title:"RECOMMENDED SPARE PARTS LIST", page:128 } ]
+```
+
+Al field app és la taula de continguts del manual vinculat: «obre'm la secció 5.3»
+sense haver de saber a quina pàgina cau.
+
 ## Fitxa de màquina (`machine`)
 
 `machine` ja no són només `serial`, `model` i `client`. El full de dades del manual
@@ -121,7 +142,7 @@ Amb això, al field app un dispositiu de la llista (`tables[kind=electrical].row
 és a dos tocs del seu circuit: `full` → `sheets` → `page` → visor. Els números de full
 són text (poden dur lletra, «741A») i es comparen tal qual.
 
-> **El remapatge, les taules, les pàgines marcades i el mapa de fulls no es porten.** Viuen a pàgines que
+> **El remapatge, les taules, les pàgines marcades, el mapa de fulls i l'índex no es porten.** Viuen a pàgines que
 > no són de cap conjunt (la 128 dels recanvis recomanats, la 285 de la llista
 > elèctrica, la 110 de la consignació, tot l'annex d'esquemes), de manera que un PDF
 > retallat no les conté i no

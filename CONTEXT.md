@@ -3367,10 +3367,15 @@ schematic one revision behind the cabinet is the wrong contactor.
 - The manual manager shows it beside the device count, so the name and revision
   are visible where the import happens and not only in a report.
 
-**The splitter has to catch up**: until `recanvis-splitter` writes the block,
-the name is the electrical table's and there is no revision. It already reads
-the EPLAN title block for the sheet numbers (`sheets[]`), so the data is under
-its nose.
+**The splitter writes the block** (same day, in `recanvis-splitter`): three
+fields under the sheet map, filled with the same 🎯 as the machine's data
+sheet, the pointer opening the first schematic page the map found — which is
+where the title block is. Deliberately NOT read automatically like the sheet
+numbers: a sheet number is always in the same slot of the title block, while
+what the name and the revision are CALLED there changes with the language and
+with who drew the schematic, and guessing wrong puts a false revision on a
+report. The block only travels when something has been written in it, so a
+catalogue made before this still arrives without one and the fallback holds.
 
 ---
 

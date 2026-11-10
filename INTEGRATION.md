@@ -182,15 +182,19 @@ schematic:{ name,          // com es diu l'esquema al caixetí EPLAN
 Tot text, tal com surt del full, com a `machine`. Les claus que falten volen dir
 «no consta».
 
-**Mentre el recanvis-splitter no l'escrigui**, el field app es queda amb el `name`
-de la taula elèctrica (el que va posar qui va marcar l'extracció), que és el més
-a prop que el JSON té d'un nom d'esquema i és un nom que ha triat una persona.
-La versió només pot sortir del caixetí, i per tant del bloc: sense bloc, el
-recordatori de l'informe surt igualment però sense dir de quin esquema es tracta.
+Al recanvis-splitter s'omple **a mà, amb el mateix 🎯 que la fitxa de màquina**,
+als tres camps que hi ha sota el mapa de fulls; el 🎯 obre la primera pàgina
+d'esquema que el mapa ha trobat, que és on hi ha el caixetí. No es llegeix sol
+com els números de full: el número de full sempre és al mateix lloc del caixetí,
+mentre que **com es diuen** allà el nom i la revisió canvia amb l'idioma i amb qui
+ha dibuixat l'esquema, i endevinar-ho malament posa una revisió falsa a un
+informe. El bloc només viatja si s'hi ha escrit alguna cosa.
 
-> Pendent al recanvis-splitter: llegir el caixetí EPLAN —que ja llegeix per treure
-> el número de full (`sheets[]`)— també per al nom i la revisió, i escriure
-> `schematic` al JSON.
+**Si el bloc no hi és**, el field app es queda amb el `name` de la taula elèctrica
+(el que va posar qui va marcar l'extracció), que és el més a prop que el JSON té
+d'un nom d'esquema i és un nom que ha triat una persona. La versió només pot
+sortir del caixetí, i per tant del bloc: sense bloc, el recordatori de l'informe
+surt igualment però sense dir de quin esquema es tracta.
 
 ## Restricció Drive: scope `drive.file`
 

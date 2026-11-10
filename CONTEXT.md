@@ -3290,6 +3290,20 @@ word (case-insensitive, accents literal), and `partsBlockHTML` highlights the
 reference and the name in the log's parts line. The cross-session search and
 the filtered report use the same function, so they gained the same reach.
 
+## A photo from another day says so (2026-11-10)
+
+An entry takes its photo's capture time (`capturedAt`, from EXIF or
+`lastModified`), so a photo added days later lands on the day it was taken.
+Right, and worth being told as it happens. `renderThumbs(bk)` now compares
+each image's day (`isoDayOf(capturedAt)`) with `photoDayRef(bk)` — today in
+the composer, the entry's own day in the editor and the resolution — and
+for each photo off that day puts a `.thumb-date` badge (dd/mm) on the
+thumbnail and one `.thumb-warn` line under the thumbnails
+(`photoDayWarn`): the dates, how long ago ("fa 3 dies", "ahir"), how many
+photos per date, and what will happen (the entry takes the photo's date; in
+the editor, unless the time was set by hand). Strings in `UI.es`/`UI.en`.
+Audio chips are left out of the comparison.
+
 ## Test data
 `fsl_demo_data.json` — 10 sessions, 100 entries, 66 synthetic photos
 Sectors: automotive, pharma, steel, food, logistics, wind energy, chemical,

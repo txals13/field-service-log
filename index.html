@@ -214,6 +214,8 @@ textarea{resize:none;line-height:1.4}
 /* modals */
 .modal-back{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;justify-content:center;z-index:100}
 #devBack{z-index:120}
+.thumb-date{position:absolute;left:4px;bottom:4px;background:rgba(245,158,11,.92);color:#000;font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;pointer-events:none}
+.thumb-warn{flex-basis:100%;width:100%;font-size:11px;color:#92400e;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:5px 8px;margin-top:4px;line-height:1.4}
 .fchip{font-size:11px;padding:3px 8px;border-radius:12px;border:1px solid var(--bd,#4b5563);background:transparent;color:var(--tx3);cursor:pointer}
 .fchip.on{border-color:var(--gold);background:rgba(245,158,11,.15);color:var(--tx1,#fff);font-weight:700}
 #filtMore.on{border-color:var(--gold);color:var(--gold);font-weight:700}
@@ -5045,8 +5047,35 @@ function retryUpload(img,bk){
   });
 }
 // One renderer for all three strips.
+// A photo shot on another day (2026-11-10). The entry takes the photo's own
+// time, so a picture added days later lands on the day it was taken -- which
+// is right, and which is also the kind of thing you want to be told as it
+// happens, not discover in the report. The day it is measured against: today
+// in the composer (the day the photo is being added), the entry's day in the
+// editor. Each such photo wears its date on the thumbnail, and one line under
+// the thumbnails says it in words.
+function photoDayRef(bk){
+  if(bk==="pend")return isoDayOf(now());
+  var sv=sessions.find(function(x){return x.id===aid}),en=sv&&(sv.entries||[]).find(function(e){return e.id===editingId});
+  return isoDayOf((en&&en.ts)||now());
+}
+function photoDayWarn(bk,imgs,refDay){
+  var days={};
+  (imgs||[]).forEach(function(im){if(im.capturedAt&&im.type!=="audio"){var d=isoDayOf(im.capturedAt);if(d!==refDay)days[d]=(days[d]||0)+1}});
+  var ks=Object.keys(days).sort();if(!ks.length)return null;
+  var todayK=isoDayOf(now());
+  function rel(d){var n=Math.round((new Date(todayK+"T12:00:00")-new Date(d+"T12:00:00"))/864e5);
+    if(n===0)return uiT("avui");if(n===1)return uiT("ahir");if(n>1)return uiT("fa {n} dies").replace("{n}",n);
+    return uiT("d'aquí a {n} dies").replace("{n}",-n)}
+  var what=ks.map(function(d){return dmy(d)+" ("+rel(d)+(days[d]>1?", "+days[d]+" "+uiT("fotos"):"")+")"}).join(" · ");
+  var tail=(bk==="pend")
+    ?uiT("no és d'avui: l'entrada prendrà la data de la foto.")
+    :uiT("no és del dia de l'entrada: l'entrada passarà a la data de la foto, si no li has posat l'hora a mà.");
+  return "📷 "+(ks.length===1&&days[ks[0]]===1?uiT("Foto del"):uiT("Fotos del"))+" "+what+" — "+tail;
+}
 function renderThumbs(bk){
   var B=MB[bk],c=$$(B.thumbs);if(!c)return;c.innerHTML="";
+  var refDay=photoDayRef(bk);
   B.get().forEach(function(img,i){
     function removeAt(){
       // a video taken out before its entry was ever saved leaves the queue too
@@ -5061,14 +5090,18 @@ function renderThumbs(bk){
     }
     var isVid=img.type==="video",src=isVid?(img.poster||""):img.data;
     var d=document.createElement("div");d.className="thumb";
+    var offDay=img.capturedAt&&isoDayOf(img.capturedAt)!==refDay;
     d.innerHTML=(src?"<img src=\""+src+"\" alt=\"\">":"<div class=\"thumb-ph\">"+(isVid?"🎬":"🖼")+"</div>")
       +(isVid?"<div class=\"thumb-play\">▶</div>":"")
       +upBadge(img)
+      +(offDay?"<span class=\"thumb-date\" title=\""+esc(fts(img.capturedAt))+"\">"+dmy(isoDayOf(img.capturedAt)).slice(0,5)+"</span>":"")
       +"<button class=\"thumb-del\">✕</button>";
     var up=d.querySelector(".thumb-up.err");if(up)up.addEventListener("click",function(ev){ev.stopPropagation();retryUpload(img,bk)});
     d.querySelector(".thumb-del").addEventListener("click",removeAt);
     c.appendChild(d);
   });
+  var pw=photoDayWarn(bk,B.get(),refDay);
+  if(pw){var w=document.createElement("div");w.className="thumb-warn";w.textContent=pw;c.appendChild(w)}
   if(MB[bk].names)rNames(bk);
 }
 function rThumbs(){renderThumbs("pend")}
@@ -7666,6 +7699,10 @@ function openGemKey(msg){
 var UI={
 es:{
   "Només les entrades del filtre":"Solo las entradas del filtro",
+  "avui":"hoy","ahir":"ayer","fa {n} dies":"hace {n} días","d'aquí a {n} dies":"dentro de {n} días","fotos":"fotos",
+  "Foto del":"Foto del","Fotos del":"Fotos del",
+  "no és d'avui: l'entrada prendrà la data de la foto.":"no es de hoy: la entrada tomará la fecha de la foto.",
+  "no és del dia de l'entrada: l'entrada passarà a la data de la foto, si no li has posat l'hora a mà.":"no es del día de la entrada: la entrada pasará a la fecha de la foto, si no le has puesto la hora a mano.",
   "Dates":"Fechas","Dies":"Días","Gravetat":"Gravedad","Neteja els filtres":"Limpia los filtros","des de":"desde","fins a":"hasta",
   "Més filtres: dates, dies de la setmana i gravetat":"Más filtros: fechas, días de la semana y gravedad",
   "Treu tots els filtres, el text també":"Quita todos los filtros, el texto también",
@@ -8301,6 +8338,10 @@ es:{
 },
 en:{
   "Només les entrades del filtre":"Only the entries of the filter",
+  "avui":"today","ahir":"yesterday","fa {n} dies":"{n} days ago","d'aquí a {n} dies":"in {n} days","fotos":"photos",
+  "Foto del":"Photo of","Fotos del":"Photos of",
+  "no és d'avui: l'entrada prendrà la data de la foto.":"not today's: the entry will take the photo's date.",
+  "no és del dia de l'entrada: l'entrada passarà a la data de la foto, si no li has posat l'hora a mà.":"not the entry's day: the entry will move to the photo's date, unless you set its time by hand.",
   "Dates":"Dates","Dies":"Days","Gravetat":"Severity","Neteja els filtres":"Clear the filters","des de":"from","fins a":"until",
   "Més filtres: dates, dies de la setmana i gravetat":"More filters: dates, weekdays and severity",
   "Treu tots els filtres, el text també":"Remove every filter, the text too",

@@ -165,6 +165,33 @@ són text (poden dur lletra, «741A») i es comparen tal qual.
 > quedaven fora del JSON renumerat, i el field app deia que el manual no portava la
 > llista elèctrica.
 
+## Qui és l'esquema (`schematic`)
+
+Els dispositius de `tables[kind=electrical]` no surten del manual: surten de
+l'esquema EPLAN que hi va enquadernat, que té el seu propi nom i la seva pròpia
+versió. Demanar un contactor sobre un esquema una versió endarrerit respecte del
+quadre és com es demana el contactor equivocat, de manera que l'informe ho ha de
+poder dir:
+
+```
+schematic:{ name,          // com es diu l'esquema al caixetí EPLAN
+            rev,           // la versió o revisió, tal com hi surt
+            date }         // la data del caixetí, si n'hi ha
+```
+
+Tot text, tal com surt del full, com a `machine`. Les claus que falten volen dir
+«no consta».
+
+**Mentre el recanvis-splitter no l'escrigui**, el field app es queda amb el `name`
+de la taula elèctrica (el que va posar qui va marcar l'extracció), que és el més
+a prop que el JSON té d'un nom d'esquema i és un nom que ha triat una persona.
+La versió només pot sortir del caixetí, i per tant del bloc: sense bloc, el
+recordatori de l'informe surt igualment però sense dir de quin esquema es tracta.
+
+> Pendent al recanvis-splitter: llegir el caixetí EPLAN —que ja llegeix per treure
+> el número de full (`sheets[]`)— també per al nom i la revisió, i escriure
+> `schematic` al JSON.
+
 ## Restricció Drive: scope `drive.file`
 
 El field app només pot llegir fitxers que **ell mateix** ha creat. Conseqüència:

@@ -3342,6 +3342,38 @@ one (`s.reportLang`, set by the chips) stays. The timesheet's own language
 not the technician's. Everything that compares the report language with the
 written one (`localizeSession`, the closes-quotes, `trPick`) follows.
 
+## The schematic says which schematic (2026-11-10)
+
+A device added with ⚡ is a part like any other in the report, and the parts
+section already says which MANUAL the parts were looked up in. The devices did
+not come from the manual: they came from the EPLAN schematic bound inside it,
+which carries its own name and its own revision, and a contactor ordered off a
+schematic one revision behind the cabinet is the wrong contactor.
+
+- `catSchematic(cat)` reads `cat.schematic` — `{name, rev, date}`, the block
+  documented in INTEGRATION.md — and falls back to the electrical table's own
+  `name`, typed by whoever marked the extraction up, which is the nearest thing
+  the JSON has today and is still a name a person chose. The revision can only
+  come from the block. It is stored on the manual index entry (`sch`) and
+  carried onto `manualRef`, so a visit linked before the block existed simply
+  has none.
+- `devNoteOf` joins `partsNotes`, after the manual's own note, whenever the
+  visit has any part with `dev`. Two labels, not one with a hole in it:
+  `devNote` names the schematic, `devNoteAny` does not, because the warning is
+  worth making either way — the point is "check the revision", and that stands
+  whether or not we can say which document to check. Both are in the three base
+  languages and ride the label translation to the other twenty-six, like
+  `manualNote` and `setNote`.
+- The manual manager shows it beside the device count, so the name and revision
+  are visible where the import happens and not only in a report.
+
+**The splitter has to catch up**: until `recanvis-splitter` writes the block,
+the name is the electrical table's and there is no revision. It already reads
+the EPLAN title block for the sheet numbers (`sheets[]`), so the data is under
+its nose.
+
+---
+
 ## Test data
 `fsl_demo_data.json` — 10 sessions, 100 entries, 66 synthetic photos
 Sectors: automotive, pharma, steel, food, logistics, wind energy, chemical,

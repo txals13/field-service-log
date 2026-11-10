@@ -3304,6 +3304,16 @@ photos per date, and what will happen (the entry takes the photo's date; in
 the editor, unless the time was set by hand). Strings in `UI.es`/`UI.en`.
 Audio chips are left out of the comparison.
 
+## An entry before the typed start moves the start (2026-11-10)
+
+`sessionStartTs(s)` used to return `s.startAt` whenever it was set. A visit
+with "Inici de la visita" typed and then an entry dated earlier — a photo from
+25/08 added in November, with its own day — kept the typed start, so the
+report's Inici and the timesheet's first day ignored the earliest entry. Now
+the typed start wins only over a LATER first entry; an earlier one pulls the
+start back to itself. Everything that reads the start (`tsRange`, the report
+header, the visit clock) follows.
+
 ## The timesheet opens on the intervention's own dates (2026-11-10)
 
 `tsDefaultRange(s)` now returns `tsRange(s)` as it is — the visit's start day

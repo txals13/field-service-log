@@ -9468,12 +9468,15 @@ function todayISO(){var d=new Date();function p(n){return("0"+n).slice(-2)}retur
 function sessionStartTs(s){
   // Typed in by hand (2026-11-08): the visit can be written up after arriving
   // at the client, or once back home, and then the first entry is not when the
-  // work started either. What is written wins over everything; empty means
-  // "work it out", which is what it says in the form.
-  if(s&&s.startAt)return s.startAt;
-  var es=(s&&s.entries)||[];
-  for(var i=0;i<es.length;i++){if(es[i]&&es[i].ts)return es[i].ts}
-  return (s&&s.createdAt)||now();
+  // work started either. What is written wins over a LATER first entry; empty
+  // means "work it out", which is what it says in the form. But an entry dated
+  // before the typed start (2026-11-10: a photo from August added in November,
+  // carrying its own day) pulls the start back to itself: the work cannot have
+  // started after its own first line, whatever was typed.
+  var es=(s&&s.entries)||[],first=null;
+  for(var i=0;i<es.length;i++){if(es[i]&&es[i].ts){first=es[i].ts;break}}
+  if(s&&s.startAt)return (first&&Date.parse(first)<Date.parse(s.startAt))?first:s.startAt;
+  return first||(s&&s.createdAt)||now();
 }
 // "The end date": the day the work actually finished — the last entry's — with
 // the session's own date as the fallback while there are none.

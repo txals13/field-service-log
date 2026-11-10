@@ -4794,7 +4794,6 @@ function renderContent(){
     +"<button data-rev=\"1\" title=\"Revisions de l'informe: consulta-les, corregeix la data de la vigent o emet-ne una de nova\">Revisions…</button></div>"
     +"<div id=\"expFiltRow\"></div>"
     +langRowHTML("Idioma de l'informe","",reportLang(active),"lang")
-    +langRowHTML("Escrit en","L'idioma en què has escrit les entrades. Si és el mateix que el de l'informe, no s'envia res a traduir.",writeLang(active),"wlang")
     +(CHIP_LANGS.indexOf(reportLang(active))<0&&RPT[reportLang(active)]
       ?"<div class=\"exp-rev\"><span>Etiquetes en "+esc(langNative(reportLang(active)))+"</span>"
         +"<button data-lbl=\"1\" title=\"Les ha traduïdes Gemini i surten a cada fila de cada pàgina: val la pena mirar-les un cop\">Revisa-les…</button></div>"
@@ -10425,7 +10424,14 @@ function setReportLang(id,lang){
 // saved — so the session says so, and says Catalan unless told otherwise,
 // because that is what the app is written in. Only the technician's own words
 // are at stake: every fixed label comes from RPT[lang] either way.
-function writeLang(s){return (s&&RPT[s.writeLang])?s.writeLang:"ca"}
+// The language the entries are written in is the language the app is set to
+// (2026-11-10): whoever writes in Catalan has the app in Catalan. It used to be
+// a row of its own in the Informe menu, defaulting to Catalan whatever the
+// interface said, which meant a technician with the app in Spanish had to
+// remember to set it on every visit or get a needless translation. A value
+// stored on a visit by that old row is ignored; the setter stays for the
+// handler that still exists, and does nothing anyone can see.
+function writeLang(s){var l=uiLang();return RPT[l]?l:"ca"}
 function setWriteLang(id,lang){
   sessions=sessions.map(function(x){return x.id===id?Object.assign({},x,{writeLang:lang}):x});
   saveLocal();isDirty=true;if(isLoggedIn)saveToDrive();

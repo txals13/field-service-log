@@ -3304,6 +3304,17 @@ photos per date, and what will happen (the entry takes the photo's date; in
 the editor, unless the time was set by hand). Strings in `UI.es`/`UI.en`.
 Audio chips are left out of the comparison.
 
+## The written language is the app's (2026-11-10)
+
+`writeLang(s)` returns `uiLang()` (ca/es/en, the interface language) and no
+longer reads `s.writeLang`; the "Escrit en" row of the Informe menu is gone.
+The reasoning: whoever writes in Catalan has the app in Catalan, and a row
+that defaulted to Catalan whatever the interface said had to be set by hand
+on every visit or produced a needless translation. `setWriteLang` and the
+`data-wlang` handler remain (nothing renders them). A `writeLang` stored on
+old visits is ignored. Everything that compares the report language with the
+written one (`localizeSession`, the closes-quotes, `trPick`) follows.
+
 ## Test data
 `fsl_demo_data.json` — 10 sessions, 100 entries, 66 synthetic photos
 Sectors: automotive, pharma, steel, food, logistics, wind energy, chemical,

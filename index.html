@@ -1647,8 +1647,8 @@ function partsBlockHTML(parts){
   return "<div class=\"log-parts\">"+parts.map(function(p){
     var st=partSt(p);
     return "<span class=\"pq\">"+(p.cant?esc(p.cant)+"×":"")+"</span>"
-      +"<span class=\"pr\">"+esc(p.ref||"")+"</span>"
-      +"<span class=\"pn\">"+(p.set?"&#128230; ":"")+esc(p.denominacio||"")+"</span>"
+      +"<span class=\"pr\">"+highlightText(p.ref||"",filterTxt)+"</span>"
+      +"<span class=\"pn\">"+(p.set?"&#128230; ":"")+highlightText(p.denominacio||"",filterTxt)+"</span>"
       +"<span class=\"ps ps-"+st+"\" title=\""+esc(PST_TIP[st])+"\">"+PST_APP[st]+"</span>";
   }).join("")+"</div>";
 }
@@ -1778,27 +1778,42 @@ function partsSummaryHTML(s,R){
       return "<div style=\"font-size:11px;color:#6b7280;margin-top:8px\">"+esc(n)+"</div>";
     }).join("");
 }
+// Every word of the query is marked where it appears (the match below is by
+// words too). Accents are matched literally here, only here: the mark has to
+// sit on the text as written, and a near miss on an accent costs a mark, not
+// a result.
 function highlightText(text,query){
   var e=esc(text);
-  var q=(query||"").trim();
-  if(!q)return e;
-  var eq=esc(q).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
-  if(!eq)return e;
-  return e.replace(new RegExp("("+eq+")","gi"),"<mark>$1</mark>");
+  var words=(query||"").trim().split(/\s+/).filter(Boolean);
+  if(!words.length)return e;
+  var eq=words.map(function(w){return esc(w).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}).filter(Boolean);
+  if(!eq.length)return e;
+  return e.replace(new RegExp("("+eq.join("|")+")","gi"),"<mark>$1</mark>");
 }
 // Matches text, tag, AND severity (both the raw value like "issue" and its
 // display label like "ISSUE") — used by both the in-session log filter and
 // the cross-session search so severity is searchable in either place.
+// By words, without accents, over everything the entry carries (2026-11-10):
+// its text and its resolution's, the tag, the severity (raw and as shown), the
+// time as shown, every spare part on it (position, reference, name, conjunt,
+// grup, and whether it was changed or recommended) and the names of its
+// files. Every word typed has to be found somewhere in that; "motor 5332"
+// finds the entry whose part 5332-0183 went on a motor. Accents and case are
+// ignored on both sides, so "neteja" finds "NETEJA" and "rodament" finds
+// "Rodament".
+function entryHaystack(e){
+  var sm=SM[e.severity]||SM.info,h=[e.text,(e.fix&&e.fix.text),e.tag,e.severity,sm.label,fts(e.ts)];
+  (e.parts||[]).forEach(function(p){h.push(p.pos,p.ref,p.denominacio,p.conjunt,p.grup,PST_APP[partSt(p)])});
+  ((e.fix&&e.fix.parts)||[]).forEach(function(p){h.push(p.pos,p.ref,p.denominacio)});
+  (e.images||[]).forEach(function(im){h.push(im&&im.name)});
+  ((e.fix&&e.fix.images)||[]).forEach(function(im){h.push(im&&im.name)});
+  return devNorm(h.filter(Boolean).join(" \n "));
+}
 function entryMatches(e,rawQuery){
-  var q=(rawQuery||"").trim().toLowerCase();
-  if(!q)return true;
-  var sm=SM[e.severity]||SM.info;
-  return(e.text||"").toLowerCase().includes(q)
-    ||((e.fix&&e.fix.text)||"").toLowerCase().includes(q)
-    ||(e.tag||"").toLowerCase().includes(q)
-    ||(e.severity||"").toLowerCase().includes(q)
-    ||sm.label.toLowerCase().includes(q)
-    ||fts(e.ts).toLowerCase().includes(q); // "10/03/25 15:30:00" — same format shown on screen
+  var words=devNorm(rawQuery||"").trim().split(/\s+/).filter(Boolean);
+  if(!words.length)return true;
+  var hay=entryHaystack(e);
+  return words.every(function(w){return hay.indexOf(w)>=0});
 }
 function $$(id){return document.getElementById(id)}
 // -- Where the keyboard comes from (2026-11-07) --

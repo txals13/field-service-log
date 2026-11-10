@@ -3277,6 +3277,19 @@ The general and internal notes stay visible either way. The JS is the
 phone's: `m2Ent` → `m2Show("compose")`, `data-m2close` → `m2Hide`, and
 `addEntry` folds it. The classic design is untouched.
 
+## The text filter: by words, over the parts too (2026-11-10)
+
+`entryMatches(e,q)` used to look for the whole phrase in the text, the fix,
+the tag, the severity and the time. Now `entryHaystack(e)` joins all of that
+plus every part on the entry (`pos`, `ref`, `denominacio`, `conjunt`, `grup`
+and the status label `PST_APP[partSt(p)]`), the resolution's parts, and the
+names of the entry's and resolution's files, normalised with `devNorm` (no
+accents, lower case); the query is split on whitespace, normalised the same
+way, and every word has to appear somewhere (AND). `highlightText` marks each
+word (case-insensitive, accents literal), and `partsBlockHTML` highlights the
+reference and the name in the log's parts line. The cross-session search and
+the filtered report use the same function, so they gained the same reach.
+
 ## Test data
 `fsl_demo_data.json` — 10 sessions, 100 entries, 66 synthetic photos
 Sectors: automotive, pharma, steel, food, logistics, wind energy, chemical,

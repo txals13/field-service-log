@@ -3312,7 +3312,12 @@ with "Inici de la visita" typed and then an entry dated earlier — a photo from
 report's Inici and the timesheet's first day ignored the earliest entry. Now
 the typed start wins only over a LATER first entry; an earlier one pulls the
 start back to itself. Everything that reads the start (`tsRange`, the report
-header, the visit clock) follows.
+header, the visit clock) follows. Two places had to be told separately: the
+timesheet, whose SAVED range used to win outright (`T.from||R.from`) and now
+only wins where it is wider (`T.from<=R.from`, `T.to>=R.to`), so a sheet saved
+before the earlier entry opens from the new start; and the visit form, whose
+"Inici de la visita" field now shows the start in force (`sessionStartTs`)
+when something was typed, not the typed value itself.
 
 ## The timesheet opens on the intervention's own dates (2026-11-10)
 

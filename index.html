@@ -7193,7 +7193,9 @@ function openNewModal(editSess){
   $$("nContactPhone").value=editSess?(editSess.contactPhone||""):"";
   $$("nContactEmail").value=editSess?(editSess.contactEmail||""):"";
   $$("nType").value=editSess?(editSess.type||"commissioning"):"commissioning";
-  $$("nStart").value=editSess?tsToInput(editSess.startAt||""):"";
+  // What the field shows is the start in force: the typed one, or the earlier
+  // entry that has overtaken it (2026-11-10). Blank stays blank.
+  $$("nStart").value=(editSess&&editSess.startAt)?tsToInput(sessionStartTs(editSess)):"";
   uiApply($$("newBack"));
   $$("newBack").style.display="flex";setTimeout(function(){focusField($$("nClient"))},80);
 }
@@ -12385,8 +12387,12 @@ function openTimesheet(){
   if(!active)return;
   tsSess=active;tsPick=null;tsAll=[];
   var T=active.timesheet||{},R=tsDefaultRange(active);
-  $$("tsFrom").value=T.from||R.from;
-  $$("tsTo").value=T.to||R.to;
+  // The saved range wins, but it cannot cut the intervention: a sheet saved
+  // before an earlier entry moved the start (2026-11-10) opens from that
+  // start, and one saved before a later entry runs on to it. Wider by hand
+  // stays wider.
+  $$("tsFrom").value=(T.from&&T.from<=R.from)?T.from:R.from;
+  $$("tsTo").value=(T.to&&T.to>=R.to)?T.to:R.to;
   // Built from the same table as the report's, so the sheet is not stuck at
   // three languages while the report has twenty-nine.
   $$("tsLang").innerHTML=LANGS.map(function(l){return "<option value=\""+l[0]+"\">"+esc(l[1])+"</option>"}).join("");

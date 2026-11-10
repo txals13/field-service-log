@@ -214,6 +214,9 @@ textarea{resize:none;line-height:1.4}
 /* modals */
 .modal-back{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;justify-content:center;z-index:100}
 #devBack{z-index:120}
+.fchip{font-size:11px;padding:3px 8px;border-radius:12px;border:1px solid var(--bd,#4b5563);background:transparent;color:var(--tx3);cursor:pointer}
+.fchip.on{border-color:var(--gold);background:rgba(245,158,11,.15);color:var(--tx1,#fff);font-weight:700}
+#filtMore.on{border-color:var(--gold);color:var(--gold);font-weight:700}
 .dev-row{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid rgba(128,128,128,.25)}
 .dev-tag{font-family:monospace;font-weight:600;font-size:14px}
 .dev-den{font-size:12px;margin-top:2px}
@@ -1423,6 +1426,47 @@ var sessions=[], aid=null, pImgs=[], filterTxt="", sessFilterTxt="";
 //    never the document that gets signed: no revision is asked for or made,
 //    and the file carries FILTRAT in its name beside the client's copy. --
 var expFilterOn=false;
+// The rest of the filter (2026-11-10): a range of dates, days of the week and
+// severities, beside the text. All of it ANDed, all of it in one test that
+// the log, the Informe menu and the export share, so what is on screen is
+// exactly what a filtered report carries.
+var logF={from:"",to:"",days:{},sev:{}},filtPanelOpen=false;
+function logFilterActive(){return !!(filterTxt.trim()||logF.from||logF.to||Object.keys(logF.days).length||Object.keys(logF.sev).length)}
+function isoDayOf(ts){var d=new Date(ts);function p(n){return("0"+n).slice(-2)}return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())}
+function entryPasses(e){
+  if(filterTxt.trim()&&!entryMatches(e,filterTxt))return false;
+  if(logF.from&&isoDayOf(e.ts)<logF.from)return false;
+  if(logF.to&&isoDayOf(e.ts)>logF.to)return false;
+  if(Object.keys(logF.days).length&&!logF.days[new Date(e.ts).getDay()])return false;
+  if(Object.keys(logF.sev).length&&!logF.sev[e.severity||"info"])return false;
+  return true;
+}
+// Monday first, in the interface's language: 2024-01-01 was a Monday.
+function dayShort(d){try{return new Date(2024,0,1+((d+6)%7)).toLocaleDateString(uiLang()==="ca"?"ca-ES":uiLang(),{weekday:"short"}).replace(/\.$/,"")}catch(e){return ["dg","dl","dt","dc","dj","dv","ds"][d]}}
+// What the filter is, in words: for the menu row, the report's band and the file name.
+function filterDesc(){
+  var p=[];
+  if(filterTxt.trim())p.push("«"+filterTxt.trim()+"»");
+  if(logF.from&&logF.to)p.push(dmy(logF.from)+"–"+dmy(logF.to));
+  else if(logF.from)p.push(uiT("des de")+" "+dmy(logF.from));
+  else if(logF.to)p.push(uiT("fins a")+" "+dmy(logF.to));
+  var ds=[1,2,3,4,5,6,0].filter(function(d){return logF.days[d]});
+  if(ds.length)p.push(ds.map(dayShort).join(" "));
+  var sv=["issue","warning","ok","info"].filter(function(k){return logF.sev[k]});
+  if(sv.length)p.push(sv.map(function(k){return SM[k].label.toLowerCase()}).join(" "));
+  return p.join(" · ");
+}
+function filtExtraCount(){return (logF.from||logF.to?1:0)+(Object.keys(logF.days).length?1:0)+(Object.keys(logF.sev).length?1:0)}
+function filtPanelHTML(){
+  var days=[1,2,3,4,5,6,0].map(function(d){return "<button class=\"fchip"+(logF.days[d]?" on":"")+"\" data-fday=\""+d+"\">"+esc(dayShort(d))+"</button>"}).join("");
+  var sev=["issue","warning","ok","info"].map(function(k){return "<button class=\"fchip"+(logF.sev[k]?" on":"")+"\" data-fsev=\""+k+"\" style=\"color:"+SM[k].tx+"\">"+SM[k].dot+" "+SM[k].label+"</button>"}).join("");
+  return "<div id=\"filtPanel\" style=\"display:"+(filtPanelOpen?"flex":"none")+";flex-wrap:wrap;gap:8px 14px;align-items:center;padding:8px 0 2px;font-size:12px\">"
+    +"<span style=\"display:flex;align-items:center;gap:6px\"><span style=\"color:var(--tx3)\">"+uiT("Dates")+"</span><input type=\"date\" id=\"fFrom\" value=\""+esc(logF.from)+"\" style=\"font-size:12px;padding:4px 6px\">–<input type=\"date\" id=\"fTo\" value=\""+esc(logF.to)+"\" style=\"font-size:12px;padding:4px 6px\"></span>"
+    +"<span style=\"display:flex;align-items:center;gap:4px;flex-wrap:wrap\"><span style=\"color:var(--tx3);margin-right:2px\">"+uiT("Dies")+"</span>"+days+"</span>"
+    +"<span style=\"display:flex;align-items:center;gap:4px;flex-wrap:wrap\"><span style=\"color:var(--tx3);margin-right:2px\">"+uiT("Gravetat")+"</span>"+sev+"</span>"
+    +"<button class=\"btn-sm\" id=\"fClear\" title=\"Treu tots els filtres, el text també\">✕ "+uiT("Neteja els filtres")+"</button>"
+    +"</div>";
+}
 var pExif=0, pExifEdit=0, pExifFix=0;
 var corrPrev={};   // "✓ Corregeix": the text as it was, so one more tap undoes it
 // The resolution being edited: its media, and whether the entry has one at all.
@@ -1786,11 +1830,11 @@ function handheld(){
 // is rendered once per visit, and the filter box only redraws the log.
 function refreshExpFiltRow(){
   var row=$$("expFiltRow");if(!row)return;
-  var q=filterTxt.trim(),sv=sessions.find(function(x){return x.id===aid});
-  if(!q||!sv){row.innerHTML="";return}
-  var all=(sv.entries||[]).filter(function(e){return !isIntern(e)}),n=all.filter(function(e){return entryMatches(e,q)}).length;
+  var sv=sessions.find(function(x){return x.id===aid});
+  if(!logFilterActive()||!sv){row.innerHTML="";return}
+  var all=(sv.entries||[]).filter(function(e){return !isIntern(e)}),n=all.filter(entryPasses).length;
   row.innerHTML="<div class=\"exp-rev\"><label data-filtlbl=\"1\" style=\"display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px\"><input type=\"checkbox\" data-filt=\"1\""+(expFilterOn?" checked":"")+" style=\"width:auto;margin:0\">"
-    +"<span>🔍 "+uiT("Només les entrades del filtre")+" «"+esc(q)+"» ("+n+"/"+all.length+")</span></label></div>";
+    +"<span>🔍 "+uiT("Només les entrades del filtre")+": "+esc(filterDesc())+" ("+n+"/"+all.length+")</span></label></div>";
 }
 function openExpMenu(btn,m){
   refreshExpFiltRow();
@@ -4522,15 +4566,15 @@ function logFixHTML(e){
 function renderLogArea(){
   var active=sessions.find(function(s){return s.id===aid});if(!active)return;
   var entries=active.entries||[];
-  var filtered=filterTxt?entries.filter(function(e){return entryMatches(e,filterTxt)}):entries;
+  var filtered=logFilterActive()?entries.filter(entryPasses):entries;
   var isOpen=active.status==="open";
-  var ec=$$("entCount");if(ec)ec.textContent=(filterTxt?filtered.length+"/":"")+pl(entries.length,"entrada","entrades");
+  var ec=$$("entCount");if(ec)ec.textContent=(logFilterActive()?filtered.length+"/":"")+pl(entries.length,"entrada","entrades");
   var logArea=$$("logArea");if(!logArea)return;
   if(logArea.childNodes.length)logCapture();
   var keepTop=(logPos&&logPos.aid===aid&&!logPos.atBottom&&!logToBottom)?logPos.top:null;
   logPos=null;logToBottom=false;logAid=aid;
   logArea.innerHTML="";
-  if(!filtered.length){logArea.innerHTML="<div class=\"no-ent\">"+(filterTxt?"Cap resultat.":"— Encara no hi ha entrades. Registra la primera acció o incidència. —")+"</div>"}
+  if(!filtered.length){logArea.innerHTML="<div class=\"no-ent\">"+(logFilterActive()?"Cap resultat.":"— Encara no hi ha entrades. Registra la primera acció o incidència. —")+"</div>"}
   else{
     // Grouped by day (2026-10-13, option C): a heading per day with that day's
     // own counters, and each entry shows only its time — the same information
@@ -4692,7 +4736,7 @@ function renderContent(){
 
   var tm=TM[active.type]||TM.commissioning;
   var entries=active.entries||[];
-  var filtered=filterTxt?entries.filter(function(e){return entryMatches(e,filterTxt)}):entries;
+  var filtered=logFilterActive()?entries.filter(entryPasses):entries;
   var cnt=severityCounts(entries),errs=cnt.issue,warns=cnt.warning,oks=cnt.ok;
   var isOpen=active.status==="open";
 
@@ -4749,8 +4793,10 @@ function renderContent(){
     +"<div class=\"filter-row\">"
     +"<span style=\"color:var(--tx3)\">🔍</span>"
     +"<input type=\"text\" id=\"filtIn\" placeholder=\"Filtra el registre…\" style=\"max-width:180px;font-size:12px;padding:5px 8px\" value=\""+esc(filterTxt)+"\">"
-    +"<span id=\"entCount\" style=\"font-size:11px;color:var(--tx3);font-family:monospace\">"+(filterTxt?filtered.length+"/":"")+pl(entries.length,"entrada","entrades")+"</span>"
+    +"<button class=\"btn-sm"+(filtExtraCount()?" on":"")+"\" id=\"filtMore\" title=\"Més filtres: dates, dies de la setmana i gravetat\" style=\"font-size:12px;padding:4px 7px\">⚙"+(filtExtraCount()?" "+filtExtraCount():"")+"</button>"
+    +"<span id=\"entCount\" style=\"font-size:11px;color:var(--tx3);font-family:monospace\">"+(logFilterActive()?filtered.length+"/":"")+pl(entries.length,"entrada","entrades")+"</span>"
     +"</div>"
+    +filtPanelHTML()
     // log
     +"<div class=\"log-area\" id=\"logArea\"></div>"
     // input or closed bar
@@ -4871,7 +4917,21 @@ function renderContent(){
   }
   var btnSy=$$("btnSync");if(btnSy)btnSy.addEventListener("click",function(){loadFromDrive().then(renderAll);flushTrash()});
   var btnSS=$$("btnSessSync");if(btnSS)btnSS.addEventListener("click",syncActiveSessionToDrive);
-  var fi=$$("filtIn");if(fi)fi.addEventListener("input",function(e){filterTxt=e.target.value;if(!filterTxt.trim())expFilterOn=false;refreshExpFiltRow();debLogRender()});
+  var fi=$$("filtIn");if(fi)fi.addEventListener("input",function(e){filterTxt=e.target.value;if(!logFilterActive())expFilterOn=false;refreshExpFiltRow();debLogRender()});
+  // The extra filters: a change redraws the log and the row of the menu; the
+  // header itself is redrawn so the chips and the ⚙ badge follow.
+  function filtChanged(){if(!logFilterActive())expFilterOn=false;refreshExpFiltRow();renderContent()}
+  var fm=$$("filtMore");if(fm)fm.addEventListener("click",function(){filtPanelOpen=!filtPanelOpen;var p=$$("filtPanel");if(p)p.style.display=filtPanelOpen?"flex":"none"});
+  var fp=$$("filtPanel");if(fp){
+    $$("fFrom").addEventListener("change",function(){logF.from=this.value||"";filtChanged()});
+    $$("fTo").addEventListener("change",function(){logF.to=this.value||"";filtChanged()});
+    fp.addEventListener("click",function(e){
+      var dB=e.target.closest("[data-fday]"),sB=e.target.closest("[data-fsev]");
+      if(dB){var d=parseInt(dB.dataset.fday,10);if(logF.days[d])delete logF.days[d];else logF.days[d]=1;filtChanged();return}
+      if(sB){var k=sB.dataset.fsev;if(logF.sev[k])delete logF.sev[k];else logF.sev[k]=1;filtChanged();return}
+      if(e.target.closest("#fClear")){logF={from:"",to:"",days:{},sev:{}};filterTxt="";expFilterOn=false;filtPanelOpen=false;refreshExpFiltRow();renderContent()}
+    });
+  }
   if(isOpen){
     var ni=$$("notesIn");ni.value=active.notes||"";autoH(ni);
     rThumbs();rPParts();
@@ -7382,7 +7442,7 @@ function dlBlob(blob,filename){
 // general notes) are machine-translated with Google Cloud Translation. The
 // manual's data — part names, references — always stays as the manual has it.
 var RPT={
-  ca:{title:"Informe de servei tècnic",gen:"Generat el",partial:"Informe parcial — filtre «{q}»: {n} de {t} entrades",
+  ca:{title:"Informe de servei tècnic",gen:"Generat el",partial:"Informe parcial — filtre {q}: {n} de {t} entrades",
       types:{commissioning:"Posada en marxa",maintenance:"Manteniment",retrofit:"Millora / Retrofit",production:"Prova de producció"},
       sev:{info:"INFO",ok:"OK",warning:"AVÍS",issue:"PROBLEMA"},
       client:"Client",contact:"Persona de contacte",project:"Número de projecte",machine:"Màquina / Equip",machineNo:"Núm. de màquina / equip",phone:"Telèfon",email:"Correu electrònic",year:"Any de fabricació",gClient:"Client",gEquip:"Equip",gVisit:"Visita",location:"Ubicació",tech:"Tècnic",
@@ -7399,7 +7459,7 @@ var RPT={
       x:{sSession:"Sessió",sFit:"Canviats",sRec:"Recomanats",sQuo:"Cotització",st:"Estat",prio:"Prioritat",sDetail:"Detall",sSummary:"Resum",qty:"Quantitat",ref:"Ref.",den:"Denominació",
          date:"Data",sev:"Gravetat",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunt",grup:"Grup / Dibuix",
          page:"Pàgina",project:"Projecte",type:"Tipus",gen:"Generat",lines:"Recanvis (línies)",refs:"Referències diferents"}},
-  es:{title:"Informe de servicio técnico",gen:"Generado el",partial:"Informe parcial — filtro «{q}»: {n} de {t} entradas",
+  es:{title:"Informe de servicio técnico",gen:"Generado el",partial:"Informe parcial — filtro {q}: {n} de {t} entradas",
       types:{commissioning:"Puesta en marcha",maintenance:"Mantenimiento",retrofit:"Mejora / Retrofit",production:"Prueba de producción"},
       sev:{info:"INFO",ok:"OK",warning:"AVISO",issue:"PROBLEMA"},
       client:"Cliente",contact:"Persona de contacto",project:"Número de proyecto",machine:"Máquina / Equipo",machineNo:"N.º de máquina / equipo",phone:"Teléfono",email:"Correo electrónico",year:"Año de fabricación",gClient:"Cliente",gEquip:"Equipo",gVisit:"Visita",location:"Ubicación",tech:"Técnico",
@@ -7416,7 +7476,7 @@ var RPT={
       x:{sSession:"Sesión",sFit:"Cambiados",sRec:"Recomendados",sQuo:"Cotización",st:"Estado",prio:"Prioridad",sDetail:"Detalle",sSummary:"Resumen",qty:"Cantidad",ref:"Ref.",den:"Denominación",
          date:"Fecha",sev:"Gravedad",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunto",grup:"Grupo / Plano",
          page:"Página",project:"Proyecto",type:"Tipo",gen:"Generado",lines:"Recambios (líneas)",refs:"Referencias distintas"}},
-  en:{title:"Field Service Report",gen:"Generated on",partial:"Partial report — filter «{q}»: {n} of {t} entries",
+  en:{title:"Field Service Report",gen:"Generated on",partial:"Partial report — filter {q}: {n} of {t} entries",
       types:{commissioning:"Commissioning",maintenance:"Maintenance",retrofit:"Upgrade / Retrofit",production:"Production test"},
       sev:{info:"INFO",ok:"OK",warning:"WARNING",issue:"ISSUE"},
       client:"Client",contact:"Contact",project:"Project Number",machine:"Machine / Equipment",machineNo:"Machine / equipment no.",phone:"Phone",email:"Email",year:"Year of manufacture",gClient:"Client",gEquip:"Equipment",gVisit:"Visit",location:"Location",tech:"Technician",
@@ -7575,6 +7635,9 @@ function openGemKey(msg){
 var UI={
 es:{
   "Només les entrades del filtre":"Solo las entradas del filtro",
+  "Dates":"Fechas","Dies":"Días","Gravetat":"Gravedad","Neteja els filtres":"Limpia los filtros","des de":"desde","fins a":"hasta",
+  "Més filtres: dates, dies de la setmana i gravetat":"Más filtros: fechas, días de la semana y gravedad",
+  "Treu tots els filtres, el text també":"Quita todos los filtros, el texto también",
   "Cap entrada coincideix amb el filtre.":"Ninguna entrada coincide con el filtro.",
   "⚡ Dispositiu elèctric":"⚡ Dispositivo eléctrico",
   "Dispositius elèctrics":"Dispositivos eléctricos",
@@ -8207,6 +8270,9 @@ es:{
 },
 en:{
   "Només les entrades del filtre":"Only the entries of the filter",
+  "Dates":"Dates","Dies":"Days","Gravetat":"Severity","Neteja els filtres":"Clear the filters","des de":"from","fins a":"until",
+  "Més filtres: dates, dies de la setmana i gravetat":"More filters: dates, weekdays and severity",
+  "Treu tots els filtres, el text també":"Remove every filter, the text too",
   "Cap entrada coincideix amb el filtre.":"No entry matches the filter.",
   "⚡ Dispositiu elèctric":"⚡ Electrical device",
   "Dispositius elèctrics":"Electrical devices",
@@ -11514,10 +11580,11 @@ async function exportRep(s,fmt){
   // It is a partial view, so it gets no revision of its own and never asks for
   // one -- it borrows the visit's current number, or none -- and it says what
   // it is on the page and in the file name.
-  var FQ=(expFilterOn&&filterTxt.trim())?filterTxt.trim():"",PF=null,sFull=s;
+  var FQ=(expFilterOn&&logFilterActive())?filterDesc():"",PF=null,sFull=s,keepIds={};
   if(FQ){
-    var allE=(s.entries||[]).filter(function(e){return !isIntern(e)}),fe=allE.filter(function(e){return entryMatches(e,FQ)});
+    var allE=(s.entries||[]).filter(function(e){return !isIntern(e)}),fe=allE.filter(entryPasses);
     if(!fe.length){alert(uiT("Cap entrada coincideix amb el filtre."));return}
+    fe.forEach(function(e){keepIds[e.id]=1});
     PF={q:FQ,n:fe.length,t:allE.length};
     s=Object.assign({},s,{entries:fe});
   }
@@ -11532,7 +11599,10 @@ async function exportRep(s,fmt){
   try{R=await reportSession(s)}finally{expBusy("")}
   if(!R)return;
   R.rev=rev;R.partial=PF;
-  var base=reportBase(s,R.lang,rev.n)+(PF?"_FILTRAT_"+fileSafe(FQ,"filtre").slice(0,24):""),P=RPT[R.lang].pre;
+  // The translation step returns the visit as stored, not the copy it was
+  // handed, so the filter is laid over its result again, by entry id.
+  if(PF)R.s=Object.assign({},R.s,{entries:(R.s.entries||[]).filter(function(e){return keepIds[e.id]})});
+  var base=reportBase(s,R.lang,rev.n)+(PF?"_FILTRAT_"+fileSafe(filterTxt.trim()||"filtre","filtre").slice(0,24):""),P=RPT[R.lang].pre;
   if(fmt==="html"){
     var htmlBlob=new Blob([buildReportHTML(R.s,false,R.lang,R.rev,{partial:PF})],{type:"text/html;charset=utf-8"});
     var hn=P.report+"_"+base+".html";

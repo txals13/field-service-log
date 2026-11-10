@@ -3248,6 +3248,20 @@ lists follow the filtered entries because they are all computed from
 `s.entries`. The signing preview ignores the filter on purpose: what is
 signed is the whole report.
 
+Same day, two more things. **The filter grew**: beside the text there is now
+`logF={from,to,days:{dow:1},sev:{key:1}}`, set from a panel (`#filtPanel`,
+opened by the ⚙ `#filtMore` button, which shows a count of the extra criteria)
+with two date inputs, seven weekday chips (Monday first, named through
+`dayShort` in the interface's language) and four severity chips. Everything is
+ANDed in `entryPasses(e)`, the one test the log, the menu row and the export
+share; `logFilterActive()` says whether any criterion is set, `filterDesc()`
+puts the whole filter into words (menu row, report band, `{q}` of `partial`).
+**And the first filtered export came out whole** when the report language
+differed from the written one: `localizeSession` returns the visit as stored
+(so its translations are cached), not the filtered copy it was handed. The
+export now keeps the ids of the entries the filter left and lays the filter
+over `R.s.entries` again after translation.
+
 ## Test data
 `fsl_demo_data.json` — 10 sessions, 100 entries, 66 synthetic photos
 Sectors: automotive, pharma, steel, food, logistics, wind energy, chemical,

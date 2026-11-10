@@ -489,6 +489,22 @@ textarea{resize:none;line-height:1.4}
   body.m2 .sv #m2Sev{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:160px}
   body.m2 .sv #m2Sev button{padding:5px 0;font-size:11.5px;font-weight:700}
   body.m2 .sv .inp-tag{width:160px}
+  /* The composer, as on the phone (2026-11-10): folded away until asked for.
+     The log has the room, and a box always open under it was the one thing
+     the desktop still did differently. The phone's quick bar -- Entrada,
+     Foto, Veu -- sits where the box was; the box opens in place (not over
+     the screen, there is room here), with the sheet's own ✕ to fold it, and
+     adding an entry folds it as the phone does. The general notes stay. */
+  body.m2 .sv .m2-quick{display:grid;grid-template-columns:repeat(3,max-content);gap:8px;padding:8px 12px;border-top:1px solid var(--br);background:var(--bg1)}
+  body.m2 .sv .m2-quick button{display:inline-flex;flex-direction:row;align-items:center;gap:7px;padding:7px 14px;font-size:13px;border-radius:10px}
+  body.m2 .sv .m2-quick button b{font-size:16px;line-height:1}
+  body.m2 .sv .m2-quick #m2Ent{background:var(--gold);border-color:var(--golddim);color:#000;font-weight:700}
+  body.m2 .sv .m2-quick button:not(#m2Ent):not(#m2Foto):not(#m2Veu){display:none}
+  body.m2:not(.m2-compose) .sv #pThumbs,body.m2:not(.m2-compose) .sv #pParts,body.m2:not(.m2-compose) .sv .input-row,body.m2:not(.m2-compose) .sv #internBanner{display:none}
+  body.m2.m2-compose .sv .m2-quick{display:none}
+  body.m2.m2-compose .sv #m2CompHdr{display:flex;align-items:center;gap:8px;padding:4px 0 8px;border-bottom:1px solid var(--br);margin-bottom:6px}
+  body.m2.m2-compose .sv #m2CompHdr span{flex:1;font-weight:700;font-size:14px}
+  body.m2.m2-compose .sv #m2Add{display:none}
 }
 @media(max-width:700px){
   body.m2 .m2-blk{display:block}

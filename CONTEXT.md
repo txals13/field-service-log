@@ -3262,6 +3262,21 @@ differed from the written one: `localizeSession` returns the visit as stored
 export now keeps the ids of the entries the filter left and lays the filter
 over `R.s.entries` again after translation.
 
+## The desktop composer folds away, as on the phone (2026-11-10)
+
+In the new design (`body.m2`) the phone hides `.input-bar` until `m2-compose`
+and shows the quick bar (`.m2-quick`: Foto, Entrada, Veu). The desktop kept
+the composer always open under the log; the user wanted it the phone's way.
+All of it is CSS in the `@media(min-width:701px)` block: `.m2-quick` is shown
+as a row of three buttons (the others of the bar hidden); the composer's own
+parts — `#pThumbs`, `#pParts`, `.input-row`, `#internBanner` — are hidden
+unless `body.m2-compose`; when composing the quick bar hides, the sheet
+header `#m2CompHdr` (✕ Entrada nova) shows inline (its `#m2Add` hidden, the
+row's own ↵ Afegeix stays) and the box opens IN PLACE, not over the screen.
+The general and internal notes stay visible either way. The JS is the
+phone's: `m2Ent` → `m2Show("compose")`, `data-m2close` → `m2Hide`, and
+`addEntry` folds it. The classic design is untouched.
+
 ## Test data
 `fsl_demo_data.json` — 10 sessions, 100 entries, 66 synthetic photos
 Sectors: automotive, pharma, steel, food, logistics, wind energy, chemical,

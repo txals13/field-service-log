@@ -1415,6 +1415,14 @@ function severityCounts(entries){
 
 // ── STATE ───────────────────────────────────────────────────────────────────
 var sessions=[], aid=null, pImgs=[], filterTxt="", sessFilterTxt="";
+// -- A filtered report (2026-11-10). The log's filter box narrows what is on
+//    screen; ticked in the Informe menu, it narrows the report the same way:
+//    every format is built from the entries the filter leaves, the counts and
+//    summaries follow, and the page says so in a band under the title, because
+//    a partial report that doesn't say it is partial is a wrong report. It is
+//    never the document that gets signed: no revision is asked for or made,
+//    and the file carries FILTRAT in its name beside the client's copy. --
+var expFilterOn=false;
 var pExif=0, pExifEdit=0, pExifFix=0;
 var corrPrev={};   // "✓ Corregeix": the text as it was, so one more tap undoes it
 // The resolution being edited: its media, and whether the entry has one at all.
@@ -1774,7 +1782,18 @@ function handheld(){
 // used to be absolutely positioned with right:0, which on a phone (where the
 // button sits far left after the header wraps) pushed the menu off the left
 // edge. Fixed positioning also frees it from any scrolling ancestor.
+// The filter row of the Informe menu, drawn when the menu opens: the header
+// is rendered once per visit, and the filter box only redraws the log.
+function refreshExpFiltRow(){
+  var row=$$("expFiltRow");if(!row)return;
+  var q=filterTxt.trim(),sv=sessions.find(function(x){return x.id===aid});
+  if(!q||!sv){row.innerHTML="";return}
+  var all=(sv.entries||[]).filter(function(e){return !isIntern(e)}),n=all.filter(function(e){return entryMatches(e,q)}).length;
+  row.innerHTML="<div class=\"exp-rev\"><label data-filtlbl=\"1\" style=\"display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px\"><input type=\"checkbox\" data-filt=\"1\""+(expFilterOn?" checked":"")+" style=\"width:auto;margin:0\">"
+    +"<span>🔍 "+uiT("Només les entrades del filtre")+" «"+esc(q)+"» ("+n+"/"+all.length+")</span></label></div>";
+}
 function openExpMenu(btn,m){
+  refreshExpFiltRow();
   m.style.display="block";
   m.style.position="fixed";
   m.style.right="auto";
@@ -4696,6 +4715,7 @@ function renderContent(){
         ?"Revisió "+revNo(curRev(active).n).replace("Rev. ","")+" · "+dmy(curRev(active).date)
         :"Encara sense revisió")+"</span>"
     +"<button data-rev=\"1\" title=\"Revisions de l'informe: consulta-les, corregeix la data de la vigent o emet-ne una de nova\">Revisions…</button></div>"
+    +"<div id=\"expFiltRow\"></div>"
     +langRowHTML("Idioma de l'informe","",reportLang(active),"lang")
     +langRowHTML("Escrit en","L'idioma en què has escrit les entrades. Si és el mateix que el de l'informe, no s'envia res a traduir.",writeLang(active),"wlang")
     +(CHIP_LANGS.indexOf(reportLang(active))<0&&RPT[reportLang(active)]
@@ -4842,6 +4862,7 @@ function renderContent(){
         }
         return;
       }
+      if(e.target.closest("[data-filtlbl]")){e.stopPropagation();var fcb=$$("expMenu").querySelector("[data-filt]");if(fcb)setTimeout(function(){expFilterOn=fcb.checked},0);return}
       if(e.target.closest("[data-rev]")){$$("expMenu").style.display="none";openRevisions();return}
       if(e.target.closest("[data-lbl]")){$$("expMenu").style.display="none";openLabels(reportLang(active));return}
       if(e.target.closest("[data-sign]")){$$("expMenu").style.display="none";openReviewSign();return}
@@ -4850,7 +4871,7 @@ function renderContent(){
   }
   var btnSy=$$("btnSync");if(btnSy)btnSy.addEventListener("click",function(){loadFromDrive().then(renderAll);flushTrash()});
   var btnSS=$$("btnSessSync");if(btnSS)btnSS.addEventListener("click",syncActiveSessionToDrive);
-  var fi=$$("filtIn");if(fi)fi.addEventListener("input",function(e){filterTxt=e.target.value;debLogRender()});
+  var fi=$$("filtIn");if(fi)fi.addEventListener("input",function(e){filterTxt=e.target.value;if(!filterTxt.trim())expFilterOn=false;refreshExpFiltRow();debLogRender()});
   if(isOpen){
     var ni=$$("notesIn");ni.value=active.notes||"";autoH(ni);
     rThumbs();rPParts();
@@ -7361,7 +7382,7 @@ function dlBlob(blob,filename){
 // general notes) are machine-translated with Google Cloud Translation. The
 // manual's data — part names, references — always stays as the manual has it.
 var RPT={
-  ca:{title:"Informe de servei tècnic",gen:"Generat el",
+  ca:{title:"Informe de servei tècnic",gen:"Generat el",partial:"Informe parcial — filtre «{q}»: {n} de {t} entrades",
       types:{commissioning:"Posada en marxa",maintenance:"Manteniment",retrofit:"Millora / Retrofit",production:"Prova de producció"},
       sev:{info:"INFO",ok:"OK",warning:"AVÍS",issue:"PROBLEMA"},
       client:"Client",contact:"Persona de contacte",project:"Número de projecte",machine:"Màquina / Equip",machineNo:"Núm. de màquina / equip",phone:"Telèfon",email:"Correu electrònic",year:"Any de fabricació",gClient:"Client",gEquip:"Equip",gVisit:"Visita",location:"Ubicació",tech:"Tècnic",
@@ -7378,7 +7399,7 @@ var RPT={
       x:{sSession:"Sessió",sFit:"Canviats",sRec:"Recomanats",sQuo:"Cotització",st:"Estat",prio:"Prioritat",sDetail:"Detall",sSummary:"Resum",qty:"Quantitat",ref:"Ref.",den:"Denominació",
          date:"Data",sev:"Gravetat",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunt",grup:"Grup / Dibuix",
          page:"Pàgina",project:"Projecte",type:"Tipus",gen:"Generat",lines:"Recanvis (línies)",refs:"Referències diferents"}},
-  es:{title:"Informe de servicio técnico",gen:"Generado el",
+  es:{title:"Informe de servicio técnico",gen:"Generado el",partial:"Informe parcial — filtro «{q}»: {n} de {t} entradas",
       types:{commissioning:"Puesta en marcha",maintenance:"Mantenimiento",retrofit:"Mejora / Retrofit",production:"Prueba de producción"},
       sev:{info:"INFO",ok:"OK",warning:"AVISO",issue:"PROBLEMA"},
       client:"Cliente",contact:"Persona de contacto",project:"Número de proyecto",machine:"Máquina / Equipo",machineNo:"N.º de máquina / equipo",phone:"Teléfono",email:"Correo electrónico",year:"Año de fabricación",gClient:"Cliente",gEquip:"Equipo",gVisit:"Visita",location:"Ubicación",tech:"Técnico",
@@ -7395,7 +7416,7 @@ var RPT={
       x:{sSession:"Sesión",sFit:"Cambiados",sRec:"Recomendados",sQuo:"Cotización",st:"Estado",prio:"Prioridad",sDetail:"Detalle",sSummary:"Resumen",qty:"Cantidad",ref:"Ref.",den:"Denominación",
          date:"Fecha",sev:"Gravedad",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunto",grup:"Grupo / Plano",
          page:"Página",project:"Proyecto",type:"Tipo",gen:"Generado",lines:"Recambios (líneas)",refs:"Referencias distintas"}},
-  en:{title:"Field Service Report",gen:"Generated on",
+  en:{title:"Field Service Report",gen:"Generated on",partial:"Partial report — filter «{q}»: {n} of {t} entries",
       types:{commissioning:"Commissioning",maintenance:"Maintenance",retrofit:"Upgrade / Retrofit",production:"Production test"},
       sev:{info:"INFO",ok:"OK",warning:"WARNING",issue:"ISSUE"},
       client:"Client",contact:"Contact",project:"Project Number",machine:"Machine / Equipment",machineNo:"Machine / equipment no.",phone:"Phone",email:"Email",year:"Year of manufacture",gClient:"Client",gEquip:"Equipment",gVisit:"Visit",location:"Location",tech:"Technician",
@@ -7553,6 +7574,8 @@ function openGemKey(msg){
 // neither: it is already in the page when this runs.
 var UI={
 es:{
+  "Només les entrades del filtre":"Solo las entradas del filtro",
+  "Cap entrada coincideix amb el filtre.":"Ninguna entrada coincide con el filtro.",
   "⚡ Dispositiu elèctric":"⚡ Dispositivo eléctrico",
   "Dispositius elèctrics":"Dispositivos eléctricos",
   "Etiqueta, nom, fabricant o referència…":"Etiqueta, nombre, fabricante o referencia…",
@@ -8183,6 +8206,8 @@ es:{
   "Revisió":"Revisión"
 },
 en:{
+  "Només les entrades del filtre":"Only the entries of the filter",
+  "Cap entrada coincideix amb el filtre.":"No entry matches the filter.",
   "⚡ Dispositiu elèctric":"⚡ Electrical device",
   "Dispositius elèctrics":"Electrical devices",
   "Etiqueta, nom, fabricant o referència…":"Tag, name, manufacturer or reference…",
@@ -9282,6 +9307,13 @@ function wireDaySummary(btnId,fieldId){
 function revList(s){return (s&&s.revisions)||[]}
 function curRev(s){var r=revList(s);return r.length?r[r.length-1]:null}
 function revNo(n){return uiT("Rev.")+" "+("0"+n).slice(-2)}
+// What a partial report says under its title. In the report's language when
+// the labels have it (ca, es, en); the others fall back to English, which is
+// still a warning and not silence.
+function partialLine(R,PF){
+  var t=(R&&R.partial)||RPT.en.partial;
+  return t.replace("{q}",PF.q).replace("{n}",PF.n).replace("{t}",PF.t);
+}
 function dmy(isoDate){var p=String(isoDate||"").slice(0,10).split("-");return p.length===3?p[2]+"/"+p[1]+"/"+p[0]:""}
 function todayISO(){var d=new Date();function p(n){return("0"+n).slice(-2)}return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())}
 // "The start": when the work actually began — the first entry's — with the
@@ -11365,7 +11397,9 @@ function buildReportHTML(s,forPrint,lang,rev,opts){
     +"<div style=\"border-bottom:3px solid #f59e0b;padding-bottom:14px;margin-bottom:16px\">"
     +"<span style=\"background:"+tm.bg+";color:"+tm.tx+";border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700;letter-spacing:1px\">"+esc(tl.toUpperCase())+"</span>"
     +"<h1>"+esc(R.title)+"</h1>"
-    +"<div style=\"color:#6b7280;font-size:13px\">"+esc(revLine(R,rev,tl))+"</div></div>"
+    +"<div style=\"color:#6b7280;font-size:13px\">"+esc(revLine(R,rev,tl))+"</div>"
+    +(opts&&opts.partial?"<div style=\"margin-top:8px;background:#fef3c7;border:1px solid #f59e0b;color:#92400e;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:700\">&#9888; "+esc(partialLine(R,opts.partial))+"</div>":"")
+    +"</div>"
     // the details in three groups: client, equipment, visit
     +"<div class=\"meta\">"+reportMetaGroups(s,R).map(function(g){
       return "<div><div class=\"mg\">"+esc(g.t)+"</div>"
@@ -11476,20 +11510,31 @@ async function exportRep(s,fmt){
   // A language the app has no labels for yet has to get them before anything
   // is built, or the report comes out with Catalan headings on foreign text.
   if(!await ensureLabels(reportLang(s)))return;
+  // The filtered report: the same builders fed the entries the filter leaves.
+  // It is a partial view, so it gets no revision of its own and never asks for
+  // one -- it borrows the visit's current number, or none -- and it says what
+  // it is on the page and in the file name.
+  var FQ=(expFilterOn&&filterTxt.trim())?filterTxt.trim():"",PF=null,sFull=s;
+  if(FQ){
+    var allE=(s.entries||[]).filter(function(e){return !isIntern(e)}),fe=allE.filter(function(e){return entryMatches(e,FQ)});
+    if(!fe.length){alert(uiT("Cap entrada coincideix amb el filtre."));return}
+    PF={q:FQ,n:fe.length,t:allE.length};
+    s=Object.assign({},s,{entries:fe});
+  }
   // Which revision this is goes first: it stamps both the file name and the
   // header, and it's the one question worth asking before any work is done.
-  var rev=await ensureRevision(s);
+  var rev=PF?(curRev(sFull)||{n:0,date:todayISO(),note:""}):await ensureRevision(s);
   if(!rev)return;
-  s=sessions.find(function(x){return x.id===s.id})||s;
+  if(!PF)s=sessions.find(function(x){return x.id===s.id})||s;
   renderContent(); // the menu row shows which revision this is
   var R;
   expBusy("Traduint…");
   try{R=await reportSession(s)}finally{expBusy("")}
   if(!R)return;
-  R.rev=rev;
-  var base=reportBase(s,R.lang,rev.n),P=RPT[R.lang].pre;
+  R.rev=rev;R.partial=PF;
+  var base=reportBase(s,R.lang,rev.n)+(PF?"_FILTRAT_"+fileSafe(FQ,"filtre").slice(0,24):""),P=RPT[R.lang].pre;
   if(fmt==="html"){
-    var htmlBlob=new Blob([buildReportHTML(R.s,false,R.lang,R.rev)],{type:"text/html;charset=utf-8"});
+    var htmlBlob=new Blob([buildReportHTML(R.s,false,R.lang,R.rev,{partial:PF})],{type:"text/html;charset=utf-8"});
     var hn=P.report+"_"+base+".html";
     await saveReport(s,htmlBlob,hn,"text/html");
   }
@@ -13011,7 +13056,7 @@ function pdfH2(doc,title,M,y,c,fs){
 function hexRgb(h){var m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h||"");return m?[parseInt(m[1],16),parseInt(m[2],16),parseInt(m[3],16)]:[17,24,39]}
 // s = the real session (Drive folder, file names); R = {s: its localized copy, lang}
 async function exportPDF(s,R,base){
-  var blob=await buildPdfBlob(R.s,R.lang,R.rev);
+  var blob=await buildPdfBlob(R.s,R.lang,R.rev,R.partial?{partial:R.partial}:undefined);
   if(!blob){alert(uiT("No s'ha pogut carregar la llibreria PDF. Comprova la connexió."));return}
   var fn=RPT[R.lang].pre.report+"_"+base+".pdf";
   await saveReport(s,blob,fn,"application/pdf");
@@ -13066,6 +13111,14 @@ async function buildPdfBlob(s,lang,rev,opts){
     doc.roundedRect(M,y-4.5,CW,7,1,1,"FD");
     doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setTextColor(185,28,28);
     doc.text(uiT("ÚS INTERN — NO ENVIAR AL CLIENT"),M+3,y+0.6);
+    doc.setFont("helvetica","normal");doc.setTextColor(0,0,0);
+    y+=9;
+  }
+  if(opts&&opts.partial){
+    doc.setFillColor(254,243,199);doc.setDrawColor(245,158,11);doc.setLineWidth(0.3);
+    doc.roundedRect(M,y-4.5,CW,7,1,1,"FD");
+    doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setTextColor(146,64,14);
+    doc.text(partialLine(R,opts.partial),M+3,y+0.6);
     doc.setFont("helvetica","normal");doc.setTextColor(0,0,0);
     y+=9;
   }
@@ -13546,14 +13599,14 @@ function autoCols(rows,min,max){
   return w.map(function(len){return {wch:Math.min(max||55,Math.max(min||6,(len||0)+2))}});
 }
 async function exportXLSX(s,R,base){
-  var blob=await buildXlsxBlob(R.s,R.lang,R.rev);
+  var blob=await buildXlsxBlob(R.s,R.lang,R.rev,R.partial?{partial:R.partial}:undefined);
   if(!blob){alert(uiT("No s'ha pogut carregar la llibreria d'Excel. Comprova la connexió."));return}
   var fn=RPT[R.lang].pre.parts+"_"+base+".xlsx";
   await saveReport(s,blob,fn,XLSX_MIME);
 }
 // Returns the spare-parts workbook, or null when the library fails or there are
 // no parts (the ZIP just leaves it out then, without nagging).
-async function buildXlsxBlob(s,lang,rev){
+async function buildXlsxBlob(s,lang,rev,opts){
   s=clientCopy(s);
   var items=collectSessionParts(s),ptTests=s.prodTests||[];
   if(!items.length&&!ptTests.length)return null;
@@ -13604,6 +13657,7 @@ async function buildXlsxBlob(s,lang,rev){
   wsI["!cols"]=autoCols(info);
 
   var wb=X.utils.book_new();
+  if(opts&&opts.partial){var wsP=X.utils.aoa_to_sheet([[partialLine(R,opts.partial)]]);wsP["!cols"]=[{wch:80}];X.utils.book_append_sheet(wb,wsP,"FILTRAT")}
   X.utils.book_append_sheet(wb,wsI,C.sSession);
   if(items.length){
     if(PS.rec.length)X.utils.book_append_sheet(wb,sumSheet(PS.rec,true),String(C.sRec).slice(0,31));
@@ -13662,7 +13716,7 @@ async function buildDocxBlob(s,lang,rev,opts){
 }
 async function exportDOCX(s,R,base){
   try{
-    var blob=await buildDocxBlob(R.s,R.lang,R.rev);
+    var blob=await buildDocxBlob(R.s,R.lang,R.rev,R.partial?{partial:R.partial}:undefined);
     if(!blob){alert(uiT("No s'ha pogut carregar la llibreria de Word. Comprova la connexió."));return}
     var fn=RPT[R.lang].pre.report+"_"+base+".docx";
     await saveReport(s,blob,fn,DOCX_MIME);
@@ -13910,10 +13964,11 @@ async function buildDocxDocument(D,s,lang,rev,opts){
   var children=[
     P({spacing:{after:60},children:[T({text:R.title,bold:true,size:hp(18),font:"Arial",color:"111827"})]}),
     P({spacing:{after:120},border:{bottom:{style:D.BorderStyle.SINGLE,size:6,color:"F59E0B",space:4}},
-       children:[T({text:revLine(R,rev,tl),size:hp(9),font:"Arial",color:"6B7280"})]}),
-    metaTable,
+       children:[T({text:revLine(R,rev,tl),size:hp(9),font:"Arial",color:"6B7280"})]})]
+    .concat(opts&&opts.partial?[P({spacing:{after:120},shading:{fill:"FEF3C7"},children:[T({text:"⚠ "+partialLine(R,opts.partial),bold:true,size:hp(9),font:"Arial",color:"92400E"})]})]:[])
+    .concat([metaTable,
     P({spacing:{before:120,after:120},children:counters})
-  ].concat(ctrCh).concat(notesCh).concat(incCh).concat((function(){
+  ]).concat(ctrCh).concat(notesCh).concat(incCh).concat((function(){
     // ONE table: its header repeats at the top of each page, and each day is a
     // slim bar inside it, kept with its first entry — as in the PDF
     var trs=[new D.TableRow({tableHeader:true,children:[hdrCell(R.time,COLW[0]),hdrCell(R.severity,COLW[1]),hdrCell(R.tag,COLW[2]),hdrCell(R.desc,COLW[3]),hdrCell(R.att,COLW[4])]})];

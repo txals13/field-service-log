@@ -3228,6 +3228,26 @@ the frame. `zoom` reflows, so the height `fit()` measures afterwards is the
 scaled one. Measured in the preview at 375 px: zoom 0.827, scrollWidth ==
 clientWidth, the whole entries table visible. The generated PDF is untouched.
 
+## The filtered report (2026-11-10)
+
+The log's filter box (`filterTxt`, matched by `entryMatches`) can now narrow
+the report too. When a filter is typed, the Informe menu shows a checkbox
+(`[data-filt]`, state in `expFilterOn`, read on the label's click with a
+`setTimeout(0)` so the box has toggled) "Només les entrades del filtre «q»
+(n/t)". With it ticked, `exportRep` builds `s` as a copy whose `entries` are
+the non-internal entries matching the filter, sets `PF={q,n,t}`, **asks for no
+revision** (it borrows `curRev` or a `{n:0}` stand-in), does not re-read the
+session from `sessions` (that would drop the filtered copy), and passes
+`{partial:PF}` to every builder: `buildReportHTML`, `buildPdfBlob`,
+`buildDocxBlob`, `buildXlsxBlob` (which gained an `opts` parameter). Each
+prints `partialLine(R,PF)` — the `partial` label of `RPT` ca/es/en, English
+for the other languages — as an amber band under the title (HTML div, PDF
+rounded rect, DOCX shaded paragraph, XLSX a first sheet named FILTRAT). The
+file name gets `_FILTRAT_<filter>`. Counts, incident summaries and parts
+lists follow the filtered entries because they are all computed from
+`s.entries`. The signing preview ignores the filter on purpose: what is
+signed is the whole report.
+
 ## Test data
 `fsl_demo_data.json` — 10 sessions, 100 entries, 66 synthetic photos
 Sectors: automotive, pharma, steel, food, logistics, wind energy, chemical,

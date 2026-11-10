@@ -3312,7 +3312,11 @@ The reasoning: whoever writes in Catalan has the app in Catalan, and a row
 that defaulted to Catalan whatever the interface said had to be set by hand
 on every visit or produced a needless translation. `setWriteLang` and the
 `data-wlang` handler remain (nothing renders them). A `writeLang` stored on
-old visits is ignored. Everything that compares the report language with the
+old visits is ignored. The same evening, `reportLang(s)` stopped defaulting
+to Catalan: a visit with no chosen report language gets `uiLang()`; a chosen
+one (`s.reportLang`, set by the chips) stays. The timesheet's own language
+(`s.timesheet.lang`) still defaults to Catalan: it is the signer's language,
+not the technician's. Everything that compares the report language with the
 written one (`localizeSession`, the closes-quotes, `trPick`) follows.
 
 ## Test data

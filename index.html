@@ -7616,7 +7616,10 @@ function langIntoUI(c){
   try{nm=new Intl.DisplayNames([uiLang()],{type:"language"}).of(c)||c}catch(e){nm=langNative(c)}
   return (uiLang()==="es"?"al ":"into ")+nm;
 }
-function reportLang(s){return (s&&knownLang(s.reportLang))?s.reportLang:"ca"}
+// A visit that has not been given a report language gets the app's (2026-11-
+// 10), not Catalan: with the app in Spanish the report came out in Catalan
+// until the chip was tapped. A language chosen on the visit stays chosen.
+function reportLang(s){if(s&&knownLang(s.reportLang))return s.reportLang;var l=uiLang();return RPT[l]?l:"ca"}
 // One row of the export menu: three chips for the everyday languages and a
 // dropdown for the other twenty-six, so the common case stays one tap and the
 // rare one is still there. When a rare language is picked the chips go quiet

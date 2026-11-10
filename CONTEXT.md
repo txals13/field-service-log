@@ -3304,6 +3304,14 @@ photos per date, and what will happen (the entry takes the photo's date; in
 the editor, unless the time was set by hand). Strings in `UI.es`/`UI.en`.
 Audio chips are left out of the comparison.
 
+## The timesheet opens on the intervention's own dates (2026-11-10)
+
+`tsDefaultRange(s)` now returns `tsRange(s)` as it is — the visit's start day
+and the day of its last entry — and no longer widens it by a day on each side
+(the 2026-11-08 default described above). The user asked for the work's own
+dates; a sheet that needs the travel days is widened by hand, and the saved
+range still wins on reopening. `tsDayShift`, which only served that widening, is gone.
+
 ## The written language is the app's (2026-11-10)
 
 `writeLang(s)` returns `uiLang()` (ca/es/en, the interface language) and no

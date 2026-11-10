@@ -3304,6 +3304,16 @@ photos per date, and what will happen (the entry takes the photo's date; in
 the editor, unless the time was set by hand). Strings in `UI.es`/`UI.en`.
 Audio chips are left out of the comparison.
 
+## The machine counters suggest their moments (2026-11-10)
+
+`openCounters` used to open the two "Data i hora" fields empty, and a number
+typed with no time took "now". Now `ctrSuggestTs(k)` gives the arrival
+reading the visit's start (`sessionStartTs`) and the departure reading the
+last entry's time (now, with no entries); an empty field opens with it, a
+number typed with no time takes it, and two buttons beside each field —
+Inici / Final (the suggestion, with its full time in the tooltip) and Ara —
+set it in one tap. A time already saved is kept, like the timesheet's range.
+
 ## An entry before the typed start moves the start (2026-11-10)
 
 `sessionStartTs(s)` used to return `s.startAt` whenever it was set. A visit

@@ -420,6 +420,10 @@ purpose, not the interface's.
   the sidebar line counts what is waiting. `uploadReportCopy` (download +
   background copy) is gone. Still downloaded on purpose: the JSON backup, the
   camera copy to the phone, and the archive ZIP when its archive folder fails.
+  **Since 2026-11-11 a report that cannot reach Drive right now is downloaded
+  as well** as queued (see that day's section): the rule is "everything goes
+  to the project folder", not "nothing on the device" when there is no folder
+  to reach.
 - **Two Claude Docs kept current with the app** (created 2026-10-17, private to
   the user, pinned in their claude.ai sidebar):
   [Presentació del projecte](https://claude.ai/code/artifact/356924d4-6ca4-4b48-88cf-e982777f4a5a)
@@ -3303,6 +3307,31 @@ thumbnail and one `.thumb-warn` line under the thumbnails
 photos per date, and what will happen (the entry takes the photo's date; in
 the editor, unless the time was set by hand). Strings in `UI.es`/`UI.en`.
 Audio chips are left out of the comparison.
+
+## Reports without a connection land on the device (2026-11-11)
+
+Two things from the airplane-mode test on the phone. (1) The PDF came out and
+the Word did not — "the Word library could not be loaded" — and nothing in the
+app could say beforehand whether the worker had managed to keep every library.
+`sw.js` now lists each library with what it serves (`LIBS` = `[url, what]`),
+answers the page's `"libs"` (download what is missing, then reply) and
+`"libs?"` (reply only) with `{fslLibs:{missing:[…],total}}`, and the page
+(`libsAsk`, `libsLine`) shows it in the sidebar under the account: "📦 Informes
+sense connexió: tot a punt en aquest aparell", or "⚠ Per fer informes sense
+connexió falta baixar: Word · Baixa-ho ara". Asked at start-up, on `online`,
+and from `libFail(msg)`, which replaced the seven "could not load the library"
+alerts and adds, when offline, how to get it. (2) A report made offline was
+stuck in the app until the connection came back. `saveReport` now also
+`dlBlob`s the file when it did not reach Drive (offline, signed out, or the
+upload failed), and the note says so; the queued copy still goes up later. The
+project ZIP (`exportSessionZip`) no longer needs Drive when `navigator.onLine`
+is false: `token` stays null, the Drive folder listing is empty, the media come
+from the visit's own copies and from the device's upload queue (`mqBlob` — new
+for entry videos; tickets already did), the earlier revisions and the manual
+are skipped, `zipAt` is not stamped, and the ZIP is downloaded with a note that
+names what only Drive had. Online and signed out it still asks to sign in, as
+before. Tested in the preview with `navigator.onLine` forced false: PDF, Word
+and the project ZIP (docx + html + pdf + session.json) all downloaded.
 
 ## The machine counters suggest their moments (2026-11-10)
 

@@ -15,19 +15,21 @@ const SHELL = ["./", "./index.html", "./manual.html"];
    que no es buida en publicar una versió nova de l'app perquè les URL porten
    la versió fixada (si es canvia una versió, es canvia la URL i prou).
    LIBS són les primeres URL que prova cada carregador d'index.html; les de
-   reserva (jsdelivr, cdnjs) també es guarden si mai s'arriben a fer servir. */
+   reserva (jsdelivr, cdnjs) també es guarden si mai s'arriben a fer servir.
+   Cada una porta el nom del que serveix, perquè la pàgina pugui dir què falta
+   (2026-11-11: al telèfon, en mode avió, el Word no sortia i res no ho deia). */
 const LIBS_CACHE = "fsl-libs-1";
 const LIBS = [
-  "https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js",
-  "https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js",
-  "https://unpkg.com/docx@8.5.0/build/index.umd.js",
-  "https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js",
-  "https://unpkg.com/jszip@3.10.1/dist/jszip.min.js",
-  "https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js",
-  "https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js",
-  "https://cdn.jsdelivr.net/npm/@expo-google-fonts/noto-sans/NotoSans_400Regular.ttf",
-  "https://cdn.jsdelivr.net/npm/@expo-google-fonts/noto-sans/NotoSans_700Bold.ttf",
-  "https://cdn.jsdelivr.net/npm/@expo-google-fonts/amiri/Amiri_400Regular.ttf"
+  ["https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js", "PDF"],
+  ["https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js", "PDF"],
+  ["https://unpkg.com/docx@8.5.0/build/index.umd.js", "Word"],
+  ["https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js", "Excel"],
+  ["https://unpkg.com/jszip@3.10.1/dist/jszip.min.js", "ZIP"],
+  ["https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js", "dibuixos"],
+  ["https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js", "dibuixos"],
+  ["https://cdn.jsdelivr.net/npm/@expo-google-fonts/noto-sans/NotoSans_400Regular.ttf", "tipografies del PDF"],
+  ["https://cdn.jsdelivr.net/npm/@expo-google-fonts/noto-sans/NotoSans_700Bold.ttf", "tipografies del PDF"],
+  ["https://cdn.jsdelivr.net/npm/@expo-google-fonts/amiri/Amiri_400Regular.ttf", "tipografies del PDF"]
 ];
 const CDN = /^https:\/\/(unpkg\.com|cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com)\//;
 
@@ -112,14 +114,27 @@ async function responLib(req){
    Les que ja hi són no es tornen a baixar, així que cada obertura costa poc. */
 async function precarregaLibs(){
   const cache = await caches.open(LIBS_CACHE);
-  await Promise.all(LIBS.map(async url => {
+  await Promise.all(LIBS.map(async ([url]) => {
     if(await cache.match(url, {ignoreVary:true})) return;
     try{ await baixaLib(url); }catch(e){}
   }));
 }
-
+/* Què hi ha i què falta, pel nom: la barra lateral ho ensenya. */
+async function estatLibs(){
+  const cache = await caches.open(LIBS_CACHE);
+  const missing = [];
+  for(const [url, what] of LIBS){
+    if(!(await cache.match(url, {ignoreVary:true})) && missing.indexOf(what) < 0) missing.push(what);
+  }
+  return {missing, total: LIBS.length};
+}
+/* "libs": baixa el que falta i després contesta; "libs?": només contesta. La
+   resposta va a la pàgina que ho ha demanat, com {fslLibs:{missing:[…]}}. */
 self.addEventListener("message", e => {
-  if(e.data === "libs") e.waitUntil(precarregaLibs());
+  const src = e.source;
+  const contesta = () => estatLibs().then(st => { if(src) src.postMessage({fslLibs: st}); }).catch(() => {});
+  if(e.data === "libs") e.waitUntil(precarregaLibs().then(contesta, contesta));
+  else if(e.data === "libs?") e.waitUntil(contesta());
 });
 
 self.addEventListener("fetch", e => {

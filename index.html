@@ -2591,8 +2591,13 @@ async function saveReport(sess,blob,fname,mime){
   pendReps=q2.filter(function(x){return !(x.sessId===sess.id&&x.fname===fname)})
     .concat([{sessId:sess.id,fname:fname,mime:mime,blob:blob,at:now()}]);
   await pendSave();
-  repNote("&#9203; <b>"+esc(fname)+"</b> queda guardat a l'app i es pujarà a la carpeta del projecte "
-    +(isLoggedIn?"quan tornis a tenir connexió.":"quan entris a Google."),"wait");
+  // …and a copy lands on this device meanwhile (2026-11-11). A report made at
+  // a plant with no signal was stuck inside the app, with nothing to show or
+  // send until the connection came back; downloaded here it goes out by
+  // whatever the phone has, and the queued copy still reaches the folder.
+  dlBlob(blob,fname);
+  repNote("&#11015; <b>"+esc(fname)+"</b> "+uiT("descarregat en aquest aparell; es pujarà també a la carpeta del projecte")+" "
+    +(isLoggedIn?uiT("quan tornis a tenir connexió."):uiT("quan entris a Google.")),"wait");
   return false;
 }
 // ── VIDEOS WAIT IN A QUEUE (2026-10-18) ──────────────────────────────────────
@@ -4237,6 +4242,7 @@ async function refreshDriveInfo(token){
   var pend=pendReps&&pendReps.length?"<br><span style=\"color:var(--orange)\">&#9203; "+pl(pendReps.length,"informe pendent","informes pendents")+" de pujar</span>":"";
   if(mqN-mqNT)pend+="<br><span style=\"color:var(--orange)\">&#9203; "+pl(mqN-mqNT,"vídeo a la cua","vídeos a la cua")+" per pujar</span>";
   if(mqNT)pend+="<br><span style=\"color:var(--orange)\">&#9203; "+pl(mqNT,"tiquet a la cua","tiquets a la cua")+" per pujar</span>";
+  pend+=libsLine();
   if(!isLoggedIn){el.innerHTML=uiT("Sense entrar a Google: només aquest aparell")+pend+left;return}
   el.innerHTML="Compte: <strong>"+esc(driveEmail||"?")+"</strong>"
     +(lastDriveCount!=null?"<br>A Drive: "+pl(lastDriveCount,"visita","visites")
@@ -4413,7 +4419,7 @@ function scheduleSync(){
   setInterval(function(){syncTick(true)},30000);
   document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")syncTick()});
   window.addEventListener("focus",function(){syncTick()});
-  window.addEventListener("online",function(){flushPendingReports();mqFlush();exReadPending()});
+  window.addEventListener("online",function(){flushPendingReports();mqFlush();exReadPending();libsAsk(true)});
   document.addEventListener("focusout",function(){
     setTimeout(function(){if(redrawPending&&!hasUnsaved()){redrawPending=false;renderAll()}},0);
   });
@@ -4515,8 +4521,40 @@ if("serviceWorker" in navigator){
     // The PDF/Word/Excel/ZIP libraries, pdf.js and the PDF fonts come from a
     // CDN. Ask the worker to keep a copy of each (it fetches only what it lacks),
     // so a report still comes out at a plant with no signal.
-    navigator.serviceWorker.ready.then(function(reg){if(reg.active)reg.active.postMessage("libs")})["catch"](function(){});
+    libsAsk(true);
   });
+}
+// ── WHAT THIS DEVICE HAS FOR REPORTS WITHOUT CONNECTION (2026-11-11) ─────────
+// The worker keeps the libraries, but nothing said whether it had managed to:
+// on the phone in airplane mode the PDF came out and the Word did not ("the
+// Word library could not be loaded"), with no way to know before trying. Now
+// the worker answers with what is missing (by name: Word, Excel…), the
+// sidebar says so, and a link asks for the download again. It is asked at
+// start-up, when the connection comes back, and whenever a library fails.
+var libsSt=null;
+function libsAsk(dl){
+  if(!("serviceWorker" in navigator))return;
+  navigator.serviceWorker.ready.then(function(reg){if(reg.active)reg.active.postMessage(dl?"libs":"libs?")})["catch"](function(){});
+}
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.addEventListener("message",function(e){
+    if(e.data&&e.data.fslLibs){libsSt=e.data.fslLibs;refreshDriveInfo()}
+  });
+}
+function libsLine(){
+  if(!libsSt)return "";
+  if(!libsSt.missing.length)return "<br><span style=\"color:var(--green)\">&#128230; "+uiT("Informes sense connexió: tot a punt en aquest aparell")+"</span>";
+  return "<br><span style=\"color:var(--orange)\">&#9888; "+uiT("Per fer informes sense connexió falta baixar:")+" "+libsSt.missing.map(function(x){return esc(uiT(x))}).join(", ")
+    +" · <a href=\"#\" id=\"libsDl\">"+uiT("Baixa-ho ara")+"</a></span>";
+}
+$$("driveInfo").addEventListener("click",function(e){
+  if(e.target&&e.target.id==="libsDl"){e.preventDefault();e.target.textContent="…";libsAsk(true)}
+});
+// A library that will not load: with no connection it is not on this device,
+// and the way to get it is said; either way the worker is asked for it again.
+function libFail(msg){
+  alert(uiT(msg)+(navigator.onLine===false?"\n\n"+uiT("Aquest aparell no té guardada la llibreria. Obre l'app un cop amb connexió: es baixa sola, i la barra lateral diu quan hi és."):""));
+  libsAsk(true);
 }
 
 // ── SIDEBAR ──────────────────────────────────────────────────────────────────
@@ -8121,6 +8159,22 @@ es:{
   "Aquesta nota de veu és a Drive. Inicia la sessió per reproduir-la.":"Esta nota de voz está en Drive. Inicia sesión para reproducirla.",
   "No s'ha pogut carregar la llibreria d'Excel. Comprova la connexió.":"No se ha podido cargar la librería de Excel. Comprueba la conexión.",
   "No s'ha pogut carregar la llibreria de Word. Comprova la connexió.":"No se ha podido cargar la librería de Word. Comprueba la conexión.",
+  "Aquest aparell no té guardada la llibreria. Obre l'app un cop amb connexió: es baixa sola, i la barra lateral diu quan hi és.":"Este dispositivo no tiene guardada la librería. Abre la app una vez con conexión: se descarga sola, y la barra lateral dice cuándo está.",
+  "Informes sense connexió: tot a punt en aquest aparell":"Informes sin conexión: todo listo en este dispositivo",
+  "Per fer informes sense connexió falta baixar:":"Para hacer informes sin conexión falta descargar:",
+  "Baixa-ho ara":"Descárgalo ahora",
+  "dibuixos":"dibujos",
+  "tipografies del PDF":"tipografías del PDF",
+  "descarregat en aquest aparell; es pujarà també a la carpeta del projecte":"descargado en este dispositivo; se subirá también a la carpeta del proyecto",
+  "quan tornis a tenir connexió.":"cuando vuelvas a tener conexión.",
+  "quan entris a Google.":"cuando entres en Google.",
+  "fitxer que només és a Drive":"archivo que solo está en Drive",
+  "fitxers que només són a Drive":"archivos que solo están en Drive",
+  "les revisions anteriors":"las revisiones anteriores",
+  "el manual de recanvis":"el manual de recambios",
+  "ZIP fet sense connexió, amb el que hi ha en aquest aparell.":"ZIP hecho sin conexión, con lo que hay en este dispositivo.",
+  "No porta:":"No lleva:",
+  "No compta com a còpia completa: torna'l a fer amb connexió abans d'esborrar la visita.":"No cuenta como copia completa: vuelve a hacerlo con conexión antes de borrar la visita.",
   "Escriu com a mínim una posició, una referència o una denominació.":"Escribe como mínimo una posición, una referencia o una denominación.",
   "No es pot tornar a provar: treu aquest adjunt i torna'l a afegir.":"No se puede volver a intentar: quita este adjunto y vuelve a añadirlo.",
   "\n\nEl podràs recuperar durant 30 dies des de drive.google.com.":"\n\nLo podrás recuperar durante 30 días desde drive.google.com.",
@@ -8775,6 +8829,22 @@ en:{
   "Aquesta nota de veu és a Drive. Inicia la sessió per reproduir-la.":"This voice note is in Drive. Sign in to play it.",
   "No s'ha pogut carregar la llibreria d'Excel. Comprova la connexió.":"The Excel library could not be loaded. Check the connection.",
   "No s'ha pogut carregar la llibreria de Word. Comprova la connexió.":"The Word library could not be loaded. Check the connection.",
+  "Aquest aparell no té guardada la llibreria. Obre l'app un cop amb connexió: es baixa sola, i la barra lateral diu quan hi és.":"This device has no copy of the library. Open the app once with a connection: it downloads on its own, and the sidebar says when it is there.",
+  "Informes sense connexió: tot a punt en aquest aparell":"Offline reports: everything ready on this device",
+  "Per fer informes sense connexió falta baixar:":"Still to download for offline reports:",
+  "Baixa-ho ara":"Download now",
+  "dibuixos":"drawings",
+  "tipografies del PDF":"PDF fonts",
+  "descarregat en aquest aparell; es pujarà també a la carpeta del projecte":"downloaded to this device; it will also go up to the project folder",
+  "quan tornis a tenir connexió.":"when you are back online.",
+  "quan entris a Google.":"when you sign in to Google.",
+  "fitxer que només és a Drive":"file that is only on Drive",
+  "fitxers que només són a Drive":"files that are only on Drive",
+  "les revisions anteriors":"the earlier revisions",
+  "el manual de recanvis":"the spare-parts manual",
+  "ZIP fet sense connexió, amb el que hi ha en aquest aparell.":"ZIP made offline, with what this device has.",
+  "No porta:":"Missing:",
+  "No compta com a còpia completa: torna'l a fer amb connexió abans d'esborrar la visita.":"It does not count as the complete copy: make it again with a connection before deleting the visit.",
   "Escriu com a mínim una posició, una referència o una denominació.":"Type at least a position, a reference or a description.",
   "No es pot tornar a provar: treu aquest adjunt i torna'l a afegir.":"It cannot be tried again: remove this attachment and add it again.",
   "\n\nEl podràs recuperar durant 30 dies des de drive.google.com.":"\n\nYou will be able to recover it for 30 days from drive.google.com.",
@@ -11724,7 +11794,7 @@ async function exportRep(s,fmt){
     expBusy("Informe intern…");
     try{
       var ib=await buildPdfBlob(s,internLang(),curRev(s),{intern:true});
-      if(!ib){alert(uiT("No s'ha pogut carregar la llibreria PDF. Comprova la connexió."));return}
+      if(!ib){libFail("No s'ha pogut carregar la llibreria PDF. Comprova la connexió.");return}
       await saveReport(s,ib,internFileName(s,curRev(s)),"application/pdf");
     }finally{expBusy("")}
     return;
@@ -11772,7 +11842,7 @@ async function exportRep(s,fmt){
     expBusy("Informe de validació…");
     try{
       var vb=await buildPdfBlob(R.s,R.lang,R.rev,{validation:true});
-      if(!vb){alert(uiT("No s'ha pogut carregar la llibreria PDF. Comprova la connexió."));return}
+      if(!vb){libFail("No s'ha pogut carregar la llibreria PDF. Comprova la connexió.");return}
       var vn=RPT[R.lang].pt.file+"_"+base+".pdf";
       await saveReport(s,vb,vn,"application/pdf");
     }finally{expBusy("")}
@@ -12788,7 +12858,7 @@ async function exportTimesheet(s){
   if(!T)return;
   s=Object.assign({},s,{timesheet:T});
   var blob=await buildTimesheetBlob(s);
-  if(!blob){alert(uiT("No s'ha pogut carregar la llibreria PDF. Comprova la connexió."));return}
+  if(!blob){libFail("No s'ha pogut carregar la llibreria PDF. Comprova la connexió.");return}
   var fn=tsFileName(s);
   await saveReport(s,blob,fn,"application/pdf");
 }
@@ -13282,7 +13352,7 @@ function hexRgb(h){var m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h||"")
 // s = the real session (Drive folder, file names); R = {s: its localized copy, lang}
 async function exportPDF(s,R,base){
   var blob=await buildPdfBlob(R.s,R.lang,R.rev,R.partial?{partial:R.partial}:undefined);
-  if(!blob){alert(uiT("No s'ha pogut carregar la llibreria PDF. Comprova la connexió."));return}
+  if(!blob){libFail("No s'ha pogut carregar la llibreria PDF. Comprova la connexió.");return}
   var fn=RPT[R.lang].pre.report+"_"+base+".pdf";
   await saveReport(s,blob,fn,"application/pdf");
 }
@@ -13825,7 +13895,7 @@ function autoCols(rows,min,max){
 }
 async function exportXLSX(s,R,base){
   var blob=await buildXlsxBlob(R.s,R.lang,R.rev,R.partial?{partial:R.partial}:undefined);
-  if(!blob){alert(uiT("No s'ha pogut carregar la llibreria d'Excel. Comprova la connexió."));return}
+  if(!blob){libFail("No s'ha pogut carregar la llibreria d'Excel. Comprova la connexió.");return}
   var fn=RPT[R.lang].pre.parts+"_"+base+".xlsx";
   await saveReport(s,blob,fn,XLSX_MIME);
 }
@@ -13942,7 +14012,7 @@ async function buildDocxBlob(s,lang,rev,opts){
 async function exportDOCX(s,R,base){
   try{
     var blob=await buildDocxBlob(R.s,R.lang,R.rev,R.partial?{partial:R.partial}:undefined);
-    if(!blob){alert(uiT("No s'ha pogut carregar la llibreria de Word. Comprova la connexió."));return}
+    if(!blob){libFail("No s'ha pogut carregar la llibreria de Word. Comprova la connexió.");return}
     var fn=RPT[R.lang].pre.report+"_"+base+".docx";
     await saveReport(s,blob,fn,DOCX_MIME);
   }catch(err){alert(uiT("Error en generar el Word: ")+err.message)}
@@ -14504,15 +14574,24 @@ async function exportSessionZip(s,kind,pick){
   var want=function(k){return !pick||pick[k]!==false};
   s=sessions.find(function(x){return x.id===s.id})||s; // pick up a language just chosen in the menu
   var archive=(kind||"project")==="project";
-  if(!isLoggedIn){alert(uiT("Primer inicia la sessió amb Google: s'exporten els fitxers guardats a la carpeta de Drive de la sessió."));return}
-  var token=await ensureToken();if(!token){alert(uiT("No s'ha pogut autenticar amb Drive."));return}
+  // WITHOUT CONNECTION (2026-11-11) the ZIP is still made, from what this
+  // device has: the reports built here, session.json, the photos and voice
+  // notes the visit keeps, the videos and tickets waiting in the queue. What
+  // only Drive has — videos already up, earlier revisions, the manual — stays
+  // out and is named in the note at the end, and the ZIP does not count as the
+  // complete copy (no zipAt). It is downloaded, like any report made offline.
+  var offline=navigator.onLine===false,token=null;
+  if(!offline){
+    if(!isLoggedIn){alert(uiT("Primer inicia la sessió amb Google: s'exporten els fitxers guardats a la carpeta de Drive de la sessió."));return}
+    token=await ensureToken();if(!token){alert(uiT("No s'ha pogut autenticar amb Drive."));return}
+  }
   if(!await ensureLabels(reportLang(s)))return;   // same gate as a single report
   // While the click is still counted as a gesture: after this comes a minute
   // of translating and zipping, and by then the permission prompt is refused.
   var arxWhere=archive?arxMode():null;
   var arxOn=arxWhere==="local"?await arxPermission(true):false;
   // Drive: the folder is asked for now, the first time, with the click fresh.
-  var drvArx=arxWhere==="drive"?await driveArxFolder(token,true):null;
+  var drvArx=arxWhere==="drive"&&token?await driveArxFolder(token,true):null;
   var arxOk=false;
   var rev=await ensureRevision(s);
   if(!rev)return;
@@ -14528,11 +14607,11 @@ async function exportSessionZip(s,kind,pick){
   s=sessions.find(function(x){return x.id===s.id})||s;
   expBusy("Comprimint…");
   try{
-    var folderId=await getSessionFolder(token,s);
-    if(!folderId){alert(uiT("Aquesta sessió encara no té carpeta a Drive."));return}
+    var folderId=token?await getSessionFolder(token,s):null;
+    if(!folderId&&token){alert(uiT("Aquesta sessió encara no té carpeta a Drive."));return}
     var JSZipLib=await loadJSZip();
-    if(!JSZipLib){alert(uiT("No s'ha pogut carregar la llibreria ZIP. Comprova la connexió."));return}
-    var files=await sessionFolderFiles(token,s,folderId);
+    if(!JSZipLib){libFail("No s'ha pogut carregar la llibreria ZIP. Comprova la connexió.");return}
+    var files=folderId?await sessionFolderFiles(token,s,folderId):[];
     // JSZip writes each file's time as UTC and Windows reads it as local time:
     // every file came out two hours early (2026-10-24, in summer time here).
     // Shifted by the local offset, the ZIP shows the time on the wall clock.
@@ -14610,7 +14689,8 @@ async function exportSessionZip(s,kind,pick){
       var mp=mediaKind(im)+"/"+im.name;
       if(zip.file(mp))continue;
       expBusy("Multimèdia "+(mi+1)+"/"+allMedia.length+"…");
-      var mb=im.driveId?await driveBlobById(token,im.driveId):null;
+      var mb=token&&im.driveId?await driveBlobById(token,im.driveId):null;
+      if(!mb&&im.qid)mb=await mqBlob(im.qid);              // still in this device's queue
       if(!mb&&im.type!=="video"&&typeof im.data==="string"&&/^data:/.test(im.data)){try{mb=dataUrlToBlob(im.data)}catch(e){}}
       if(mb){zip.file(mp,mb);if(im.driveId)inZip[im.driveId]=1}
       else lostMedia.push(im.name);
@@ -14638,7 +14718,7 @@ async function exportSessionZip(s,kind,pick){
         var tp="tiquets/"+ti2.name;
         if(zip.file(tp))continue;
         expBusy("Tiquets "+(tj+1)+"/"+allTk.length+"…");
-        var tb=ti2.driveId&&!ti2.driveGone?await driveBlobById(token,ti2.driveId):null;
+        var tb=token&&ti2.driveId&&!ti2.driveGone?await driveBlobById(token,ti2.driveId):null;
         if(!tb&&ti2.qid)tb=await mqBlob(ti2.qid);
         if(!tb&&ti2.type==="pdf")tb=await exPdfOrig(ti2,false);
         if(!tb){var tfd=await exFull(ti2,false);if(tfd){try{tb=dataUrlToBlob(tfd)}catch(e){}}}
@@ -14681,7 +14761,7 @@ async function exportSessionZip(s,kind,pick){
     // something, so the drawings and the catalog go in too. Only in the
     // archive: the hand-over pack is the report and the photos, not the
     // machine's manual. A manual that won't download doesn't stop the ZIP.
-    if(archive&&want("manual")&&s.manualRef&&s.manualRef.pdfId){
+    if(token&&archive&&want("manual")&&s.manualRef&&s.manualRef.pdfId){
       expBusy("Manual…");
       var mr=s.manualRef,mBase=mr.base||mr.serial||"manual";
       try{
@@ -14713,13 +14793,21 @@ async function exportSessionZip(s,kind,pick){
     // so nothing could be restored from it. Nor does one without the media or
     // the earlier revisions — those cannot be rebuilt from session.json — nor,
     // of course, one without session.json.
-    if(archive&&want("json")&&want("media")&&want("revs")&&(want("exp")||!(s.expenses||[]).length)){
+    if(token&&archive&&want("json")&&want("media")&&want("revs")&&(want("exp")||!(s.expenses||[]).length)){
       var t=now();
       sessions=sessions.map(function(x){return x.id===s.id?Object.assign({},x,{zipAt:t,updatedAt:t,
         zipName:typeof arxOk==="string"?arxOk:"",zipTo:arxOn?"local":(drvArx?"drive":"")}):x});
       saveLocal();isDirty=true;
     }
-    if(lostMedia.length)alert(uiT("Atenció: el ZIP no porta {n} fitxer(s) que la visita té però que ja no són a Drive:").replace("{n}",lostMedia.length)+"\n· "+lostMedia.join("\n· ")
+    if(offline){
+      var out=[];
+      if(lostMedia.length)out.push(pl(lostMedia.length,"fitxer que només és a Drive","fitxers que només són a Drive")+":\n· "+lostMedia.join("\n· "));
+      if(archive&&want("revs")&&revList(s).length>1)out.push(uiT("les revisions anteriors"));   // only when there are any
+      if(archive&&want("manual")&&s.manualRef&&s.manualRef.pdfId)out.push(uiT("el manual de recanvis"));
+      alert(uiT("ZIP fet sense connexió, amb el que hi ha en aquest aparell.")+(out.length?"\n\n"+uiT("No porta:")+"\n"+out.join("\n"):"")
+        +"\n\n"+uiT("No compta com a còpia completa: torna'l a fer amb connexió abans d'esborrar la visita."));
+    }
+    else if(lostMedia.length)alert(uiT("Atenció: el ZIP no porta {n} fitxer(s) que la visita té però que ja no són a Drive:").replace("{n}",lostMedia.length)+"\n· "+lostMedia.join("\n· ")
       +uiT("\n\nSi els tens en algun altre lloc, afegeix-los a la carpeta de la visita i torna a fer el ZIP abans d'esborrar la visita."));
   }catch(e){alert(uiT("No s'ha pogut exportar el ZIP: ")+((e&&e.message)||e))}
   finally{expBusy("");if(window.JSZip&&JSZip.defaults)JSZip.defaults.date=null}

@@ -2554,6 +2554,28 @@ function sessionToJson(sess){return JSON.stringify([sess],null,2)}
 // signed in — it waits in this device's IndexedDB (`pendingReports`) and goes
 // up at the next sync, so a report made offline at the client is not lost.
 var PEND_KEY="pendingReports",pendReps=null,pendBusy=false;
+// IS THERE REALLY A WAY OUT? (2026-11-11) `navigator.onLine` says "no" for
+// certain, but "yes" only means some interface is up: airplane mode with the
+// Wi-Fi left on, or a plant's Wi-Fi with no internet behind it, both say yes
+// and then every Drive call fails slowly, one after the other, and the ZIP
+// went on asking for its Drive folder. So the places that decide between
+// Drive and the device ask this: a four-second no-cors ping to Google's
+// connectivity check, remembered for ten seconds. Nothing of the user's goes
+// out in it. The worker never touches this origin, so it cannot answer from a
+// cache.
+var netAt=0,netOk=true;
+async function netReach(){
+  if(navigator.onLine===false)return false;
+  if(Date.now()-netAt<10000)return netOk;
+  var ok=false;
+  try{
+    var ctl=("AbortController" in window)?new AbortController():null;
+    var tm=setTimeout(function(){if(ctl)ctl.abort()},4000);
+    await fetch("https://www.gstatic.com/generate_204",{mode:"no-cors",cache:"no-store",signal:ctl?ctl.signal:undefined});
+    clearTimeout(tm);ok=true;
+  }catch(e){}
+  netAt=Date.now();netOk=ok;return ok;
+}
 async function pendLoad(){
   if(pendReps)return pendReps;
   var v=null;try{if(idb)v=await idbGet(idb,PEND_KEY)}catch(e){}
@@ -2564,7 +2586,7 @@ async function pendSave(){try{if(idb)await idbSet(idb,PEND_KEY,pendReps||[])}cat
 // Uploads one report (resumable, size-checked) over the file of the same name,
 // if there is one. Returns the Drive file, or null.
 async function reportToDrive(sess,blob,fname,mime,ui){
-  if(!isLoggedIn||navigator.onLine===false)return null;
+  if(!isLoggedIn||!(await netReach()))return null;
   try{
     var token=await ensureToken();if(!token)return null;
     var folderId=await getSessionFolder(token,sess);if(!folderId)return null;
@@ -6623,7 +6645,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-11-06 · 1";
+var APP_VERSION="2026-11-11 · 1";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -14580,7 +14602,7 @@ async function exportSessionZip(s,kind,pick){
   // only Drive has — videos already up, earlier revisions, the manual — stays
   // out and is named in the note at the end, and the ZIP does not count as the
   // complete copy (no zipAt). It is downloaded, like any report made offline.
-  var offline=navigator.onLine===false,token=null;
+  var offline=!(await netReach()),token=null;
   if(!offline){
     if(!isLoggedIn){alert(uiT("Primer inicia la sessió amb Google: s'exporten els fitxers guardats a la carpeta de Drive de la sessió."));return}
     token=await ensureToken();if(!token){alert(uiT("No s'ha pogut autenticar amb Drive."));return}

@@ -3333,6 +3333,16 @@ names what only Drive had. Online and signed out it still asks to sign in, as
 before. Tested in the preview with `navigator.onLine` forced false: PDF, Word
 and the project ZIP (docx + html + pdf + session.json) all downloaded.
 
+Same day, from the phone: in airplane mode the ZIP still asked for its Drive
+folder and nothing was downloaded. Two reasons. The phone was running the
+previous build (offline it cannot fetch the new one; the version is now
+`2026-11-11 · 1` so the sidebar tells). And `navigator.onLine` is only
+reliable when it says false: with the Wi-Fi radio on and no internet it says
+true, and every Drive call then fails slowly. `netReach()` — a four-second
+no-cors ping to `www.gstatic.com/generate_204`, cached ten seconds, never
+intercepted by the worker — now decides in `reportToDrive` and in the ZIP's
+gate; `navigator.onLine===false` short-circuits it.
+
 ## The machine counters suggest their moments (2026-11-10)
 
 `openCounters` used to open the two "Data i hora" fields empty, and a number

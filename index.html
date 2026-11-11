@@ -10458,7 +10458,8 @@ async function buildHistoryHTML(cur,lang){
     +"<div style=\"font-size:18px;font-weight:700;color:var(--gold)\">&#128220; "+esc(v.title)+"</div>"
     +"<div class=\"ts-note\" style=\"margin:2px 0 12px\">"+esc(L.h.title)+" · "+v.note+"</div>"
     +v.body
-    +"<div class=\"ts-note\" style=\"margin-top:14px\">"+esc(L.gen||"")+" "+dmy(todayISO())+(cur.tech?" · "+esc(cur.tech):"")+"</div>"
+    +"<div class=\"ts-note\" style=\"margin-top:14px\">"+esc(L.gen||"")+" "+dmy(todayISO())+(cur.tech?" · "+esc(cur.tech):"")
+      +(licStamp()?" · "+esc(licStamp()):"")+"</div>"
     +"</body></html>";
   return {name:fileSafe(L.h.title,"history")+"_"+sanitize(newest.machine)+"_"+sanitize(newest.client)+".html",
     blob:new Blob([html],{type:"text/html;charset=utf-8"})};
@@ -13970,6 +13971,7 @@ async function buildXlsxBlob(s,lang,rev,opts){
     var k=ctrReport(s,R,lang);if(k&&k.since)info.push([K.since,k.since.slice(k.since.indexOf(": ")+2)]);
   })();
   (function(){var nn=partsNotes(s,R);if(nn.length){info.push(["",""]);nn.forEach(function(n){info.push(["",n])})}})();
+  (function(){var ls=licStamp();if(ls)info.push(["",""],["",ls])})();   // as in every other document's foot
   var wsI=X.utils.aoa_to_sheet(info);
   wsI["!cols"]=autoCols(info);
 
@@ -15134,7 +15136,7 @@ async function exBuildXlsx(s){
   }
   var S=exSummary(l),cs=S.cs;
   function vals(o){return cs.map(function(c){return o[c]!=null?Math.round(o[c]*100)/100:""})}
-  var sum=[["Despeses · "+(s.client||"")],["Projecte",s.project||""],["Màquina",s.machine||""],["Tècnic",s.tech||""],["Exportat",fts(now())],
+  var sum=[["Despeses · "+(s.client||"")],["Projecte",s.project||""],["Màquina",s.machine||""],["Tècnic",s.tech||""],["Exportat",fts(now())],(licStamp()?["Llicència",licStamp()]:[]),
     ["Cada moneda té la seva suma: no es converteix res."],[],
     ["Per categoria"].concat(cs)];
   S.cats.forEach(function(k){sum.push([(k?exCatLabel(k):"Sense categoria")+" ("+S.cat[k].n+")"].concat(vals(S.cat[k])))});

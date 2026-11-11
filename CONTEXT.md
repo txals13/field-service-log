@@ -3446,7 +3446,20 @@ prints `reportStamp(s,R,rev)`: the project, a middle dot, and the revision.
 
 Changed in all four footers at once — HTML, report PDF, timesheet PDF and Word
 — because they are the same line in four vocabularies and a footer that
-disagrees between formats is a footer nobody trusts. Checked by building each
+disagrees between formats is a footer nobody trusts. The validation report and
+the internal report come out of the same `buildPdfBlob`, so they were carried
+along with it.
+
+Then the rule was taken to **everything that can be downloaded** ("de fet, per
+tots els documents que es puguin descarregar"), which meant the three without a
+footer at all. What they were missing was not the project — the parts Excel's
+session sheet already had it, and adding it again only put it in twice, which
+is what the first attempt did and had to be undone — but the LICENCE HOLDER,
+which every footer carries and which says who made the document:
+`licStamp()` at the end of the parts Excel's session sheet, under the export
+date in the expenses Excel's summary, and on the machine history's last line
+beside the day and the technician. Guarded everywhere, as in the footers: no
+licence, no empty line. Checked by building each
 and reading the text back: the HTML's `.ft`, the PDF's last line through
 pdf.js, and `word/footer1.xml` inflated out of the .docx.
 

@@ -3341,7 +3341,14 @@ reliable when it says false: with the Wi-Fi radio on and no internet it says
 true, and every Drive call then fails slowly. `netReach()` — a four-second
 no-cors ping to `www.gstatic.com/generate_204`, cached ten seconds, never
 intercepted by the worker — now decides in `reportToDrive` and in the ZIP's
-gate; `navigator.onLine===false` short-circuits it.
+gate; `navigator.onLine===false` short-circuits it. The user then asked for
+the same for "every document that can be downloaded", the three of Revisa i
+signa first: nothing more to build, every one of them already ends in
+`saveReport` (`pvGen` → `exportTimesheet` / `exportRep(s,"valpdf"|"pdf")`;
+the internal PDF, the HTML, the Excel of parts and of expenses, the hand-over
+ZIP too), so the download-when-no-Drive rule covers them all; the archive ZIP
+and the JSON backup were downloads already. Only the machine history's 🖨
+Imprimeix is a print dialog, not a file.
 
 ## The machine counters suggest their moments (2026-11-10)
 

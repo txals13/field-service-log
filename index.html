@@ -9508,6 +9508,20 @@ function wireDaySummary(btnId,fieldId){
 function revList(s){return (s&&s.revisions)||[]}
 function curRev(s){var r=revList(s);return r.length?r[r.length-1]:null}
 function revNo(n){return uiT("Rev.")+" "+("0"+n).slice(-2)}
+// What the foot of a document says about WHICH document it is (2026-11-11).
+// It used to be the session's internal id, which says nothing to whoever reads
+// the report: the project number and the revision say exactly which copy they
+// are holding, and they are what the file name has carried all along. The id
+// is not lost — it is in session.json, which is what the app reads back, and
+// it never had a reader outside the app.
+// The revision label comes from the REPORT's language (R.revLbl), not the
+// interface's, because this is printed on the client's copy.
+function reportStamp(s,R,rev){
+  var out=[],p=String((s&&s.project)||"").trim();
+  if(p)out.push(p);
+  if(rev&&rev.n)out.push(((R&&R.revLbl)||uiT("Rev."))+" "+("0"+rev.n).slice(-2));
+  return out.join(" · ");
+}
 // What a partial report says under its title. In the report's language when
 // the labels have it (ca, es, en); the others fall back to English, which is
 // still a warning and not silence.
@@ -11686,7 +11700,7 @@ function buildReportHTML(s,forPrint,lang,rev,opts){
             +"<span style=\"font-family:monospace;overflow-wrap:anywhere\">"+mediaA(sh.img,(vid?"» ":"")+esc(sh.img.name||(vid?R.video:R.photo)))+"</span></figcaption></figure>";
         }).join("")+"</div>";
     })()
-    +"<div class=\"ft\"><span>ID: "+s.id+"</span>"+(licStamp()?"<span>"+esc(licStamp())+"</span>":"")+"<span>Field Service Log</span></div>"
+    +"<div class=\"ft\"><span>"+esc(reportStamp(s,R,rev))+"</span>"+(licStamp()?"<span>"+esc(licStamp())+"</span>":"")+"<span>Field Service Log</span></div>"
     +"</body></html>";
 }
 
@@ -12711,7 +12725,7 @@ async function buildTimesheetBlob(s){
   var n=doc.internal.getNumberOfPages();
   for(var p=1;p<=n;p++){
     doc.setPage(p);doc.setFontSize(7.5);doc.setTextColor(156,163,175);
-    doc.text("ID: "+s.id,M,H-6);
+    doc.text(reportStamp(s,null,null),M,H-6);
     var lst=licStamp();if(lst)doc.text(lst,W/2,H-6,{align:"center"});
     doc.text(p+" / "+n,W-M,H-6,{align:"right"});
   }
@@ -13731,7 +13745,7 @@ async function buildPdfBlob(s,lang,rev,opts){
       doc.text(uiT("ÚS INTERN — NO ENVIAR AL CLIENT"),M,H-10);
       doc.setFont("helvetica","normal");doc.setTextColor(156,163,175);
     }
-    doc.text("ID: "+s.id,M,H-6);
+    doc.text(reportStamp(s,R,rev),M,H-6);
     var lst=licStamp();if(lst)doc.text(lst,W/2,H-6,{align:"center"});
     doc.text(p+" / "+n,W-M,H-6,{align:"right"});
   }
@@ -14345,10 +14359,10 @@ async function buildDocxDocument(D,s,lang,rev,opts){
     children.push(P({spacing:{after:120},children:[T({text:""})]}));
   }
 
-  // The PDF's footer: session id on the left, page x / y on the right.
+  // The PDF's footer: project and revision on the left, page x / y on the right.
   var footer=new D.Footer({children:[P({
     tabStops:[{type:D.TabStopType.CENTER,position:tw(CW/2)},{type:D.TabStopType.RIGHT,position:tw(CW)}],
-    children:[T({text:"ID: "+s.id,size:hp(7.5),font:"Arial",color:"9CA3AF"}),T({text:"\t",size:hp(7.5)}),
+    children:[T({text:reportStamp(s,R,rev),size:hp(7.5),font:"Arial",color:"9CA3AF"}),T({text:"\t",size:hp(7.5)}),
               T({text:licStamp(),size:hp(7.5),font:"Arial",color:"9CA3AF"}),T({text:"\t",size:hp(7.5)}),
               T({children:[D.PageNumber.CURRENT," / ",D.PageNumber.TOTAL_PAGES],size:hp(7.5),font:"Arial",color:"9CA3AF"})]})]});
 

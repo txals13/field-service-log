@@ -3389,6 +3389,30 @@ catalogue made before this still arrives without one and the fallback holds.
 
 ---
 
+## The footer says which document, not which record (2026-11-11)
+
+Every report's footer printed `ID: <session id>` on the left. It told whoever
+reads the report nothing — it is the app's own key, with no reader outside the
+app — while the two things that DO identify the copy in their hands, the
+project number and the revision, were only in the file name. So the footer now
+prints `reportStamp(s,R,rev)`: the project, a middle dot, and the revision.
+
+- The revision label comes from `R.revLbl`, the REPORT's language, not `revNo`,
+  which goes through `uiT` and would print the interface's — this is on the
+  client's copy.
+- The timesheet has no revisions, so it passes no `rev` and prints the project
+  alone.
+- The id is not lost: it is in `session.json`, which is what the app reads back
+  on import, and that is the only reader it ever had.
+
+Changed in all four footers at once — HTML, report PDF, timesheet PDF and Word
+— because they are the same line in four vocabularies and a footer that
+disagrees between formats is a footer nobody trusts. Checked by building each
+and reading the text back: the HTML's `.ft`, the PDF's last line through
+pdf.js, and `word/footer1.xml` inflated out of the .docx.
+
+---
+
 ## Test data
 `fsl_demo_data.json` — 10 sessions, 100 entries, 66 synthetic photos
 Sectors: automotive, pharma, steel, food, logistics, wind energy, chemical,

@@ -3494,3 +3494,67 @@ To add test users: APIs & Services → OAuth consent screen → Test users → A
 - Session filtering/search in sidebar
 - Batch export of multiple sessions
 - QR code for quick access URL sharing
+
+---
+
+## The redesign is built in `nou/`, beside the app in use (2026-11-13)
+
+**Rule: the redesign does not touch the root `index.html` / `sw.js` until it is
+operational.** Both apps exist meanwhile:
+
+- the app in use, at the root: `https://txals13.github.io/field-service-log/`
+- the redesign, in `nou/`: `https://txals13.github.io/field-service-log/nou/`
+  (locally `http://localhost:8420/nou/`, same `static` server)
+
+`nou/index.html` started as a copy of the root file of 2026-11-11 · 1, and
+`nou/sw.js` as a copy of the root worker. A git branch would not do: Pages
+publishes `main` only, so the new one could not be tried on the phone.
+
+**The design** is the Claude Design canvas "Field Service Log — nou disseny",
+page "Proposta B" (navy, white cards, timeline): phone screens B01–B31, the
+desktop boards B32–B33 and the A4 report pages B34–B40. **ONE structure for
+every device** (decided 2026-11-13): the canvas's third page, the study that
+splits the app into a plant mode and an office mode chosen by `handheld()`,
+is NOT being built. A separate plant version for Android is a maybe, for later.
+
+**What the copy changes, and nothing else yet** (all at the top of the script):
+
+- `SEPARAT = true` gives everything the copy keeps another name, because
+  browser storage goes by origin and Drive by account, never by folder — left
+  alone it would read and write the real visits:
+  - localStorage prefix `fsln_v6_` (was `fsl_v6_`; every key goes through `LSP`)
+  - IndexedDB database `fsl-nou` (was `fsl`; `IDB_NAME`)
+  - Drive folder `Field Service Log (nou)`, data file
+    `field_service_log_data_nou.json`, history file
+    `field_service_log_history_nou.json`
+- The licence, the trial's first day, the Gemini key, the interface language
+  and the theme are copied ONCE from the old keys (read only), so a device
+  needs nothing typed again.
+- Title and manifest name "Field Service Log · nou" / "FSL nou", navy icon and
+  theme colour, so the two installed apps can be told apart on the phone.
+- `APP_VERSION` reads `nou · <date> · <n>`; the manual button opens
+  `../manual.html` (the manual still describes the old app).
+
+**The worker shares its cache names with the root one, on purpose.** Caches go
+by origin, and the root worker deletes, on activate, every cache that is not
+`fsl-v2` or `fsl-libs-1`. With names of its own, every new version of the old
+app would leave the new one with nothing to open offline. Sharing mixes
+nothing — the keys are full URLs — and the report libraries are downloaded
+once for both. Consequence: **if the root `sw.js` ever renames its caches,
+`nou/sw.js` has to follow.**
+
+**While both exist:** the root app gets fixes only, and each fix has to be
+carried into `nou/index.html` by hand (the two files diverge from here).
+Manuals uploaded to the real Drive folder are not seen by the copy: it has its
+own folder.
+
+**The day of the switch:** set `SEPARAT` to false, move `nou/index.html` and
+`nou/sw.js` to the root, keep the old pair a while under `classic/`. Installed
+apps point at the root, so they update themselves, and the copy picks up the
+real data where the old app left it (the redesign changes screens, not the
+data format — keep it that way).
+
+Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
+console errors, a visit created there lands in `fsl-nou` and the root app does
+not show it, and the root's keys are untouched. NOT verified: anything on
+Drive (needs a Google sign-in), and installing both on a phone.

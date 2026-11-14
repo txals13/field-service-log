@@ -3644,8 +3644,8 @@ phone (keyboard over the sheet, camera, voice), anything on Drive, generating
 any report, the interface in Spanish or English, the dark theme screen by
 screen.
 
-**Still to do:** the rest of the desktop board B33, the layouts of B13 / B14 /
-B16, and the reports (B34–B40) last. The four phone flows are done.
+**Still to do:** the layouts of B13 / B14 / B16 and the reports (B34–B40),
+last. The four phone flows and the desktop board are done.
 
 ### Flux 2 of the redesign (2026-11-14, version `nou · 2026-11-14 · 1`)
 
@@ -3767,6 +3767,43 @@ window. "Arxiva sessions" only with rows written into it by hand, because it
 needs a Google sign-in. **NOT verified:** the session's folder, "Tria què
 carregar" and the manuals with anything in them (all three need Drive), an
 expense with its pictures, the crop tool, a real phone.
+
+### The desktop board B33 (2026-11-14, version `nou · 2026-11-14 · 4`)
+
+**From 701 px a visit is ONE page of cards**, as on the board: its details and
+the timeline on top, then "Incidències detectades", "Proves i dades de
+producció", "Recanvis", "Evidències gràfiques" and "Resum amb signatura i
+informe". Under 701 px nothing changes: the same parts stay behind the tabs
+and in their windows.
+
+- **No card has code of its own.** `nvDeskRender` (called from `nvVisitWire`)
+  fills `#nvDesk` by handing another box to the functions that already draw
+  each part on the phone: `nvIncRender`, `nvPdHTML`, `nvRecRender` (which now
+  takes `"parts"` or `"pics"` to draw one half), `nvSumPaint` (which now takes
+  the two boxes to paint into). The taps inside the summary are handled by
+  `nvSumClick`, shared by the window and the card.
+- `.sv` is a grid from 701 px (`auto-fit`, columns of at least 430 px) and
+  the page scrolls as a whole; `#nvDesk` is `display:contents`, so its cards
+  are cells of that grid. The timeline's card has a height of its own (640 px)
+  and scrolls inside.
+- The timeline's card only ever shows the log: `nvHeader` puts `nvTab` back
+  to `reg` when wide, and its Incidències and Recanvis tabs are hidden.
+- **`nvGoSec(k)`** goes to a part of the visit: wide, it scrolls the page to
+  its card; narrow, it opens the tab or the window. The rail, the summary's
+  rows and `nvSetTab` all go through it.
+- The visit's card shows everything ("Veure més" is not needed with room to
+  spare).
+
+**Where it departs from the board:** "Dades de la visita" is not a form you
+type into with a "Guardar" button — the pencil opens the same window as
+always; "Recanvis" is the two lists, not a table with a bin on each row (a
+part is removed from its entry); the timeline's card has no "Documents" tab.
+
+**Verified in the preview** at 1440 px: the five cards, the rail scrolling to
+each, closing and reopening from the summary's card, "+ Nova" opening the
+composer on Problema; and at 375 px that the tabs still draw their pages and
+`#nvDesk` is empty. No console errors. **NOT verified:** widths between 701
+and 900 px (one column), a real tablet, opening a test from its card.
 
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does

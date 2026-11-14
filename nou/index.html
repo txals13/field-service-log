@@ -1195,6 +1195,41 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
   /* a window's title is the navy bar on the phone: the red of "Elimina" does not read on it */
   body.m2 #delBack .modal>.modal-title{color:#fff!important}
 }
+
+/* ── The desktop board B33 (2026-11-14): from 701 px a visit is ONE page of cards ──
+   Its card and the timeline on top, then what the phone keeps behind tabs and
+   windows: incidents, tests, parts, photos and the summary. The rail on the
+   left takes you to each. Under 701 px nothing of this shows. */
+#nvDesk{display:none}
+@media(min-width:701px){
+  body.m2 .sv{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(430px,1fr));gap:18px;align-content:start;align-items:start;padding:20px 24px 28px;overflow-y:auto!important;scroll-behavior:smooth}
+  .nv-fitxa{flex:none;padding:0;overflow:visible;min-height:0;scroll-margin-top:20px}
+  .nv-fx-more{display:none}
+  body.nv-visit .nv-logcol{margin:0;height:640px;max-height:calc(100dvh - 120px);border:1px solid var(--br);border-radius:14px;overflow:hidden;scroll-margin-top:20px}
+  .nv-tabs [data-t=inc],.nv-tabs [data-t=rec]{display:none}
+  #nvDesk{display:contents}
+  .nv-dk{padding:14px 16px 12px;min-width:0;scroll-margin-top:20px}
+  .nv-dk.wide{grid-column:1/-1}
+  .nv-dk>.hd{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;min-height:34px}
+  .nv-dk>.hd h2{font-size:17px;font-weight:700}
+  .nv-dk>.hd .bt{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .nv-dk .nv-tabpage{padding:0;gap:0}
+  .nv-dk .nv-inc{box-shadow:none;border:0;border-top:1px solid var(--br);border-radius:0;padding:12px 0}
+  .nv-dk .nv-tabpage>.nv-inc:first-child{border-top:0}
+  .nv-dk .nv-cap{margin:12px 0 0}
+  .nv-dk .nv-plist,.nv-dk .nv-pics,.nv-dk .pd-top,.nv-dk .pd-sec,.nv-dk .nv-chk,.nv-dk .nv-sig,.nv-dk .nv-docs{box-shadow:none;border:0;border-radius:0;padding-left:0;padding-right:0;background:none;margin-bottom:0}
+  .nv-dk .pd-sec{border-top:1px solid var(--br)}
+  .nv-dk .nv-pics{padding-top:4px}
+  .nv-dk .nv-pics .hd b{font-size:14px;font-weight:600;color:var(--tx3)}
+  .nv-dk .nv-addp{margin-top:8px}
+  .nv-dk .no-ent{padding:18px 0;text-align:left}
+  .nv-dk-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:0 32px;align-items:start}
+  .nv-dk-sum .nv-done{grid-column:1/-1}
+  .nv-dk-sum .nv-cta{grid-column:1/-1;text-align:left;padding-left:0}
+  .nv-dk-acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px;padding-top:12px;border-top:1px solid var(--br)}
+  .nv-dk-acts button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;border-radius:12px;padding:8px 18px}
+  .nv-dk-acts [data-k=back]{display:none}
+}
 </style>
 </head>
 <body>
@@ -5632,7 +5667,7 @@ function renderContent(){
       +"<button id=\"m2Ent\">"+nvI("plus",20,2.4)+"<span>"+esc(nvT("Afegir entrada"))+"</span></button>"
       +"<button id=\"m2Foto\" title=\"Foto\" aria-label=\"Foto\">"+nvI("cam",22)+"</button>"
       +"<button id=\"m2Veu\" title=\"Nota de veu\" aria-label=\"Nota de veu\">"+nvI("mic",22)+"</button></div>":"")
-    +"</div></div>";
+    +"</div><div id=\"nvDesk\"></div></div>";
 
   renderLogArea();
   populateTagOptions(); // fill the Tag dropdown with the linked manual's grups
@@ -7285,7 +7320,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-14 · 3";
+var APP_VERSION="nou · 2026-11-14 · 4";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -16827,6 +16862,7 @@ function nvBackStep(){
   if(nvView!=="home"){nvView="home";renderAll()}
 }
 function nvSetTab(k){
+  if(nvWide()&&k!=="reg"){nvGoSec(k);return}
   nvTab=k;
   if(aid&&nvSub!=="log"&&!nvWide()){nvSub="log";renderAll();return}
   var a=nvActive();if(!a)return;
@@ -16871,6 +16907,7 @@ document.addEventListener("click",function(e){
   };
 })();
 function nvHeader(active){
+  if(active&&nvWide())nvTab="reg";   // from 701 px Incidències and Recanvis are cards of the page, not tabs
   if(active&&nvSubAid!==active.id){nvSub="fitxa";nvSubAid=active.id;nvTab="reg";nvFx="det";nvFxMore=false}
   if(!active)nvSubAid=null;
   var b=document.body.classList;
@@ -16912,10 +16949,10 @@ function nvNavRender(){
   }
   if(a){
     var c=severityCounts(a.entries),inc=c.issue+c.warning;
-    h=bt("home","home","Inici")+bt("fitxa","doc","Visita")
-      +bt("t:reg","clock","Cronologia",nvTab==="reg")
-      +bt("t:inc","alert","Incidències",nvTab==="inc",inc?"<span class=\"cnt\">"+inc+"</span>":"")
-      +bt("prod","chart","Proves")+bt("t:rec","wrench","Recanvis",nvTab==="rec")
+    h=bt("home","home","Inici")+bt("fitxa","doc","Visita",true)
+      +bt("t:reg","clock","Cronologia")
+      +bt("t:inc","alert","Incidències",false,inc?"<span class=\"cnt\">"+inc+"</span>":"")
+      +bt("prod","chart","Proves")+bt("t:rec","wrench","Recanvis")
       +bt("fol","image","Evidències")+bt("ctr","gauge","Comptadors")+bt("ts","cal","Full d'hores")+bt("sum","sign","Resum")
       +(q?"<div class=\"foot\">"+esc(q)+"</div>":"");
   }else{
@@ -16936,13 +16973,13 @@ $$("nvNav").addEventListener("click",function(e){
   if(k==="home"||k==="visits"||k==="mach"||k==="menu"){nvGo(k);return}
   if(k==="manuals"){$$("btnManuals").click();return}
   if(k==="arx"){$$("btnBulkArx").click();return}
-  if(k==="fitxa"){var f=$$("nvFitxa");if(f)f.scrollTop=0;return}
-  if(k.indexOf("t:")===0){nvSetTab(k.slice(2));return}
-  if(k==="prod"){openProdList();return}
-  if(k==="fol"){openFolder();return}
+  if(k==="fitxa"){nvGoSec("fitxa");return}
+  if(k.indexOf("t:")===0){nvGoSec(k.slice(2));return}
+  if(k==="prod"){nvGoSec("pd");return}
+  if(k==="fol"){nvGoSec("pics");return}
   if(k==="ctr"){openCounters();return}
   if(k==="ts"){openTimesheet();return}
-  if(k==="sum"){nvSumOpen();return}
+  if(k==="sum"){nvGoSec("sum");return}
 });
 $$("nvBack").addEventListener("click",nvBackStep);
 $$("nvRep").addEventListener("click",function(e){
@@ -17115,7 +17152,7 @@ function nvFitxaRender(a,isOpen){
       +"<button type=\"button\" class=\"btn-sm\" data-go=\"ctr\">"+esc(nvT("Comptadors"))+"</button></div>";
   }else{
     body=row("Màquina",a.machine)+row("Sèrie",a.machineNo)+row("Tipus",uiT(tm.label))+row("Tècnic",a.tech)+row("Inici",nvDT(sessionStartTs(a)));
-    if(nvFxMore){
+    if(nvFxMore||nvWide()){   // with room to spare, the whole of it
       body+=row("Projecte",a.project)+row("Any de fabricació",a.year)+row("Contacte",contactLine(a))
         +(a.contactPhone?row("Telèfon","<a href=\"tel:"+esc(String(a.contactPhone).replace(/[^\d+]/g,""))+"\">"+esc(a.contactPhone)+"</a>",true):"")
         +(a.contactEmail?row("Correu","<a href=\"mailto:"+esc(a.contactEmail)+"\">"+esc(a.contactEmail)+"</a>",true):"")
@@ -17195,7 +17232,7 @@ function nvFixLine(e,fx){
   return s;
 }
 function nvVisitWire(a,isOpen){
-  nvFitxaRender(a,isOpen);nvTabsRender(a);
+  nvFitxaRender(a,isOpen);nvTabsRender(a);nvDeskRender(a,isOpen);
   var go=$$("nvFxGo");if(go)go.addEventListener("click",function(){nvSub="log";renderAll()});
   var sh=$$("nvShade");if(sh)sh.addEventListener("click",function(){m2Hide()});
   // "Nou problema": the same composer, with the severity already on Problema
@@ -17342,7 +17379,7 @@ function nvAddPart(){
   if(c){alert(nvT("Aquesta visita encara no té cap manual de recanvis vinculat. Vincula'n un i podràs triar el recanvi tocant el dibuix."));c.click();return}
   alert(nvT("Per afegir un recanvi a mà, obre una entrada del registre i fes servir «Afegeix un recanvi»."));
 }
-function nvRecRender(a,box,isOpen){
+function nvRecRender(a,box,isOpen,what){   // what: "parts", "pics" or nothing for both
   var used=[],rec=[],inf=[];
   collectSessionParts(a).forEach(function(it){var st=partSt(it.part);(st==="fit"?used:st==="inf"?inf:rec).push(it)});
   function row(it){
@@ -17372,7 +17409,8 @@ function nvRecRender(a,box,isOpen){
   var h=group("Recanvis utilitzats",used)+group("Recomanats al client",rec)+group("Només informatius",inf);
   if(!used.length&&!rec.length&&!inf.length)h="<div class=\"no-ent\" style=\"padding:20px 12px\">"+esc(nvT("Cap recanvi en aquesta visita."))+"</div>";
   if(isOpen)h+="<button type=\"button\" class=\"nv-addp\" id=\"nvAddPart\">"+nvI("plus",20,2.4)+"<span>"+esc(nvT("Afegir recanvi des del dibuix"))+"</span></button>";
-  if(ims.length||nA){
+  if(what==="pics")h=(ims.length||nA)?"":"<div class=\"no-ent\">"+esc(nvT("Cap foto encara."))+"</div>";
+  if((ims.length||nA)&&what!=="parts"){
     h+="<section class=\"nv-card nv-pics\"><div class=\"hd\"><b>"+esc(nvT("Fotos"))+" ("+nP+")</b>"
       +"<button type=\"button\" class=\"nv-link\" id=\"nvFol\">"+esc(nvT("Carpeta →"))+"</button></div>"
       +(shown.length?"<div class=\"gr\">"+shown.map(function(im,i){
@@ -17549,8 +17587,8 @@ function nvSumState(a){
   if(nInt)rows.push({k:"",label:nvT("Notes internes")+" ("+nInt+")",st:"lock",note:nvT("queden fora")});
   return {rows:rows,nPh:nPh,parts:parts,tests:tests.length,hasT:hasT};
 }
-function nvSumPaint(){
-  var a=nvActive(),body=$$("nvSumBody"),acts=$$("nvSumActs");
+function nvSumPaint(bodyEl,actsEl){
+  var a=nvActive(),body=bodyEl||$$("nvSumBody"),acts=actsEl||$$("nvSumActs");
   if(!a||!body||!acts)return;
   var isOpen=a.status==="open",S=nvSumState(a),sg=revSign(a)||{},r=curRev(a);
   $$("nvSumTitle").textContent=nvT("Resum de la visita")+" · "+(a.project||a.client||"");
@@ -17608,8 +17646,14 @@ function nvSumWire(){
   if(nvSumWired)return;nvSumWired=true;
   var back=$$("nvSumBack");
   back.addEventListener("click",function(ev){
+    if(ev.target===back||ev.target.closest("#nvSumClose")){nvSumShut();return}
+    nvSumClick(ev);
+  });
+}
+// What a tap inside the summary does: in its window and, from 701 px, in the
+// card of the visit's page.
+function nvSumClick(ev){
     var t=ev.target,a=nvActive(),b;
-    if(t===back||t.closest("#nvSumClose")){nvSumShut();return}
     if(!a)return;
     if((b=t.closest("[data-doc]"))){nvSumShut();exportRep(a,b.dataset.doc);return}
     b=t.closest("[data-k]");if(!b)return;
@@ -17625,13 +17669,83 @@ function nvSumWire(){
     if(k==="home"){nvSumShut();nvGo("home");return}
     if(k==="sign"){nvSumShut();openReviewSign();return}
     // a part of the visit: the tabs are behind this window, the rest opens over it
-    if(k==="inc"||k==="rec"){nvSumShut();nvSetTab(k);return}
-    if(k==="fotos"){nvSumShut();nvSetTab("rec");return}
+    if(k==="inc"||k==="rec"){nvSumShut();nvGoSec(k);return}
+    if(k==="fotos"){nvSumShut();nvGoSec("pics");return}
     if(k==="dades"){openNewModal(a);return}
     if(k==="prod"){openProdList();return}
     if(k==="ctr"){openCounters();return}
     if(k==="ts"){openTimesheet();return}
-  });
+}
+
+// ── THE NEW DESIGN, DESKTOP (B33): THE VISIT AS ONE PAGE (2026-11-14) ────────
+// From 701 px there is room for everything at once, so the visit is a page of
+// cards: its details and the timeline on top, then the incidents, the tests,
+// the parts, the photos and the summary. Each card is drawn by the very same
+// function that draws it on the phone (the Incidències and Recanvis tabs, the
+// tests' list, the summary window), handed another box to draw into. Under
+// 701 px #nvDesk stays empty and hidden.
+(function(){
+  var es={"Incidències detectades":"Incidencias detectadas","Proves i dades de producció":"Pruebas y datos de producción",
+    "Evidències gràfiques":"Evidencias gráficas","Resum amb signatura i informe":"Resumen con firma e informe","+ Nova":"+ Nueva",
+    "Nova prova":"Nueva prueba","Informe de validació":"Informe de validación","Cap prova encara.":"Ninguna prueba todavía.","Cap foto encara.":"Ninguna foto todavía."};
+  var en={"Incidències detectades":"Issues found","Proves i dades de producció":"Tests and production data",
+    "Evidències gràfiques":"Photographic evidence","Resum amb signatura i informe":"Summary with signature and report","+ Nova":"+ New",
+    "Nova prova":"New test","Informe de validació":"Validation report","Cap prova encara.":"No tests yet.","Cap foto encara.":"No photos yet."};
+  Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
+  Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});
+})();
+// Goes to a part of the visit: from 701 px it is a card of the page, and the
+// page scrolls to it; under that it is a tab or a window.
+function nvGoSec(k){
+  if(!nvWide()){
+    if(k==="pics")k="rec";
+    if(k==="inc"||k==="rec"||k==="reg"){nvSetTab(k);return}
+    if(k==="pd"){openProdList();return}
+    if(k==="sum"){nvSumOpen();return}
+    return;
+  }
+  var el=k==="fitxa"?$$("nvFitxa"):k==="reg"?document.querySelector(".nv-logcol"):$$("nvDk-"+k);
+  if(el)el.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function nvDeskRender(a,isOpen){
+  var box=$$("nvDesk");if(!box)return;
+  if(!nvWide()){box.innerHTML="";return}
+  var tests=a.prodTests||[];
+  function sec(k,title,extra,cls){
+    return "<section class=\"nv-card nv-dk"+(cls?" "+cls:"")+"\" id=\"nvDk-"+k+"\"><div class=\"hd\"><h2>"+esc(nvT(title))+"</h2><span class=\"bt\">"+(extra||"")+"</span></div>"
+      +"<div class=\"bd\" id=\"nvDkB-"+k+"\"></div></section>";
+  }
+  function bt(act,label,gold){return "<button type=\"button\" class=\"btn-sm"+(gold?" btn-gold":"")+"\" data-dk=\""+act+"\">"+esc(nvT(label))+"</button>"}
+  box.innerHTML=sec("inc","Incidències detectades",isOpen?bt("newinc","+ Nova",true):"")
+    +sec("pd","Proves i dades de producció",(tests.length?bt("val","Informe de validació"):"")+(isOpen?bt("newpt","Nova prova",!tests.length):""))
+    +sec("rec","Recanvis","")
+    +sec("pics","Evidències gràfiques","")
+    +sec("sum","Resum amb signatura i informe","","wide");
+  nvIncRender(a,$$("nvDkB-inc"),isOpen,a.entries||[]);
+  $$("nvDkB-pd").innerHTML=tests.length?nvPdHTML(tests):"<div class=\"no-ent\">"+esc(nvT("Cap prova encara."))+"</div>";
+  nvRecRender(a,$$("nvDkB-rec"),isOpen,"parts");
+  nvRecRender(a,$$("nvDkB-pics"),isOpen,"pics");
+  var sb=$$("nvDkB-sum");
+  sb.innerHTML="<div class=\"nv-dk-sum\" id=\"nvDkSumBody\"></div><div class=\"nv-dk-acts\" id=\"nvDkSumActs\"></div>";
+  nvSumPaint($$("nvDkSumBody"),$$("nvDkSumActs"));
+  // the window's own hidden "close" button has an id the back key looks for: it must not be here twice
+  var hid=$$("nvDkSumActs").querySelector("#nvSumClose");if(hid)hid.parentNode.removeChild(hid);
+  sb.addEventListener("click",nvSumClick);
+  box.onclick=function(ev){
+    var t=ev.target,x;
+    if((x=t.closest("[data-dk]"))){
+      var k=x.dataset.dk;
+      if(k==="newinc"){
+        m2Show("compose");
+        var sv=document.querySelector("#m2Sev [data-sev=issue]");if(sv)sv.click();
+        focusField($$("entIn"));return;
+      }
+      if(k==="newpt"){openProdList(true);return}
+      if(k==="val"){exportRep(a,"valpdf");return}
+    }
+    // a test opens its own window, as from the tests' list
+    if((x=t.closest("#nvDkB-pd [data-pt]"))){ptSessId=a.id;wirePd();openProdTest(x.dataset.pt)}
+  };
 }
 
 // ── CLOSE DROPDOWNS ───────────────────────────────────────────────────────────

@@ -3644,8 +3644,8 @@ phone (keyboard over the sheet, camera, voice), anything on Drive, generating
 any report, the interface in Spanish or English, the dark theme screen by
 screen.
 
-**Still to do:** Flux 3 (resum, signatura, informe), Flux 4 (despeses, fitxers,
-arxiu), the rest of the desktop board B33, and the reports (B34–B40) last.
+**Still to do:** Flux 4 (despeses, fitxers, arxiu), the rest of the desktop
+board B33, the layouts of B13 / B14 / B16, and the reports (B34–B40) last.
 
 ### Flux 2 of the redesign (2026-11-14, version `nou · 2026-11-14 · 1`)
 
@@ -3693,6 +3693,54 @@ drawings), a running test, Spanish and English on these screens.
 the drawing), B14 (the live test with its navy clock) and B16 (the counters
 with the "since the last visit" block). They work as before, in the new
 colours.
+
+### Flux 3 of the redesign (2026-11-14, version `nou · 2026-11-14 · 2`)
+
+Boards B17–B23. B17 and B18 are new; B19 is redrawn; B20–B23 (Revisa i
+signa, Revisions, Full d'hores, the ZIP's list) are the old windows in the
+new look.
+
+- **One window, two faces** (`#nvSumBack`, `nvSumOpen` / `nvSumPaint`). It is
+  the FIRST window in the page, so the ones it opens come up over it, and
+  `nvHeader` repaints it on every redraw (or shuts it if the visit is gone).
+  - **Visit open: "Resum de la visita"** (B17). Each part of the visit with
+    where it stands (`nvSumState`): ok, warn (worth a look before closing),
+    none (not used) or lock (internal). A row opens its screen. Then the
+    client's signature and "Tancar visita".
+  - **Visit closed: "Visita llesta!"** (B18). The documents that can be
+    made, the signature, "ZIP del projecte" and "Tornar a l'inici", plus
+    "Reobre la visita".
+- **Closing goes through the summary.** "Tanca la visita" in Més opens it,
+  and so does "Resum" on the rail. `nvSumCloseVisit` lists what is still
+  pending in its confirmation and then makes the same change the old button
+  made (`status:"closed"`, `closedAt`). The old `#btnClose` is still in the
+  page and still works; nothing calls it any more.
+- **The report menu** (B19): "Revisa i signa" on top as the main row, the
+  language rows as cards, then "Genera" with one line per document
+  (`nvRepBtn`: icon, name, a word on what it is). The click reads
+  `closest("[data-fmt]")` now, since a line has spans inside.
+- The menu's own heading (with the cross) had been hidden on the phone since
+  Flux 1 by the rule that hides the sheets' headings inside a visit; fixed.
+
+**Where it departs from the boards, on purpose:**
+
+- **No signature pad in the summary.** The board draws one. Here the
+  signature hangs off the REVISION and is made in "Revisa i signa", in front
+  of the report: a pad in the summary would put the client's name under a
+  text they have not been shown. The summary shows the signature (or that
+  there is none) and leads to "Revisa i signa".
+- **Closing does not generate the report.** The board says "Informe generat
+  i desat a Drive". Generating asks about revisions, translates with Gemini
+  and uploads, each with its own questions; doing it behind a "close" button
+  would hide all of that. "Visita llesta" lists the documents and each row
+  makes its own.
+
+**Verified in the preview** (phone and desktop): the summary's rows and
+states, closing (the confirmation lists what is pending), "Visita llesta",
+reopening, the report menu and, from it, the Revisions window and the ZIP's
+list. No console errors. **NOT verified:** generating any document, signing
+(so the signature card has only been seen empty), a visit with counters or a
+timesheet, a real phone.
 
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does

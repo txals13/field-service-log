@@ -980,7 +980,7 @@ body.m2 #m2MoreBack .modal>.modal-title{position:static;margin:0;padding:8px 6px
   #m2MoreBack{align-items:center}
   body.m2 #m2MoreBack .modal{border-radius:16px!important;max-width:460px;padding:12px 14px 0}
   body.m2 #expMenu{position:fixed!important;left:auto!important;right:16px!important;top:66px!important;width:400px!important;max-width:calc(100vw - 32px)!important;max-height:calc(100dvh - 84px)!important;z-index:95}
-  body.m2 .exp-menu .m2-sheet-hdr{display:none}
+  body.m2 .sv .exp-menu .m2-sheet-hdr{display:none}
 }
 
 /* ── Flux 2 (2026-11-14): the tabs' own screens, the machine history, the tests ── */
@@ -1079,6 +1079,63 @@ body.m2 #m2MoreBack .modal>.modal-title{position:static;margin:0;padding:8px 6px
   /* these two windows are long: their buttons stay in sight while the page scrolls */
   #pdBack .modal-actions,#mhBack .modal-actions{position:sticky;bottom:-20px;margin:12px -20px -20px;padding:12px 20px 20px;border-top:1px solid var(--br);border-radius:0 0 16px 16px}
 }
+
+/* ── Flux 3 (2026-11-14): the summary before closing, "Visita llesta", the report menu ── */
+#nvSumBack .modal{background:var(--bg0)}
+#nvSumBack .modal-actions{background:var(--bg1)}
+#nvSumActs button{display:flex;align-items:center;justify-content:center;gap:8px;flex:1 1 0;min-height:52px;white-space:nowrap}
+#nvSumActs button.btn-gold{flex:1.4 1 0}
+#nvSumBody{display:flex;flex-direction:column;gap:10px}
+.nv-chk{padding:6px 14px}
+.nv-chk button{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;min-height:44px;padding:4px 0;border:0;border-top:1px solid var(--br);border-radius:0;background:none;text-align:left;font-size:15px;font-weight:400;color:var(--tx1);white-space:normal}
+.nv-chk button:first-child{border-top:0}
+.nv-chk button:hover{background:none;color:var(--gold)}
+.nv-chk button[disabled]{opacity:1;cursor:default;color:var(--tx1)}
+.nv-chk .mk{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:800;background:#A8B3C2}
+.nv-chk .mk.ok{background:#1B7F3B}.nv-chk .mk.warn{background:#F29A1F}.nv-chk .mk.lock{background:var(--int-bg);color:var(--int-tx)}
+.nv-chk .nt{font-size:13px;font-weight:600;color:var(--tx3);text-align:right}
+.nv-chk .nt.warn{color:var(--orange)}
+.nv-sig{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.nv-sig h3{font-size:16px;font-weight:700}
+.nv-sig .pad{height:104px;border:1px solid var(--br);border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;color:#5A6576;overflow:hidden}
+.nv-sig .pad img{max-width:90%;max-height:90%}
+.nv-sig .ft{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;color:var(--tx3)}
+.nv-cta{font-size:14px;font-weight:600;color:var(--gold);background:none;border:0;padding:8px;text-align:center;white-space:normal}
+.nv-cta:hover{background:none;text-decoration:underline}
+.nv-done{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 0 4px;text-align:center}
+.nv-done .ck{width:64px;height:64px;border-radius:50%;background:#22A04B;color:#fff;display:flex;align-items:center;justify-content:center}
+.nv-done b{font-size:24px;font-weight:800;color:var(--green)}
+.nv-done span{font-size:14px;color:var(--tx3)}
+.nv-docs{padding:12px 14px 4px}
+.nv-docs h3{font-size:16px;font-weight:700;padding-bottom:8px}
+.nv-doc{display:grid;grid-template-columns:40px minmax(0,1fr) 40px;gap:10px;align-items:center;width:100%;padding:8px 0;border:0;border-top:1px solid var(--br);border-radius:0;background:none;text-align:left;font-weight:400;color:var(--tx1);white-space:normal}
+.nv-doc:hover{background:none}
+.nv-doc .ic{width:40px;height:40px;border-radius:10px;background:var(--redbg);color:var(--red);display:flex;align-items:center;justify-content:center}
+.nv-doc .ic.b{background:var(--goldbg);color:var(--gold)}
+.nv-doc .ic.y{background:var(--int-bg);color:var(--int-tx)}
+.nv-doc b{display:block;font-size:14px;font-weight:600}
+.nv-doc small{display:block;font-size:12px;color:var(--tx3)}
+.nv-doc .go{color:var(--gold);display:flex;justify-content:center}
+/* the report menu */
+.exp-menu{background:var(--bg0);padding:8px 10px 10px}
+.exp-menu .exp-rev,.exp-menu .exp-lang{background:var(--bg1);border:1px solid var(--br);border-radius:10px;margin:0 0 6px;padding:8px 10px;font-size:12px;white-space:normal;flex-wrap:wrap}
+.exp-menu #expFiltRow:empty{display:none}
+.exp-menu .exp-rev.nv-sign{background:var(--accs);border-color:var(--accs);color:#fff;font-size:15px;font-weight:700;min-height:56px;border-radius:14px;padding:8px 12px}
+.exp-menu .exp-rev.nv-sign button{background:rgba(255,255,255,.16);border:0;color:#fff;font-size:13px;font-weight:600;padding:9px 12px;border-radius:8px}
+.nv-gen-h{font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--tx3);padding:8px 2px 6px;text-transform:uppercase}
+body.m2 .exp-menu button.nv-gen{display:grid;grid-template-columns:36px minmax(0,1fr);gap:10px;align-items:center;width:100%;min-height:54px;margin:0 0 6px;padding:6px 10px;border:1px solid var(--br);border-radius:10px;background:var(--bg1);text-align:left;white-space:normal;font-size:14px}
+body.m2 .exp-menu button.nv-gen:hover{border-color:var(--br2)}
+.nv-gen .ic{width:36px;height:36px;border-radius:9px;background:var(--bg2);color:var(--btx);display:flex;align-items:center;justify-content:center}
+.nv-gen b{display:block;font-size:14px;font-weight:600}
+.nv-gen small{display:block;font-size:12px;font-weight:400;color:var(--tx3)}
+body.m2 .exp-menu button.nv-gen.int{border:1px dashed var(--int-dot);background:var(--int-bg)}
+/* the menu fills the phone: its own heading, with the cross that closes it, has to show
+   (the rule that hides the sheets' headings inside a visit was hiding this one too) */
+body.m2 .sv .exp-menu .m2-sheet-hdr{display:flex;align-items:center;padding:6px 4px 10px!important;background:none;border:0;font-size:17px;font-weight:700;cursor:pointer}
+body.m2 .exp-menu .exp-rev button{padding:8px 12px;font-size:13px}
+@media(min-width:701px){
+  #nvSumBack .modal-actions{position:sticky;bottom:-20px;margin:12px -20px -20px;padding:12px 20px 20px;border-top:1px solid var(--br);border-radius:0 0 16px 16px}
+}
 </style>
 </head>
 <body>
@@ -1170,6 +1227,15 @@ body.m2 #m2MoreBack .modal>.modal-title{position:static;margin:0;padding:8px 6px
     </div>
     <div class="overlay" id="overlay"></div>
     <div class="content" id="content"></div>
+  </div>
+
+  <!-- The summary before closing and, once closed, "Visita llesta" (new design, Flux 3) -->
+  <div class="modal-back" id="nvSumBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,560px)">
+      <div class="modal-title" id="nvSumTitle">Resum de la visita</div>
+      <div id="nvSumBody"></div>
+      <div class="modal-actions" id="nvSumActs"></div>
+    </div>
   </div>
 
   <!-- New session modal -->
@@ -5385,7 +5451,7 @@ function renderContent(){
     +"<div class=\"exp-wrap\"><button class=\"btn-sm\" id=\"btnExp\">&#8595; Informe &#9662;</button>"
     +"<div class=\"exp-menu\" id=\"expMenu\">"
     +"<div class=\"m2-flx m2-sheet-hdr\" style=\"padding:12px 16px\"><span>&#8595; Informe</span><b style=\"font-size:20px;color:var(--tx3)\">&#10005;</b></div>"
-    +"<div class=\"exp-rev\"><span>"+(revSign(active)?"&#9997; Informe signat":"Informe sense signar")+"</span>"
+    +"<div class=\"exp-rev nv-sign\"><span>"+(revSign(active)?"&#9997; Informe signat":"Informe sense signar")+"</span>"
     +"<button data-sign=\"1\" title=\"Mostra l'informe o el full d'hores per ensenyar-lo, i signa'l al final\">Revisa i signa…</button></div>"
     +"<div class=\"exp-rev\"><span>"+(curRev(active)
         ?"Revisió "+revNo(curRev(active).n).replace("Rev. ","")+" · "+dmy(curRev(active).date)
@@ -5397,7 +5463,17 @@ function renderContent(){
       ?"<div class=\"exp-rev\"><span>Etiquetes en "+esc(langNative(reportLang(active)))+"</span>"
         +"<button data-lbl=\"1\" title=\"Les ha traduïdes Gemini i surten a cada fila de cada pàgina: val la pena mirar-les un cop\">Revisa-les…</button></div>"
       :"")
-    +"<button data-fmt=\"pdf\">📄 PDF</button><button data-fmt=\"docx\">📄 Word (DOCX)</button><button data-fmt=\"html\">📄 HTML</button><button data-fmt=\"xlsx\">📊 Recanvis (Excel)</button><button data-fmt=\"timesheet\">🧾 Full d'hores…</button>"+((active.prodTests||[]).length?"<button data-fmt=\"valpdf\">📈 Informe de validació (PDF)</button>":"")+(hasIntern(active)?"<button data-fmt=\"internpdf\" title=\"Les entrades internes i les notes internes, en un PDF a part. No és per al client.\">🔒 Informe intern (PDF)</button>":"")+"<button data-fmt=\"zip\" title=\"Tot: tots els informes, els fitxers multimèdia i session.json — la còpia que es pot tornar a importar\">🗄 ZIP del projecte (arxiu)</button><button data-fmt=\"zipdocx\" title=\"L'informe Word amb totes les fotos, vídeos i notes de veu — per lliurar. No es pot tornar a importar.\">📦 ZIP Word + multimèdia</button></div></div>"
+    +"<div class=\"nv-gen-h\">"+esc(nvT("Genera"))+"</div>"
+    +nvRepBtn("pdf","file","PDF",nvT("L'informe complet"))
+    +nvRepBtn("docx","file","Word (DOCX)",nvT("El mateix informe, editable"))
+    +nvRepBtn("html","file","HTML",nvT("Per obrir a qualsevol navegador"))
+    +nvRepBtn("xlsx","grid","Recanvis (Excel)",nvT("Recomanats · Cotització · Canviats · Detall"))
+    +nvRepBtn("timesheet","sign","Full d'hores…",nvT("Les hores fitxades, per signar"))
+    +((active.prodTests||[]).length?nvRepBtn("valpdf","trend","Informe de validació (PDF)",nvPl(active.prodTests.length,"prova","proves")+" · "+nvT("amb signatures")):"")
+    +(hasIntern(active)?nvRepBtn("internpdf","lock","Informe intern (PDF)",nvT("No és per al client"),"Les entrades internes i les notes internes, en un PDF a part. No és per al client.","int"):"")
+    +nvRepBtn("zip","box","ZIP del projecte",nvT("Tot · es pot reimportar"),"Tot: tots els informes, els fitxers multimèdia i session.json — la còpia que es pot tornar a importar")
+    +nvRepBtn("zipdocx","box","ZIP Word + multimèdia",nvT("Per lliurar · sense intern"),"L'informe Word amb totes les fotos, vídeos i notes de veu — per lliurar. No es pot tornar a importar.")
+    +"</div></div>"
     +"<button class=\"btn-sm m2-dk\" id=\"btnM2More2\" title=\"Historial, carpeta, manual, full d'hores, dades de la visita…\">&#8942; Més</button>"
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSync\" title=\"Sincronitza ara\">⟳</button>":"")
     +(isLoggedIn?"<button class=\"btn-g btn-sm\" id=\"btnSessSync\" title=\"Recrea les carpetes de Drive i puja-hi les fotos que hi faltin, d'aquesta sessió\">&#9729; Desa</button>":"")
@@ -5547,7 +5623,8 @@ function renderContent(){
       if(e.target.closest("[data-rev]")){$$("expMenu").style.display="none";openRevisions();return}
       if(e.target.closest("[data-lbl]")){$$("expMenu").style.display="none";openLabels(reportLang(active));return}
       if(e.target.closest("[data-sign]")){$$("expMenu").style.display="none";openReviewSign();return}
-      var f=e.target.dataset.fmt;if(f){$$("expMenu").style.display="none";exportRep(active,f)}
+      // (new design) a line of the menu is a button with an icon and two lines inside it
+      var fb=e.target.closest?e.target.closest("[data-fmt]"):null,f=fb&&fb.dataset.fmt;if(f){$$("expMenu").style.display="none";exportRep(active,f)}
     });
   }
   var btnSy=$$("btnSync");if(btnSy)btnSy.addEventListener("click",function(){loadFromDrive().then(renderAll);flushTrash()});
@@ -6945,7 +7022,7 @@ function m2Hide(){
 //
 // A window with something typed or signed in it (NAV_ASK) asks first, since a
 // back press is easy to make by accident. Saying no keeps it open.
-var NAV_BTN={arxBack:"arxCancel",bulkBack:"bulkCancel",ctrBack:"ctrCancel",delBack:"delCancel",drawBack:"drawClose",
+var NAV_BTN={nvSumBack:"nvSumClose",arxBack:"arxCancel",bulkBack:"bulkCancel",ctrBack:"ctrCancel",delBack:"delCancel",drawBack:"drawClose",
   exBack:"exClose",folBack:"folClose",fsaBack:"fsaCancel",gemBack:"gemCancel",lblBack:"lblCancel",linkBack:"linkClose",
   m2MoreBack:"m2MoreClose",manualsBack:"manualsClose",mhBack:"mhClose",newBack:"nCancel",pdBack:"pdClose",ptBack:"ptDone",
   pvBack:"pvCancel",pvPickBack:"pvPickCancel",revBack:"revCancel",tsBack:"tsCancel",zipPickBack:"zipPickCancel",
@@ -7091,6 +7168,7 @@ function openM2More(){
   function click(id){return function(){var b=$$(id);if(b)b.click()}}
   var secs=[
     ["INFORME",[
+      it("&#128203;",nvT("Resum de la visita"),nvT(isOpen?"abans de tancar":"tancada"),function(){nvSumOpen()}),
       it("&#9997;","Revisa i signa",[revSign(a)?uiT("informe signat"):"",tsSigned(a)?uiT("full signat"):""].filter(Boolean).join(" · "),function(){openReviewSign()}),
       it("&#8595;","Informe i exportació",(r?revNo(r.n):uiT("sense revisió"))+" · "+reportLang(a).toUpperCase(),function(){
         // under whichever button is on screen: Més on the computer, the hidden
@@ -7114,7 +7192,7 @@ function openM2More(){
       it("&#128269;","Cerca al registre","",function(){nvNeedLog();if(!document.body.classList.contains("m2-find"))$$("btnM2Find").click();else focusField($$("filtIn"))}),
       $$("btnSessSync")?it("&#9729;","Desa a Drive",uiT("fotos que hi faltin"),click("btnSessSync")):null,
       $$("btnSync")?it("&#10227;","Sincronitza ara","",click("btnSync")):null,
-      isOpen?it("&#9632;","Tanca la visita","",click("btnClose")):it("&#8634;","Reobre la visita","",click("btnReopen")),
+      isOpen?it("&#9632;","Tanca la visita","",function(){nvSumOpen()}):it("&#8634;","Reobre la visita","",click("btnReopen")),
       // also on the ✕ in the list of visits; here it is next to the rest
       it("&#128465;","Elimina la visita","",function(){openDelModal(a)})
     ]]
@@ -7145,7 +7223,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-14 · 1";
+var APP_VERSION="nou · 2026-11-14 · 2";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -16754,6 +16832,8 @@ function nvHeader(active){
   // the drawer's own heading says "Visites (n)"; as the menu page it names itself
   var sc=$$("sideCount");if(sc&&!active&&nvView==="menu")sc.textContent=nvT(nvWide()?"Configuració":"Menú");
   nvChipPaint();nvNavRender();
+  // the summary window shows this visit: keep it in step, or close it with the visit
+  if(nvSumIsOpen()){if(active)nvSumPaint();else nvSumShut()}
 }
 function nvWho(){
   var n="";
@@ -16800,7 +16880,7 @@ $$("nvNav").addEventListener("click",function(e){
   if(k==="fol"){openFolder();return}
   if(k==="ctr"){openCounters();return}
   if(k==="ts"){openTimesheet();return}
-  if(k==="sum"){openReviewSign();return}
+  if(k==="sum"){nvSumOpen();return}
 });
 $$("nvBack").addEventListener("click",nvBackStep);
 $$("nvRep").addEventListener("click",function(e){
@@ -17316,6 +17396,180 @@ function nvPdHTML(list){
       +"<span class=\"rs "+v+"\">"+esc(v==="pass"?"OK":v==="fail"?nvT("No superada"):v==="run"?nvT("En curs"):"—")+"</span></button>";
   }).join("")+"</div>";
   return h;
+}
+
+// ── THE NEW DESIGN, FLUX 3: THE SUMMARY BEFORE CLOSING, "VISITA LLESTA" (2026-11-14) ──
+// One window (#nvSumBack) with two faces. While the visit is open it is the
+// summary to go through before closing: each part of the visit with where it
+// stands, the client's signature, and the button that closes. Once the visit
+// is closed it is "Visita llesta": the documents, the signature, the ZIP.
+// It reads everything and stores nothing: closing and reopening are the same
+// two changes the old buttons made, and the signature still belongs to the
+// revision and is still made in "Revisa i signa", in front of the report.
+(function(){
+  var es={"Resum de la visita":"Resumen de la visita","abans de tancar":"antes de cerrar","Dades de la visita":"Datos de la visita",
+    "Proves i producció":"Pruebas y producción","Fotografies":"Fotografías","Notes internes":"Notas internas","queden fora":"quedan fuera",
+    "sortida pendent":"salida pendiente","sense lectures":"sin lecturas","sense signar":"sin firmar","signat":"firmado","sense full":"sin hoja",
+    "cap":"ninguna","en curs":"en curso","pendent":"pendiente","pendents":"pendientes","a la cua":"en cola","falta el projecte":"falta el proyecto",
+    "falta el tècnic":"falta el técnico","Signatura del client":"Firma del cliente","Encara sense signar":"Todavía sin firmar",
+    "Revisa l'informe tal com el rebrà el client →":"Revisa el informe tal como lo recibirá el cliente →","Tancar visita":"Cerrar visita",
+    "Visita llesta!":"¡Visita lista!","Tancada el":"Cerrada el","Documents":"Documentos","sense revisió":"sin revisión",
+    "Informe de servei (PDF)":"Informe de servicio (PDF)","Recanvis (Excel)":"Recambios (Excel)","Informe de validació (PDF)":"Informe de validación (PDF)",
+    "Informe intern (PDF)":"Informe interno (PDF)","No és per al client":"No es para el cliente","ZIP del projecte":"ZIP del proyecto",
+    "Tornar a l'inici":"Volver al inicio","Reobre la visita":"Reabre la visita","Queden coses pendents:":"Quedan cosas pendientes:",
+    "Vols tancar la visita igualment? La pots reobrir més endavant.":"¿Quieres cerrar la visita igualmente? La puedes reabrir más adelante.",
+    "Informe sense la signatura del client":"Informe sin la firma del cliente","recanvi":"recambio","recanvis":"recambios","prova":"prueba","proves":"pruebas",
+    "Genera":"Genera","L'informe complet":"El informe completo","El mateix informe, editable":"El mismo informe, editable",
+    "Per obrir a qualsevol navegador":"Para abrir en cualquier navegador","Recomanats · Cotització · Canviats · Detall":"Recomendados · Cotización · Cambiados · Detalle",
+    "Les hores fitxades, per signar":"Las horas fichadas, para firmar","Tot · es pot reimportar":"Todo · se puede reimportar","Per lliurar · sense intern":"Para entregar · sin interno",
+    "Word (DOCX)":"Word (DOCX)","Full d'hores…":"Hoja de horas…","ZIP Word + multimèdia":"ZIP Word + multimedia","amb signatures":"con firmas","tancada":"cerrada"};
+  var en={"Resum de la visita":"Visit summary","abans de tancar":"before closing","Dades de la visita":"Visit details",
+    "Proves i producció":"Tests and production","Fotografies":"Photographs","Notes internes":"Internal notes","queden fora":"left out",
+    "sortida pendent":"departure pending","sense lectures":"no readings","sense signar":"not signed","signat":"signed","sense full":"no timesheet",
+    "cap":"none","en curs":"running","pendent":"pending","pendents":"pending","a la cua":"queued","falta el projecte":"project missing",
+    "falta el tècnic":"technician missing","Signatura del client":"Customer's signature","Encara sense signar":"Not signed yet",
+    "Revisa l'informe tal com el rebrà el client →":"Review the report as the customer will get it →","Tancar visita":"Close visit",
+    "Visita llesta!":"Visit done!","Tancada el":"Closed on","Documents":"Documents","sense revisió":"no revision",
+    "Informe de servei (PDF)":"Service report (PDF)","Recanvis (Excel)":"Spare parts (Excel)","Informe de validació (PDF)":"Validation report (PDF)",
+    "Informe intern (PDF)":"Internal report (PDF)","No és per al client":"Not for the customer","ZIP del projecte":"Project ZIP",
+    "Tornar a l'inici":"Back to home","Reobre la visita":"Reopen the visit","Queden coses pendents:":"Some things are still pending:",
+    "Vols tancar la visita igualment? La pots reobrir més endavant.":"Close the visit anyway? You can reopen it later.",
+    "Informe sense la signatura del client":"Report without the customer's signature","recanvi":"part","recanvis":"parts","prova":"test","proves":"tests",
+    "Genera":"Generate","L'informe complet":"The full report","El mateix informe, editable":"The same report, editable",
+    "Per obrir a qualsevol navegador":"Opens in any browser","Recomanats · Cotització · Canviats · Detall":"Recommended · Quotation · Replaced · Detail",
+    "Les hores fitxades, per signar":"The hours clocked, to be signed","Tot · es pot reimportar":"Everything · can be imported again","Per lliurar · sense intern":"To hand over · no internal",
+    "Word (DOCX)":"Word (DOCX)","Full d'hores…":"Timesheet…","ZIP Word + multimèdia":"ZIP Word + media","amb signatures":"with signatures","tancada":"closed"};
+  Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
+  Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});
+})();
+NV_IC.file="<path d=\"M6 2h8l5 5v15H6z\"/><path d=\"M14 2v5h5\"/>";
+NV_IC.grid="<rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M3 9h18M3 15h18M9 3v18\"/>";
+NV_IC.trend="<path d=\"M3 17l6-6 4 4 8-8\"/><path d=\"M14 7h7v7\"/>";
+// One line of the report menu: what it makes, and a word on what that is.
+function nvRepBtn(fmt,ic,title,sub,tip,cls){
+  return "<button type=\"button\" class=\"nv-gen"+(cls?" "+cls:"")+"\" data-fmt=\""+fmt+"\""+(tip?" title=\""+esc(uiT(tip))+"\"":"")+">"
+    +"<span class=\"ic\">"+nvI(ic,18)+"</span><span><b>"+esc(nvT(title))+"</b>"+(sub?"<small>"+esc(sub)+"</small>":"")+"</span></button>";
+}
+
+function nvSumIsOpen(){var b=$$("nvSumBack");return !!b&&b.style.display==="flex"}
+function nvSumShut(){var b=$$("nvSumBack");if(b)b.style.display="none"}
+function nvSumOpen(){
+  if(!nvActive())return;
+  nvSumWire();nvSumPaint();
+  $$("nvSumBack").style.display="flex";
+}
+// Each part of the visit and where it stands: ok, warn (something to look at
+// before closing), none (not used on this visit) or lock (internal).
+function nvSumState(a){
+  var c=severityCounts(a.entries),inc=c.issue+c.warning;
+  var pend=openEntries(a,closedRefs(machineSessions(a))).length;
+  var tests=a.prodTests||[],lastT=tests[tests.length-1],lr=lastT?ptCalc(lastT):null,running=tests.some(function(t){return t.running});
+  var parts=collectSessionParts(a).length,nPh=0,nQ=0;
+  (a.entries||[]).forEach(function(e){
+    (e.images||[]).concat((e.fix&&e.fix.images)||[]).forEach(function(im){
+      if(!im||im.type==="audio")return;
+      nPh++;if(im.uploadStatus==="queued"||(im.qid&&!im.driveId))nQ++;
+    });
+  });
+  var C=a.counters||{},arr=ctrRead(C.arr),dep=ctrRead(C.dep);
+  var T=a.timesheet,hasT=!!(T&&T.rows&&T.rows.length);
+  var nInt=internCount(a)+(String(a.notesInt||"").trim()?1:0);
+  var rows=[
+    {k:"dades",label:nvT("Dades de la visita"),st:(a.project&&a.tech)?"ok":"warn",note:!a.project?nvT("falta el projecte"):!a.tech?nvT("falta el tècnic"):""},
+    {k:"inc",label:nvT("Incidències")+" ("+inc+")",st:pend?"warn":inc?"ok":"none",note:pend?nvPl(pend,"pendent","pendents"):inc?"":nvT("cap")},
+    {k:"prod",label:nvT("Proves i producció")+" ("+tests.length+")",st:!tests.length?"none":(running||(lr&&lr.verdict==="fail"))?"warn":"ok",
+      note:!tests.length?nvT("cap"):running?nvT("en curs"):lr&&lr.verdict==="fail"?nvT("No superada"):lr&&lr.oee!=null?"OEE "+ptPct(lr.oee,uiLang()):""},
+    {k:"rec",label:nvT("Recanvis")+" ("+parts+")",st:parts?"ok":"none",note:parts?"":nvT("cap")},
+    {k:"fotos",label:nvT("Fotografies")+" ("+nPh+")",st:nPh?"ok":"none",note:nQ?"⏳ "+nQ+" "+nvT("a la cua"):nPh?"":nvT("cap")},
+    {k:"ctr",label:nvT("Comptadors"),st:arr&&!dep?"warn":(arr||dep)?"ok":"none",note:arr&&!dep?nvT("sortida pendent"):(arr||dep)?"":nvT("sense lectures")},
+    {k:"ts",label:nvT("Full d'hores"),st:!hasT?"none":tsSigned(a)?"ok":"warn",note:!hasT?nvT("sense full"):tsSigned(a)?nvT("signat"):nvT("sense signar")}
+  ];
+  if(nInt)rows.push({k:"",label:nvT("Notes internes")+" ("+nInt+")",st:"lock",note:nvT("queden fora")});
+  return {rows:rows,nPh:nPh,parts:parts,tests:tests.length,hasT:hasT};
+}
+function nvSumPaint(){
+  var a=nvActive(),body=$$("nvSumBody"),acts=$$("nvSumActs");
+  if(!a||!body||!acts)return;
+  var isOpen=a.status==="open",S=nvSumState(a),sg=revSign(a)||{},r=curRev(a);
+  $$("nvSumTitle").textContent=nvT("Resum de la visita")+" · "+(a.project||a.client||"");
+  var sig="<section class=\"nv-card nv-sig\"><h3>"+esc(nvT("Signatura del client"))+"</h3>"
+    +"<div class=\"pad\">"+(sg.cliSig?"<img src=\""+sg.cliSig+"\" alt=\"\">":esc(nvT("Encara sense signar")))+"</div>"
+    +"<div class=\"ft\"><span>"+esc([sg.cliName||contactLine(a)||"",sg.signedAt?nvDT(sg.signedAt):""].filter(Boolean).join(" · "))+"</span>"
+    +(r?"<span>"+esc(revNo(r.n))+"</span>":"")+"</div></section>";
+  var h;
+  if(isOpen){
+    h="<section class=\"nv-card nv-chk\">"+S.rows.map(function(x){
+        var mk=x.st==="ok"?nvI("check",13,3.4):x.st==="warn"?"!":x.st==="lock"?nvI("lock",13,2.4):"";
+        return "<button type=\"button\""+(x.k?" data-k=\""+x.k+"\"":" disabled")+"><span class=\"mk "+x.st+"\">"+mk+"</span><span>"+esc(x.label)+"</span>"
+          +"<span class=\"nt"+(x.st==="warn"?" warn":"")+"\">"+esc(x.note||"")+"</span></button>";
+      }).join("")+"</section>"
+      +sig
+      +"<button type=\"button\" class=\"nv-cta\" data-k=\"sign\">"+esc(nvT("Revisa l'informe tal com el rebrà el client →"))+"</button>";
+    acts.innerHTML="<button type=\"button\" data-k=\"back\">"+esc(nvT("Enrere"))+"</button>"
+      +"<button type=\"button\" class=\"btn-gold\" data-k=\"close\">"+nvI("check",18,2.6)+" "+esc(nvT("Tancar visita"))+"</button>"
+      +"<button type=\"button\" id=\"nvSumClose\" style=\"display:none\"></button>";
+  }else{
+    var lang=String(reportLang(a)||"").toUpperCase();
+    function doc(fmt,ic,cls,title,bits){
+      return "<button type=\"button\" class=\"nv-doc\" data-doc=\""+fmt+"\"><span class=\"ic "+cls+"\">"+nvI(ic,20)+"</span>"
+        +"<span style=\"min-width:0\"><b>"+esc(nvT(title))+"</b><small>"+esc(bits.filter(Boolean).join(" · "))+"</small></span>"
+        +"<span class=\"go\">"+nvI("down",20)+"</span></button>";
+    }
+    h="<div class=\"nv-done\"><span class=\"ck\">"+nvI("check",36,3)+"</span><b>"+esc(nvT("Visita llesta!"))+"</b>"
+      +"<span>"+esc(nvT("Tancada el")+" "+(a.closedAt?nvDT(a.closedAt):"—"))+"</span></div>"
+      +"<section class=\"nv-card nv-docs\"><h3>"+esc(nvT("Documents"))+(r?" · "+esc(revNo(r.n)):"")+"</h3>"
+      +doc("pdf","file","","Informe de servei (PDF)",[r?"":nvT("sense revisió"),lang,nvT(sg.cliSig?"signat":"sense signar")])
+      +(S.hasT?doc("timesheet","sign","b","Full d'hores",[nvT(tsSigned(a)?"signat":"sense signar")]):"")
+      +(S.parts?doc("xlsx","grid","b","Recanvis (Excel)",[nvPl(S.parts,"recanvi","recanvis")]):"")
+      +(S.tests?doc("valpdf","trend","","Informe de validació (PDF)",[nvPl(S.tests,"prova","proves")]):"")
+      +(hasIntern(a)?doc("internpdf","lock","y","Informe intern (PDF)",[nvT("No és per al client")]):"")
+      +"</section>"+sig
+      +"<button type=\"button\" class=\"nv-cta\" data-k=\"reopen\">"+esc(nvT("Reobre la visita"))+"</button>";
+    acts.innerHTML="<button type=\"button\" data-k=\"zip\">"+nvI("box",18)+" "+esc(nvT("ZIP del projecte"))+"</button>"
+      +"<button type=\"button\" class=\"btn-gold\" data-k=\"home\">"+nvI("home",18,2.4)+" "+esc(nvT("Tornar a l'inici"))+"</button>"
+      +"<button type=\"button\" id=\"nvSumClose\" style=\"display:none\"></button>";
+  }
+  body.innerHTML=h;
+}
+function nvSumCloseVisit(a){
+  var pend=nvSumState(a).rows.filter(function(x){return x.st==="warn"}).map(function(x){return "· "+x.label+(x.note?": "+x.note:"")});
+  var sg=revSign(a);
+  if(!(sg&&sg.cliSig))pend.push("· "+nvT("Informe sense la signatura del client"));
+  var msg=pend.length?nvT("Queden coses pendents:")+"\n"+pend.join("\n")+"\n\n"+nvT("Vols tancar la visita igualment? La pots reobrir més endavant.")
+                     :uiT("Vols tancar aquesta sessió? La pots reobrir més endavant.");
+  if(!confirm(msg))return;
+  sessions=sessions.map(function(s){return s.id===a.id?Object.assign({},s,{status:"closed",closedAt:now()}):s});
+  scheduleSave();renderAll();   // nvHeader repaints this window, now as "Visita llesta"
+}
+var nvSumWired=false;
+function nvSumWire(){
+  if(nvSumWired)return;nvSumWired=true;
+  var back=$$("nvSumBack");
+  back.addEventListener("click",function(ev){
+    var t=ev.target,a=nvActive(),b;
+    if(t===back||t.closest("#nvSumClose")){nvSumShut();return}
+    if(!a)return;
+    if((b=t.closest("[data-doc]"))){nvSumShut();exportRep(a,b.dataset.doc);return}
+    b=t.closest("[data-k]");if(!b)return;
+    var k=b.dataset.k;
+    if(k==="back"){nvSumShut();return}
+    if(k==="close"){nvSumCloseVisit(a);return}
+    if(k==="reopen"){
+      if(!confirm(uiT("Vols reobrir aquesta sessió?")))return;
+      sessions=sessions.map(function(s){return s.id===a.id?Object.assign({},s,{status:"open",closedAt:null}):s});
+      scheduleSave();renderAll();return;
+    }
+    if(k==="zip"){nvSumShut();exportRep(a,"zip");return}
+    if(k==="home"){nvSumShut();nvGo("home");return}
+    if(k==="sign"){nvSumShut();openReviewSign();return}
+    // a part of the visit: the tabs are behind this window, the rest opens over it
+    if(k==="inc"||k==="rec"){nvSumShut();nvSetTab(k);return}
+    if(k==="fotos"){nvSumShut();nvSetTab("rec");return}
+    if(k==="dades"){openNewModal(a);return}
+    if(k==="prod"){openProdList();return}
+    if(k==="ctr"){openCounters();return}
+    if(k==="ts"){openTimesheet();return}
+  });
 }
 
 // ── CLOSE DROPDOWNS ───────────────────────────────────────────────────────────

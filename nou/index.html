@@ -1194,6 +1194,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
 @media(max-width:700px){
   /* a window's title is the navy bar on the phone: the red of "Elimina" does not read on it */
   body.m2 #delBack .modal>.modal-title{color:#fff!important}
+  body.m2 .modal>.modal-title .btn-g{color:#fff}
+  body.m2 .modal>.modal-title .btn-g:hover{background:rgba(255,255,255,.12)}
+  body.m2 .modal>.modal-title #drawManual{color:var(--navysub)!important}
 }
 
 /* ── The desktop board B33 (2026-11-14): from 701 px a visit is ONE page of cards ──
@@ -1229,6 +1232,85 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
   .nv-dk-acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px;padding-top:12px;border-top:1px solid var(--br)}
   .nv-dk-acts button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;border-radius:12px;padding:8px 18px}
   .nv-dk-acts [data-k=back]{display:none}
+}
+
+/* ── The three windows that had kept their old arrangement (2026-11-14):
+   counters (B16), the production test and its live clock (B14), the part
+   picked on a drawing (B13) ── */
+#ctrBack .modal,#ptBack .modal{background:var(--bg0)}
+#ctrBack .modal-actions,#ptBack .modal-actions{background:var(--bg1)}
+/* counters */
+.ctr-blk{padding:12px 14px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px}
+.ctr-blk.pend{border-color:#F0A92E}
+.ctr-blk .hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.ctr-blk .hd b{font-size:14px;font-weight:600}
+.ctr-blk .hd span{font-size:12px;color:var(--tx3)}
+.ctr-blk .g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ctr-blk label{display:flex;flex-direction:column;gap:3px;font-size:11px;font-weight:600;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase}
+.ctr-blk .in{display:flex;align-items:center;gap:6px;height:48px;border:1px solid var(--br2);border-radius:10px;padding:0 10px;background:var(--bg1)}
+.ctr-blk.pend .in{border-style:dashed}
+.ctr-blk .in:focus-within{border-color:var(--accs);border-style:solid;box-shadow:0 0 0 3px var(--goldbg)}
+.ctr-blk .in input{flex:1;min-width:0;width:100%;border:0!important;box-shadow:none!important;padding:0!important;margin:0!important;font-size:18px!important;font-weight:600;background:none}
+.ctr-blk .in i{font-style:normal;font-size:11px;font-weight:400;color:var(--tx3);text-transform:none;letter-spacing:0}
+.ctr-blk .at>span{display:flex;gap:6px;align-items:center}
+.ctr-blk .at input{flex:1;min-width:0}
+.ctr-unit{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--tx3);margin:2px 2px 10px}
+.ctr-navy{background:var(--navy);color:#fff;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.ctr-navy .hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.ctr-navy .hd b{font-size:14px;font-weight:600}
+.ctr-navy .hd span{font-size:12px;color:var(--navysub)}
+.ctr-navy .g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px}
+.ctr-navy small{display:block;font-size:11px;letter-spacing:.06em;color:var(--navysub)}
+.ctr-navy .g2 b{display:block;font-size:22px;font-weight:600;line-height:1.3}
+.ctr-navy .g2 span{font-size:12px;color:#D3E0F5}
+.ctr-navy .pv{font-size:12px;color:#D3E0F5;border-top:1px solid rgba(255,255,255,.12);padding-top:8px}
+.ctr-warn{background:var(--int-bg);border:1px solid var(--int-bd);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--int-tx);margin-bottom:8px}
+/* the production test */
+.pt-live{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:0;border:0;background:none}
+.pt-live>button{min-height:52px;border-radius:12px;font-size:15px}
+.pt-clock{font-family:inherit}
+.pt-now{background:var(--navy);color:#fff;border-radius:14px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.pt-now .st{font-size:12px;letter-spacing:.08em;color:var(--navysub);text-transform:uppercase}
+.pt-now .ck{font-size:52px;font-weight:600;line-height:1}
+.pt-now.stop .ck{color:#FCD98A}
+.pt-now .k3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:100%;margin-top:6px;text-align:center;font-size:12px;color:#D3E0F5}
+.pt-now .k3 b{display:block;font-size:16px;font-weight:600;color:#fff}
+.pt-now .k3 b.w{color:#FCD98A}
+.pt-big{display:grid;grid-template-columns:2fr 1fr;gap:8px}
+.pt-big button{height:72px;border-radius:14px;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;white-space:normal}
+.pt-big .halt{background:#C2410C;border-color:#C2410C;color:#fff;font-size:18px}
+.pt-big .go{background:#1B7F3B;border-color:#1B7F3B;color:#fff;font-size:18px}
+#ptBack .pt-grid,#ptBack #ptStops,#ptBack .pt-crit,#ptBack #ptRes{background:var(--bg1);border:1px solid var(--br);border-radius:14px;box-shadow:var(--sh);padding:12px}
+#ptBack .pt-grid{gap:8px 12px;margin-top:2px}
+#ptBack .pt-grid .field{margin:0}
+#ptBack .pt-sec{font-size:13px;font-weight:700;letter-spacing:.05em;color:var(--tx3);margin:16px 2px 6px}
+#ptBack .pt-stop .pt-dur,#ptBack .pt-res td.v{font-family:inherit}
+#ptBack #ptStopAdd{margin-top:8px}
+/* the part picked on a drawing: a sheet under the drawing */
+#drawChoices.draw-pick{order:9;flex-direction:column;gap:12px;background:var(--bg1);border:0;border-radius:16px 16px 0 0;box-shadow:0 -6px 18px rgba(11,31,58,.12);margin:-14px -14px 0;padding:14px 14px 16px;position:relative;z-index:2}
+#drawSets{order:10;margin:8px 0 0!important}
+.draw-pick .hd{display:flex;align-items:center;gap:10px}
+.draw-pick .no{width:40px;height:40px;flex:none;border-radius:50%;background:var(--accs);color:#fff;font-weight:600;display:flex;align-items:center;justify-content:center}
+.draw-pick .tx{flex:1;min-width:0}
+.draw-pick .tx b{display:block;font-size:15px;font-weight:600;word-break:break-word}
+.draw-pick .tx small{display:block;font-size:13px;color:var(--tx3);word-break:break-word}
+.draw-pick .qt{display:flex;align-items:center;flex:none;border:1px solid var(--br2);border-radius:10px;overflow:hidden}
+.draw-pick .qt button{width:40px;height:44px;padding:0;border:0;border-radius:0;background:transparent;font-size:18px}
+.draw-pick .qt input{width:44px;height:44px;padding:0!important;border:0!important;box-shadow:none!important;border-radius:0;text-align:center;font-size:15px!important;font-weight:600;background:none}
+.draw-pick .g4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.draw-pick .g4 button{height:48px;border-radius:10px;font-size:14px;font-weight:600}
+.draw-pick .st-fit{background:#1E4FA8;border-color:#1E4FA8;color:#fff}
+.draw-pick .st-urg{background:#B42318;border-color:#B42318;color:#fff}
+.draw-pick .st-prev{background:var(--goldbg);border-color:var(--br2);color:var(--gold)}
+.draw-pick .st-quo{background:#F1EBFB;border-color:#C5B3E6;color:#5B2E9E}
+.draw-pick button.last{box-shadow:0 0 0 2px var(--bg1),0 0 0 4px var(--navy)}
+.draw-pick .ft{display:flex;align-items:center;gap:8px}
+.draw-pick .ft i{flex:1;height:1px;background:var(--br)}
+.draw-pick .ft button{height:44px;padding:0 16px;border-radius:10px;font-size:13px}
+#drawSets button{flex:1 1 100%;min-height:48px;border:1px dashed var(--br2);border-radius:10px;background:var(--bg1);font-size:13px;white-space:normal}
+@media(min-width:701px){
+  #drawChoices.draw-pick{margin:8px 0 0;border-radius:14px;border:1px solid var(--br);box-shadow:var(--sh)}
+  .draw-pick .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
 }
 </style>
 </head>
@@ -4449,42 +4531,51 @@ function confirmAndAdd(r){
   if(viewerPickPurpose==="text"){insertPartText(r);return}
   var box=$$("drawChoices");
   if(!box){addResolvedPart(r);return} // no panel available: keep the old behaviour
+  // (new design) a sheet under the drawing: what was tapped, how many, and one
+  // button for each thing it can be. The look is .draw-pick in the stylesheet;
+  // what each button does is what it always did.
   box.innerHTML="";
-  box.style.cssText="display:block;background:var(--bg1);border:1px solid var(--br2);border-radius:8px;padding:10px;margin-bottom:8px";
+  box.className="draw-pick";
+  box.style.cssText="display:flex";
   var ctx=(r.subgrup||r.grup||"")+(r.num?" · Nº "+r.num:"");
-  var head=document.createElement("div");
-  head.style.cssText="font-size:12px;color:var(--tx2);margin-bottom:8px";
-  head.innerHTML=r.set
-    ?"<strong>&#128230; Conjunt sencer"+(r.ref?" · "+esc(r.ref):"")+"</strong> "+esc(r.denominacio||"")
-    :"<strong>Pos "+esc(r.pos)+(r.ref?" · "+esc(r.ref):"")+"</strong> "+esc(r.denominacio||"")
-    +(ctx?" <span style=\"color:var(--tx3)\">("+esc(ctx)+")</span>":"");
+  var head=document.createElement("div");head.className="hd";
+  head.innerHTML="<span class=\"no\">"+(r.set?"&#128230;":esc(r.pos||"·"))+"</span>"
+    +"<span class=\"tx\"><b>"+esc(r.denominacio||"—")+"</b>"
+    +"<small>"+esc([r.ref,r.set?nvT("conjunt sencer"):"",ctx].filter(Boolean).join(" · "))+"</small></span>";
+  var qt=document.createElement("span");qt.className="qt";
+  var minus=document.createElement("button");minus.type="button";minus.textContent="−";minus.setAttribute("aria-label","−");
+  var inp=document.createElement("input");inp.type="text";inp.inputMode="numeric";inp.value=r.cant||"";inp.setAttribute("aria-label","Qt.");
+  var plus=document.createElement("button");plus.type="button";plus.textContent="+";plus.setAttribute("aria-label","+");
+  function step(by){var n=parseFloat(String(inp.value).replace(",","."));if(isNaN(n))n=0;inp.value=String(Math.max(1,n+by))}
+  minus.addEventListener("click",function(){step(-1)});
+  plus.addEventListener("click",function(){step(1)});
+  qt.appendChild(minus);qt.appendChild(inp);qt.appendChild(plus);head.appendChild(qt);
   box.appendChild(head);
-  var row=document.createElement("div");
-  row.style.cssText="display:flex;align-items:center;gap:8px;flex-wrap:wrap";
-  var lab=document.createElement("span");lab.style.cssText="font-size:12px;color:var(--tx3)";lab.textContent="Qt.";
-  var inp=document.createElement("input");inp.type="text";inp.inputMode="numeric";
-  inp.value=r.cant||"";inp.style.cssText="width:70px;font-size:13px;padding:5px 7px;text-align:center";
   // One tap says both "add it" and what it is: replaced here, or recommended.
-  // The one used last is highlighted, and Enter repeats it.
-  var cancel=document.createElement("button");cancel.className="btn-sm";cancel.textContent="Cancel·la";
+  // The one used last is ringed, and Enter repeats it.
   function done(){box.style.display="none"}
   var btns={};
   PART_STS.forEach(function(st){
-    var b=document.createElement("button");
-    b.className="btn-sm"+(st===lastPartSt?" btn-gold":"");b.textContent=PST_APP[st];b.title=PST_TIP[st];
+    var b=document.createElement("button");b.type="button";
+    b.className="st-"+st+(st===lastPartSt?" last":"");
+    b.textContent=nvT(st==="inf"?"Només informatiu":NV_PST[st]);b.title=PST_TIP[st];
     b.addEventListener("click",function(){done();addResolvedPart(r,inp.value,st)});
     btns[st]=b;
   });
   inp.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();btns[lastPartSt].click()}});
+  var g4=document.createElement("div");g4.className="g4";
+  ["fit","urg","prev","quo"].forEach(function(st){if(btns[st])g4.appendChild(btns[st])});
+  box.appendChild(g4);
+  // Last, and apart from the other four: those ask somebody for something,
+  // this one only says which part is being talked about.
+  var ft=document.createElement("div");ft.className="ft";
+  var cancel=document.createElement("button");cancel.type="button";cancel.textContent="Cancel·la";
   cancel.addEventListener("click",function(){done();setDrawStatus("")});
-  row.appendChild(lab);row.appendChild(inp);row.appendChild(btns.fit);row.appendChild(btns.quo);
-  var rl=document.createElement("span");rl.style.cssText="font-size:12px;color:var(--tx3);margin-left:4px";rl.textContent="Recomanat:";
-  row.appendChild(rl);row.appendChild(btns.urg);row.appendChild(btns.prev);
-  // Last, and apart from the other four: those three ask somebody for
-  // something, this one only says which part is being talked about.
-  row.appendChild(btns.inf);row.appendChild(cancel);
-  box.appendChild(row);
-  setTimeout(function(){focusField(inp,true)},30);
+  ft.appendChild(cancel);ft.appendChild(document.createElement("i"));if(btns.inf)ft.appendChild(btns.inf);
+  box.appendChild(ft);
+  // with a keyboard the quantity is where typing starts; on a phone the two
+  // steppers do it, and raising the keyboard would cover the sheet
+  if(!handheld())setTimeout(function(){focusField(inp,true)},30);
 }
 // Scope a tapped Pos to the SUBGRUP (drawing) that owns the current page — a
 // single drawing's Pos numbering is unique, so this resolves to exactly one
@@ -4557,7 +4648,7 @@ function renderDrawSets(){
 }
 function showPickChoices(pos,rows,offPage){
   var box=$$("drawChoices");if(!box)return;
-  box.innerHTML="";
+  box.innerHTML="";box.className="";   // not the part sheet: a plain list
   box.style.cssText="display:block;background:var(--bg1);border:1px solid var(--br2);border-radius:8px;padding:8px;margin-bottom:8px;max-height:38vh;overflow:auto";
   var title=document.createElement("div");
   title.style.cssText="font-size:12px;color:var(--tx2);margin-bottom:6px";
@@ -7320,7 +7411,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-14 · 4";
+var APP_VERSION="nou · 2026-11-14 · 5";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -7449,22 +7540,26 @@ function openCounters(){
   var a=sessions.find(function(x){return x.id===aid});if(!a)return;
   ctrSessId=a.id;
   var c=a.counters||{};
+  // (new design) a card for each reading: when it was taken on the right, the two
+  // numbers large with their unit, and the moment below. The departure is
+  // marked while it is still to be noted down.
   function blk(k,lab){
-    var r=c[k]||{};
+    var r=c[k]||{},has=!!(r.h||r.u);
     var sug=ctrSuggestTs(k);
-    return "<div style=\"border:1px solid var(--br);border-radius:8px;padding:8px 10px;margin-bottom:8px\">"
-      +"<div style=\"font-weight:700;font-size:12px;margin-bottom:6px\">"+lab+"</div>"
-      +"<div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px 10px;align-items:end\">"
-      +"<label style=\"font-size:11px;color:var(--tx3)\">Hores de màquina<input type=\"text\" inputmode=\"decimal\" data-ctr=\""+k+"h\" value=\""+esc(r.h||"")+"\" style=\"width:100%;margin-top:2px\"></label>"
-      +"<label style=\"font-size:11px;color:var(--tx3)\">Producte total<input type=\"text\" inputmode=\"numeric\" data-ctr=\""+k+"u\" value=\""+esc(r.u||"")+"\" style=\"width:100%;margin-top:2px\"></label>"
-      +"<label style=\"font-size:11px;color:var(--tx3);grid-column:1/-1\">Data i hora<span style=\"display:flex;gap:4px;margin-top:2px\"><input type=\"datetime-local\" data-ctr=\""+k+"at\" value=\""+esc(tsToInput(r.at||sug))+"\" style=\"flex:1;min-width:0\">"
+    return "<div class=\"nv-card ctr-blk"+(k==="dep"&&!has?" pend":"")+"\">"
+      +"<div class=\"hd\"><b>"+lab+"</b><span>"+(has&&r.at?esc(nvDM(r.at)+" · "+nvHM(r.at)):esc(nvT("pendent")))+"</span></div>"
+      +"<div class=\"g2\">"
+      +"<label>Hores de màquina<span class=\"in\"><input type=\"text\" inputmode=\"decimal\" data-ctr=\""+k+"h\" value=\""+esc(r.h||"")+"\"><i>h</i></span></label>"
+      +"<label>Producte total<span class=\"in\"><input type=\"text\" inputmode=\"numeric\" data-ctr=\""+k+"u\" value=\""+esc(r.u||"")+"\"><i>u</i></span></label>"
+      +"</div>"
+      +"<label class=\"at\">Data i hora<span><input type=\"datetime-local\" data-ctr=\""+k+"at\" value=\""+esc(tsToInput(r.at||sug))+"\">"
       +"<button type=\"button\" class=\"btn-xs\" data-ctrsug=\""+k+"\" title=\""+esc(fts(sug))+"\">"+(k==="arr"?"Inici":"Final")+"</button>"
       +"<button type=\"button\" class=\"btn-xs\" data-ctrnow=\""+k+"\" title=\"Ara\">Ara</button></span></label>"
-      +"</div></div>";
+      +"</div>";
   }
   var cu=c.unit||rateDefUnit();
   $$("ctrGrid").innerHTML=blk("arr","Arribada")+blk("dep","Sortida")
-    +"<label style=\"display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx3)\">Ritme de producció en"
+    +"<label class=\"ctr-unit\">Ritme de producció en"
     +"<select id=\"ctrUnit\" style=\"width:auto\"><option value=\"h\""+(cu==="h"?" selected":"")+">unitats/h</option><option value=\"min\""+(cu==="min"?" selected":"")+">unitats/min</option></select></label>";
   $$("ctrBack").style.display="flex";
   if(!ctrWired){
@@ -7506,15 +7601,25 @@ function ctrCollect(){
 function ctrSum(){
   var a=sessions.find(function(x){return x.id===ctrSessId});if(!a)return;
   var s=Object.assign({},a,{counters:ctrCollect()}),C=RPT.ca.ctr,out=[];
-  var pv=ctrPrev(s),first=ctrFirst(s);
+  var pv=ctrPrev(s),first=ctrFirst(s),unit=s.counters.unit;
   if(pv){
-    out.push("<div style=\"color:var(--tx3);font-size:12px\">Visita anterior amb lectura: "+esc(pv.s.project||"")+(pv.r.at?" · "+mhDate(pv.r.at):"")
-      +" · "+(pv.r.h!=null?esc(ctrFmt(pv.r.h,"ca",1))+" h":"")+(pv.r.h!=null&&pv.r.u!=null?" · ":"")+(pv.r.u!=null?esc(ctrFmt(pv.r.u,"ca",0))+" u":"")+"</div>");
-    var t=first?ctrDeltaText(ctrDelta(pv.r,first),C,"ca",s.counters.unit):"";
-    if(t)out.push("<div><strong>"+esc(C.since)+":</strong> "+esc(t)+"</div>");
+    var d=first?ctrDelta(pv.r,first):null;
+    var prevLine=(pv.r.h!=null?ctrFmt(pv.r.h,"ca",1)+" h":"")+(pv.r.h!=null&&pv.r.u!=null?" · ":"")+(pv.r.u!=null?ctrFmt(pv.r.u,"ca",0)+" u":"");
+    if(d&&d.reset)out.push("<div class=\"ctr-warn\">"+esc(C.reset)+"</div>");
+    if(d&&!d.reset&&(d.dh!=null||d.du!=null)){
+      // (new design) what the machine has done since the last visit, as figures
+      var dd=d.days!=null&&d.days>=1?Math.round(d.days):0;
+      out.push("<div class=\"ctr-navy\"><div class=\"hd\"><b>"+esc(C.since)+"</b><span>"
+        +esc([pv.s.project,pv.r.at?mhDate(pv.r.at):"",dd?dd+" "+(dd===1?C.day1:C.days):""].filter(Boolean).join(" · "))+"</span></div>"
+        +"<div class=\"g2\">"
+        +(d.dh!=null?"<div><small>"+esc(nvT("HORES"))+"</small><b>"+esc(ctrFmt(d.dh,"ca",1))+" h</b>"+(d.hpd!=null?"<span>"+esc(ctrFmt(d.hpd,"ca",1)+" "+C.perDay)+"</span>":"")+"</div>":"")
+        +(d.du!=null?"<div><small>"+esc(nvT("UNITATS"))+"</small><b>"+esc(ctrFmt(d.du,"ca",0))+"</b>"
+          +(d.uph!=null?"<span>"+esc(unit==="min"?ctrFmt(d.uph/60,"ca",1)+" "+(C.perMin||C.perHour):ctrFmt(d.uph,"ca",0)+" "+C.perHour)+"</span>":"")+"</div>":"")
+        +"</div><div class=\"pv\">"+esc(nvT("Lectura anterior"))+": "+esc(prevLine)+"</div></div>");
+    }else out.push("<div style=\"color:var(--tx3);font-size:12px\">Visita anterior amb lectura: "+esc(pv.s.project||"")+(pv.r.at?" · "+mhDate(pv.r.at):"")+" · "+esc(prevLine)+"</div>");
   }else out.push("<div style=\"color:var(--tx3);font-size:12px\">Cap visita anterior d'aquesta màquina amb lectures: aquesta serà la primera.</div>");
   var c=s.counters,da=ctrRead(c.arr),db=ctrRead(c.dep);
-  if(da&&db){var d=ctrDeltaText(ctrDelta(da,db),C,"ca",s.counters.unit);if(d)out.push("<div><strong>"+esc(C.during)+":</strong> "+esc(d)+"</div>")}
+  if(da&&db){var dt=ctrDeltaText(ctrDelta(da,db),C,"ca",s.counters.unit);if(dt)out.push("<div><strong>"+esc(C.during)+":</strong> "+esc(dt)+"</div>")}
   $$("ctrSum").innerHTML=out.join("");
 }
 function prodChipHTML(s){
@@ -7631,20 +7736,33 @@ function ptRenderLive(){
   el.dataset.state=state;
   if(state==="new"){el.innerHTML="<button class=\"btn-gold\" data-live=\"start\">&#9654; Inicia la prova ara</button><span class=\"ts-note\">o omple les hores a mà, a sota</span>";return}
   if(state==="run"||state==="stop"){
-    el.innerHTML="<span class=\"pt-clock\" id=\"ptClk\">● —</span>"
-      +(state==="stop"?"<span class=\"pt-clock stop\" id=\"ptClkStop\">—</span><button class=\"btn-gold\" data-live=\"resume\">&#9654; Represa</button>"
-                      :"<button data-live=\"stop\">&#9208; Aturada</button>")
-      +"<button class=\"btn-danger\" data-live=\"end\">&#9632; Finalitza</button>";
+    // (new design) the clock is the screen: large, navy, with what the test has
+    // run and lost so far, and two buttons a hand finds without looking
+    el.innerHTML="<div class=\"pt-now"+(state==="stop"?" stop":"")+"\">"
+      +"<div class=\"st\">"+esc(nvT(state==="stop"?"Aturada":"En marxa"))+" · "+esc(nvT("des de les"))+" "+nvHM(state==="stop"?open.start:t.start)+"</div>"
+      +"<div class=\"ck\" id=\""+(state==="stop"?"ptClkStop":"ptClk")+"\">—</div>"
+      +(state==="stop"?"<div class=\"st\">"+esc(nvT("la prova"))+" · <span id=\"ptClk\">—</span></div>":"")
+      +"<div class=\"k3\"><div><b id=\"ptKRun\">—</b>"+esc(nvT("min en marxa"))+"</div><div><b id=\"ptKLost\" class=\"w\">—</b>"+esc(nvT("min perduts"))+"</div>"
+      +"<div><b id=\"ptKAv\">—</b>"+esc(nvT("disponibilitat"))+"</div></div></div>"
+      +"<div class=\"pt-big\">"+(state==="stop"?"<button class=\"go\" data-live=\"resume\">&#9654; "+esc(nvT("Represa"))+"</button>"
+                                             :"<button class=\"halt\" data-live=\"stop\">&#9208; "+esc(nvT("Aturada"))+"</button>")
+      +"<button data-live=\"end\">&#9632; "+esc(nvT("Finalitza"))+"</button></div>";
     ptTick();return;
   }
   el.innerHTML="<span class=\"ts-note\">"+(state==="done"?"Prova acabada. Les hores i les aturades es poden corregir a sota."
     :"Falta l'hora final.")+"</span>"+(state==="half"?"<button data-live=\"resumeTest\">&#9654; Continua en directe</button>":"");
 }
+function nvHMS(ms){var x=Math.max(0,Math.floor(ms/1000));return nvP2(Math.floor(x/3600))+":"+nvP2(Math.floor(x/60)%60)+":"+nvP2(x%60)}
 function ptTick(){
   var t=ptTest();if(!t||!t.running)return;
-  var c=$$("ptClk");if(c)c.textContent="● En curs · "+ptClock(Date.now()-ptMs(t.start));
+  var c=$$("ptClk");if(c)c.textContent=nvHMS(Date.now()-ptMs(t.start));
   var open=(t.stops||[]).filter(function(x){return x.start&&!x.end})[0];
-  var cs=$$("ptClkStop");if(cs&&open)cs.textContent="Aturada · "+ptClock(Date.now()-ptMs(open.start));
+  var cs=$$("ptClkStop");if(cs&&open)cs.textContent=nvHMS(Date.now()-ptMs(open.start));
+  // the three figures under the clock, as of this second
+  var r=ptCalc(t,Date.now()),e;
+  if((e=$$("ptKRun")))e.textContent=r.runMin!=null?ctrFmt(r.runMin,"ca",1):"—";
+  if((e=$$("ptKLost")))e.textContent=r.downMin!=null?ctrFmt(r.downMin,"ca",1):"—";
+  if((e=$$("ptKAv")))e.textContent=r.avail!=null?Math.round(r.avail*100)+" %":"—";
   ptRenderRes();
 }
 function ptRenderRes(){
@@ -17748,6 +17866,17 @@ function nvDeskRender(a,isOpen){
   };
 }
 
+// ── THE NEW DESIGN: the words of the counters, the live test and the part sheet (2026-11-14) ──
+(function(){
+  var es={"HORES":"HORAS","UNITATS":"UNIDADES","Lectura anterior":"Lectura anterior","En marxa":"En marcha","Aturada":"Parada","des de les":"desde las",
+    "la prova":"la prueba","min en marxa":"min en marcha","min perduts":"min perdidos","disponibilitat":"disponibilidad","Represa":"Reanuda",
+    "Finalitza":"Finaliza","Només informatiu":"Solo informativo"};
+  var en={"HORES":"HOURS","UNITATS":"UNITS","Lectura anterior":"Previous reading","En marxa":"Running","Aturada":"Stopped","des de les":"since",
+    "la prova":"the test","min en marxa":"min running","min perduts":"min lost","disponibilitat":"availability","Represa":"Resume",
+    "Finalitza":"Finish","Només informatiu":"For information only"};
+  Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
+  Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});
+})();
 // ── CLOSE DROPDOWNS ───────────────────────────────────────────────────────────
 document.addEventListener("click",function(){var m=$$("expMenu");if(m)m.style.display="none"});
 

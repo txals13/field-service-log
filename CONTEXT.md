@@ -3644,8 +3644,7 @@ phone (keyboard over the sheet, camera, voice), anything on Drive, generating
 any report, the interface in Spanish or English, the dark theme screen by
 screen.
 
-**Still to do:** the layouts of B13 / B14 / B16 and the reports (B34–B40),
-last. The four phone flows and the desktop board are done.
+**Still to do:** the reports (B34–B40). Every screen of the app is done.
 
 ### Flux 2 of the redesign (2026-11-14, version `nou · 2026-11-14 · 1`)
 
@@ -3804,6 +3803,47 @@ each, closing and reopening from the summary's card, "+ Nova" opening the
 composer on Problema; and at 375 px that the tabs still draw their pages and
 `#nvDesk` is empty. No console errors. **NOT verified:** widths between 701
 and 900 px (one column), a real tablet, opening a test from its card.
+
+### Counters, the live test, the part on a drawing — B16, B14, B13 (2026-11-14, version `nou · 2026-11-14 · 5`)
+
+The three windows that had kept their old arrangement. **What each button
+does is what it always did**; what changed is what is drawn.
+
+- **Comptadors (B16).** `blk()` in `openCounters` draws each reading as a card
+  (when it was taken, the two numbers large with their unit, the moment
+  below); the departure is marked amber and dashed while it is still to be
+  noted. `ctrSum` draws what the machine did since the last visit as a navy
+  block of figures (hours, units, per day, per hour) instead of one line of
+  text; a counter that went DOWN shows the app's own warning. The inputs keep
+  their `data-ctr` names, so reading and saving are untouched.
+- **Prova en directe (B14).** `ptRenderLive`, while the test runs: a navy block
+  with the clock large (`nvHMS`, always h:m:s), the minutes run and lost and
+  the availability so far (`ptTick` fills them every second from
+  `ptCalc(t,Date.now())`), and two big buttons — Aturada / Represa, and
+  Finalitza. Stopped, the big clock is the stop's and turns amber, with the
+  test's own below. The buttons keep their `data-live` names. The rest of
+  the window is the same form, on cards.
+- **Recanvi des del dibuix (B13).** `confirmAndAdd` builds a sheet UNDER the
+  drawing (`#drawChoices.draw-pick`, `order:9`): the position in a circle, the
+  name, a stepper for the quantity, the four states as large buttons (the one
+  used last is ringed, Enter still repeats it), "Només informatiu" apart, and
+  "Conjunt sencer" (`#drawSets`) as a dashed button below. On a phone the
+  quantity is no longer focused on opening — the stepper does it, and the
+  keyboard would cover the sheet. `showPickChoices` (the list when a position
+  is ambiguous) resets the class and stays a plain list.
+- On the phone a window's title is the navy bar, and what sat inside it in a
+  dark colour (the viewer's close cross, the manual's name) did not read:
+  white now.
+
+**Verified in the preview:** the counters (a previous visit's reading, typing
+the departure, saving, reopening; phone and desktop) and a whole live test
+(start, stop, resume, finish). **The part sheet could not be reached through
+the app** — it needs a manual with its drawings, which needs Drive — so it
+was exercised by taking `confirmAndAdd`'s own source out of the page, running
+it against the real window with its helpers stubbed, and checking the stepper
+and that "Urgent" hands over the right quantity and state. **NOT verified:**
+the sheet over a real drawing, with marks and zoom; a counter that went down;
+a real phone.
 
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does

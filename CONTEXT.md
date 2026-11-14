@@ -3644,9 +3644,55 @@ phone (keyboard over the sheet, camera, voice), anything on Drive, generating
 any report, the interface in Spanish or English, the dark theme screen by
 screen.
 
-**Still to do:** Flux 2 (incidències, historial, recanvis, proves,
-comptadors), Flux 3 (resum, signatura, informe), Flux 4 (despeses, fitxers,
+**Still to do:** Flux 3 (resum, signatura, informe), Flux 4 (despeses, fitxers,
 arxiu), the rest of the desktop board B33, and the reports (B34–B40) last.
+
+### Flux 2 of the redesign (2026-11-14, version `nou · 2026-11-14 · 1`)
+
+Boards B10–B16. The starred ones (B10, B11, B12, B15) are redesigned; B13,
+B14 and B16 are still the old windows with the new look.
+
+- **Incidències and Recanvis are pages of their own now**, not filters:
+  `renderLogArea` hands `#logArea` to `nvIncRender` / `nvRecRender` when
+  `nvTab` is `inc` / `rec`. **Nothing new is stored**: an incident is an entry
+  that says problem or warning, a part is a line of an entry.
+- **Incidències** (`nvIncRender`): this visit's problems and warnings, the
+  open ones first, each with its state (Pendent / En procés / Resolta), the
+  outcome and how long it took, and its first photo. "✔ Com ha quedat" opens
+  the edit window and presses `#fixAdd`. Under "D'altres visites": what
+  earlier visits of this machine left open; "Tanca-la des d'aquesta visita"
+  (`nvCloseFrom`) asks, adds an OK entry here with the same `closes` link the
+  edit window's selector writes, and opens it to be told how. On this tab the
+  button at the foot says "Nou problema" and opens the composer on Problema.
+- **Recanvis** (`nvRecRender`): Recanvis utilitzats (`fit`), Recomanats al
+  client (`urg`, `prev`, `quo`, urgent first), Només informatius (`inf`), from
+  `collectSessionParts`. A row opens its entry. "Afegir recanvi des del
+  dibuix" opens the composer and presses `#btnPickDraw`; with no manual linked
+  it says so and opens the link window. Then the photos of the visit (six
+  tiles, the last one "+N") and the way to the folder.
+- **Historial de la màquina:** `mhRender` is untouched but for four class
+  names (`mh-mets`, `mh-met`, `mh-h`); its inline styles are also what gets
+  PRINTED, so the screen restyles them from the stylesheet, scoped to
+  `#mhBody`. Do not move those styles into classes without checking the print.
+- **Proves de producció:** `pdRender` draws the list with `nvPdHTML`: the
+  latest test on top (or the running one) with OEE, availability, performance
+  and quality against what was agreed, the OEE of every test as a curve with
+  the target (from two finished tests on), and each test with its verdict. A
+  test still opens the old test window. "Informe de validació" is the main
+  button once there is a test.
+- New words go in `NV_T` (the section merges its own at the top).
+
+**Verified in the preview** (phone and desktop, made-up visit with two tests,
+five parts and nine photos): both tabs, "Com ha quedat", closing an earlier
+problem (the entry is created with its link and the old problem leaves the
+list), the tests list and the history window. No console errors. **NOT
+verified:** a real phone, a visit with a linked manual (the button to the
+drawings), a running test, Spanish and English on these screens.
+
+**Not done in this flow:** the particular layouts of B13 (the part panel under
+the drawing), B14 (the live test with its navy clock) and B16 (the counters
+with the "since the last visit" block). They work as before, in the new
+colours.
 
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does

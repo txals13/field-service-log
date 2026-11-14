@@ -982,6 +982,103 @@ body.m2 #m2MoreBack .modal>.modal-title{position:static;margin:0;padding:8px 6px
   body.m2 #expMenu{position:fixed!important;left:auto!important;right:16px!important;top:66px!important;width:400px!important;max-width:calc(100vw - 32px)!important;max-height:calc(100dvh - 84px)!important;z-index:95}
   body.m2 .exp-menu .m2-sheet-hdr{display:none}
 }
+
+/* ── Flux 2 (2026-11-14): the tabs' own screens, the machine history, the tests ── */
+.nv-pill.b{background:var(--goldbg);color:var(--gold)}
+.nv-tabpage{display:flex;flex-direction:column;gap:10px;padding:12px 0 14px}
+.nv-cap{font-size:13px;font-weight:700;color:var(--tx3);letter-spacing:.04em;margin:4px 2px 0}
+.nv-soft{display:flex;align-items:center;justify-content:center;gap:8px;min-height:40px;border:0;border-radius:12px;background:var(--goldbg);color:var(--gold);font-size:14px;font-weight:600}
+.nv-soft:hover{background:var(--goldbg);filter:brightness(.97)}
+/* an incident */
+.nv-inc{padding:14px;display:flex;flex-direction:column;gap:6px;cursor:pointer}
+.nv-inc .hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.nv-inc .hd .tg{font-size:12px;color:var(--tx3);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nv-inc .tt{font-size:16px;font-weight:700;line-height:1.35;word-break:break-word}
+.nv-inc .bd{display:flex;gap:12px}
+.nv-inc .bd .tx{flex:1;min-width:0}
+.nv-inc .ln{font-size:14px}
+.nv-inc .ln .tm{color:var(--gold);font-weight:600}
+.nv-inc .ln .ok{color:var(--green);font-weight:700}
+.nv-inc .ln .no{color:var(--orange);font-weight:700}
+.nv-inc .lb{font-size:13px;color:var(--tx3);margin-top:6px}
+.nv-inc .so{font-size:14px;word-break:break-word}
+.nv-inc .du{font-size:15px;font-weight:700}
+.nv-inc .ph{width:92px;height:72px;flex:none;border-radius:10px;overflow:hidden;background:var(--bg2)}
+.nv-inc .ph img{display:block;width:100%;height:100%;object-fit:cover}
+.nv-inc.old{padding:12px 14px;cursor:default}
+.nv-inc.old .hd{flex-wrap:nowrap}
+.nv-inc.old .hd b{flex:1;min-width:0;font-size:15px;font-weight:700;word-break:break-word}
+.nv-inc.old .sb{font-size:13px;color:var(--tx3)}
+/* the parts of the visit */
+.nv-plist{padding:12px 14px 4px}
+.nv-plist h3{font-size:15px;font-weight:700;color:var(--gold);padding-bottom:10px}
+.nv-part{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--br);cursor:pointer}
+.nv-part .mk{width:24px;height:24px;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:var(--p-info-bg);color:var(--tx3)}
+.nv-part .mk.fit{background:none;border:2px solid var(--gold);color:var(--gold)}
+.nv-part .mk.urg{background:none}
+.nv-part .nm{font-size:15px;font-weight:700;word-break:break-word}
+.nv-part .rf{font-size:13px;color:var(--tx3);word-break:break-word}
+.nv-part .en{display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-size:14px;white-space:nowrap}
+.nv-addp{display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;border:0;border-radius:12px;background:var(--bg2);color:var(--gold);font-size:15px;font-weight:600}
+.nv-pics{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.nv-pics .hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.nv-pics .hd b{font-size:16px;font-weight:700}
+.nv-pics .gr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.nv-pics .ti{position:relative;height:84px;border-radius:10px;overflow:hidden;background:var(--bg2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px}
+.nv-pics .ti img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.nv-pics .ti .mo{position:absolute;inset:0;background:rgba(15,43,91,.62);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:700}
+.nv-pics .ti .pl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;background:rgba(0,0,0,.3)}
+.nv-pics .ft{font-size:12.5px;color:var(--tx3)}
+@media(min-width:701px){
+  .nv-tabpage{padding:14px 0 18px}
+  .nv-pics .gr{grid-template-columns:repeat(6,minmax(0,1fr))}
+}
+/* the machine history: grey page, white cards (the window's own inline styles
+   are also what gets printed, so they are overridden here, on screen only) */
+#mhBack .modal,#pdBack .modal{background:var(--bg0)}
+#mhBack .modal-actions,#pdBack .modal-actions{background:var(--bg1)}
+#mhBody .mh-mets{gap:8px!important;margin-bottom:12px!important}
+#mhBody .mh-met{background:var(--bg1)!important;border:1px solid var(--br)!important;border-radius:14px!important;box-shadow:var(--sh);padding:12px 4px!important;text-align:center}
+#mhBody .mh-met b{font-size:28px!important;font-weight:800;line-height:1.1!important;color:var(--numc)}
+#mhBody .mh-met span{font-size:12.5px!important;font-weight:600;color:var(--tx1)!important}
+#mhBody .mh-h{font-size:16px;font-weight:700!important;color:var(--tx1)!important;margin:14px 2px 8px!important}
+#mhBody .mh-card{background:var(--bg1)!important;border:1px solid var(--br)!important;border-radius:12px!important;box-shadow:var(--sh);padding:10px 12px!important;margin-bottom:8px!important}
+#mhBody .mh-row{font-size:14px;padding:8px 2px!important}
+#mhBody [style*="monospace"]{font-family:inherit!important}
+#mhNote{font-size:13px}
+@media(max-width:700px){
+  #mhBody .mh-mets{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+  #mhBody .mh-met b{font-size:24px!important}
+  #mhBody .mh-met span{font-size:11.5px!important}
+}
+/* production tests */
+.pd-top{padding:14px;display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
+.pd-top .hd{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pd-top .hd b{font-size:18px;font-weight:800;min-width:0;word-break:break-word}
+.pd-go{display:flex;align-items:center;gap:18px;width:100%;padding:4px 0;border:0;background:none;border-radius:8px;font-size:15px;font-weight:400;color:var(--tx1);text-align:left;white-space:normal}
+.pd-go span{color:var(--tx3)}
+.pd-go .pr{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pd-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.pd-tile{background:var(--bg2);border-radius:12px;padding:12px;text-align:center}
+.pd-tile .l{font-size:13px;font-weight:600;color:var(--tx3)}
+.pd-tile .v{font-size:26px;font-weight:800;line-height:1.2}
+.pd-tile .c{font-size:12px;font-weight:600;color:var(--tx3)}
+.pd-tile .c.ok{color:var(--green)}.pd-tile .c.ko{color:var(--red)}
+.pd-sec{padding:12px 14px;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.pd-sec h3{font-size:16px;font-weight:700}
+.pd-sec svg{display:block;width:100%;height:auto;max-height:190px}
+.pd-row{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;padding:8px 0 0;border:0;border-top:1px solid var(--br);border-radius:0;background:none;text-align:left;font-size:14px;font-weight:600;color:var(--tx1);white-space:normal}
+.pd-row:first-of-type{border-top:0;padding-top:0}
+.pd-row:hover,.pd-go:hover{background:none;color:var(--gold)}
+.pd-row .mk{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;background:#8593A6}
+.pd-row .mk.pass{background:#1B7F3B}.pd-row .mk.fail{background:#C8251B}.pd-row .mk.run{background:#1A56C9}
+.pd-row .rs{font-weight:800;color:var(--tx3)}
+.pd-row .rs.pass{color:var(--green)}.pd-row .rs.fail{color:var(--red)}.pd-row .rs.run{color:var(--gold)}
+@media(min-width:701px){
+  .pd-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}
+  /* these two windows are long: their buttons stay in sight while the page scrolls */
+  #pdBack .modal-actions,#mhBack .modal-actions{position:sticky;bottom:-20px;margin:12px -20px -20px;padding:12px 20px 20px;border-top:1px solid var(--br);border-radius:0 0 16px 16px}
+}
 </style>
 </head>
 <body>
@@ -1340,9 +1437,9 @@ body.m2 #m2MoreBack .modal>.modal-title{position:static;margin:0;padding:8px 6px
       <div id="pdNote" class="ts-note" style="margin-bottom:8px">&mdash;</div>
       <div id="pdList"></div>
       <div class="modal-actions">
-        <button id="pdVal" title="Un PDF amb les dades de la visita, totes les proves, els indicadors, el veredicte i les signatures">&#128196; Informe de validaci&oacute;</button>
+        <button class="btn-gold" id="pdVal" title="Un PDF amb les dades de la visita, totes les proves, els indicadors, el veredicte i les signatures">&#128196; Informe de validaci&oacute;</button>
         <button id="pdClose">Tanca</button>
-        <button class="btn-gold" id="pdNew">&#65291; Nova prova</button>
+        <button id="pdNew">&#65291; Nova prova</button>
       </div>
     </div>
   </div>
@@ -5131,7 +5228,6 @@ function renderLogArea(){
   var active=sessions.find(function(s){return s.id===aid});if(!active)return;
   var entries=active.entries||[];
   var filtered=logFilterActive()?entries.filter(entryPasses):entries;
-  if(nvTab!=="reg")filtered=filtered.filter(nvTabPass);   // the tab is a second filter, over the same list
   var isOpen=active.status==="open";
   var ec=$$("entCount");if(ec)ec.textContent=(logFilterActive()?filtered.length+"/":"")+pl(entries.length,"entrada","entrades");
   var logArea=$$("logArea");if(!logArea)return;
@@ -5139,7 +5235,10 @@ function renderLogArea(){
   var keepTop=(logPos&&logPos.aid===aid&&!logPos.atBottom&&!logToBottom)?logPos.top:null;
   logPos=null;logToBottom=false;logAid=aid;
   logArea.innerHTML="";
-  if(!filtered.length){logArea.innerHTML="<div class=\"no-ent\">"+esc(logFilterActive()?uiT("Cap resultat."):nvTab==="inc"?nvT("Cap incidència en aquesta visita."):nvTab==="rec"?nvT("Cap recanvi en aquesta visita."):uiT("— Encara no hi ha entrades. Registra la primera acció o incidència. —"))+"</div>"}
+  // (new design) the other two tabs are pages of their own, over the same entries
+  if(nvTab==="inc"){nvIncRender(active,logArea,isOpen,filtered);return}
+  if(nvTab==="rec"){nvRecRender(active,logArea,isOpen);return}
+  if(!filtered.length){logArea.innerHTML="<div class=\"no-ent\">"+esc(uiT(logFilterActive()?"Cap resultat.":"— Encara no hi ha entrades. Registra la primera acció o incidència. —"))+"</div>"}
   else{
     // Grouped by day (2026-10-13, option C): a heading per day with that day's
     // own counters, and each entry shows only its time — the same information
@@ -7046,7 +7145,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-13 · 2";
+var APP_VERSION="nou · 2026-11-14 · 1";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -7273,14 +7372,10 @@ function pdRender(){
   $$("pdTitle").textContent="Proves de producció · "+(s.client||"");
   $$("pdNote").textContent=list.length?"Toca una prova per obrir-la."
     :"Encara no n'hi ha cap. Una prova registra la producció durant un període —unitats, rebuig i aturades— i en calcula l'OEE.";
-  $$("pdList").innerHTML=list.map(function(t){
-    var r=ptCalc(t);
-    var badge=t.running?"<span class=\"pt-badge run\">EN CURS</span>":(r.verdict?"<span class=\"pt-badge "+r.verdict+"\">"+(r.verdict==="pass"?"SUPERADA":"NO SUPERADA")+"</span>":"");
-    return "<button class=\"pd-card\" data-pt=\""+esc(t.id)+"\"><div class=\"t\">"+esc(t.name||"Prova")+badge+"</div>"
-      +"<div class=\"s\">"+esc([t.product,ptWhen(t.start)+(t.end?" → "+ptWhen(t.end).slice(-5):"")].filter(Boolean).join(" · "))+"</div>"
-      +"<div class=\"k\"><span>OEE "+ptPct(r.oee)+"</span><span>A "+ptPct(r.avail)+"</span><span>R "+ptPct(r.perf)+"</span><span>Q "+ptPct(r.qual)+"</span></div></button>";
-  }).join("");
+  $$("pdList").innerHTML=list.length?nvPdHTML(list):"";
   $$("pdVal").style.display=list.length?"":"none";
+  // with tests the report is the main thing to do; with none, starting one is
+  $$("pdNew").className=list.length?"":"btn-gold";
 }
 function wirePd(){
   if(pdWired)return;pdWired=true;
@@ -10694,13 +10789,13 @@ function mhRender(cur,all,L,forPrint){
     });
   });
   open.sort(function(a,b){return String(a.e.ts).localeCompare(String(b.e.ts))});
-  function metric(n,lbl,col){return "<div style=\"background:var(--bg2);border:1px solid var(--br);border-radius:6px;padding:6px 9px\">"
+  function metric(n,lbl,col){return "<div class=\"mh-met\" style=\"background:var(--bg2);border:1px solid var(--br);border-radius:6px;padding:6px 9px\">"
     +"<b style=\"display:block;font-size:18px;line-height:1.2"+(col?";color:"+col:"")+"\">"+n+"</b><span style=\"font-size:11px;color:var(--tx3)\">"+esc(lbl)+"</span></div>"}
-  var h="<div style=\"display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:12px\">"
+  var h="<div class=\"mh-mets\" style=\"display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:12px\">"
     +metric(all.length,H.visits)+metric(open.length,H.kOpen,open.length?"var(--orange)":"")
     +metric(nDone,H.kDone,"")+metric(urgOpen,H.kUrg,urgOpen?"var(--red)":"")+"</div>";
   if(open.length){
-    h+="<div style=\"font-weight:700;margin:2px 0 4px;color:var(--orange)\">⚠ "+esc(H.openTitle)+" ("+open.length+")</div>";
+    h+="<div class=\"mh-h\" style=\"font-weight:700;margin:2px 0 4px;color:var(--orange)\">⚠ "+esc(H.openTitle)+" ("+open.length+")</div>";
     h+=open.map(function(o){
       var old=mhAgeDays(o.e.ts)>90,sm=SM[o.e.severity]||SM.info;
       return "<div class=\"mh-row\" style=\"display:flex;gap:8px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--br)\">"
@@ -10718,7 +10813,7 @@ function mhRender(cur,all,L,forPrint){
   // every problem sits in its own visit with where it stands, and a visit also
   // shows the earlier problems it closed. The dot is gold for this visit,
   // orange while the visit still has something open.
-  h+="<div style=\"font-weight:700;margin:2px 0 6px\">"+esc(H.visitsH)+"</div>";
+  h+="<div class=\"mh-h\" style=\"font-weight:700;margin:2px 0 6px\">"+esc(H.visitsH)+"</div>";
   h+=all.map(function(x,i){
     var c=x._counts||severityCounts(x.entries||[]),r=curRev(x),isCur=x.id===cur.id&&!forPrint;
     var rng=x._range||tsRange(x),hasOpen=openEntries(x,closed).length>0,last=i===all.length-1;
@@ -16597,11 +16692,6 @@ function nvSetTab(k){
   var a=nvActive();if(!a)return;
   nvTabsRender(a);nvNavRender();renderLogArea();
 }
-function nvTabPass(e){
-  if(nvTab==="inc")return e.severity==="issue"||e.severity==="warning";
-  if(nvTab==="rec")return !!(e.parts&&e.parts.length);
-  return true;
-}
 
 // ── the header and the navigation ──
 function nvQueue(){var v=0,r=0;try{v=mqN||0}catch(e){}try{r=(pendReps||[]).length}catch(e){}return {files:v,reps:r,n:v+r}}
@@ -16939,6 +17029,8 @@ function nvTabsRender(a){
   function t(k,label,n){return "<button type=\"button\" data-t=\""+k+"\""+(nvTab===k?" class=\"on\"":"")+">"+esc(nvT(label))+(n?" <b>"+n+"</b>":"")+"</button>"}
   el.innerHTML=t("reg","Registre")+t("inc","Incidències",inc)+t("rec","Recanvis")+(machineSessions(a).length?t("his","Historial"):"")
     +"<button type=\"button\" class=\"nv-find\" data-t=\"find\" title=\""+esc(nvT("Cerca dins la visita"))+"\" aria-label=\""+esc(nvT("Cerca dins la visita"))+"\">"+nvI("search",20)+"</button>";
+  var q=$$("m2Ent"),qs=q&&q.querySelector("span");
+  if(qs)qs.textContent=nvT(nvTab==="inc"?"Nou problema":"Afegir entrada");
   el.onclick=function(e){
     var b=e.target.closest?e.target.closest("[data-t]"):null;if(!b)return;
     var k=b.dataset.t;
@@ -16964,6 +17056,266 @@ function nvVisitWire(a,isOpen){
   nvFitxaRender(a,isOpen);nvTabsRender(a);
   var go=$$("nvFxGo");if(go)go.addEventListener("click",function(){nvSub="log";renderAll()});
   var sh=$$("nvShade");if(sh)sh.addEventListener("click",function(){m2Hide()});
+  // "Nou problema": the same composer, with the severity already on Problema
+  var me=$$("m2Ent");if(me)me.addEventListener("click",function(){
+    if(nvTab!=="inc")return;
+    var sb=document.querySelector("#m2Sev [data-sev=issue]");if(sb)sb.click();
+  });
+}
+
+// ── THE NEW DESIGN, FLUX 2: INCIDENTS, PARTS, TESTS (2026-11-14) ─────────────
+// Incidències and Recanvis stop being filters of the timeline: each tab draws
+// its own page into the same scrolling box (#logArea), from the same entries.
+// Nothing new is stored: an incident is an entry that says problem or warning,
+// a part is a line of an entry, and closing an old problem is the same
+// `closes` link the edit window already writes.
+(function(){
+  var es={"Resolta":"Resuelta","Pendent":"Pendiente","En procés":"En proceso","Solució":"Solución","Temps":"Tiempo",
+    "D'altres visites":"De otras visitas","Tanca-la des d'aquesta visita":"Ciérrala desde esta visita","Nou problema":"Nuevo problema",
+    "recanvi urgent":"recambio urgente","recanvi preventiu":"recambio preventivo","Recanvis utilitzats":"Recambios utilizados",
+    "Recomanats al client":"Recomendados al cliente","Només informatius":"Solo informativos","Canviat":"Cambiado","Urgent":"Urgente",
+    "Preventiu":"Preventivo","Cotització":"Cotización","Informatiu":"Informativo","conjunt sencer":"conjunto entero","demana preu":"pide precio",
+    "Afegir recanvi des del dibuix":"Añadir recambio desde el dibujo","Fotos":"Fotos","Carpeta →":"Carpeta →","foto":"foto","fotos":"fotos",
+    "vídeo":"vídeo","vídeos":"vídeos","nota de veu":"nota de voz","notes de veu":"notas de voz","Tancat":"Cerrado",
+    "Vols tancar aquest problema des d'aquesta visita?":"¿Quieres cerrar este problema desde esta visita?",
+    "S'afegirà una entrada OK al registre; la pots editar per explicar com ha quedat.":"Se añadirá una entrada OK al registro; puedes editarla para explicar cómo ha quedado.",
+    "Aquesta visita encara no té cap manual de recanvis vinculat. Vincula'n un i podràs triar el recanvi tocant el dibuix.":"Esta visita todavía no tiene ningún manual de recambios vinculado. Vincula uno y podrás elegir el recambio tocando el dibujo.",
+    "Per afegir un recanvi a mà, obre una entrada del registre i fes servir «Afegeix un recanvi».":"Para añadir un recambio a mano, abre una entrada del registro y usa «Añade un recambio».",
+    "Superada":"Superada","No superada":"No superada","Fi":"Fin","Disponibilitat":"Disponibilidad","Rendiment":"Rendimiento","Qualitat":"Calidad",
+    "mín":"mín","màx":"máx","rebuig":"rechazo","OEE de les proves":"OEE de las pruebas","objectiu":"objetivo","Prova de producció":"Prueba de producción",
+    "Tancada per una visita posterior":"Cerrada por una visita posterior","Cap recanvi en aquesta visita.":"Ningún recambio en esta visita.","u.":"u."};
+  var en={"Resolta":"Resolved","Pendent":"Pending","En procés":"In progress","Solució":"Solution","Temps":"Time",
+    "D'altres visites":"From other visits","Tanca-la des d'aquesta visita":"Close it from this visit","Nou problema":"New problem",
+    "recanvi urgent":"urgent part","recanvi preventiu":"preventive part","Recanvis utilitzats":"Parts used",
+    "Recomanats al client":"Recommended to the customer","Només informatius":"For information only","Canviat":"Replaced","Urgent":"Urgent",
+    "Preventiu":"Preventive","Cotització":"Quotation","Informatiu":"Informative","conjunt sencer":"whole assembly","demana preu":"asks for a price",
+    "Afegir recanvi des del dibuix":"Add a part from the drawing","Fotos":"Photos","Carpeta →":"Folder →","foto":"photo","fotos":"photos",
+    "vídeo":"video","vídeos":"videos","nota de veu":"voice note","notes de veu":"voice notes","Tancat":"Closed",
+    "Vols tancar aquest problema des d'aquesta visita?":"Close this problem from this visit?",
+    "S'afegirà una entrada OK al registre; la pots editar per explicar com ha quedat.":"An OK entry will be added to the log; you can edit it to say how it ended.",
+    "Aquesta visita encara no té cap manual de recanvis vinculat. Vincula'n un i podràs triar el recanvi tocant el dibuix.":"This visit has no parts manual linked yet. Link one and you can pick the part by tapping the drawing.",
+    "Per afegir un recanvi a mà, obre una entrada del registre i fes servir «Afegeix un recanvi».":"To add a part by hand, open a log entry and use “Add a part”.",
+    "Superada":"Passed","No superada":"Not passed","Fi":"End","Disponibilitat":"Availability","Rendiment":"Performance","Qualitat":"Quality",
+    "mín":"min","màx":"max","rebuig":"rejects","OEE de les proves":"OEE of the tests","objectiu":"target","Prova de producció":"Production test",
+    "Tancada per una visita posterior":"Closed by a later visit","Cap recanvi en aquesta visita.":"No spare parts on this visit.","u.":"pcs"};
+  Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
+  Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});
+})();
+NV_IC.right="<path d=\"M9 6l6 6-6 6\"/>";
+NV_IC.check="<path d=\"M20 6L9 17l-5-5\"/>";
+NV_IC.x="<path d=\"M6 6l12 12M18 6L6 18\"/>";
+NV_IC.chat="<path d=\"M4 5h16v11H9l-5 4z\"/>";
+function nvHM(iso){var d=new Date(iso);return isNaN(d.getTime())?"":nvP2(d.getHours())+":"+nvP2(d.getMinutes())}
+function nvSpan(a,b){
+  var m=Math.round((b-a)/60000);if(!(m>0))return "";
+  return m<60?m+" min":m<2880?Math.floor(m/60)+" h"+(m%60?" "+(m%60)+" min":""):Math.round(m/1440)+" "+nvT("dies");
+}
+function nvFirstImg(e){
+  var l=(e.images||[]).concat((e.fix&&e.fix.images)||[]);
+  for(var i=0;i<l.length;i++){if(l[i]&&l[i].type!=="audio"&&l[i].type!=="video"&&l[i].data)return l[i]}
+  return null;
+}
+function nvDayKey(ts){var d=new Date(ts);return isNaN(d.getTime())?"":d.toDateString()}
+
+// ── Incidències ──
+// This visit's problems and warnings, the open ones first, each with where it
+// stands; then what earlier visits of this machine left open, which this visit
+// can close.
+function nvIncRender(a,box,isOpen,list){
+  var all=machineSessions(a),closed=closedRefs(all);
+  function later(e){return closed[a.id+"|"+e.id]}
+  function done(e){return isResolved(e)||!!later(e)}
+  var inc=list.filter(function(e){return e&&(e.severity==="issue"||e.severity==="warning")});
+  inc.sort(function(x,y){return (done(x)?1:0)-(done(y)?1:0)||String(x.ts).localeCompare(String(y.ts))});
+  var days={};inc.forEach(function(e){days[nvDayKey(e.ts)]=1});
+  var multi=Object.keys(days).length>1;
+  var others=[];
+  all.forEach(function(x){if(x.id!==a.id)openEntries(x,closed).forEach(function(e){others.push({s:x,e:e})})});
+  others.sort(function(p,q){return String(p.e.ts).localeCompare(String(q.e.ts))});
+  var h=inc.map(function(e){
+    var ok=done(e),fx=e.fix,im=nvFirstImg(e),issue=e.severity==="issue";
+    var st=ok?"<span class=\"ok\">"+esc(nvT("Resolta"))+"</span>":"<span class=\"no\">"+esc(nvT(fx?"En procés":"Pendent"))+"</span>";
+    var ps=(e.parts||[]).map(partSt),extra=!ok&&ps.indexOf("urg")>=0?" · "+esc(nvT("recanvi urgent")):!ok&&ps.indexOf("prev")>=0?" · "+esc(nvT("recanvi preventiu")):"";
+    var t0=Date.parse(e.ts),t1=fx?Date.parse(fx.ts):NaN,dur=isResolved(e)&&!isNaN(t0)&&!isNaN(t1)?nvSpan(t0,t1):"";
+    return "<div class=\"nv-card nv-inc\" data-e=\""+esc(e.id)+"\">"
+      +"<div class=\"hd\">"+nvSevIcon(e.severity)+"<span class=\"nv-pill "+(issue?"r":"o")+"\">"+esc(uiT(issue?"Problema":"Avís"))+"</span>"
+        +(e.tag?"<span class=\"tg\">"+highlightText(e.tag,filterTxt)+"</span>":"")
+        +(isIntern(e)?"<span class=\"log-int\">🔒</span>":"")+"</div>"
+      +"<div class=\"tt\">"+highlightText(e.text||"—",filterTxt)+"</div>"
+      +"<div class=\"bd\"><div class=\"tx\">"
+        +"<div class=\"ln\"><span class=\"tm\">"+(multi?nvDM(e.ts)+" · ":"")+nvHM(e.ts)+"</span> · "+st+extra+"</div>"
+        +(fx&&fx.text?"<div class=\"lb\">"+esc(nvT("Solució"))+"</div><div class=\"so\">"+highlightText(fx.text,filterTxt)+"</div>":"")
+        +(!isResolved(e)&&later(e)?"<div class=\"lb\">"+esc(nvT("Tancada per una visita posterior"))+"</div>":"")
+        +(dur?"<div class=\"lb\">"+esc(nvT("Temps"))+"</div><div class=\"du\">"+esc(dur)+"</div>":"")
+      +"</div>"+(im?"<div class=\"ph\"><img src=\""+im.data+"\" alt=\"\" loading=\"lazy\"></div>":"")+"</div>"
+      +(!ok&&isOpen?"<button type=\"button\" class=\"nv-soft\" data-fix=\""+esc(e.id)+"\">✔ "+esc(nvT("Com ha quedat"))+"</button>":"")
+      +"</div>";
+  }).join("");
+  if(!inc.length)h="<div class=\"no-ent\">"+esc(logFilterActive()?uiT("Cap resultat."):nvT("Cap incidència en aquesta visita."))+"</div>";
+  if(others.length){
+    h+="<div class=\"nv-cap\">"+esc(nvT("D'altres visites").toUpperCase())+"</div>"+others.map(function(o,i){
+      var old=(Date.now()-Date.parse(o.e.ts||0))>30*86400000;
+      return "<div class=\"nv-card nv-inc old\" data-o=\""+i+"\">"
+        +"<div class=\"hd\">"+nvSevIcon(o.e.severity)+"<b>"+esc(String(o.e.text||o.e.tag||"—").split("\n")[0])+"</b>"
+          +"<span class=\"nv-pill "+(old?"r":"o")+"\">"+esc(nvAgo(o.e.ts))+"</span></div>"
+        +"<div class=\"sb\">"+esc([o.s.project,dmy(String(o.e.ts).slice(0,10)),o.e.tag].filter(Boolean).join(" · "))+"</div>"
+        +(isOpen?"<button type=\"button\" class=\"nv-soft\" data-close=\""+i+"\">"+esc(nvT("Tanca-la des d'aquesta visita"))+"</button>":"")
+        +"</div>";
+    }).join("");
+  }
+  box.innerHTML="<div class=\"nv-tabpage\">"+h+"</div>";
+  box.scrollTop=0;
+  box.firstChild.addEventListener("click",function(ev){
+    var t=ev.target,b;
+    if((b=t.closest("[data-fix]"))){
+      openEdit(b.dataset.fix);
+      // the edit window is open on that entry: go straight to its outcome
+      setTimeout(function(){var fa=$$("fixAdd");if(fa&&fa.style.display!=="none")fa.click()},0);
+      return;
+    }
+    if((b=t.closest("[data-close]"))){nvCloseFrom(a,others[+b.dataset.close]);return}
+    if((b=t.closest("[data-o]"))){nvOpenVisitOf(others[+b.dataset.o].s,"log");return}
+    if((b=t.closest("[data-e]"))&&isOpen)openEdit(b.dataset.e);
+  });
+}
+// Closing an earlier visit's problem from this one: an OK entry here that
+// points at it — exactly what picking it in the edit window's "Tanca un
+// problema d'una visita anterior" does — opened at once so it can be told how.
+function nvCloseFrom(a,o){
+  if(!o)return;
+  var t=String(o.e.text||o.e.tag||"").split("\n")[0];
+  if(!confirm(nvT("Vols tancar aquest problema des d'aquesta visita?")+"\n\n«"+t+"»\n\n"+nvT("S'afegirà una entrada OK al registre; la pots editar per explicar com ha quedat.")))return;
+  var en={id:uid(),ts:now(),text:nvT("Tancat")+": "+t,severity:"ok",tag:o.e.tag||"",images:[],closes:{s:o.s.id,e:o.e.id}};
+  sessions=sessions.map(function(s){return s.id===a.id?Object.assign({},s,{entries:sortEntries((s.entries||[]).concat([en]))}):s});
+  scheduleSave();renderAll();
+  openEdit(en.id);
+}
+
+// ── Recanvis i evidències ──
+var NV_PST={fit:"Canviat",urg:"Urgent",prev:"Preventiu",quo:"Cotització",inf:"Informatiu"};
+function nvAddPart(){
+  var b=$$("btnPickDraw");
+  if(b&&b.style.display!=="none"){m2Show("compose");b.click();return}
+  var c=$$("manualChip");
+  if(c){alert(nvT("Aquesta visita encara no té cap manual de recanvis vinculat. Vincula'n un i podràs triar el recanvi tocant el dibuix."));c.click();return}
+  alert(nvT("Per afegir un recanvi a mà, obre una entrada del registre i fes servir «Afegeix un recanvi»."));
+}
+function nvRecRender(a,box,isOpen){
+  var used=[],rec=[],inf=[];
+  collectSessionParts(a).forEach(function(it){var st=partSt(it.part);(st==="fit"?used:st==="inf"?inf:rec).push(it)});
+  function row(it){
+    var p=it.part,st=partSt(p);
+    var mk=st==="fit"?"<span class=\"mk fit\">"+nvI("check",13,3)+"</span>"
+          :st==="urg"?"<span class=\"mk urg\">"+nvSevIcon("issue")+"</span>"
+          :"<span class=\"mk\">"+nvI(st==="prev"?"clock":st==="quo"?"chat":"doc",13,2.4)+"</span>";
+    var sub=[p.ref,p.pos?"pos. "+p.pos:"",p.set?nvT("conjunt sencer"):"",st==="quo"?nvT("demana preu"):""].filter(Boolean).join(" · ");
+    return "<div class=\"nv-part\" data-e=\""+esc(it.entry.id)+"\">"+mk
+      +"<div style=\"min-width:0\"><div class=\"nm\">"+esc(p.denominacio||p.ref||"—")+"</div>"+(sub?"<div class=\"rf\">"+esc(sub)+"</div>":"")+"</div>"
+      +"<div class=\"en\">"+(p.cant?"<span>"+esc(p.cant)+" "+esc(nvT("u."))+"</span>":"")
+      +"<span class=\"nv-pill "+({fit:"b",urg:"r",prev:"o"}[st]||"")+"\">"+esc(nvT(NV_PST[st]))+"</span></div></div>";
+  }
+  var rank={urg:0,prev:1,quo:2};
+  rec.sort(function(x,y){return rank[partSt(x.part)]-rank[partSt(y.part)]});
+  function group(title,l){return l.length?"<section class=\"nv-card nv-plist\"><h3>"+esc(nvT(title))+"</h3>"+l.map(row).join("")+"</section>":""}
+  var ims=[],nV=0,nA=0;
+  (a.entries||[]).forEach(function(e){
+    (e.images||[]).concat((e.fix&&e.fix.images)||[]).forEach(function(im){
+      if(!im)return;
+      if(im.type==="audio"){nA++;return}
+      if(im.type==="video")nV++;
+      ims.push(im);
+    });
+  });
+  var nP=ims.length-nV,MAX=6,shown=ims.slice(0,MAX),more=ims.length-MAX;
+  var h=group("Recanvis utilitzats",used)+group("Recomanats al client",rec)+group("Només informatius",inf);
+  if(!used.length&&!rec.length&&!inf.length)h="<div class=\"no-ent\" style=\"padding:20px 12px\">"+esc(nvT("Cap recanvi en aquesta visita."))+"</div>";
+  if(isOpen)h+="<button type=\"button\" class=\"nv-addp\" id=\"nvAddPart\">"+nvI("plus",20,2.4)+"<span>"+esc(nvT("Afegir recanvi des del dibuix"))+"</span></button>";
+  if(ims.length||nA){
+    h+="<section class=\"nv-card nv-pics\"><div class=\"hd\"><b>"+esc(nvT("Fotos"))+" ("+nP+")</b>"
+      +"<button type=\"button\" class=\"nv-link\" id=\"nvFol\">"+esc(nvT("Carpeta →"))+"</button></div>"
+      +(shown.length?"<div class=\"gr\">"+shown.map(function(im,i){
+          var vid=im.type==="video",src=vid?(im.poster||""):im.data,last=i===MAX-1&&more>0;
+          return "<div class=\"ti\" data-i=\""+i+"\">"+(src?"<img src=\""+src+"\" alt=\"\" loading=\"lazy\">":(vid?"🎬":"🖼"))
+            +(last?"<span class=\"mo\">+"+(more+1)+"</span>":vid?"<span class=\"pl\">▶</span>":"")+"</div>";
+        }).join("")+"</div>":"")
+      +"<div class=\"ft\">"+esc([nvPl(nP,"foto","fotos"),nV?nvPl(nV,"vídeo","vídeos"):"",nA?nvPl(nA,"nota de veu","notes de veu"):""].filter(Boolean).join(" · "))+"</div>"
+      +"</section>";
+  }
+  box.innerHTML="<div class=\"nv-tabpage\">"+h+"</div>";
+  box.scrollTop=0;
+  box.firstChild.addEventListener("click",function(ev){
+    var t=ev.target,b;
+    if(t.closest("#nvAddPart")){nvAddPart();return}
+    if(t.closest("#nvFol")){openFolder();return}
+    if((b=t.closest("[data-i]"))){
+      var i=+b.dataset.i,im=shown[i];
+      // the last tile stands for the rest, and a video plays from the folder
+      if((i===MAX-1&&more>0)||!im||im.type==="video"||!im.data){openFolder();return}
+      openMedia(im.data,"image",im.name);return;
+    }
+    if((b=t.closest("[data-e]"))&&isOpen)openEdit(b.dataset.e);
+  });
+}
+
+// ── Proves i producció ──
+// The list of tests, drawn as the board has it: the latest test on top with its
+// four figures against what was agreed, the OEE of every test as a curve, and
+// then each test with its verdict.
+function nvPdHTML(list){
+  var calc=list.map(function(t){return {t:t,r:ptCalc(t)}});
+  var cur=calc.filter(function(x){return x.t.running})[0]||calc[calc.length-1];
+  var r=cur.r,t=cur.t;
+  function ck(key){return r.checks.filter(function(k){return k.key===key})[0]}
+  function crit(key,min){
+    var c=ck(key);if(!c)return "<div class=\"c\">&nbsp;</div>";
+    return "<div class=\"c "+(c.ok===true?"ok":c.ok===false?"ko":"")+"\">"+(c.ok===true?"✓ ":c.ok===false?"✗ ":"")+esc(nvT(min?"mín":"màx"))+" "+ptN(c.lim,uiLang(),1)+" %</div>";
+  }
+  function tile(lbl,val,c){return "<div class=\"pd-tile\"><div class=\"l\">"+esc(nvT(lbl))+"</div><div class=\"v\">"+ptPct(val,uiLang())+"</div>"+c+"</div>"}
+  function verdict(x){return x.t.running?"run":(x.r.verdict||"")}
+  function badge(x){
+    var v=verdict(x);
+    return v==="run"?"<span class=\"nv-pill b\">"+esc(nvT("En curs"))+"</span>"
+      :v==="pass"?"<span class=\"nv-pill g\">✓ "+esc(nvT("Superada"))+"</span>"
+      :v==="fail"?"<span class=\"nv-pill r\">"+esc(nvT("No superada"))+"</span>":"";
+  }
+  var qc=ck("rejPct");
+  var ql=r.rejPct!=null?"<div class=\"c "+(qc?(qc.ok?"ok":"ko"):"")+"\">"+esc(nvT("rebuig"))+" "+ptPct(r.rejPct,uiLang())+(qc?(qc.ok?" ✓":" ✗"):"")+"</div>":"<div class=\"c\">&nbsp;</div>";
+  var h="<div class=\"nv-card pd-top\"><div class=\"hd\"><b>"+esc(t.name||nvT("Prova de producció"))+"</b>"+badge(cur)+"</div>"
+    +"<button type=\"button\" class=\"pd-go\" data-pt=\""+esc(t.id)+"\"><span>"+esc(uiT("Inici"))+"</span> <strong>"+(nvHM(t.start)||"—")+"</strong>"
+      +"<span>"+esc(nvT("Fi"))+"</span> <strong>"+(nvHM(t.end)||"—")+"</strong><span class=\"pr\">"+esc(t.product||"")+"</span>"+nvI("right",20)+"</button>"
+    +"<div class=\"pd-tiles\">"+tile("OEE",r.oee,crit("oee",true))+tile("Disponibilitat",r.avail,crit("avail",true))
+      +tile("Rendiment",r.perf,crit("perf",true))+tile("Qualitat",r.qual,ql)+"</div></div>";
+  // the curve: only worth drawing when there is more than one finished test
+  var pts=calc.filter(function(x){return x.r.oee!=null});
+  if(pts.length>1){
+    var goal=ptNum(t.crit&&t.crit.oee),vals=pts.map(function(x){return x.r.oee*100});
+    var lo=Math.max(0,Math.floor((Math.min.apply(null,vals.concat(goal!=null?[goal]:[]))-6)/5)*5);
+    var hi=Math.min(100,Math.ceil((Math.max.apply(null,vals.concat(goal!=null?[goal]:[]))+4)/5)*5);
+    if(hi-lo<15)lo=Math.max(0,hi-15);
+    var W=320,H=140,x0=34,x1=W-34,y0=26,y1=H-34;
+    var X=function(i){return pts.length===1?(x0+x1)/2:x0+(x1-x0)*i/(pts.length-1)},Y=function(v){return y1-(y1-y0)*(v-lo)/(hi-lo)};
+    var line=pts.map(function(x,i){return (i?"L":"M")+X(i).toFixed(1)+" "+Y(vals[i]).toFixed(1)}).join(" ");
+    h+="<div class=\"nv-card pd-sec\"><h3>"+esc(nvT("OEE de les proves"))+"</h3>"
+      +"<svg viewBox=\"0 0 "+W+" "+H+"\" role=\"img\" aria-label=\""+esc(nvT("OEE de les proves"))+"\">"
+      +"<path d=\""+line+" L"+x1+" "+y1+" L"+x0+" "+y1+" Z\" style=\"fill:var(--goldbg)\"/>"
+      +"<path d=\""+line+"\" fill=\"none\" style=\"stroke:var(--gold)\" stroke-width=\"2.5\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/>"
+      +(goal!=null?"<path d=\"M"+x0+" "+Y(goal).toFixed(1)+"H"+x1+"\" style=\"stroke:var(--orange)\" stroke-width=\"1.5\" stroke-dasharray=\"5 4\"/>"
+        +"<text x=\""+((x0+x1)/2)+"\" y=\""+(Y(goal)+12).toFixed(1)+"\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"600\" style=\"fill:var(--orange)\">"+esc(nvT("objectiu"))+" "+ptN(goal,uiLang(),1)+" %</text>":"")
+      +pts.map(function(x,i){
+          var v=verdict(x),col=v==="pass"?"#1B7F3B":v==="fail"?"#C8251B":"#1A56C9";
+          return "<circle cx=\""+X(i).toFixed(1)+"\" cy=\""+Y(vals[i]).toFixed(1)+"\" r=\"5\" fill=\""+col+"\" style=\"stroke:var(--bg1)\" stroke-width=\"2\"/>"
+            +"<text x=\""+X(i).toFixed(1)+"\" y=\""+(Y(vals[i])+(goal!=null&&vals[i]<goal?18:-10)).toFixed(1)+"\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" style=\"fill:var(--tx1)\">"+ptPct(x.r.oee,uiLang())+"</text>"
+            +"<text x=\""+X(i).toFixed(1)+"\" y=\""+(H-12)+"\" text-anchor=\"middle\" font-size=\"10\" style=\"fill:var(--tx3)\">"+esc(String(x.t.name||"").slice(0,14))+"</text>";
+        }).join("")
+      +"</svg></div>";
+  }
+  h+="<div class=\"nv-card pd-sec\">"+calc.slice().reverse().map(function(x){
+    var v=verdict(x);
+    return "<button type=\"button\" class=\"pd-row\" data-pt=\""+esc(x.t.id)+"\"><span class=\"mk "+v+"\">"+(v==="pass"?nvI("check",12,3.4):v==="fail"?nvI("x",12,3.4):"")+"</span>"
+      +"<span>"+esc([x.t.name||nvT("Prova de producció"),x.t.product].filter(Boolean).join(" · "))+"</span>"
+      +"<span class=\"rs "+v+"\">"+esc(v==="pass"?"OK":v==="fail"?nvT("No superada"):v==="run"?nvT("En curs"):"—")+"</span></button>";
+  }).join("")+"</div>";
+  return h;
 }
 
 // ── CLOSE DROPDOWNS ───────────────────────────────────────────────────────────

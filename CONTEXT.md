@@ -3554,6 +3554,100 @@ apps point at the root, so they update themselves, and the copy picks up the
 real data where the old app left it (the redesign changes screens, not the
 data format — keep it that way).
 
+### Flux 1 of the redesign (2026-11-13, version `nou · 2026-11-13 · 2`)
+
+Boards B01–B09 and the two desktop boards B32–B33. **How it is built, so the
+next flows go the same way:**
+
+- **A layer over the old layout, not a rewrite.** The canvas itself says it:
+  the starred boards are redesigned, "the rest is the content of A with the
+  looks of B". So `body.m2` is always on (`M2=true`, the switch is gone) and
+  the redesign stands on the m2 pieces: the composer and the notes are the m2
+  sheets, "Més" is the m2 menu, the back button is `navLayers`.
+- **CSS:** the palette is the two `:root` blocks at the top (light is the
+  design as drawn and the default; dark is the same design with the lights
+  off; the theme is NOT carried over from the old app). `--gold` is now the
+  ACCENT, blue — the name stays because 400 rules use it. `--accs` is the
+  solid accent with white text. Everything else is ONE block at the end of the
+  stylesheet ("THE NEW DESIGN"), which overrides what is above on purpose.
+  Breakpoint: 701 px, the same as m2's.
+- **JS:** one section, "THE NEW DESIGN: SHELL, HOME, VISIT CARD, TABS", just
+  before CLOSE DROPDOWNS. State: `nvView` (home | visits | mach | menu),
+  `nvSub` (fitxa | log, only under 701 px), `nvTab` (reg | inc | rec).
+  `nvHeader()` runs at the top of `renderContent` and sets the body classes
+  (`nv-shell` / `nv-visit`, `nv-v-*`, `nv-sub-*`) that the CSS reads.
+- **Words:** `nvT()` looks in `NV_T` (es, en) BEFORE the app's `UI` table,
+  because "Inici" is already there as the START of a visit and here it is the
+  home page. New strings of the redesign go in `NV_T`.
+- **Icons:** `nvI(name)` draws line icons from `NV_IC`. The new pieces use
+  them; the windows not yet redesigned still carry their emoji.
+
+**What is where:**
+
+- **Header** (`.topbar`): navy on the phone; in a visit it holds back, the
+  title, the sync chip, Informe and Més. From 701 px it is hidden on the shell
+  and white in a visit. What the old top bar held is still in the page, hidden
+  in `.nv-tools`: the menu's rows and the chip CLICK those buttons.
+- **The sync chip** (`.nv-chip`, painted by `nvChipPaint`): Drive · al dia /
+  Sincronitzant… / Local · ⏳ n / Sense Drive. It follows `setSyncSt` and
+  `refreshDriveInfo`, both wrapped. A tap signs in, reconnects or syncs.
+- **Navigation** (`#nvNav`, `nvNavRender`): a bar at the bottom (Inici,
+  Visites, Màquines, Menú); from 701 px a navy rail with Manuals, Arxiu and
+  Configuració too. Inside a visit, from 701 px, the rail turns white and
+  lists the visit's sections (they open the existing windows).
+- **Visites and Menú are the old drawer shown as a page** (`#sidebar`), so
+  the list, its search and every tool keep their wiring. `#sideTools` was
+  re-ordered under four headings; `buildSitem` draws a visit as a row.
+- **Inici** (`nvHomeRender`): greeting, four figures, the visits, "Què queda
+  obert". Open problems are counted machine by machine with the same
+  functions as the machine history (`nvMachines`, archived visits included).
+  "Informes per signar" = visits with entries whose current revision has no
+  signature. The fourth figure is the expenses to check, or what waits in the
+  upload queue when the expenses module is off.
+- **Màquines** (`nvMachRender`): one row per machine; a tap opens its history
+  (`openMachineHistory(sess)` now takes the visit to show; `mhFor`).
+- **A visit:** its card (`#nvFitxa`, `nvFitxaRender`) and the column of the
+  timeline (`.nv-logcol`). Under 701 px one at a time: the card first, then
+  "Registrar activitat". A new visit and a search hit open on the timeline.
+  The hidden column is `visibility:hidden`, not `display:none`, because the
+  report menu lives inside it and must open over the card too.
+- **Tabs** (`#nvTabs`): Registre, Incidències n, Recanvis are FILTERS of the
+  same timeline for now (`nvTabPass`); Historial opens the history window.
+  Their own screens (B10–B12) are Flux 2.
+- **Timeline:** `renderLogArea` wraps each day's entries in a `.nv-day` card;
+  the dot, the line and the pills are CSS over the old markup. The tag went
+  under the text (`.nv-sub`). A resolved problem says "Resolt a les 11:08 ·
+  en 2 h 28 min" (`nvFixLine`).
+- **Nova entrada:** the m2 composer as a sheet from the bottom, at every
+  width (centred from 701 px), over a shade (`#nvShade`). `.input-row` is
+  `display:contents` so its pieces can be ordered as the board has them.
+- **Notes generals** are a sheet at every width now (Més, or the card's
+  "Veure més"), and the search moved into Més on the phone.
+
+**Where it departs from the boards, on purpose:**
+
+- The timeline keeps the thumbnails (56 px). The board shows "2 fotos" as
+  text; the thumbnail is what carries the upload mark and opens the picture.
+- The first-run sign-in screen is gone: Inici says the same in a note.
+- Inici lists "Les teves visites" on the phone too (B01 says "Avui"), and
+  shows "Què queda obert" on the phone as well, since the figure leads there.
+- The font is Inter from Google Fonts, cached by `nou/sw.js` (the one
+  difference from the root worker). Without it the system font stands in.
+- `interactive-widget=resizes-content` in the viewport, so the sheet rides
+  above Android's keyboard.
+
+**Verified in the preview (phone 375 px and desktop 1366 px, made-up visits):**
+Inici, Visites, Màquines, Menú, the card, the timeline, adding an entry from
+the sheet, the edit window, Més, the report menu, and the back button
+(window, timeline, card, home). No console errors. **NOT verified:** a real
+phone (keyboard over the sheet, camera, voice), anything on Drive, generating
+any report, the interface in Spanish or English, the dark theme screen by
+screen.
+
+**Still to do:** Flux 2 (incidències, historial, recanvis, proves,
+comptadors), Flux 3 (resum, signatura, informe), Flux 4 (despeses, fitxers,
+arxiu), the rest of the desktop board B33, and the reports (B34–B40) last.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

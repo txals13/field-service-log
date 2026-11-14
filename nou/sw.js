@@ -1,6 +1,7 @@
 /* Service worker de la còpia nova del Field Service Log (carpeta nou/).
-   És el mateix que el de l'arrel, i ha de seguir-ho sent mentre hi hagi les
-   dues apps: si es toca l'un, es toca l'altre.
+   És el mateix que el de l'arrel, tret de la tipografia (vegeu CDN, més avall),
+   i ha de seguir-ho sent mentre hi hagi les dues apps: si es toca l'un, es
+   toca l'altre.
 
    ELS NOMS DE LES MEMÒRIES CAU SÓN ELS MATEIXOS QUE A L'ARREL, I NO ÉS UN
    DESCUIT. Les memòries cau van per domini, no per carpeta, i el worker de
@@ -44,7 +45,9 @@ const LIBS = [
   ["https://cdn.jsdelivr.net/npm/@expo-google-fonts/noto-sans/NotoSans_700Bold.ttf", "tipografies del PDF"],
   ["https://cdn.jsdelivr.net/npm/@expo-google-fonts/amiri/Amiri_400Regular.ttf", "tipografies del PDF"]
 ];
-const CDN = /^https:\/\/(unpkg\.com|cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com)\//;
+/* Aquí, a més, la tipografia del disseny nou (Inter, de Google Fonts): es guarda
+   com una llibreria més, perquè sense cobertura l'app no canviï de lletra. */
+const CDN = /^https:\/\/(unpkg\.com|cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)\//;
 
 self.addEventListener("install", e => {
   e.waitUntil(

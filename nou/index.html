@@ -1136,6 +1136,65 @@ body.m2 .exp-menu .exp-rev button{padding:8px 12px;font-size:13px}
 @media(min-width:701px){
   #nvSumBack .modal-actions{position:sticky;bottom:-20px;margin:12px -20px -20px;padding:12px 20px 20px;border-top:1px solid var(--br);border-radius:0 0 16px 16px}
 }
+
+/* ── Flux 4 (2026-11-14): expenses, the session's folder, manuals, archive, folders ──
+   The same windows as before, in the look of the boards: a grey page, white
+   cards, rows that are cards, small square tags. Only the stylesheet changes
+   (and where two buttons of the expenses window sit). */
+#exBack .modal,#xeBack .modal,#folBack .modal,#bulkBack .modal,#arxBack .modal,#fsaBack .modal,#manualsBack .modal{background:var(--bg0)}
+#exBack .modal-actions,#xeBack .modal-actions,#folBack .modal-actions,#bulkBack .modal-actions,#arxBack .modal-actions,#fsaBack .modal-actions,#manualsBack .modal-actions{background:var(--bg1)}
+input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
+/* expenses: the list */
+.ex-cap{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px}
+.ex-cap button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:52px;border-radius:10px;white-space:normal}
+.ex-cap button[style*="display:none"],.ex-cap button[style*="display: none"]{display:none}
+.ex-sum{background:var(--bg1);border:1px solid var(--br);border-radius:14px;box-shadow:var(--sh);padding:10px 12px}
+.ex-tab .am,.ex-card .am,.ex-sum .am{font-family:inherit}
+.ex-card{background:var(--bg1);border:1px solid var(--br);border-radius:14px;box-shadow:var(--sh);padding:8px 10px;font-weight:400}
+.ex-card:hover{background:var(--bg1);border-color:var(--br2)}
+.ex-card .th{width:48px;height:48px;border-radius:8px;background-color:var(--bg2)}
+.ex-card .th img{border-radius:8px}
+.ex-card .t{font-size:14px;font-weight:600}
+.ex-card .am{font-size:15px;font-weight:600}
+.ex-badge{border-radius:4px;font-size:11px;letter-spacing:.04em;padding:1px 6px;margin:0 4px 2px 0;background:var(--int-bg);color:var(--int-tx);border:1px solid var(--int-bd)}
+.ex-badge.inv{background:var(--redbg);color:var(--red);border-color:rgba(200,37,27,.28)}
+.ex-badge.rd{background:var(--p-info-bg);color:var(--p-info-tx);border-color:transparent}
+.ex-sug{background:var(--goldbg);border:1px solid var(--br2);border-radius:10px;font-size:13px;color:var(--tx1)}
+/* expenses: one expense */
+#xeBack .pt-grid{background:var(--bg1);border:1px solid var(--br);border-radius:14px;box-shadow:var(--sh);padding:12px;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}
+#xeBack .pt-grid input,#xeBack .pt-grid select{min-width:0;width:100%}
+#xeBack .pt-grid .field{margin:0}
+#xeBack .xe-img{background:var(--bg2)}
+#xeBack .xe-inv{border:1px solid var(--int-bd);border-radius:8px;font-size:12.5px}
+#xeBack .xe-strip button.th.on{outline-color:var(--accs)}
+.xe-crop{border-color:var(--accs)}.xe-crop i{background:var(--accs)}
+/* the session's folder */
+#folList{background:var(--bg1);border:1px solid var(--br);border-radius:14px;box-shadow:var(--sh);overflow:hidden}
+#folList:empty{display:none}
+.fol-row{padding:8px 12px;font-size:13px;min-height:52px}
+.fol-row:last-child{border-bottom:0}
+.fol-head{font-size:14px;font-weight:600;text-transform:none;letter-spacing:0;color:var(--tx1);padding:12px 12px 6px}
+.fol-badge{border-radius:4px;font-weight:700}
+.fol-sub{border-left-color:var(--br2)}
+/* archive several, and pick what to load: each line is a card */
+#bulkList,#arxList{border:0!important;display:flex;flex-direction:column;gap:8px}
+#bulkList>label,#arxList>label{background:var(--bg1);border:1px solid var(--br)!important;border-radius:14px;min-height:60px;padding:8px 12px!important}
+#bulkList>label:has(input:checked),#arxList>label:has(input:checked){border-color:var(--accs)!important}
+#bulkList input[type=checkbox],#arxList input[type=checkbox]{width:22px!important;height:22px}
+#bulkList>label>span>span:first-child{font-size:14px!important}
+#bulkList>label>span>span+span,#arxList>label>span{font-size:12px!important}
+#arxList [style*="monospace"]{font-family:inherit!important}
+/* folders: the two choices are cards */
+.arx-opt{background:var(--bg1);border-radius:14px;padding:12px}
+.arx-opt:has(input:checked){border-color:var(--accs);background:var(--bg1);box-shadow:0 0 0 1px var(--accs)}
+#fsaBack input[type=radio]{width:20px;height:20px;flex:none}
+/* manuals */
+#manualsList{background:var(--bg1);border:1px solid var(--br);border-radius:14px;box-shadow:var(--sh);padding:4px 12px}
+#manualsList:empty{display:none}
+@media(max-width:700px){
+  /* a window's title is the navy bar on the phone: the red of "Elimina" does not read on it */
+  body.m2 #delBack .modal>.modal-title{color:#fff!important}
+}
 </style>
 </head>
 <body>
@@ -1623,6 +1682,11 @@ body.m2 .exp-menu .exp-rev button{padding:8px 12px;font-size:13px}
     <div class="modal" style="max-width:min(96vw,640px)">
       <div class="modal-title">&#128182; <span id="exTitle">Despeses</span></div>
       <div id="exNote" class="ts-note" style="margin-bottom:8px">&mdash;</div>
+      <!-- (new design) adding a paper is what this window is for: on top, not among the buttons at the foot -->
+      <div class="ex-cap">
+        <button class="btn-gold cap-only" id="exCam" style="display:none">&#128247; Fotografia el tiquet</button>
+        <button id="exFile">&#65291; Imatge o PDF</button>
+      </div>
       <div id="exSum" class="ex-sum"></div>
       <div id="exList"></div>
       <div class="field" style="margin-top:12px;margin-bottom:4px"><label>Targeta d'empresa acabada en</label><input type="text" id="exLast4" inputmode="numeric" maxlength="4" placeholder="4 xifres" autocomplete="off" style="max-width:110px"></div>
@@ -1632,8 +1696,6 @@ body.m2 .exp-menu .exp-rev button{padding:8px 12px;font-size:13px}
       <div class="modal-actions" style="flex-wrap:wrap">
         <button id="exClose">Tanca</button>
         <button id="exXlsx" style="display:none" title="Un Excel amb una fila per despesa i un full de resum, a la carpeta del projecte">&#128202; Excel</button>
-        <button id="exFile">&#65291; Imatge o PDF</button>
-        <button class="btn-gold cap-only" id="exCam" style="display:none">&#128247; Fotografia el tiquet</button>
       </div>
     </div>
   </div>
@@ -6918,7 +6980,7 @@ function renderDelModal(){
   var ok=zipIsCurrent(s);
   $$("delZipSt").innerHTML=ok
     ? "<span style=\"color:var(--green)\">&#10003; <strong>ZIP del projecte exportat el "+esc(fts(s.zipAt))+"</strong>, després de l'últim canvi: n'hi ha una còpia completa.</span>"
-    : "<span style=\"color:var(--gold)\">&#9888; <strong>No s'ha exportat cap ZIP del projecte des de l'últim canvi"+(s.zipAt?" (l'últim: "+esc(fts(s.zipAt))+")":"")
+    : "<span style=\"color:var(--orange)\">&#9888; <strong>No s'ha exportat cap ZIP del projecte des de l'últim canvi"+(s.zipAt?" (l'últim: "+esc(fts(s.zipAt))+")":"")
       +".</strong> Només aquest fitxer conté les fotos i els vídeos, i es pot tornar a importar sencer.</span>";
   $$("delZipNow").style.display=ok?"none":"";
   $$("delConfirm").innerHTML=ok?"&#128465; Elimina":"&#128465; Elimina igualment";
@@ -7223,7 +7285,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-14 · 2";
+var APP_VERSION="nou · 2026-11-14 · 3";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();

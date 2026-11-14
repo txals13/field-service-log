@@ -3644,8 +3644,8 @@ phone (keyboard over the sheet, camera, voice), anything on Drive, generating
 any report, the interface in Spanish or English, the dark theme screen by
 screen.
 
-**Still to do:** Flux 4 (despeses, fitxers, arxiu), the rest of the desktop
-board B33, the layouts of B13 / B14 / B16, and the reports (B34–B40) last.
+**Still to do:** the rest of the desktop board B33, the layouts of B13 / B14 /
+B16, and the reports (B34–B40) last. The four phone flows are done.
 
 ### Flux 2 of the redesign (2026-11-14, version `nou · 2026-11-14 · 1`)
 
@@ -3741,6 +3741,32 @@ reopening, the report menu and, from it, the Revisions window and the ZIP's
 list. No console errors. **NOT verified:** generating any document, signing
 (so the signature card has only been seen empty), a visit with counters or a
 timesheet, a real phone.
+
+### Flux 4 of the redesign (2026-11-14, version `nou · 2026-11-14 · 3`)
+
+Boards B24–B31, none of them starred: the same windows as before in the look
+of the boards. **Only the stylesheet changed**, plus two things:
+
+- In the expenses window the two ways of adding a paper ("Fotografia el
+  tiquet", "Imatge o PDF") moved from the buttons at the foot to the top
+  (`.ex-cap`), as on B24. Same buttons, same ids.
+- The warning in the delete window was coloured `var(--gold)`, which in this
+  design is the accent: it is orange now. **Wherever the old code used gold
+  to mean "careful", it reads as blue here** — fix each as it is found; this
+  was the first.
+
+What the stylesheet does: a grey page with white cards for the expenses list
+and one expense, the session's folder, the manuals, "Arxiva sessions", "Tria
+què carregar" and "Carpetes"; expenses and archive rows as cards; small
+square tags (PER REVISAR, FALTA REBUT); the expense form in two columns on
+the phone too; the checkboxes and radios in the accent colour.
+
+**Verified in the preview:** the expenses list and one expense (phone and
+desktop, four made-up expenses with no pictures), "Carpetes", the delete
+window. "Arxiva sessions" only with rows written into it by hand, because it
+needs a Google sign-in. **NOT verified:** the session's folder, "Tria què
+carregar" and the manuals with anything in them (all three need Drive), an
+expense with its pictures, the crop tool, a real phone.
 
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does

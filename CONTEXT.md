@@ -3644,7 +3644,9 @@ phone (keyboard over the sheet, camera, voice), anything on Drive, generating
 any report, the interface in Spanish or English, the dark theme screen by
 screen.
 
-**Still to do:** the reports (B34–B40). Every screen of the app is done.
+**Still to do:** nothing of the design. The screens and the reports (B34–B40)
+are built; what is left is trying it on the phone and against Drive, and the
+day of the switch.
 
 ### Flux 2 of the redesign (2026-11-14, version `nou · 2026-11-14 · 1`)
 
@@ -3844,6 +3846,62 @@ it against the real window with its helpers stubbed, and checking the stepper
 and that "Urgent" hands over the right quantity and state. **NOT verified:**
 the sheet over a real drawing, with marks and zoom; a counter that went down;
 a real phone.
+
+### The reports — B34–B40 (2026-11-14, version `nou · 2026-11-14 · 6`)
+
+The boards have the SAME structure as the report the app already made
+(header, three groups of details, counts, counters, notes, problems, the log
+by day, parts, tests, signatures, the photo annex). So the builders were not
+rewritten: they were **recoloured, and the PDF got three pieces it lacked**.
+Nothing about what a report contains, or in which order, changed.
+
+- **The palette** (the comment "REPORT PALETTE" at the top of the script):
+  navy `0F2B5B` for titles and the rule under the header, blue `1A56C9` for
+  accents, links and references, `B42318` / `C2410C` / `1F7A4D` for problem /
+  warning / ok, `B7791F` for quantities and the notes' bar, `5A6576` for
+  secondary text, `EEF2F7` for table heads. The colours are literals all
+  through the builders, as before — hex in the HTML, `RRGGBB` in the Word
+  file, r,g,b in the PDF — so the change was the tables the reports read
+  (`SM`, `PST_RGB`, `PST_HEX`), the places decided one by one (titles, rules,
+  the type badge), and then a map of the old greys/blue/green/red to the
+  design's over the whole script (252 replacements; it reaches the timesheet
+  and the printed history too). **`SM` is also what the app's own pills
+  read**, so their colours moved with it.
+- **The old amber is gone as the brand colour.** It only survives where it
+  warns: the notice of a partial (filtered) report.
+- **HTML report:** navy title, a blue square tag for the kind of visit, table
+  heads in page grey, no zebra, a line under each row of the log instead of a
+  grid, the day bar in blue-grey with the day in navy.
+- **PDF** (`buildPdfBlob`): the same, plus — the kind of visit as a small
+  blue tag over the title (not on the internal report); the three groups of
+  details inside a pale box (`pdfMetaGroups` lays them out twice: once to
+  learn the box's height, once to write over it); the counts as five tiles
+  (four when nothing was resolved) instead of a line of text.
+- **Word** (`buildDocxDocument`): colours only. No tiles and no tag.
+- The validation report and the internal report are the same builder, so
+  they came along. The internal one keeps its red "internal use" band.
+
+**Where it departs from the boards, on purpose:**
+
+- **The font stays Arial / Helvetica.** The boards are drawn in Inter; putting
+  it in a PDF means embedding the font file, and the Word file would ask the
+  reader's computer for it. A report must look the same wherever it is opened.
+- **No company logo** in the header: the app has no logo to put there.
+- Times keep their seconds, the footer keeps its format ("The footer says
+  which document"), and B36's variant of page 2 was not built.
+- B39 (internal) and B40 (validation) were not read board by board: they got
+  the palette through the shared builder.
+
+**Verified in the preview, generating each document from a made-up visit and
+reading the file itself** (the download is caught in the page, nothing lands
+on the disk): the service PDF (4 pages: tag, box, tiles, day bars, parts,
+tests, signatures, photo annex — nothing overlaps), the internal PDF, the
+validation PDF (3 pages), the HTML report, and the Word file (opened as a
+zip: every colour in `word/document.xml` is of the new palette). No console
+errors. **NOT verified:** the Word file opened in Word; the timesheet PDF and
+the printed machine history (the timesheet needs the calendar's days from
+Drive); a report in Spanish, English or a right-to-left language; a signed
+report; the Excel file (it has no colours of its own); printing on paper.
 
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does

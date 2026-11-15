@@ -4561,6 +4561,29 @@ the table by hand: every table is exactly the sheet's width, no sideways
 scroll; at 1024 px and in the print box the five columns are there and the
 second line is hidden, sizes as before. NOT checked: his phone.
 
+**Version 19 broke the history on the computer; fixed in `nou · 2026-11-15 · 20`.**
+"Ara no surt bé a l'ordinador", with a PDF of six pages: in the two tables of
+problems the severity cell had taken almost the whole width and stood as a
+column of its own with a grey box under it, the text squeezed into 110 px.
+The class given to that cell in version 19 was **`sv` — the app's own class
+for the visit screen** (`.sv{…}` and some eighty rules under it), so the
+cell was laid out as a screen. It was missed because the check at 1024 px
+only measured the two parts tables.
+
+- **Every class inside the sheet now starts with `mhr-`** (`mhr-meta`,
+  `mhr-stat`, `mhr-vb`, `mhr-st`, `mhr-sv`, `mhr-dt`, `mhr-wx`, `mhr-nx`…),
+  in `MHR_CSS` and in what `mhRender` and its helpers write. The names in
+  the sections above are the old ones without the prefix.
+- **The rule for anything new in there:** a class in the sheet must not be
+  one the app's stylesheet knows. The check that would have caught it, and
+  was run this time: list every class used inside `.mhr` and look for it in
+  every rule of every stylesheet except `MHR_CSS` — none found.
+
+Checked in the preview: at 1024 px and with the print rules applied on a
+688 px sheet (A4 less its margins) the severity column is 71–89 px and the
+text has the rest, in all four tables; at 375 px as in version 19. NOT
+checked: a PDF from his Chrome.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

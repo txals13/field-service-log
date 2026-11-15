@@ -7894,7 +7894,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 19";
+var APP_VERSION="nou · 2026-11-15 · 20";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -12526,42 +12526,42 @@ var MHR_CSS=".mhr{background:#fff;color:#0F1B2D;font-family:Arial,sans-serif;fon
   +".mhr-tag{display:inline-block;background:#1A56C9;color:#fff;border-radius:4px;padding:3px 8px;font-size:10px;font-weight:600;letter-spacing:.08em}"
   +".mhr h1{font-size:24px;font-weight:700;margin:8px 0 4px;color:#0F2B5B;line-height:1.1;letter-spacing:0}"
   +".mhr-sub{color:#5A6576;font-size:13px}"
-  +".mhr .meta{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;background:#F7F9FC;border:1px solid #E6EAF0;border-radius:8px;padding:14px 16px;margin:16px 0}"
-  +".mhr .mg{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#0F2B5B;border-bottom:1px solid #1A56C9;padding-bottom:3px;margin-bottom:6px}"
-  +".mhr .ml{font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;color:#5A6576;font-weight:600;margin-top:7px}"
-  +".mhr .mv{font-size:13px;font-weight:700;overflow-wrap:anywhere}"
-  +".mhr .stats{display:flex;gap:12px;margin:16px 0}"
-  +".mhr .stat{text-align:center;padding:10px 20px;border-radius:8px}"
-  +".mhr .stat strong{font-size:26px;display:block;line-height:1.15}.mhr .stat span{font-size:11px}"
+  +".mhr .mhr-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;background:#F7F9FC;border:1px solid #E6EAF0;border-radius:8px;padding:14px 16px;margin:16px 0}"
+  +".mhr .mhr-mg{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#0F2B5B;border-bottom:1px solid #1A56C9;padding-bottom:3px;margin-bottom:6px}"
+  +".mhr .mhr-ml{font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;color:#5A6576;font-weight:600;margin-top:7px}"
+  +".mhr .mhr-mv{font-size:13px;font-weight:700;overflow-wrap:anywhere}"
+  +".mhr .mhr-stats{display:flex;gap:12px;margin:16px 0}"
+  +".mhr .mhr-stat{text-align:center;padding:10px 20px;border-radius:8px}"
+  +".mhr .mhr-stat strong{font-size:26px;display:block;line-height:1.15}.mhr .mhr-stat span{font-size:11px}"
   +".mhr h2{font-size:15px;font-weight:600;color:#0F2B5B;margin:28px 0 8px;padding:1px 0 1px 10px;border-left:3px solid #1A56C9;letter-spacing:0}"
   +".mhr table{width:100%;border-collapse:collapse;margin:0}"
   +".mhr td{vertical-align:top;padding:6px 8px;border-bottom:1px solid #E6EAF0;font-size:12.5px;color:#0F1B2D;overflow-wrap:break-word}"
   +".mhr th{background:#EEF2F7;color:#5A6576;font-weight:700;padding:6px 8px;text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid #CBD3DE}"
-  +".mhr .nw{white-space:nowrap;width:1%}.mhr .mono{font-family:monospace}"
-  +".mhr .vb td{background:#E3EAF4;border-top:1px solid #CBD6E6;border-bottom:1px solid #CBD6E6;padding:7px 8px}"
-  +".mhr .vb[data-sess]{cursor:pointer}"
-  +".mhr .vb b{font-size:12.5px;color:#0F2B5B}.mhr .vb i{font-style:normal;font-size:11px;color:#2C3A4F;margin-left:10px;white-space:nowrap}"
-  +".mhr .vb .ln{font-size:11px;color:#2C3A4F;margin-top:2px}"
-  +".mhr .gap td{height:10px;padding:0;border:none;background:#fff}"
-  +".mhr .st{margin-top:5px;padding:4px 8px;border-left:3px solid #CBD3DE;background:#F7F9FC;border-radius:0 4px 4px 0;font-size:11.5px;color:#3D4756}"
-  +".mhr .ft{margin-top:28px;padding-top:12px;border-top:1px solid #E6EAF0;font-size:11px;color:#8593A6;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}"
-  +".mhr .sv{font-weight:700;font-size:11px}.mhr .dt{font-size:11px;color:#5A6576}.mhr .pj{font-size:11px;color:#5A6576}"
-  +".mhr .nx{display:none}"
+  +".mhr .mhr-nw{white-space:nowrap;width:1%}.mhr .mhr-mono{font-family:monospace}"
+  +".mhr .mhr-vb td{background:#E3EAF4;border-top:1px solid #CBD6E6;border-bottom:1px solid #CBD6E6;padding:7px 8px}"
+  +".mhr .mhr-vb[data-sess]{cursor:pointer}"
+  +".mhr .mhr-vb b{font-size:12.5px;color:#0F2B5B}.mhr .mhr-vb i{font-style:normal;font-size:11px;color:#2C3A4F;margin-left:10px;white-space:nowrap}"
+  +".mhr .mhr-vb .mhr-ln{font-size:11px;color:#2C3A4F;margin-top:2px}"
+  +".mhr .mhr-gap td{height:10px;padding:0;border:none;background:#fff}"
+  +".mhr .mhr-st{margin-top:5px;padding:4px 8px;border-left:3px solid #CBD3DE;background:#F7F9FC;border-radius:0 4px 4px 0;font-size:11.5px;color:#3D4756}"
+  +".mhr .mhr-ft{margin-top:28px;padding-top:12px;border-top:1px solid #E6EAF0;font-size:11px;color:#8593A6;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}"
+  +".mhr .mhr-sv{font-weight:700;font-size:11px}.mhr .mhr-dt{font-size:11px;color:#5A6576}.mhr .mhr-pj{font-size:11px;color:#5A6576}"
+  +".mhr .mhr-nx{display:none}"
   // A PHONE'S SCREEN (never paper: a sheet is wider than this). "La versió al
   // mòbil no és gaire llegible": the sizes above are a printed report's, and
   // at arm's length in a factory they are too small; and the parts tables'
   // five columns do not fit. So the type goes up a size or two, and a part's
-  // reference and date go under its name (.nx) in place of their columns (.wx).
-  +"@media screen and (max-width:640px){.mhr{font-size:15px}.mhr .meta{grid-template-columns:1fr 1fr;gap:12px 16px}.mhr h1{font-size:22px}"
-  +".mhr-sub{font-size:14px}.mhr .mg{font-size:11px}.mhr .ml{font-size:10.5px}.mhr .mv{font-size:15px}"
-  +".mhr .stats{gap:8px}.mhr .stat{flex:1 1 0;min-width:0;padding:8px 4px}.mhr .stat strong{font-size:24px}.mhr .stat span{font-size:12px}"
+  // reference and date go under its name (.mhr-nx) in place of their columns (.mhr-wx).
+  +"@media screen and (max-width:640px){.mhr{font-size:15px}.mhr .mhr-meta{grid-template-columns:1fr 1fr;gap:12px 16px}.mhr h1{font-size:22px}"
+  +".mhr-sub{font-size:14px}.mhr .mhr-mg{font-size:11px}.mhr .mhr-ml{font-size:10.5px}.mhr .mhr-mv{font-size:15px}"
+  +".mhr .mhr-stats{gap:8px}.mhr .mhr-stat{flex:1 1 0;min-width:0;padding:8px 4px}.mhr .mhr-stat strong{font-size:24px}.mhr .mhr-stat span{font-size:12px}"
   +".mhr h2{font-size:17px}.mhr td{font-size:15px;padding:7px 5px}.mhr th{font-size:10.5px;padding:6px 5px}"
-  +".mhr .sl,.mhr .wx{display:none}.mhr .sv{font-size:14px}.mhr .dt{font-size:12.5px;padding-top:9px}.mhr .pj{font-size:13px}"
-  +".mhr .vb b{font-size:15px}.mhr .vb i{font-size:13px;margin-left:6px}.mhr .vb .ln{font-size:13px}"
-  +".mhr .st{font-size:14px}.mhr .nx{display:block;margin-top:2px;font-size:13px;color:#5A6576}.mhr .ft{font-size:12px}}"
+  +".mhr .mhr-sl,.mhr .mhr-wx{display:none}.mhr .mhr-sv{font-size:14px}.mhr .mhr-dt{font-size:12.5px;padding-top:9px}.mhr .mhr-pj{font-size:13px}"
+  +".mhr .mhr-vb b{font-size:15px}.mhr .mhr-vb i{font-size:13px;margin-left:6px}.mhr .mhr-vb .mhr-ln{font-size:13px}"
+  +".mhr .mhr-st{font-size:14px}.mhr .mhr-nx{display:block;margin-top:2px;font-size:13px;color:#5A6576}.mhr .mhr-ft{font-size:12px}}"
   // on paper: a row is never cut, a heading stays with its table, and a
   // visit's band stays with the first of its rows
-  +"@media print{.mhr tr{break-inside:avoid}.mhr h2,.mhr .vb{break-after:avoid}}";
+  +"@media print{.mhr tr{break-inside:avoid}.mhr h2,.mhr .mhr-vb{break-after:avoid}}";
 (function(){var st=document.createElement("style");st.textContent=MHR_CSS;document.head.appendChild(st)})();
 var MH_GREEN="#1F7A4D",MH_ORANGE="#C2410C",MH_RED="#B42318";
 function mhLangOf(L){return L===RPT.ca?"ca":(Object.keys(RPT).filter(function(k){return RPT[k]===L})[0]||"ca")}
@@ -12572,9 +12572,9 @@ function mhLangOf(L){return L===RPT.ca?"ca":(Object.keys(RPT).filter(function(k)
 // touching it, and a problem that ends in an ellipsis is one you have to go
 // and look up somewhere else.
 function mhRow(col,mark,word,date,what,st,stCol){
-  return "<tr><td class=\"nw sv\" style=\"color:"+col+"\">"+mark+(word?" <span class=\"sl\">"+esc(word)+"</span>":"")+"</td>"
-    +"<td class=\"nw mono dt\">"+date+"</td>"
-    +"<td>"+what+(st?"<div class=\"st\" style=\"border-left-color:"+stCol+"\">"+st+"</div>":"")+"</td></tr>";
+  return "<tr><td class=\"mhr-nw mhr-sv\" style=\"color:"+col+"\">"+mark+(word?" <span class=\"mhr-sl\">"+esc(word)+"</span>":"")+"</td>"
+    +"<td class=\"mhr-nw mhr-mono mhr-dt\">"+date+"</td>"
+    +"<td>"+what+(st?"<div class=\"mhr-st\" style=\"border-left-color:"+stCol+"\">"+st+"</div>":"")+"</td></tr>";
 }
 function mhWhat(e){return (e.tag?"<strong>"+esc(e.tag)+"</strong> — ":"")+mhClean(e.text)}
 function mhSevRow(e,L,what,st,stCol){
@@ -12586,7 +12586,7 @@ function mhCtrLine(x,all,L){
   var C=L.ctr,r=ctrLast(x);if(!C||!r)return "";
   var lang=mhLangOf(L);
   var pv=ctrPrev(x,all),d=pv?ctrDeltaText(ctrDelta(pv.r,ctrFirst(x)),C,lang,x.counters&&x.counters.unit):"";
-  return "<div class=\"ln\">&#9201; "
+  return "<div class=\"mhr-ln\">&#9201; "
     +(r.h!=null?esc(ctrFmt(r.h,lang,1))+" "+esc(C.h):"")+(r.h!=null&&r.u!=null?" · ":"")+(r.u!=null?esc(ctrFmt(r.u,lang,0))+" "+esc(C.u):"")
     +(d?" <span style=\"color:#1A56C9\">· ↑ "+esc(d)+"</span>":"")+"</div>";
 }
@@ -12699,12 +12699,12 @@ function mhRender(cur,all,L,forPrint,stampLbl){
   var oldest=all[all.length-1]||cur,d0=dmy(rg(oldest).from),d1=dmy(rg(newest).to);
   var period=d0+(d1&&d1!==d0?" → "+d1:"");
   function th(t,cls){return "<th"+(cls?" class=\""+cls+"\"":"")+">"+esc(t)+"</th>"}
-  function thS(t){return "<th class=\"nw\"><span class=\"sl\">"+esc(t)+"</span></th>"}   // the severity column: just the mark on a phone
+  function thS(t){return "<th class=\"mhr-nw\"><span class=\"mhr-sl\">"+esc(t)+"</span></th>"}   // the severity column: just the mark on a phone
   // A part's reference and its date, a second time, under its name: on a phone
   // the two columns (.wx) are hidden and this line (.nx) is shown instead. Five
   // columns do not fit in 320 px — a reference like 02.18.37.06C01 cannot be
   // broken, and the table came out wider than the sheet.
-  function nx(ref,when){return "<div class=\"nx\">"+(ref?"<span class=\"mono\" style=\"color:#1A56C9\">"+esc(ref)+"</span>":"")+(ref&&when?" · ":"")+(when||"").replace("<br>"," · ")+"</div>"}
+  function nx(ref,when){return "<div class=\"mhr-nx\">"+(ref?"<span class=\"mhr-mono\" style=\"color:#1A56C9\">"+esc(ref)+"</span>":"")+(ref&&when?" · ":"")+(when||"").replace("<br>"," · ")+"</div>"}
 
   // ── THE HEADER, as on a report: the tag, the title, one grey line ─────────
   var h="<div class=\"mhr-hd\"><span class=\"mhr-tag\">"+esc((mhDisp(newest.machine)||"—").toUpperCase())+"</span>"
@@ -12725,14 +12725,14 @@ function mhRender(cur,all,L,forPrint,stampLbl){
     {t:L.gEquip||"Equipment",rows:[[L.machine,mhDisp(newest.machine)||"—"]].concat(serial?[[L.machineNo,String(serial)]]:[],any("year")?[[L.year,any("year")]]:[])},
     {t:H.visitsH,rows:g3}
   ];
-  h+="<div class=\"meta\">"+groups.map(function(g){
-    return "<div><div class=\"mg\">"+esc(g.t)+"</div>"
-      +g.rows.map(function(p){return "<div class=\"ml\">"+esc(p[0])+"</div><div class=\"mv\">"+esc(p[1])+"</div>"}).join("")+"</div>";
+  h+="<div class=\"mhr-meta\">"+groups.map(function(g){
+    return "<div><div class=\"mhr-mg\">"+esc(g.t)+"</div>"
+      +g.rows.map(function(p){return "<div class=\"mhr-ml\">"+esc(p[0])+"</div><div class=\"mhr-mv\">"+esc(p[1])+"</div>"}).join("")+"</div>";
   }).join("")+"</div>";
 
   // ── THE COUNTS, as the reports' tiles ─────────────────────────────────────
-  function stat(n,lbl,bg,col){return "<div class=\"stat\" style=\"background:"+bg+";color:"+col+"\"><strong>"+n+"</strong><span>"+esc(lbl)+"</span></div>"}
-  h+="<div class=\"stats\">"
+  function stat(n,lbl,bg,col){return "<div class=\"mhr-stat\" style=\"background:"+bg+";color:"+col+"\"><strong>"+n+"</strong><span>"+esc(lbl)+"</span></div>"}
+  h+="<div class=\"mhr-stats\">"
     +stat(all.length,H.visits,"#EEF1F5","#3D4756")
     +stat(open.length,H.kOpen,open.length?"#FFF1E6":"#EEF1F5",open.length?MH_ORANGE:"#3D4756")
     +stat(nDone,H.kDone,"#EAF6EF",MH_GREEN)
@@ -12740,12 +12740,12 @@ function mhRender(cur,all,L,forPrint,stampLbl){
     +"</div>";
 
   // ── WHAT IS STILL OPEN, oldest first, red once over three months ──────────
-  var head3="<thead><tr>"+thS(L.severity)+th(L.incWhen,"nw")+th(L.incWhat)+"</tr></thead>";
+  var head3="<thead><tr>"+thS(L.severity)+th(L.incWhen,"mhr-nw")+th(L.incWhat)+"</tr></thead>";
   if(open.length){
     h+=repH2(H.openTitle+" ("+open.length+")","C2410C")+"<table>"+head3+"<tbody>"
       +open.map(function(o){
         var old=mhAgeDays(o.e.ts)>90,c=old?MH_RED:MH_ORANGE,ago=mhAgo(o.e.ts,H);
-        return mhSevRow(o.e,L,mhWhat(o.e)+(o.s.project?" <span class=\"pj\">("+esc(o.s.project)+")</span>":""),
+        return mhSevRow(o.e,L,mhWhat(o.e)+(o.s.project?" <span class=\"mhr-pj\">("+esc(o.s.project)+")</span>":""),
           "<b style=\"color:"+c+"\">⚠ "+esc(H.pendingSt)+"</b>"+(ago?" · "+esc(ago):""),c);
       }).join("")+"</tbody></table>";
   }
@@ -12764,11 +12764,11 @@ function mhRender(cur,all,L,forPrint,stampLbl){
       if(isCur)bits.push("<span style=\"color:#1A56C9;font-weight:700\">"+esc(uiT("aquesta"))+"</span>");
       if(x._hist)bits.push("🗄 "+esc(H.archived));
       if(!issues&&!here)bits.push("<span style=\"color:"+MH_GREEN+";font-weight:700\">✓ "+esc(H.allOk)+"</span>");
-      return (i?"<tr class=\"gap\"><td colspan=\"3\"></td></tr>":"")
-        +"<tr class=\"vb\""+(forPrint?"":" data-sess=\""+esc(x.id)+"\"")+"><td colspan=\"3\">"
+      return (i?"<tr class=\"mhr-gap\"><td colspan=\"3\"></td></tr>":"")
+        +"<tr class=\"mhr-vb\""+(forPrint?"":" data-sess=\""+esc(x.id)+"\"")+"><td colspan=\"3\">"
         +"<b>"+dmy(rng.from)+(rng.to!==rng.from?" → "+dmy(rng.to):"")+"</b>"
         +bits.map(function(b){return " <i>"+b+"</i>"}).join("")     // the space is where a narrow screen may break the line
-        +"<div class=\"ln\">"+(c.issue?"■ "+c.issue+"  ":"")+(c.warning?"▲ "+c.warning+"  ":"")+(c.resolved?"✓ "+c.resolved+"  ":"")
+        +"<div class=\"mhr-ln\">"+(c.issue?"■ "+c.issue+"  ":"")+(c.warning?"▲ "+c.warning+"  ":"")+(c.resolved?"✓ "+c.resolved+"  ":"")
         +"● "+c.ok+"  ·  "+(x._n!=null?x._n:(x.entries||[]).length)+" "+esc(H.entries)+"</div>"
         +mhCtrLine(x,all,L)+"</td></tr>"
         +issues+here;
@@ -12778,13 +12778,13 @@ function mhRender(cur,all,L,forPrint,stampLbl){
   var pk=Object.keys(parts).sort(function(a,b){return parts[b].last.localeCompare(parts[a].last)});
   if(pk.length){
     h+=repH2(H.parts+" ("+pk.length+")",PST_HEX.fit)
-      +"<table><thead><tr><th class=\"nw\" style=\"text-align:right\">"+esc(L.qty)+"</th>"+th(L.ref,"wx")+th(L.part)+th(L.incWhen,"nw wx")+"</tr></thead><tbody>"
+      +"<table><thead><tr><th class=\"mhr-nw\" style=\"text-align:right\">"+esc(L.qty)+"</th>"+th(L.ref,"mhr-wx")+th(L.part)+th(L.incWhen,"mhr-nw mhr-wx")+"</tr></thead><tbody>"
       +pk.map(function(k){var p=parts[k];
         var when=dmy(String(p.last).slice(0,10));
-        return "<tr><td class=\"nw mono\" style=\"text-align:right;color:#B7791F\">"+(p.qty?p.qty+"×":"")+"</td>"
-          +"<td class=\"mono wx\" style=\"color:#1A56C9\">"+esc(p.ref)+"</td>"
+        return "<tr><td class=\"mhr-nw mhr-mono\" style=\"text-align:right;color:#B7791F\">"+(p.qty?p.qty+"×":"")+"</td>"
+          +"<td class=\"mhr-mono mhr-wx\" style=\"color:#1A56C9\">"+esc(p.ref)+"</td>"
           +"<td>"+esc(p.den)+nx(p.ref,when)+"</td>"
-          +"<td class=\"nw wx\" style=\"color:#5A6576\">"+when+"</td></tr>";
+          +"<td class=\"mhr-nw mhr-wx\" style=\"color:#5A6576\">"+when+"</td></tr>";
       }).join("")+"</tbody></table>";
   }
   var rk=Object.keys(recs);
@@ -12797,20 +12797,20 @@ function mhRender(cur,all,L,forPrint,stampLbl){
     rk.sort(function(a,b){var x=recs[a],y=recs[b];return rank(x)-rank(y)||y.ts.localeCompare(x.ts)});
     var recOpen=rk.filter(function(k){return !recs[k].done}).length;
     h+=repH2(H.rec+" ("+recOpen+"/"+rk.length+")",PST_HEX.urg)
-      +"<table><thead><tr>"+th(L.prio,"nw")+"<th class=\"nw\" style=\"text-align:right\">"+esc(L.qty)+"</th>"+th(L.ref,"wx")+th(L.part)+th(L.incWhen,"wx")+"</tr></thead><tbody>"
+      +"<table><thead><tr>"+th(L.prio,"mhr-nw")+"<th class=\"mhr-nw\" style=\"text-align:right\">"+esc(L.qty)+"</th>"+th(L.ref,"mhr-wx")+th(L.part)+th(L.incWhen,"mhr-wx")+"</tr></thead><tbody>"
       +rk.map(function(k){var r=recs[k];
         var col=r.done?MH_GREEN:"#"+(PST_HEX[r.st]||PST_HEX.prev);
         var when=esc(H.recOn)+" "+dmy(r.ts.slice(0,10))+(r.done?"<br>"+esc(H.fitOn)+" "+dmy(r.done.slice(0,10)):"");
-        return "<tr><td class=\"nw\" style=\"font-weight:700;color:"+col+"\">"+(r.done?"✓ ":"")+esc(L.pst[r.st])+"</td>"
-          +"<td class=\"nw mono\" style=\"text-align:right;color:#B7791F\">"+(r.qty?esc(r.qty)+"×":"")+"</td>"
-          +"<td class=\"mono wx\" style=\"color:#1A56C9\">"+esc(r.ref)+"</td>"
+        return "<tr><td class=\"mhr-nw\" style=\"font-weight:700;color:"+col+"\">"+(r.done?"✓ ":"")+esc(L.pst[r.st])+"</td>"
+          +"<td class=\"mhr-nw mhr-mono\" style=\"text-align:right;color:#B7791F\">"+(r.qty?esc(r.qty)+"×":"")+"</td>"
+          +"<td class=\"mhr-mono mhr-wx\" style=\"color:#1A56C9\">"+esc(r.ref)+"</td>"
           +"<td"+(r.done?" style=\"color:#5A6576\"":"")+">"+esc(r.den)+nx(r.ref,when)+"</td>"
-          +"<td class=\"wx\" style=\"color:#5A6576\">"+when+"</td></tr>";
+          +"<td class=\"mhr-wx\" style=\"color:#5A6576\">"+when+"</td></tr>";
       }).join("")+"</tbody></table>";
   }
 
   // ── THE FOOTER, as on a report ────────────────────────────────────────────
-  h+="<div class=\"ft\"><span>"+esc(stampLbl||L.gen||"")+" "+dmy(todayISO())+(cur.tech?" · "+esc(cur.tech):"")+"</span>"
+  h+="<div class=\"mhr-ft\"><span>"+esc(stampLbl||L.gen||"")+" "+dmy(todayISO())+(cur.tech?" · "+esc(cur.tech):"")+"</span>"
     +(licStamp()?"<span>"+esc(licStamp())+"</span>":"")+"<span>Field Service Log</span></div>";
   return {title:title,note:note,body:"<div class=\"mhr\">"+h+"</div>"};
 }

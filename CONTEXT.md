@@ -4155,6 +4155,64 @@ JSON that is no catalogue → refused. NOT checked: Google's real Picker, that a
 folder of the app in use really lists its files to `nou/`, and opening the
 drawings of a manual taken this way. A line of the device-test list.
 
+### More than one manual on a visit (2026-11-15, version `nou · 2026-11-15 · 8`)
+
+"I vull la possibilitat de vincular més d'un manual per si hi hagués annexos.
+També s'ha de pensar com gestionarà l'aplicació això." What was decided, and
+why — none of it asked back, so each is his to overturn:
+
+- **Stored:** `session.manualRefs` = every linked manual, in the order linked.
+  `session.manualRef` stays, always equal to the FIRST — the **main manual**.
+  So a visit from before has one manual without being migrated, and what only
+  asks "is there a manual" or wants the machine's serial (the history record,
+  the buttons that show with a manual) is untouched. Read them with
+  `sessManuals(s)`; never `manualRef` for anything that is per manual.
+- **A part knows its manual:** `part.man` = the ref's `id`, set when it is
+  picked off a drawing (`addResolvedPart`) or from the device search
+  (`addDevicePart`). A part without `man` is the main manual's — every part
+  from before, and parts typed by hand. `partManual(s,p)` gives the ref, or
+  null if that manual has been unlinked since.
+- **The viewer shows one manual at a time.** With several, the name in its
+  title is a selector (`#drawManSel`, `switchViewerManual`); it opens on the
+  manual this visit was last read in (`viewerManBy`), else the main one, and
+  each manual comes back at the page it was left at (`viewerPageBy`).
+  `viewerLoad(ref,page)` is the loading that `openDrawings` used to do inline;
+  a switch that fails leaves the previous manual up. `openDrawings` takes a
+  fourth argument, the manual's id (the device search uses it).
+- **Marks and filed sheets carry the manual** — page 12 of the annex is not
+  page 12 of the manual: `mark.m`, `image.drawMan` beside `drawPage`
+  (`shotOfCurMan`; a sheet filed before this names none and is the main
+  manual's).
+- **Device search and the Tag field's conjunts read every manual**
+  (`getDeviceIndex(refs)`, `populateTagOptions`); a device says which manual
+  it is from when there are several, and its 📐 opens that manual.
+- **The link window** ("Manuals d'aquesta visita") lists the linked ones first
+  — "· principal" on the first, ★ Principal on the others, ✕ to unlink — then
+  the rest with "＋ Vincula". Linking the FIRST manual closes the window, as it
+  always did; from the second on it stays open. Unlinking a manual that parts
+  were read in asks first. Making another one the main manual first writes
+  `man` (and `drawMan`) on everything that named none, so those parts stay
+  with the manual they were read in.
+- **Reports:** `manualNoteOf` names the manuals the parts came from, joined
+  with " + " inside the one `{m}` (no new label, so no translated table is
+  refetched); `devNoteOf` the same with their schematics. The Excel's page
+  column reads "<manual> · <page>" when the visit has several. The archive
+  ZIP carries them all (`manual/`, a numbered subfolder only if two share a
+  file name).
+- Also here: a cancelled page render no longer logs an unhandled rejection.
+- `nou/` only. The app in use reads `manualRef` and would see only the main
+  manual of such a visit — which does not happen while the data is apart.
+
+Checked in the preview, two manuals stubbed (PDFs of 2 and 3 pages, each with
+its catalogue and one device): link both, the chip "+1"; the selector, the page
+remembered per manual, reopening on the last one; a part picked from each with
+its own mark and its own filed sheet, saved with `man` / `drawMan`; the device
+list with both and each 📐 opening its manual; the Excel's page column and the
+note with both names; the unlink question; changing the main manual and back.
+NOT checked: real Drive and real manuals, the ZIP with two manuals, the
+schematic note with devices from two manuals, the Tag field's conjunts, the
+PDF/Word/HTML notes (same function as the Excel's), es/en on screen.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

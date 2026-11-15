@@ -1488,7 +1488,8 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
   <!-- Link a manual to the active session -->
   <div class="modal-back" id="linkBack" style="display:none">
     <div class="modal">
-      <div class="modal-title">&#128218; Vincula un manual a aquesta sessió</div>
+      <div class="modal-title">&#128218; Manuals d'aquesta visita</div>
+      <div class="ts-note" style="margin:0 0 8px">Se'n pot vincular més d'un: el manual de la màquina i els seus annexos.</div>
       <div id="linkList" style="max-height:52vh;overflow:auto"></div>
       <div class="ts-note" id="linkNote" style="margin-top:6px"></div>
       <div class="modal-actions">
@@ -1952,6 +1953,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
       <div class="modal-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
         <span>&#128208; Dibuixos</span>
         <span id="drawManual" style="font-size:11px;color:var(--tx3);font-weight:400"></span>
+        <select id="drawManSel" title="Canvia de manual: aquesta visita en té més d'un" style="display:none;font-size:12px;padding:4px 6px;max-width:58vw"></select>
         <button class="btn-g btn-sm" id="drawClose" style="margin-left:auto">&#10005;</button>
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
@@ -2285,6 +2287,9 @@ function paintIntern(){
 }
 var manuals=[], mfPdfFile=null, mfJsonFile=null, mfParsed=null;
 var pdfjsReadyP=null, viewerDoc=null, viewerNumPages=0, viewerPage=1, viewerPdfId=null, viewerRenderTask=null, viewerZoom=1;
+// Which manual the viewer is on (a visit can have several): its ref, the one
+// each visit was last read in, and the page each manual was left at.
+var viewerRef=null, viewerManBy={}, viewerPageBy={};
 var viewerPickMode=false, viewerRows=[], viewerSubgrups=[], viewerPickItems=[], pickReturnEdit=false;
 // What a tapped number does: attach a spare part, or write its name into the
 // description. Picking from the drawing is the same, only the result differs.
@@ -2506,10 +2511,25 @@ function internFileName(s,rev){
 // orders from this list has to know which one it was read against and that it
 // may have moved on since. A visit with no manual linked had its parts typed
 // in by hand, and then there is nothing to point at.
+// A visit can have several manuals (the machine's and its annexes): the note
+// names the ones the parts were actually read in, in the order they are
+// linked. A part that names no manual is the main one's.
+function manualsOfParts(s,devOnly){
+  var refs=sessManuals(s),used=[];
+  collectSessionParts(s).forEach(function(it){
+    if(devOnly&&!(it.part&&it.part.dev))return;
+    var r=partManual(s,it.part);
+    if(r&&used.indexOf(r)<0)used.push(r);
+  });
+  return refs.filter(function(r){return used.indexOf(r)>=0});
+}
 function manualNoteOf(s,R){
-  var ref=s&&s.manualRef,base=ref&&(ref.base||ref.pdfName||ref.serial);
-  if(!base||!collectSessionParts(s).length)return "";
-  return R.manualNote.replace("{m}",base);
+  var refs=sessManuals(s);
+  if(!refs.length||!collectSessionParts(s).length)return "";
+  var used=manualsOfParts(s);if(!used.length)used=[refs[0]];
+  var names=used.map(function(r){return r.base||r.pdfName||r.serial}).filter(Boolean);
+  if(!names.length)return "";
+  return R.manualNote.replace("{m}",names.join(" + "));
 }
 // A conjunt asked for whole (set:true) is ONE line with its name and
 // reference, and what arrives is the assembly as the maker builds it: the
@@ -2534,7 +2554,11 @@ function hasDevPart(s){
 }
 function devNoteOf(s,R){
   if(!hasDevPart(s))return "";
-  var lbl=schLabel(s&&s.manualRef&&s.manualRef.sch);
+  // the schematics of the manuals the devices were read in; before a visit
+  // could have several, that was the one manual's
+  var used=manualsOfParts(s,true);if(!used.length)used=sessManuals(s).slice(0,1);
+  var lbls=[];used.forEach(function(r){var l=schLabel(r.sch);if(l&&lbls.indexOf(l)<0)lbls.push(l)});
+  var lbl=lbls.join(" + ");
   return lbl?String(R.devNote||"").replace("{m}",lbl):(R.devNoteAny||"");
 }
 function partsNotes(s,R){
@@ -3761,9 +3785,45 @@ $$("mfUpload").addEventListener("click",uploadManual);
 // -- Link a manual to a session (session.manualRef = {id,base,serial,folderId,
 //    pdfId,pdfName,jsonId,jsonName}). Suggested by matching the session's
 //    free-text machine field against the catalog's model / serial / base. --
+// -- More than one manual on a visit (nou · 2026-11-15 · 8): the machine's
+//    manual and its annexes. `session.manualRefs` holds them all, in the order
+//    they were linked; `session.manualRef` is kept as the FIRST of them — the
+//    main manual — so everything that only needs "is there a manual" or the
+//    machine's serial (the history, the buttons that show with a manual) reads
+//    what it always read, and a visit from before this has one manual without
+//    being touched. What had to learn which manual it is talking about:
+//    - the viewer shows ONE manual at a time and has a selector when there are
+//      several; the last one read is where it opens next time (viewerManBy);
+//    - a part picked off a drawing, or a device, carries `man` = its manual's
+//      ref id; a part without it is the main manual's (every part before this);
+//    - the marks on a sheet and the sheet filed with the entry (`drawPage`)
+//      carry the manual too (`m`, `drawMan`): page 12 of the annex is not
+//      page 12 of the manual;
+//    - the device search and the conjunts of the Tag field read every manual;
+//    - the reports' note names the manuals the parts came from, the Excel's
+//      page column says which manual when there are several, and the archive
+//      ZIP carries them all.
+function sessManuals(s){
+  if(!s)return [];
+  if(s.manualRefs&&s.manualRefs.length)return s.manualRefs;
+  return s.manualRef?[s.manualRef]:[];
+}
+function manName(r){return (r&&(r.base||r.serial||r.pdfName))||"manual"}
+function manualById(s,id){
+  if(!id)return null;
+  var l=sessManuals(s);
+  for(var i=0;i<l.length;i++)if(l[i].id===id)return l[i];
+  return null;
+}
+// The manual a part was read in: the one it names — null if that one has been
+// unlinked since — and the main one for a part that names none.
+function partManual(s,p){return (p&&p.man)?manualById(s,p.man):(sessManuals(s)[0]||null)}
+function sameManual(a,b){
+  return !!a&&!!b&&((!!a.id&&a.id===b.id)||(!!a.pdfId&&a.pdfId===b.pdfId)||(!a.fromDrive&&!b.fromDrive&&!!a.folderId&&a.folderId===b.folderId));
+}
 function manualChipHTML(sess){
-  var ref=sess.manualRef;
-  if(ref)return "<span id=\"manualChip\" style=\"cursor:pointer\" title=\"Manual de recanvis vinculat — clica per canviar-lo\">📚 "+esc(ref.base||ref.serial||"manual")+"</span>";
+  var refs=sessManuals(sess),ref=refs[0];
+  if(ref)return "<span id=\"manualChip\" style=\"cursor:pointer\" title=\"Manual de recanvis vinculat — clica per canviar-lo\">📚 "+esc(manName(ref))+(refs.length>1?" +"+(refs.length-1):"")+"</span>";
   return "<span id=\"manualChip\" style=\"cursor:pointer;color:var(--tx3)\" title=\"Vincula un manual de recanvis\">📚 Vincula manual</span>";
 }
 function normStr(s){return (s||"").toString().toLowerCase().replace(/[^a-z0-9]+/g," ").trim()}
@@ -3867,7 +3927,7 @@ async function linkAdopt(docs){
     if(ex>=0){entry.id=manuals[ex].id;manuals[ex]=entry}else manuals.push(entry);
     await saveManualsIndex(token);
     linkNote("");
-    setSessionManual(entry);
+    linkSessionManual(entry);   // added to the visit's manuals, not put in place of them
   }catch(e){linkNote("");alert(uiT("No s'ha pogut afegir el manual:")+" "+((e&&e.message)||e))}
 }
 function closeLinkModal(){$$("linkBack").style.display="none"}
@@ -3875,31 +3935,88 @@ function renderLinkList(){
   var box=$$("linkList");if(!box)return;
   var sess=sessions.find(function(s){return s.id===aid});if(!sess){box.innerHTML="";return}
   box.innerHTML="";
-  if(sess.manualRef){
-    var u=document.createElement("div");u.className="manual-row";u.style.cursor="pointer";
-    u.innerHTML="<div class=\"mr-info\"><div class=\"mr-name\">✕ Desvincula el manual actual</div><div class=\"mr-meta\">"+esc(sess.manualRef.base||"")+"</div></div>";
-    u.addEventListener("click",function(){setSessionManual(null)});
-    box.appendChild(u);
+  var refs=sessManuals(sess);
+  function metaOf(m){
+    var meta=[];if(m.model)meta.push(esc(m.model));if(m.serial)meta.push("S/N "+esc(m.serial));
+    if(m.parts!=null)meta.push((m.parts||0)+" "+uiT("recanvis"));
+    return meta.join(" · ");
   }
-  if(!manuals.length){var e=document.createElement("div");e.className="manuals-empty";e.textContent="Encara no s'ha pujat cap manual — afegeix-ne un a 📚 Manuals de recanvis.";box.appendChild(e);return}
-  var best=-1,bestScore=0;
-  manuals.forEach(function(m,i){var sc=manualMatchScore(sess,m);if(sc>bestScore){bestScore=sc;best=i}});
-  manuals.forEach(function(m,idx){
+  // The linked ones first, in their order — the first is the main manual. A
+  // row is drawn from the visit's own ref, so a manual that has left the list
+  // since (taken off it, or the index of another app) can still be unlinked.
+  refs.forEach(function(r,i){
+    var m=manuals.filter(function(x){return sameManual(r,x)})[0]||r;
+    var row=document.createElement("div");row.className="manual-row";
+    row.innerHTML="<div class=\"mr-info\"><div class=\"mr-name\">"+esc(manName(r))
+      +"<span style=\"color:var(--green)\"> · vinculat</span>"+(refs.length>1&&i===0?"<span style=\"color:var(--tx3)\"> · principal</span>":"")+"</div>"
+      +"<div class=\"mr-meta\">"+metaOf(m)+"</div></div>"
+      +(i>0?"<button class=\"btn-xs\" style=\"flex-shrink:0\" data-lk=\"main\" title=\"Fes-lo el manual principal: és el que dona el número de sèrie a l'historial i el que s'obre primer\">&#9733; Principal</button>":"")
+      +"<button class=\"mr-del\" data-lk=\"off\" title=\"Desvincula'l d'aquesta visita (el manual no s'esborra)\">&#10005;</button>";
+    row.querySelector("[data-lk=off]").addEventListener("click",function(){unlinkSessionManual(r)});
+    var mb=row.querySelector("[data-lk=main]");if(mb)mb.addEventListener("click",function(){mainSessionManual(r)});
+    box.appendChild(row);
+  });
+  var rest=manuals.filter(function(m){return !refs.some(function(r){return sameManual(r,m)})});
+  if(!manuals.length&&!refs.length){var e=document.createElement("div");e.className="manuals-empty";e.textContent="Encara no s'ha pujat cap manual — afegeix-ne un a 📚 Manuals de recanvis.";box.appendChild(e);return}
+  var best=null,bestScore=0;
+  if(!refs.length)rest.forEach(function(m){var sc=manualMatchScore(sess,m);if(sc>bestScore){bestScore=sc;best=m}});
+  rest.forEach(function(m){
     var row=document.createElement("div");row.className="manual-row";row.style.cursor="pointer";
-    // by its folder too, so a manual uploaded again stays the linked one — but
-    // not for one taken from Drive: several of those can share a folder
-    var linked=sess.manualRef&&(sess.manualRef.id===m.id||(!!m.pdfId&&sess.manualRef.pdfId===m.pdfId)||(!m.fromDrive&&sess.manualRef.folderId===m.folderId));
-    var meta=[];if(m.model)meta.push(esc(m.model));if(m.serial)meta.push("S/N "+esc(m.serial));meta.push((m.parts||0)+" "+uiT("recanvis"));
-    var badges=(idx===best&&bestScore>0?"<span style=\"color:var(--gold)\"> · suggerit</span>":"")+(linked?"<span style=\"color:var(--green)\"> · vinculat</span>":"");
-    row.innerHTML="<div class=\"mr-info\"><div class=\"mr-name\">"+esc(m.base||m.serial||"manual")+badges+"</div><div class=\"mr-meta\">"+meta.join(" · ")+"</div></div>";
-    row.addEventListener("click",function(){setSessionManual(m)});
+    row.innerHTML="<div class=\"mr-info\"><div class=\"mr-name\">"+esc(manName(m))+(m===best?"<span style=\"color:var(--gold)\"> · suggerit</span>":"")+"</div><div class=\"mr-meta\">"+metaOf(m)+"</div></div>"
+      +"<button class=\"btn-xs\" style=\"flex-shrink:0\">&#65291; Vincula</button>";
+    row.addEventListener("click",function(){linkSessionManual(m)});
     box.appendChild(row);
   });
 }
-function setSessionManual(m){
-  var ref=m?{id:m.id,base:m.base,serial:m.serial,folderId:m.folderId,pdfId:m.pdfId,pdfName:m.pdfName,jsonId:m.jsonId,jsonName:m.jsonName,sch:m.sch||null}:null;
-  sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{manualRef:ref}):s});
-  scheduleSave();closeLinkModal();renderAll();
+function refOfManual(m){
+  var ref={id:m.id,base:m.base,serial:m.serial,folderId:m.folderId,pdfId:m.pdfId,pdfName:m.pdfName,jsonId:m.jsonId,jsonName:m.jsonName,sch:m.sch||null};
+  if(m.fromDrive)ref.fromDrive=true;
+  return ref;
+}
+function setSessionManuals(list){
+  list=(list||[]).filter(Boolean);
+  sessions=sessions.map(function(s){return s.id===aid?Object.assign({},s,{manualRefs:list,manualRef:list[0]||null}):s});
+  scheduleSave();renderLinkList();renderAll();
+}
+// The first manual closes the window, as it always did: one manual is the
+// common case and the next thing wanted is the drawing. From the second on it
+// stays open, so the annexes can be linked one after another.
+function linkSessionManual(m){
+  var sess=sessions.find(function(s){return s.id===aid});if(!sess||!m)return;
+  var refs=sessManuals(sess).slice(),ref=refOfManual(m),first=!refs.length;
+  var at=-1;refs.forEach(function(r,i){if(sameManual(r,ref))at=i});
+  // already linked (uploaded again, or taken from Drive twice): the ref is
+  // brought up to date but keeps its id — the parts read in it point at that
+  if(at>=0){ref.id=refs[at].id||ref.id;refs[at]=ref}else refs.push(ref);
+  setSessionManuals(refs);
+  if(first)closeLinkModal();
+  else linkNote("✓ "+uiT("Vinculat")+": "+manName(ref));
+}
+function unlinkSessionManual(r){
+  var sess=sessions.find(function(s){return s.id===aid});if(!sess)return;
+  var refs=sessManuals(sess),n=collectSessionParts(sess).filter(function(it){return partManual(sess,it.part)===r}).length;
+  if(n&&!confirm(uiT("En aquesta visita s'han triat recanvis d'aquest manual ({n}). Es queden a l'informe, però ja no dirà de quin manual surten.").replace("{n}",n)+"\n\n"+uiT("Vols desvincular-lo igualment?")))return;
+  if(viewerRef===r)viewerRef=null;
+  setSessionManuals(refs.filter(function(x){return x!==r}));
+  linkNote("");
+}
+function mainSessionManual(r){
+  var sess=sessions.find(function(s){return s.id===aid});if(!sess)return;
+  var refs=sessManuals(sess);
+  // The parts that named no manual were the old main one's: they are told so
+  // before it stops being the main one, or they would change manual with it.
+  var old=refs[0];
+  if(old&&old!==r&&old.id){
+    sessions=sessions.map(function(s){
+      if(s.id!==aid)return s;
+      return Object.assign({},s,{entries:(s.entries||[]).map(function(e){
+        if(!(e.parts||[]).some(function(p){return !p.man})&&!(e.images||[]).some(function(im){return im.drawPage&&!im.drawMan}))return e;
+        return Object.assign({},e,{parts:e.parts.map(function(p){return p.man?p:Object.assign({},p,{man:old.id})}),
+          images:(e.images||[]).map(function(im){return (im.drawPage&&!im.drawMan)?Object.assign(im,{drawMan:old.id}):im})});
+      })});
+    });
+  }
+  setSessionManuals([r].concat(refs.filter(function(x){return x!==r})));
 }
 $$("linkClose").addEventListener("click",closeLinkModal);
 $$("linkPick").addEventListener("click",linkPickFromDrive);
@@ -4016,24 +4133,38 @@ function buildDeviceIndex(cat){
   });
   return list;
 }
-async function getDeviceIndex(ref){
-  if(devIndex&&devIndexKey===ref.jsonId)return devIndex;
-  var cat=await getManualCatalog(ref.jsonId);
-  devIndex=buildDeviceIndex(cat);devIndexKey=ref.jsonId;
+// Every linked manual's devices in one list, each knowing its manual (`man`,
+// `manName`). A catalogue that will not load is left out; only when none
+// loads is it an error.
+var devMulti=false;
+async function getDeviceIndex(refs){
+  var key=refs.map(function(r){return r.jsonId||""}).join(",");
+  if(devIndex&&devIndexKey===key)return devIndex;
+  var list=[],ok=0,err=null;
+  for(var i=0;i<refs.length;i++){
+    if(!refs[i].jsonId)continue;
+    try{
+      var cat=await getManualCatalog(refs[i].jsonId);ok++;
+      buildDeviceIndex(cat).forEach(function(d){d.man=refs[i].id||"";d.manName=manName(refs[i]);list.push(d)});
+    }catch(e){err=e}
+  }
+  if(!ok&&err)throw err;
+  devIndex=list;devIndexKey=key;
   return devIndex;
 }
 function devNorm(v){return (v||"").toString().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase()}
 async function openDeviceSearch(target){
   devTarget=target||"edit";
   var sess=sessions.find(function(x){return x.id===aid});
-  if(!sess||!sess.manualRef){alert(uiT("Primer vincula un manual de recanvis a aquesta sessió."));return}
-  var ref=sess.manualRef;
-  $$("devManual").textContent=ref.base||ref.serial||"";
+  var refs=sessManuals(sess);
+  if(!sess||!refs.length){alert(uiT("Primer vincula un manual de recanvis a aquesta sessió."));return}
+  devMulti=refs.length>1;
+  $$("devManual").textContent=refs.map(manName).join(" + ");
   $$("devList").innerHTML="";$$("devStatus").textContent=uiT("Carregant…");
   $$("devBack").style.display="flex";
   var q=$$("devQ");q.value="";
   try{
-    devCurrent=await getDeviceIndex(ref);
+    devCurrent=await getDeviceIndex(refs);
     $$("devStatus").textContent=devCurrent.length
       ? uiT("Escriu l'etiqueta del component (p. ex. 520Q1), o un tros del nom.")
       : uiT("Aquest manual no porta la llista de materials elèctrica.");
@@ -4061,7 +4192,7 @@ function renderDevList(q){
   hits.slice(0,40).forEach(function(d){
     var row=document.createElement("div");row.className="dev-row";
     var info=document.createElement("div");
-    var meta=[d.ref,[d.fab,d.tipus].filter(Boolean).join(" ")].filter(Boolean).join(" · ");
+    var meta=[d.ref,[d.fab,d.tipus].filter(Boolean).join(" "),devMulti?d.manName:""].filter(Boolean).join(" · ");
     info.innerHTML="<div class=\"dev-tag\">"+esc(d.tag)+"</div><div class=\"dev-den\">"+esc(d.den)+"</div>"+(meta?"<div class=\"dev-meta\">"+esc(meta)+"</div>":"");
     var add=document.createElement("button");add.className="btn-sm btn-gold";add.textContent=uiT("Afegeix");
     add.addEventListener("click",function(){addDevicePart(d)});
@@ -4071,7 +4202,7 @@ function renderDevList(q){
       // from the editor, the viewer goes on top the way a pick does: the edit
       // modal is hidden and closeDrawings brings it back
       if(editingId&&$$("editBack").style.display!=="none"){pickReturnEdit=true;$$("editBack").style.display="none"}
-      openDrawings(d.page,false);
+      openDrawings(d.page,false,undefined,d.man);   // the sheet is in THIS device's manual
     })}
     else{sheet.disabled=true;sheet.title=uiT("Aquest full no és al mapa del manual.")}
     row.appendChild(info);row.appendChild(add);row.appendChild(sheet);
@@ -4085,6 +4216,7 @@ function renderDevList(q){
 function addDevicePart(d){
   var den=d.den+((d.fab||d.tipus)?" · "+[d.fab,d.tipus].filter(Boolean).join(" "):"");
   var np={pos:d.tag,ref:d.ref,cant:d.cant||"1",denominacio:den,conjunt:"Esquema elèctric",grup:d.full?("Full "+d.full):"",page:d.page||d.srcPage||null,st:lastPartSt,dev:true};
+  if(d.man)np.man=d.man;
   if(devTarget==="pend"){pParts.push(np);rPParts()}
   else{eParts.push(np);rEParts()}
   $$("devStatus").textContent="✓ "+uiT("Afegit")+": "+d.tag+" — "+d.den+". "+uiT("Busca'n un altre, o tanca per tornar.");
@@ -4096,12 +4228,64 @@ $$("devQ").addEventListener("keydown",function(e){
   if(e.key==="Escape"){closeDeviceSearch();return}
   if(e.key==="Enter"){e.preventDefault();var h=devHits(this.value);if(h.length===1||(h.length&&devNorm(h[0].tag)===devNorm(this.value).trim()))addDevicePart(h[0])}
 });
-async function openDrawings(targetPage,pickMode,purpose){
+function curManId(){return (viewerRef&&viewerRef.id)||""}
+// Is this the manual a sheet filed with an entry was taken from? One filed
+// before a visit could have several names none: it is the main manual's.
+function shotOfCurMan(img){
+  if(img.drawMan)return img.drawMan===curManId();
+  var s=sessions.find(function(x){return x.id===aid});
+  return !viewerRef||sessManuals(s)[0]===viewerRef;
+}
+// The manual's PDF and, when parts are to be picked, its catalogue, into the
+// viewer. Throws what getManualPdfBytes / loadPdfjs throw (drawErr).
+async function viewerLoad(ref,targetPage){
+  var lib=await loadPdfjs();
+  if(viewerPickMode){try{var vc=buildViewerCatalog(await getManualCatalog(ref.jsonId));viewerRows=vc.rows;viewerSubgrups=vc.subgrups}catch(e){viewerRows=[];viewerSubgrups=[];setDrawStatus("No s'ha pogut carregar el catàleg — en tocar no es trobaran els recanvis.")}}
+  else {viewerRows=[];viewerSubgrups=[]}
+  if(viewerDoc&&viewerPdfId===ref.pdfId){$$("drawStatus").textContent="";renderViewerPage(targetPage||viewerPage);return}
+  var buf=await getManualPdfBytes(ref.pdfId);
+  var doc=await lib.getDocument({data:new Uint8Array(buf.slice(0))}).promise;
+  viewerDoc=doc;viewerNumPages=doc.numPages;viewerPdfId=ref.pdfId;shotBase=null;
+  $$("drawStatus").textContent="";
+  renderViewerPage(targetPage||viewerPageBy[ref.pdfId]||1);
+}
+// The manual's name in the viewer's title: a selector when the visit has more
+// than one, the plain name when it has one.
+function drawManualUI(sess,ref){
+  var refs=sessManuals(sess),sel=$$("drawManSel"),lbl=$$("drawManual");
+  if(refs.length>1){
+    sel.innerHTML=refs.map(function(r,i){return "<option value=\""+i+"\""+(r===ref?" selected":"")+">"+esc(manName(r))+"</option>"}).join("");
+    sel.style.display="";lbl.style.display="none";
+  }else{sel.style.display="none";sel.innerHTML="";lbl.style.display="";lbl.textContent=manName(ref)}
+}
+async function switchViewerManual(i){
+  var sess=sessions.find(function(s){return s.id===aid});
+  var ref=sessManuals(sess)[i],prev=viewerRef;
+  if(!ref||ref===prev)return;
+  viewerRef=ref;viewerManBy[sess.id]=ref.id;viewerPickItems=[];lastPickMark=null;
+  var dc=$$("drawChoices");if(dc)dc.style.display="none";
+  var dsb=$$("drawSets");if(dsb)dsb.style.display="none";
+  $$("drawStatus").textContent=uiT("Carregant…");
+  try{await viewerLoad(ref)}
+  catch(e){
+    // the manual that was up stays up, with its own catalogue back
+    $$("drawStatus").textContent="";viewerRef=prev;if(prev)viewerManBy[sess.id]=prev.id;
+    drawManualUI(sess,prev);
+    if(prev){try{await viewerLoad(prev)}catch(e2){}}
+    drawFail(e,ref);
+  }
+}
+async function openDrawings(targetPage,pickMode,purpose,manId){
   viewerPickPurpose=purpose||"part";
   var sess=sessions.find(function(s){return s.id===aid});
-  if(!sess||!sess.manualRef){alert(uiT("Primer vincula un manual de recanvis a aquesta sessió."));return}
+  var refs=sessManuals(sess);
+  if(!sess||!refs.length){alert(uiT("Primer vincula un manual de recanvis a aquesta sessió."));return}
   if(!isLoggedIn){alert(uiT("Inicia la sessió amb Google per obrir els dibuixos."));return}
-  var ref=sess.manualRef;
+  // the manual asked for (a device's sheet), else the one this visit was last
+  // read in, else the main one
+  var ref=manualById(sess,manId)||manualById(sess,viewerManBy[sess.id])||refs[0];
+  viewerRef=ref;viewerManBy[sess.id]=ref.id;
+  drawManualUI(sess,ref);
   viewerPickMode=!!pickMode;viewerPickItems=[];lastPickMark=null;
   $$("drawPickHint").style.display=viewerPickMode?"block":"none";
   $$("drawPickHint").innerHTML=(viewerPickPurpose==="text")
@@ -4111,25 +4295,17 @@ async function openDrawings(targetPage,pickMode,purpose){
   // above drawBack in the DOM); closeDrawings restores it. Only after the guards
   // above pass, so a failed open never leaves the editor hidden.
   if(viewerPickMode&&editingId){pickReturnEdit=true;$$("editBack").style.display="none"}
-  $$("drawManual").textContent=ref.base||ref.serial||"";
   $$("drawStatus").textContent="Carregant…";
   viewerZoom=1;updateZoomLabel();
   $$("drawBack").style.display="flex";
-  try{
-    var lib=await loadPdfjs();
-    if(viewerPickMode){try{var vc=buildViewerCatalog(await getManualCatalog(ref.jsonId));viewerRows=vc.rows;viewerSubgrups=vc.subgrups}catch(e){viewerRows=[];viewerSubgrups=[];setDrawStatus("No s'ha pogut carregar el catàleg — en tocar no es trobaran els recanvis.")}}
-    else {viewerRows=[];viewerSubgrups=[]}
-    if(viewerDoc&&viewerPdfId===ref.pdfId){$$("drawStatus").textContent="";renderViewerPage(targetPage||viewerPage);return}
-    var buf=await getManualPdfBytes(ref.pdfId);
-    var doc=await lib.getDocument({data:new Uint8Array(buf.slice(0))}).promise;
-    viewerDoc=doc;viewerNumPages=doc.numPages;viewerPdfId=ref.pdfId;
-    $$("drawStatus").textContent="";
-    renderViewerPage(targetPage||1);
-  }catch(e){$$("drawStatus").textContent="";closeDrawings();drawFail(e,ref)}
+  try{await viewerLoad(ref,targetPage)}
+  catch(e){$$("drawStatus").textContent="";closeDrawings();drawFail(e,ref)}
 }
+$$("drawManSel").addEventListener("change",function(){switchViewerManual(+this.value)});
 function renderViewerPage(n){
   if(!viewerDoc)return;
   n=Math.max(1,Math.min(n||1,viewerNumPages));viewerPage=n;
+  if(viewerPdfId)viewerPageBy[viewerPdfId]=n;   // where this manual is taken up again
   $$("drawPageLbl").textContent=uiT("Pàg.")+" "+n+" / "+viewerNumPages;
   var cv=$$("drawCanvas");cv.style.transform=""; // clear any live pinch preview
   var dc=$$("drawChoices");if(dc)dc.style.display="none";
@@ -4148,6 +4324,7 @@ function renderViewerPage(n){
     cv.style.width=cssW+"px";cv.style.height="auto"; // display size (CSS px) — fixed, independent of the bitmap
     if(viewerRenderTask){try{viewerRenderTask.cancel()}catch(e){}}
     viewerRenderTask=pg.render({canvasContext:cv.getContext("2d"),viewport:vp});
+    viewerRenderTask.promise["catch"](function(){});   // a render cancelled by the next page is not an error
     // text-item geometry (in bitmap px) for tap-to-pick, matching this render's viewport
     viewerPickItems=[];
     if(viewerPickMode){
@@ -4236,16 +4413,24 @@ function cleanConjuntName(s){
 }
 async function populateTagOptions(){
   var sess=sessions.find(function(s){return s.id===aid});
-  var ref=sess&&sess.manualRef;
-  var key=ref?(sess.id+":"+ref.jsonId):null;
+  // the conjunts of every linked manual, the main one's first
+  var refs=sessManuals(sess).filter(function(r){return r.jsonId});
+  var key=refs.length?(sess.id+":"+refs.map(function(r){return r.jsonId}).join(",")):null;
   if(key===tagOptKey)return;
   tagOptKey=key;
-  if(!ref){tagOpts=[];fillTagTargets();return}
+  if(!refs.length){tagOpts=[];fillTagTargets();return}
   try{
-    var cat=null;
-    if(idb){try{cat=await idbGet(idb,"cat_"+ref.jsonId)}catch(e){}}
-    if(!cat)cat=await getManualCatalog(ref.jsonId);
-    var opts=[],seen={},conjunts=(cat&&cat.conjunts)||(cat&&cat.conjunt?[cat.conjunt]:[]);
+    var opts=[],seen={},conjunts=[],got=0,lastErr=null;
+    for(var ri=0;ri<refs.length;ri++){
+      try{
+        var cat=null;
+        if(idb){try{cat=await idbGet(idb,"cat_"+refs[ri].jsonId)}catch(e){}}
+        if(!cat)cat=await getManualCatalog(refs[ri].jsonId);
+        got++;
+        conjunts=conjunts.concat((cat&&cat.conjunts)||(cat&&cat.conjunt?[cat.conjunt]:[]));
+      }catch(e){lastErr=e}
+    }
+    if(!got&&lastErr)throw lastErr;
     conjunts.forEach(function(c){
       var label=cleanConjuntName(c.name)||(c.num||"").trim();
       var value=(c.num||"").trim()||label; // no number in the catalog: tag by name
@@ -4338,7 +4523,7 @@ function buildPickItems(tc,viewport){
 // printed parts list is a stack of 1s and 2s.
 function partMark(it,cv){
   function r4(v){return Math.round(v*1e4)/1e4}
-  return {p:viewerPage,x:r4(it.x/cv.width),y:r4(it.y/cv.height),w:r4(it.w/cv.width),h:r4(it.h/cv.height)};
+  return {p:viewerPage,m:curManId(),x:r4(it.x/cv.width),y:r4(it.y/cv.height),w:r4(it.w/cv.width),h:r4(it.h/cv.height)};
 }
 // Lays the marks of the page on screen over the canvas. The layer is put
 // exactly where the canvas is and sized to it, so one call covers a new page,
@@ -4353,7 +4538,7 @@ function paintPartMarks(){
   if(!viewerPickMode||viewerPickPurpose!=="part")return;
   var w=cv.offsetWidth||1,h=cv.offsetHeight||1;
   viewerMarks.forEach(function(m){
-    if(m.p!==viewerPage)return;
+    if(m.p!==viewerPage||(m.m||"")!==curManId())return;
     var b=markRect(m,w,h),d=document.createElement("div");
     d.className="draw-mark";
     d.style.left=(b.x/w*100)+"%";d.style.top=(b.y/h*100)+"%";
@@ -4365,7 +4550,7 @@ function addMarks(list){
   list.forEach(function(m){
     if(!m)return;
     // the same number taken twice would otherwise be marked twice over
-    if(viewerMarks.some(function(o){return o.p===m.p&&Math.abs(o.x-m.x)<1e-4&&Math.abs(o.y-m.y)<1e-4}))return;
+    if(viewerMarks.some(function(o){return o.p===m.p&&(o.m||"")===(m.m||"")&&Math.abs(o.x-m.x)<1e-4&&Math.abs(o.y-m.y)<1e-4}))return;
     viewerMarks.push(m);
   });
   paintPartMarks();
@@ -4548,7 +4733,7 @@ async function captureDrawingShot(){
   if(!viewerDoc||!viewerPickMode||viewerPickPurpose!=="part")return;
   var tgt=drawTarget;
   if(tgt==="edit"&&!editingId)return;
-  var page=viewerPage,entry=editingId,seq=++shotSeq,B=MB[tgt];
+  var page=viewerPage,man=curManId(),entry=editingId,seq=++shotSeq,B=MB[tgt];
   B.busy(1);
   try{
     var base=await shotBaseOf(page);
@@ -4557,7 +4742,7 @@ async function captureDrawingShot(){
     var ctx=cv.getContext("2d");
     ctx.drawImage(base,0,0);
     viewerMarks.forEach(function(m){
-      if(m.p!==page)return;
+      if(m.p!==page||(m.m||"")!==man)return;
       var b=markRect(m,cv.width,cv.height),r=Math.min(b.w,b.h)*.3;
       ctx.fillStyle=MARK_FILL;ctx.strokeStyle=MARK_COL;ctx.lineWidth=Math.max(1,b.h*.09);
       ctx.beginPath();
@@ -4567,7 +4752,8 @@ async function captureDrawingShot(){
     });
     var blob=await new Promise(function(res){cv.toBlob(res,"image/jpeg",.85)});
     // a slower shot must not land on top of a newer one
-    if(blob&&seq===shotSeq&&editingId===entry&&drawTarget===tgt)putDrawingShot(page,new File([blob],drawingShotName(page),{type:"image/jpeg"}),tgt);
+    // ...nor on the sheet of another manual, if the viewer has moved on to one
+    if(blob&&seq===shotSeq&&editingId===entry&&drawTarget===tgt&&curManId()===man)putDrawingShot(page,new File([blob],drawingShotName(page),{type:"image/jpeg"}),tgt);
   }catch(e){}
   B.busy(-1);
 }
@@ -4576,8 +4762,9 @@ async function captureDrawingShot(){
 function putDrawingShot(page,file,tgt){
   tgt=tgt||drawTarget;
   var B=MB[tgt],list=B.get().slice(),at=-1;
-  for(var i=0;i<list.length;i++)if(list[i].drawPage===page){at=i;break}
+  for(var i=0;i<list.length;i++)if(list[i].drawPage===page&&shotOfCurMan(list[i])){at=i;break}
   var img={data:null,type:"image",name:file.name,uploadStatus:"",drawPage:page};
+  if(curManId())img.drawMan=curManId();
   fileCache.set(img,file);
   if(at>=0){
     // the shot it replaces may already be on Drive: it goes to the trash queue
@@ -4633,6 +4820,7 @@ function addResolvedPart(r,qty,st){
   st=PART_STS.indexOf(st)>=0?st:lastPartSt;lastPartSt=st;
   var np={pos:r.pos,ref:r.ref,cant:cant,denominacio:r.denominacio,conjunt:r.conjunt,grup:r.grup,page:r.page,st:st};
   if(r.set)np.set=true;
+  if(curManId())np.man=curManId();   // which manual this page and this position are of
   if(drawTarget==="pend"){pParts.push(np);rPParts()}
   else{eParts.push(np);rEParts()}
   // Colour what this just took off the sheet: the number tapped, or -- taking
@@ -7547,7 +7735,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 7";
+var APP_VERSION="nou · 2026-11-15 · 8";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -8803,6 +8991,14 @@ es:{
   "Encara no s'ha pujat cap manual — afegeix-ne un a 📚 Manuals de recanvis":"Todavía no se ha subido ningún manual — añade uno en 📚 Manuales de recambios",
   "suggerit":"sugerido",
   "vinculat":"vinculado",
+  "principal":"principal","Principal":"Principal","Vinculat":"Vinculado",
+  "Manuals d'aquesta visita":"Manuales de esta visita",
+  "Se'n pot vincular més d'un: el manual de la màquina i els seus annexos.":"Se puede vincular más de uno: el manual de la máquina y sus anexos.",
+  "Fes-lo el manual principal: és el que dona el número de sèrie a l'historial i el que s'obre primer":"Hazlo el manual principal: es el que da el número de serie al historial y el que se abre primero",
+  "Desvincula'l d'aquesta visita (el manual no s'esborra)":"Desvincúlalo de esta visita (el manual no se borra)",
+  "En aquesta visita s'han triat recanvis d'aquest manual ({n}). Es queden a l'informe, però ja no dirà de quin manual surten.":"En esta visita se han elegido recambios de este manual ({n}). Se quedan en el informe, pero ya no dirá de qué manual salen.",
+  "Vols desvincular-lo igualment?":"¿Quieres desvincularlo igualmente?",
+  "Canvia de manual: aquesta visita en té més d'un":"Cambia de manual: esta visita tiene más de uno",
   "Obre els dibuixos del manual vinculat":"Abre los dibujos del manual vinculado",
   "no s'ha pogut carregar pdf.js":"no se ha podido cargar pdf.js",
   "no has iniciat la sessió":"no has iniciado sesión",
@@ -9894,6 +10090,14 @@ en:{
   "Encara no s'ha pujat cap manual — afegeix-ne un a 📚 Manuals de recanvis":"No manual has been uploaded yet — add one in 📚 Spare-part manuals",
   "suggerit":"suggested",
   "vinculat":"linked",
+  "principal":"main","Principal":"Main","Vinculat":"Linked",
+  "Manuals d'aquesta visita":"This visit's manuals",
+  "Se'n pot vincular més d'un: el manual de la màquina i els seus annexos.":"More than one can be linked: the machine's manual and its annexes.",
+  "Fes-lo el manual principal: és el que dona el número de sèrie a l'historial i el que s'obre primer":"Make it the main manual: it is the one that gives the serial number to the history and the one that opens first",
+  "Desvincula'l d'aquesta visita (el manual no s'esborra)":"Unlink it from this visit (the manual is not deleted)",
+  "En aquesta visita s'han triat recanvis d'aquest manual ({n}). Es queden a l'informe, però ja no dirà de quin manual surten.":"Parts were picked from this manual on this visit ({n}). They stay in the report, but it will no longer say which manual they come from.",
+  "Vols desvincular-lo igualment?":"Unlink it anyway?",
+  "Canvia de manual: aquesta visita en té més d'un":"Switch manual: this visit has more than one",
   "Obre els dibuixos del manual vinculat":"Open the linked manual's drawings",
   "no s'ha pogut carregar pdf.js":"pdf.js could not be loaded",
   "no has iniciat la sessió":"you are not signed in",
@@ -15862,9 +16066,12 @@ async function buildXlsxBlob(s,lang,rev,opts){
 
   // Sheet 2 — every occurrence, with the entry that needed it
   var detall=[[C.date,C.sev,C.tag,C.entry,C.st,C.ref,C.pos,C.qty,C.den,C.conj,C.grup,C.page]];
+  // With more than one manual on the visit a page number alone says nothing:
+  // the cell names the manual it is a page of.
+  var multiMan=sessManuals(s).length>1;
   items.forEach(function(it){
-    var e=it.entry,p=it.part;
-    detall.push([fts(e.ts),sm(e),e.tag||"",e.text||"",R.pstL[partSt(p)],p.ref||"",p.pos||"",qtyNum(p.cant)!==null?qtyNum(p.cant):(p.cant||""),p.denominacio||"",p.conjunt||"",p.grup||"",p.page||""]);
+    var e=it.entry,p=it.part,pm=multiMan&&p.page?partManual(s,p):null;
+    detall.push([fts(e.ts),sm(e),e.tag||"",e.text||"",R.pstL[partSt(p)],p.ref||"",p.pos||"",qtyNum(p.cant)!==null?qtyNum(p.cant):(p.cant||""),p.denominacio||"",p.conjunt||"",p.grup||"",p.page?(pm?manName(pm)+" · "+p.page:p.page):""]);
   });
   var wsD=X.utils.aoa_to_sheet(detall);
   wsD["!cols"]=autoCols(detall);
@@ -16453,7 +16660,7 @@ function zpSet(o){try{localStorage.setItem(ZP_KEY,JSON.stringify(o))}catch(e){}}
 var zpSess=null,zpWired=false;
 function openZipPick(s){
   zpSess=s;
-  var o=zpGet(),has={hist:machineSessions(s).length>0,val:!!(s.prodTests||[]).length,intern:hasIntern(s),ts:!!(s.timesheet&&s.timesheet.rows&&s.timesheet.rows.length),manual:!!(s.manualRef&&s.manualRef.pdfId),xlsx:!!collectSessionParts(s).length,exp:!!(s.expenses||[]).length};
+  var o=zpGet(),has={hist:machineSessions(s).length>0,val:!!(s.prodTests||[]).length,intern:hasIntern(s),ts:!!(s.timesheet&&s.timesheet.rows&&s.timesheet.rows.length),manual:sessManuals(s).some(function(r){return !!r.pdfId}),xlsx:!!collectSessionParts(s).length,exp:!!(s.expenses||[]).length};
   var row=function(k,l,on,dis,why){return "<label style=\"display:flex;align-items:center;gap:8px;font-size:13px"+(dis?";opacity:.5":"")+"\"><input type=\"checkbox\" data-zp=\""+k+"\""+(on?" checked":"")+(dis?" disabled":"")+">"+l+(why?" <span style=\"color:var(--tx3);font-size:11px\">("+why+")</span>":"")+"</label>"};
   $$("zipPickList").innerHTML=ZP_ITEMS.map(function(it){var k=it[0],no=(k in has)&&!has[k];return row(k,it[1],o[k]&&!no,no,no?"no n'hi ha":"")}).join("");
   function note(){
@@ -16671,17 +16878,26 @@ async function exportSessionZip(s,kind,pick){
     // something, so the drawings and the catalog go in too. Only in the
     // archive: the hand-over pack is the report and the photos, not the
     // machine's manual. A manual that won't download doesn't stop the ZIP.
-    if(token&&archive&&want("manual")&&s.manualRef&&s.manualRef.pdfId){
+    // Every manual linked to the visit, the annexes too. Two that happen to
+    // carry the same file name do not overwrite each other: from the second
+    // on, each goes in a folder of its own.
+    var zipMans=sessManuals(s).filter(function(r){return r.pdfId});
+    if(token&&archive&&want("manual")&&zipMans.length){
       expBusy("Manual…");
-      var mr=s.manualRef,mBase=mr.base||mr.serial||"manual";
-      try{
-        var pr=await fetch("https://www.googleapis.com/drive/v3/files/"+mr.pdfId+"?alt=media",{headers:{Authorization:"Bearer "+token}});
-        if(pr.ok)zip.file("manual/"+(mr.pdfName||(mBase+".pdf")),await pr.blob());
-        if(mr.jsonId){
-          var jr=await fetch("https://www.googleapis.com/drive/v3/files/"+mr.jsonId+"?alt=media",{headers:{Authorization:"Bearer "+token}});
-          if(jr.ok)zip.file("manual/"+(mr.jsonName||(mBase+".json")),await jr.blob());
-        }
-      }catch(e){}
+      var zipManNames={};
+      for(var zm=0;zm<zipMans.length;zm++){
+        var mr=zipMans[zm],mBase=mr.base||mr.serial||"manual";
+        var pdfN=mr.pdfName||(mBase+".pdf"),dir="manual/"+(zipManNames[pdfN.toLowerCase()]?(zm+1)+"/":"");
+        zipManNames[pdfN.toLowerCase()]=1;
+        try{
+          var pr=await fetch("https://www.googleapis.com/drive/v3/files/"+mr.pdfId+"?alt=media",{headers:{Authorization:"Bearer "+token}});
+          if(pr.ok)zip.file(dir+pdfN,await pr.blob());
+          if(mr.jsonId){
+            var jr=await fetch("https://www.googleapis.com/drive/v3/files/"+mr.jsonId+"?alt=media",{headers:{Authorization:"Bearer "+token}});
+            if(jr.ok)zip.file(dir+(mr.jsonName||(mBase+".json")),await jr.blob());
+          }
+        }catch(e){}
+      }
     }
     expBusy("Comprimint…");
     var zipBlob=await zip.generateAsync({type:"blob"});
@@ -16713,7 +16929,7 @@ async function exportSessionZip(s,kind,pick){
       var out=[];
       if(lostMedia.length)out.push(pl(lostMedia.length,"fitxer que només és a Drive","fitxers que només són a Drive")+":\n· "+lostMedia.join("\n· "));
       if(archive&&want("revs")&&revList(s).length>1)out.push(uiT("les revisions anteriors"));   // only when there are any
-      if(archive&&want("manual")&&s.manualRef&&s.manualRef.pdfId)out.push(uiT("el manual de recanvis"));
+      if(archive&&want("manual")&&sessManuals(s).some(function(r){return !!r.pdfId}))out.push(uiT("el manual de recanvis"));
       alert(uiT("ZIP fet sense connexió, amb el que hi ha en aquest aparell.")+(out.length?"\n\n"+uiT("No porta:")+"\n"+out.join("\n"):"")
         +"\n\n"+uiT("No compta com a còpia completa: torna'l a fer amb connexió abans d'esborrar la visita."));
     }

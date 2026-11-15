@@ -4114,6 +4114,47 @@ checked: Google's real Picker — that the second tab shows, that it walks
 through My Drive, and what the tabs are called — and the other two selectors,
 which were not opened. A line of the device-test list.
 
+### A manual taken from Drive, in the link window (2026-11-15, version `nou · 2026-11-15 · 7`)
+
+What he had meant by "no puc navegar per Drive" was NOT the selectors above
+(those stay as they are): he answered with three screenshots of "Add a part
+from the drawing" → "no manual linked yet" → the window "Vincula un manual a
+aquesta sessió" with one manual and a Close button. Asked, he chose: a button
+there to look for the manual at Drive.
+
+- `#linkPick` "🔍 Busca a Drive…" and a status line `#linkNote` in the link
+  window. `linkPickFromDrive` opens Google's Picker (multi-select, a folder
+  can be chosen) through `pickerViews`: first tab the Manuals folder
+  (`linkStartFolder`), second My Drive.
+- **While `SEPARAT`, the first tab is the Manuals folder of the app in use**
+  ("Field Service Log" › "Manuals", looked up by name, never created or
+  written): that is where his manuals are, and the two apps share the Google
+  client, so `drive.file` lets `nou/` read them. After the switch it is the
+  app's own Manuals folder.
+- `linkAdopt(docs)`: a picked folder is listed (one level); from the files it
+  takes the PDF and the JSON with the same name (else the first of each),
+  reads the JSON, and refuses it unless `catalogCounts` finds conjunts or
+  devices. Then an entry like `uploadManual`'s goes into `manuals` with
+  **`fromDrive:true`** and the files' own ids — **nothing is copied or
+  moved** — the index is saved and the visit linked (`setSessionManual`).
+  `folderId` is the picked folder, else the PDF's parent, else `pick_<pdfId>`.
+- What a folder gives is `drive.file`'s rule, and the message says so: inside
+  a folder the app sees only what the app put there; a manual dropped into
+  Drive by hand needs its two files picked themselves.
+- `renderLinkList`'s "vinculat": also by `pdfId`, and by `folderId` only for
+  manuals that are not `fromDrive` (several of those can share a folder).
+- A manual without its JSON cannot be linked: the catalogue is what turns a
+  tap into a part. Making the JSON is still the splitter's job.
+- `nou/` only.
+
+Checked in the preview in English, Google's client, Drive and the Picker
+stubbed: the button and its title; the two tabs (old Manuals folder, root);
+a folder with PDF+JSON → linked, window closed, chip with the manual's name;
+only a PDF → "The JSON is missing"; an empty folder → the folder message; a
+JSON that is no catalogue → refused. NOT checked: Google's real Picker, that a
+folder of the app in use really lists its files to `nou/`, and opening the
+drawings of a manual taken this way. A line of the device-test list.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

@@ -1490,7 +1490,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
     <div class="modal">
       <div class="modal-title">&#128218; Vincula un manual a aquesta sessió</div>
       <div id="linkList" style="max-height:52vh;overflow:auto"></div>
+      <div class="ts-note" id="linkNote" style="margin-top:6px"></div>
       <div class="modal-actions">
+        <button id="linkPick" title="Obre el selector de Google per anar a qualsevol carpeta de Drive i triar-hi el PDF i el JSON d'un manual, o la carpeta del manual">&#128269; Busca a Drive&hellip;</button>
         <button id="linkClose">Tanca</button>
       </div>
     </div>
@@ -3777,9 +3779,96 @@ function manualMatchScore(sess,m){
 }
 function openLinkModal(){
   if(!isLoggedIn){alert(uiT("Inicia la sessió amb Google per fer servir els manuals de recanvis."));return}
-  renderLinkList();
+  renderLinkList();linkNote("");
   $$("linkBack").style.display="flex";
   loadManualsIndex().then(renderLinkList);
+}
+// -- A manual that is already at Drive (nou · 2026-11-15 · 7). The list only
+//    held what had been uploaded from "Manuals de recanvis" in THIS app's
+//    folder, and there was no way to reach anything else: "no puc navegar per
+//    Drive". "Busca a Drive…" opens Google's selector, on the Manuals folder
+//    and on the whole of My Drive, and takes a manual from wherever it is:
+//    its PDF and its JSON, or the folder that holds them. Nothing is copied
+//    or moved: the entry in manuals_index.json points at those two files
+//    where they are (`fromDrive`), and the visit is linked to it at once.
+//    `drive.file` decides what a folder gives: the app sees inside it only
+//    what this app (either of the two, they share the Google client) put
+//    there; files put there by hand have to be picked themselves, which is
+//    what hands them over. While SEPARAT, the first tab is the Manuals folder
+//    of the app in use — that is where his manuals are — read, never written.
+function linkNote(t){var e=$$("linkNote");if(e)e.textContent=t||""}
+async function linkStartFolder(token){
+  try{
+    if(SEPARAT){
+      var old=await driveFind(token,"Field Service Log",null,FOLDER_MIME);
+      if(old){var mo=await driveFind(token,MANUALS_NAME,old,FOLDER_MIME);if(mo)return mo}
+    }
+    var rootId=await getRootId(token);
+    return rootId?await driveFind(token,MANUALS_NAME,rootId,FOLDER_MIME):null;
+  }catch(e){return null}
+}
+async function linkPickFromDrive(){
+  if(!isLoggedIn){alert(uiT("Inicia la sessió amb Google per fer servir els manuals de recanvis."));return}
+  var token=await ensureToken();if(!token)return;
+  linkNote(uiT("Obrint el selector de Drive…"));
+  var P=await loadPicker();
+  if(!P){linkNote("");alert(uiT("No s'ha pogut carregar el selector de Google. Comprova la connexió."));return}
+  var start=await linkStartFolder(token);
+  try{
+    var pb=new P.PickerBuilder()
+      .setOAuthToken(token).setDeveloperKey(PICKER_KEY).setAppId(PICKER_APP)
+      .enableFeature(P.Feature.MULTISELECT_ENABLED);
+    pickerViews(P,P.ViewId.DOCS,start,uiT("Manuals"),function(v){v.setSelectFolderEnabled(true)}).forEach(function(v){pb.addView(v)});
+    pb.setTitle(uiT("Tria el PDF i el JSON del manual, o la seva carpeta"))
+      .setCallback(function(d){
+        if(d.action===P.Action.PICKED)linkAdopt((d[P.Response.DOCUMENTS]||[]).map(function(x){return {id:x.id,name:x.name||"",mimeType:x.mimeType||"",parentId:x.parentId||""}}));
+        else if(d.action===P.Action.CANCEL)linkNote("");
+      }).build().setVisible(true);
+  }catch(e){linkNote("");alert(uiT("El selector de Google ha fallat: ")+((e&&e.message)||e))}
+}
+async function linkAdopt(docs){
+  try{
+    var token=await ensureToken();if(!token)throw new Error(uiT("sense accés a Drive"));
+    linkNote(uiT("Llegint el manual…"));
+    var files=[],folderPicked="";
+    for(var i=0;i<docs.length;i++){
+      var d=docs[i];
+      if(d.mimeType!==FOLDER_MIME){files.push(d);continue}
+      if(!folderPicked)folderPicked=d.id;
+      var q=encodeURIComponent(JSON.stringify(d.id)+" in parents and trashed=false");
+      var lr=await fetch("https://www.googleapis.com/drive/v3/files?q="+q+"&fields=files(id,name,mimeType)&pageSize=200",{headers:{Authorization:"Bearer "+token}});
+      if(lr.ok)((await lr.json()).files||[]).forEach(function(f){files.push({id:f.id,name:f.name||"",mimeType:f.mimeType||"",parentId:d.id})});
+    }
+    var pdfs=files.filter(function(f){return /\.pdf$/i.test(f.name)||f.mimeType==="application/pdf"});
+    var jsons=files.filter(function(f){return /\.json$/i.test(f.name)||f.mimeType==="application/json"});
+    if(!pdfs.length||!jsons.length){
+      linkNote("");
+      alert(uiT("Un manual són dos fitxers: el PDF dels dibuixos i el JSON del catàleg.")+" "
+        +uiT(!pdfs.length&&!jsons.length?"Falten tots dos.":!pdfs.length?"Falta el PDF.":"Falta el JSON.")+"\n\n"
+        +uiT(folderPicked?"D'una carpeta, l'app només veu els fitxers que hi ha pujat ella mateixa. Entra a la carpeta i tria els dos fitxers.":"Tria'ls tots dos alhora."));
+      return;
+    }
+    // the pair with the same name, when several were picked; else the first of each
+    var low=function(n){return baseOf(n).toLowerCase()},pdf=null,json=null;
+    pdfs.some(function(p){var j=jsons.filter(function(x){return low(x.name)===low(p.name)})[0];if(j){pdf=p;json=j}return !!j});
+    if(!pdf){pdf=pdfs[0];json=jsons[0]}
+    var jr=await fetch("https://www.googleapis.com/drive/v3/files/"+json.id+"?alt=media",{headers:{Authorization:"Bearer "+token}});
+    if(!jr.ok)throw new Error(uiT("Drive ha respost")+" "+jr.status);
+    var data=null,c={conjunts:0,parts:0,devices:0};
+    try{data=await jr.json();c=catalogCounts(data)}catch(e){}
+    if(!data||(!c.conjunts&&!c.devices))throw new Error(uiT("el JSON no és un catàleg de recanvis"));
+    var fid=pdf.parentId||folderPicked;
+    if(!fid){var info=await driveFileInfo(token,pdf.id);fid=(info&&info.parents&&info.parents[0])||("pick_"+pdf.id)}
+    if(idb){try{await idbSet(idb,"cat_"+json.id,data)}catch(e){}}
+    var mac=data.machine||{};
+    var entry={id:uid(),base:pdf.name.replace(/\.pdf$/i,""),serial:mac.serial||"",model:mac.model||"",client:mac.client||"",folderId:fid,pdfId:pdf.id,pdfName:pdf.name,jsonId:json.id,jsonName:json.name,conjunts:c.conjunts,parts:c.parts,devices:c.devices,sch:catSchematic(data),uploadedAt:now(),fromDrive:true};
+    await loadManualsIndex();   // the index as it is now, not as it was when the window opened
+    var ex=manuals.findIndex(function(m){return m.pdfId===pdf.id||m.jsonId===json.id});
+    if(ex>=0){entry.id=manuals[ex].id;manuals[ex]=entry}else manuals.push(entry);
+    await saveManualsIndex(token);
+    linkNote("");
+    setSessionManual(entry);
+  }catch(e){linkNote("");alert(uiT("No s'ha pogut afegir el manual:")+" "+((e&&e.message)||e))}
 }
 function closeLinkModal(){$$("linkBack").style.display="none"}
 function renderLinkList(){
@@ -3797,7 +3886,9 @@ function renderLinkList(){
   manuals.forEach(function(m,i){var sc=manualMatchScore(sess,m);if(sc>bestScore){bestScore=sc;best=i}});
   manuals.forEach(function(m,idx){
     var row=document.createElement("div");row.className="manual-row";row.style.cursor="pointer";
-    var linked=sess.manualRef&&(sess.manualRef.id===m.id||sess.manualRef.folderId===m.folderId);
+    // by its folder too, so a manual uploaded again stays the linked one — but
+    // not for one taken from Drive: several of those can share a folder
+    var linked=sess.manualRef&&(sess.manualRef.id===m.id||(!!m.pdfId&&sess.manualRef.pdfId===m.pdfId)||(!m.fromDrive&&sess.manualRef.folderId===m.folderId));
     var meta=[];if(m.model)meta.push(esc(m.model));if(m.serial)meta.push("S/N "+esc(m.serial));meta.push((m.parts||0)+" "+uiT("recanvis"));
     var badges=(idx===best&&bestScore>0?"<span style=\"color:var(--gold)\"> · suggerit</span>":"")+(linked?"<span style=\"color:var(--green)\"> · vinculat</span>":"");
     row.innerHTML="<div class=\"mr-info\"><div class=\"mr-name\">"+esc(m.base||m.serial||"manual")+badges+"</div><div class=\"mr-meta\">"+meta.join(" · ")+"</div></div>";
@@ -3811,6 +3902,7 @@ function setSessionManual(m){
   scheduleSave();closeLinkModal();renderAll();
 }
 $$("linkClose").addEventListener("click",closeLinkModal);
+$$("linkPick").addEventListener("click",linkPickFromDrive);
 $$("linkBack").addEventListener("click",function(e){if(e.target===$$("linkBack"))closeLinkModal()});
 
 // -- Drawings viewer (Pas 4): render the linked manual's PDF with pdf.js. The
@@ -7455,7 +7547,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 6";
+var APP_VERSION="nou · 2026-11-15 · 7";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -8957,6 +9049,15 @@ es:{
   "No s'ha pogut llegir la carpeta":"No se ha podido leer la carpeta",
   "fitxer(s) no s'han pogut pujar. Comprova la connexió i torna-ho a provar":"archivo(s) no se han podido subir. Comprueba la conexión y vuelve a intentarlo",
   "Obrint el selector de Drive":"Abriendo el selector de Drive",
+  "Busca a Drive":"Busca en Drive","Manuals":"Manuales","Llegint el manual":"Leyendo el manual",
+  "Obre el selector de Google per anar a qualsevol carpeta de Drive i triar-hi el PDF i el JSON d'un manual, o la carpeta del manual":"Abre el selector de Google para ir a cualquier carpeta de Drive y elegir el PDF y el JSON de un manual, o la carpeta del manual",
+  "Tria el PDF i el JSON del manual, o la seva carpeta":"Elige el PDF y el JSON del manual, o su carpeta",
+  "Un manual són dos fitxers: el PDF dels dibuixos i el JSON del catàleg.":"Un manual son dos archivos: el PDF de los dibujos y el JSON del catálogo.",
+  "Falten tots dos.":"Faltan los dos.","Falta el PDF.":"Falta el PDF.","Falta el JSON.":"Falta el JSON.",
+  "D'una carpeta, l'app només veu els fitxers que hi ha pujat ella mateixa. Entra a la carpeta i tria els dos fitxers.":"De una carpeta, la app solo ve los archivos que ha subido ella misma. Entra en la carpeta y elige los dos archivos.",
+  "Tria'ls tots dos alhora.":"Elígelos los dos a la vez.",
+  "el JSON no és un catàleg de recanvis":"el JSON no es un catálogo de recambios",
+  "No s'ha pogut afegir el manual:":"No se ha podido añadir el manual:",
   "Tria els fitxers d'aquesta sessió":"Elige los archivos de esta sesión",
   "Obrint":"Abriendo",
   "a l'informe":"en el informe",
@@ -10045,6 +10146,15 @@ en:{
   "No s'ha pogut llegir la carpeta":"The folder could not be read",
   "fitxer(s) no s'han pogut pujar. Comprova la connexió i torna-ho a provar":"file(s) could not be uploaded. Check the connection and try again",
   "Obrint el selector de Drive":"Opening the Drive picker",
+  "Busca a Drive":"Browse Drive","Manuals":"Manuals","Llegint el manual":"Reading the manual",
+  "Obre el selector de Google per anar a qualsevol carpeta de Drive i triar-hi el PDF i el JSON d'un manual, o la carpeta del manual":"Opens Google's picker to go to any Drive folder and choose a manual's PDF and JSON, or the manual's folder",
+  "Tria el PDF i el JSON del manual, o la seva carpeta":"Pick the manual's PDF and JSON, or its folder",
+  "Un manual són dos fitxers: el PDF dels dibuixos i el JSON del catàleg.":"A manual is two files: the drawings PDF and the catalogue JSON.",
+  "Falten tots dos.":"Both are missing.","Falta el PDF.":"The PDF is missing.","Falta el JSON.":"The JSON is missing.",
+  "D'una carpeta, l'app només veu els fitxers que hi ha pujat ella mateixa. Entra a la carpeta i tria els dos fitxers.":"In a folder, the app only sees the files it uploaded itself. Go into the folder and pick the two files.",
+  "Tria'ls tots dos alhora.":"Pick both at once.",
+  "el JSON no és un catàleg de recanvis":"the JSON is not a parts catalogue",
+  "No s'ha pogut afegir el manual:":"The manual could not be added:",
   "Tria els fitxers d'aquesta sessió":"Pick this visit's files",
   "Obrint":"Opening",
   "a l'informe":"in the report",

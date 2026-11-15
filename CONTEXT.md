@@ -4272,6 +4272,34 @@ hidden from the script with an inline `display`, which would win. Measured in
 the preview at 1024 and 375 px: the icon's centre on the button's centre in
 every icon-only button of the visit screen and the composer (0 px off).
 
+### The machine history on screen follows the app's language (2026-11-15, version `nou · 2026-11-15 · 11`)
+
+"Aplicació en anglès i els textos de history encara en català. És intern però
+pot llegir-se en català o en castellà, o amb companys de l'estranger en
+anglès." The dialog was drawn with `RPT.ca` whatever the app's language (and
+`#mhBody` is `data-noui`, so the DOM pass left it alone — which the second
+sweep had written down as "on purpose"; it was not what he wanted).
+
+- `openMachineHistory` draws it with `RPT[internLang()]`: the report tables'
+  own labels in ca / es / en, numbers and "fa 1 dia" included. The one literal
+  in `mhRender`, "aquesta", goes through `uiT`. `#mhBody` stays `data-noui`:
+  what is in it now is either a label already in the right language or text
+  the technician typed, and typed text must not be matched against the tables.
+- What the technician typed stays as typed, on screen. Only the PRINT
+  translates it, and the print (and the history file of the project ZIP) is
+  still in the visit's REPORT language. Asked whether the print should follow
+  the app's language too, now that he calls the history internal: "No, el de
+  l'informe". So: the screen in the app's language, the paper in the report's.
+- Found on the way: the visit's Details card said "Home: 12/11/2026" in
+  English. "Inici" is the menu's Home in `NV_T` and the start of the visit in
+  `UI`, and `row()` asks `NV_T` first; the label is handed to it already
+  translated (`row(uiT("Inici"),…)`).
+- `nou/` only.
+
+Checked in the preview in en, es and ca: the history dialog's labels and the
+Details card. NOT checked: a language of the app other than those three (the
+app has no other), the print.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

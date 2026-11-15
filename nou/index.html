@@ -7855,7 +7855,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 10";
+var APP_VERSION="nou · 2026-11-15 · 11";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -9111,7 +9111,7 @@ es:{
   "Encara no s'ha pujat cap manual — afegeix-ne un a 📚 Manuals de recanvis":"Todavía no se ha subido ningún manual — añade uno en 📚 Manuales de recambios",
   "suggerit":"sugerido",
   "vinculat":"vinculado",
-  "principal":"principal","Principal":"Principal","Vinculat":"Vinculado",
+  "principal":"principal","Principal":"Principal","Vinculat":"Vinculado","aquesta":"esta",
   "Sense client":"Sin cliente","Sense número de màquina":"Sin número de máquina",
   "Client d'aquest manual:":"Cliente de este manual:","Número de màquina d'aquest manual:":"Número de máquina de este manual:",
   "El client d'aquest manual: és la carpeta on es desa i on surt a la llista":"El cliente de este manual: es la carpeta donde se guarda y donde sale en la lista",
@@ -10216,7 +10216,7 @@ en:{
   "Encara no s'ha pujat cap manual — afegeix-ne un a 📚 Manuals de recanvis":"No manual has been uploaded yet — add one in 📚 Spare-part manuals",
   "suggerit":"suggested",
   "vinculat":"linked",
-  "principal":"main","Principal":"Main","Vinculat":"Linked",
+  "principal":"main","Principal":"Main","Vinculat":"Linked","aquesta":"this one",
   "Sense client":"No customer","Sense número de màquina":"No machine number",
   "Client d'aquest manual:":"This manual's customer:","Número de màquina d'aquest manual:":"This manual's machine number:",
   "El client d'aquest manual: és la carpeta on es desa i on surt a la llista":"This manual's customer: the folder it is saved in and listed under",
@@ -12434,7 +12434,7 @@ function mhCardIssues(x,closed,all,H){
   }).join("")+"</div>";
 }
 // The whole history, in the language of the label table L. The screen asks
-// for it in Catalan with the visits as typed; the print asks for it in the
+// for it in the app's language with the visits as typed; the print asks for it in the
 // report's language with the visits already translated (`all` is then the
 // translated copies — the same ids, so the closing links still meet).
 //
@@ -12530,7 +12530,7 @@ function mhRender(cur,all,L,forPrint){
       +(x.project?"<span style=\"font-size:11px;color:var(--tx3)\">"+esc(x.project)+"</span>":"")
       +(r?"<span style=\"font-size:11px;color:var(--tx3)\">"+esc(L.revLbl)+" "+("0"+r.n).slice(-2)+"</span>":"")
       +(x.status==="closed"?"<span style=\"font-size:11px;color:var(--red)\">"+esc(L.closed)+"</span>":"")
-      +(isCur?"<span style=\"font-size:11px;color:var(--gold)\">aquesta</span>":"")
+      +(isCur?"<span style=\"font-size:11px;color:var(--gold)\">"+esc(uiT("aquesta"))+"</span>":"")
       +(x._hist?"<span style=\"font-size:11px;color:var(--tx3)\">🗄 "+esc(H.archived)+"</span>":"")
       +(!issues&&!here?"<span style=\"font-size:11px;color:var(--green)\">✓ "+esc(H.allOk)+"</span>":"")
       +"</div>"
@@ -12581,7 +12581,12 @@ function openMachineHistory(sess){
   mhFor=(sess&&sess.id&&sess.entries)?sess:null;
   var cur=mhFor||sessions.find(function(x){return x.id===aid});if(!cur)return;
   wireMh();
-  var v=mhRender(cur,machineSessions(cur),RPT.ca,false);
+  // On screen, in the app's language (nou · 2026-11-15 · 11). It was always
+  // Catalan: "aplicació en anglès i els textos de history encara en català.
+  // És intern però pot llegir-se en català o en castellà, o amb companys de
+  // l'estranger en anglès." The labels come from the report tables, which
+  // have the three; what the technician typed stays as typed.
+  var v=mhRender(cur,machineSessions(cur),RPT[internLang()]||RPT.ca,false);
   $$("mhTitle").textContent=v.title;
   $$("mhNote").innerHTML=v.note+" "+uiT("S'agrupen per client i màquina tal com els escrius.");
   $$("mhBody").innerHTML=v.body;
@@ -18711,7 +18716,11 @@ function nvFitxaRender(a,isOpen){
       +($$("drawingsChip")?"<button type=\"button\" class=\"btn-sm\" data-go=\"drawingsChip\">"+esc(nvT("Dibuixos"))+"</button>":"")
       +"<button type=\"button\" class=\"btn-sm\" data-go=\"ctr\">"+esc(nvT("Comptadors"))+"</button></div>";
   }else{
-    body=row("Màquina",a.machine)+row("Sèrie",a.machineNo)+row("Tipus",uiT(tm.label))+row("Tècnic",a.tech)+row("Inici",nvDT(sessionStartTs(a)));
+    body=row("Màquina",a.machine)+row("Sèrie",a.machineNo)+row("Tipus",uiT(tm.label))+row("Tècnic",a.tech)
+      // "Inici" is two words here: the Home of the menu (NV_T) and the start of
+      // the visit (UI). row() asks NV_T first and wrote "Home: 12/11/2026"; the
+      // label is handed over already translated from the other table.
+      +row(uiT("Inici"),nvDT(sessionStartTs(a)));
     if(nvFxMore||nvWide()){   // with room to spare, the whole of it
       body+=row("Projecte",a.project)+row("Any de fabricació",a.year)+row("Contacte",contactLine(a))
         +(a.contactPhone?row("Telèfon","<a href=\"tel:"+esc(String(a.contactPhone).replace(/[^\d+]/g,""))+"\">"+esc(a.contactPhone)+"</a>",true):"")

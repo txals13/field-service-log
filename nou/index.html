@@ -387,6 +387,11 @@ textarea{resize:none;line-height:1.4}
    returns at once and afterprint can arrive before the page is laid out for
    the printer, which would print the app. On screen the class does nothing. */
 .print-only{display:none}
+/* The sheet is the reports': A4 with 14 mm all round (buildPdfBlob's own
+   numbers). Without this the browser prints on whatever paper it has by
+   default — Letter on his Chrome, and "el tamany no és el correcte". The
+   history is the only thing the app prints, so the rule needs no fence. */
+@page{size:A4;margin:14mm}
 @media print{
   body.print-mh{
     --bg0:#fff;--bg1:#fff;--bg2:#f3f4f6;--br:#d1d5db;--br2:#d1d5db;
@@ -1593,7 +1598,11 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
       <div class="modal-title no-print">&#128220; <span id="mhTitle">Historial de la m&agrave;quina</span></div>
       <div id="mhNote" class="ts-note no-print" style="margin-bottom:10px">&mdash;</div>
       <div id="mhBody" class="no-print" data-noui style="max-height:62vh;overflow:auto"></div>
-      <div id="mhPrintBox" class="print-only"></div>
+      <!-- data-noui: it is written in the REPORT's language, and the pass that
+           puts the app in English or Spanish must leave it alone — without
+           it a Catalan history printed from the English app came out half
+           and half ("Machine history", "Què queda obert"). -->
+      <div id="mhPrintBox" class="print-only" data-noui></div>
       <div class="modal-actions no-print">
         <button id="mhPrint" title="Imprimeix-lo o desa'l com a PDF per enviar-lo">&#128424; Imprimeix</button>
         <button id="mhClose">Tanca</button>
@@ -7883,7 +7892,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 16";
+var APP_VERSION="nou · 2026-11-15 · 17";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -12859,7 +12868,7 @@ async function buildHistoryHTML(cur,lang){
   var L=RPT[lang]||RPT.en,v=mhRender(cur,loc,L,true),newest=all[0]||cur;
   var html="<!DOCTYPE html><html lang=\""+esc(lang)+"\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
     +"<title>"+esc(L.h.title)+" - "+esc(v.title)+"</title><style>"
-    +"body{max-width:1000px;margin:40px auto;padding:0 24px;background:#fff}@media print{body{margin:0;padding:16px}}"
+    +"body{max-width:1000px;margin:40px auto;padding:0 24px;background:#fff}@page{size:A4;margin:14mm}@media print{body{max-width:none;margin:0;padding:0}}"
     +MHR_CSS+"</style></head><body>"+v.body+"</body></html>";
   return {name:fileSafe(L.h.title,"history")+"_"+sanitize(newest.machine)+"_"+sanitize(newest.client)+".html",
     blob:new Blob([html],{type:"text/html;charset=utf-8"})};

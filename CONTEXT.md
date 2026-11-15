@@ -4492,6 +4492,29 @@ file does); the app in English writes it in English; no console errors.
 NOT checked: the ZIP itself (it wants a Google session), printing on paper
 or to PDF, a history of many visits or with archived ones, a real phone.
 
+**The printed history: A4, and one language (version `nou · 2026-11-15 · 17`).**
+He saved it as PDF from the computer and sent the file: "El tamany no és el
+correcte". Read from the file itself (it could not be drawn here, no
+pdftoppm): three pages of **612 × 792 pt — Letter**, his Chrome's default
+paper, where every report the app makes is A4.
+
+- `@page{size:A4;margin:14mm}` in the stylesheet (the reports' own sheet and
+  margin, `buildPdfBlob`'s `M=14`). The history is the only thing the app
+  prints, so the rule is not fenced. The ZIP's history file has the same rule.
+- The same file showed a second fault he did not mention: the labels **half
+  in English, half in Catalan** ("Machine history", "CUSTOMER", then "Què
+  queda obert", "PRIORITAT"). His app is in English and that visit's report in
+  Catalan: `#mhPrintBox` was not fenced with `data-noui`, so the pass that
+  translates the interface rewrote every label it knew. It is fenced now, as
+  `#mhBody` always was. (This was already so before the history became a
+  report, with fewer words to catch.)
+
+Checked in the preview: the `@page` rule is in the page; with the app in
+English and the report in Catalan the print box is whole in Catalan and stays
+so. NOT checked: an actual PDF — whether his Chrome now offers A4 by itself
+(it follows `@page size` for "Save as PDF"; a real printer keeps its own
+paper), and how the three pages break.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

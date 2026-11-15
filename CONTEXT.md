@@ -4531,6 +4531,36 @@ Checked in the preview by copying every rule inside `@media print` out so it
 applies on screen: the window's shadow is `none`, the sheet has no padding
 or shadow, only the print box shows. NOT checked: a third PDF.
 
+**The history on a phone (version `nou · 2026-11-15 · 19`).** "La versió al
+mòbil no és gaire llegible", with a screenshot of the recommended-parts
+table. Two things in it:
+
+- **The phone was still on version 15** (the card look, no white sheet, no
+  table heads): the app had not been reloaded since. The worker is network
+  first with 3 s of patience and the page is 1.2 MB, so on a slow line the
+  old copy opens and the new one is kept for the NEXT opening. He was told to
+  look at the version in the Menu.
+- **The report version was no better there:** with his real references
+  (`02.18.37.06C01`, `CA-192-00-100`, which cannot be broken) the
+  recommended-parts table measured 392 px in a 317 px sheet, and the type was
+  a printed report's (11–12.5 px).
+
+So, on a phone's **screen** only (`@media screen and (max-width:640px)`;
+paper is never that narrow, so the print is untouched):
+
+- the type goes up: text and parts 15 px, where-it-stands 14, bands 15/13,
+  dates 12.5, the box's values 15;
+- in both parts tables the REF. and QUAN columns (`.wx`) are hidden and a
+  second line under the part's name (`.nx`, written by `nx(ref,when)` in
+  `mhRender`) carries the reference and the date. Three columns at most.
+- the severity and date cells take their size from classes (`.sv`, `.dt`,
+  `.pj`) instead of inline styles, so the phone can change it.
+
+Checked in the preview at 375 px, with rows carrying his references put into
+the table by hand: every table is exactly the sheet's width, no sideways
+scroll; at 1024 px and in the print box the five columns are there and the
+second line is hidden, sizes as before. NOT checked: his phone.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

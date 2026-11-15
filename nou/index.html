@@ -315,7 +315,13 @@ textarea{resize:none;line-height:1.4}
    el que creix ho fa per sota del que es veu. Se li treu quan ja es mesura. */
 #pvDoc iframe.pv-wait,#pvDoc .pv-pages.pv-wait{min-height:72vh}
 #pvDoc .pv-pages canvas{display:block;width:100%;max-width:900px;height:auto;margin:12px auto;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.25)}
-.pv-sign{background:var(--bg1);border-top:3px solid var(--gold);padding:14px}
+.pv-sign{background:var(--bg1);border-top:3px solid var(--gold);padding:14px;position:sticky;left:0}
+.pv-title{display:flex;align-items:center;gap:8px}
+.pv-title #pvTitle{flex:1;min-width:0}
+.pv-zoom{align-items:center;gap:4px;flex-shrink:0}
+.pv-zoom button{min-width:36px;min-height:34px;padding:2px 8px;border:1px solid currentColor;border-radius:8px;background:none!important;color:inherit!important;font-size:16px;font-weight:700;line-height:1}
+.pv-zoom button:disabled{opacity:.35}
+.pv-zoom #pvZoomLbl{min-width:52px;font-size:12px}
 .pv-pads{display:grid;grid-template-columns:1fr;gap:12px}
 @media(min-width:620px){.pv-pads{grid-template-columns:1fr 1fr}}
 /* misc */
@@ -670,7 +676,11 @@ textarea:focus,input[type=text]:focus,input[type=tel]:focus,input[type=email]:fo
   /* a window fills the phone: its title becomes the navy bar of that screen */
   body.m2 .modal{padding:0 14px 0}
   body.m2 .modal>.modal-title{position:sticky;top:0;z-index:3;flex-shrink:0;margin:0 -14px 14px;padding:16px;background:var(--navy);color:#fff}
+  /* edge to edge, like the title: the window has 14 px of air at each side,
+     and a bar that stopped short of it let the page show past both ends */
   body.m2 .modal-actions{background:var(--bg1);border-top:1px solid var(--br)}
+  body.m2 .modal>.modal-actions{margin-left:-14px;margin-right:-14px;padding-left:14px;padding-right:14px}
+  body.m2 #m2MoreBack .modal>.modal-actions{margin-left:-12px;margin-right:-12px;padding-left:12px;padding-right:12px}
   body.m2 .modal-actions button{min-height:48px}
 }
 
@@ -1077,6 +1087,11 @@ body.m2 #m2MoreBack .modal>.modal-title{position:static;margin:0;padding:8px 6px
   #mhBody .mh-mets{grid-template-columns:repeat(4,minmax(0,1fr))!important}
   #mhBody .mh-met b{font-size:24px!important}
   #mhBody .mh-met span{font-size:11.5px!important}
+  /* the parts table kept "recomanat el 14/11/2026" on one line and came out
+     wider than the phone: the whole window then slid sideways */
+  #mhBody table td{white-space:normal!important;overflow-wrap:break-word}
+  #mhBody{overflow-wrap:break-word}
+  #mhBack .modal{overflow-x:hidden}
 }
 /* production tests */
 .pd-top{padding:14px;display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
@@ -1613,7 +1628,10 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
        the two signature pads at the end of it, in one scrolling view. -->
   <div class="modal-back" id="pvBack" style="display:none">
     <div class="modal pv-modal">
-      <div class="modal-title" style="margin-bottom:8px">&#128065; <span id="pvTitle">Revisa i signa</span></div>
+      <!-- − NN% +: only when the report has had to be made smaller to fit
+           (a phone held upright); see pvZoomBy. -->
+      <div class="modal-title pv-title" style="margin-bottom:8px">&#128065; <span id="pvTitle">Revisa i signa</span>
+        <span id="pvZoom" class="pv-zoom" style="display:none"><button type="button" id="pvZoomOut">&minus;</button><button type="button" id="pvZoomLbl" data-noui>100%</button><button type="button" id="pvZoomIn">+</button></span></div>
       <!-- What is being left out of the copy on screen. Said here, in front of
            the pads, because this is the last moment before it is signed. -->
       <div id="pvIntern" class="int-bar" style="display:none;margin-bottom:8px"></div>
@@ -7876,7 +7894,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 14";
+var APP_VERSION="nou · 2026-11-15 · 15";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -11991,7 +12009,29 @@ function setRevSign(id,n,sign){
 // timesheet asks which one first (openReviewSign), and the screen shows that
 // one document, with its pads.
 var pv={sid:null,rev:null,parts:[]},pvWired=false;
-function pvClose(){$$("pvBack").style.display="none";$$("pvDoc").innerHTML="";pv.sid=null;pv.rev=null;pv.parts=[];pv.anchor=false}
+function pvClose(){$$("pvBack").style.display="none";$$("pvDoc").innerHTML="";pv.sid=null;pv.rev=null;pv.parts=[];pv.anchor=false;pv.mult=1;pv.refit=null}
+// The report on a phone (nou · 2026-11-15 · 15). "A la versió Android, a Revisa
+// i signa el format d'informe no és el correcte": the frame is 340 px wide and
+// the report needs 700, so it was made smaller to fit — and at that width the
+// report's own rule for narrow screens also stacked the details box in one
+// column. Half-size text in a phone layout: neither the page nor readable.
+// Now the page keeps its format at any width (openReview), and what is too
+// small to read is enlarged here: pv.mult is how many times the fitted size,
+// from 1 (the whole width in view) to real size, where the page pans sideways.
+function pvZoomBy(f){
+  if(!pv.refit)return;
+  var max=Math.max(1,1/(pv.fit||1)),m=f?Math.min(max,Math.max(1,(pv.mult||1)*f)):1;
+  if(max/m<1.12)m=max;          // the last step lands on real size, not just short of it
+  if(m<1.12)m=1;
+  pv.mult=m;pv.refit(true);
+}
+function pvZoomUI(z,m){
+  var box=$$("pvZoom");if(!box)return;
+  box.style.display=z<1?"flex":"none";
+  $$("pvZoomLbl").textContent=Math.round(z*m*100)+"%";
+  $$("pvZoomOut").disabled=m<=1.001;
+  $$("pvZoomIn").disabled=m>=1/z-0.001;
+}
 // Saved, and said so on the button; the label comes back by itself. Both
 // strings go through uiT here and are not left to uiApply: this runs well
 // after the window has been translated, and would otherwise sit in Catalan.
@@ -12013,6 +12053,10 @@ function pvSaved(){
 function pvWire(){
   if(pvWired)return;pvWired=true;
   $$("pvCancel").addEventListener("click",pvClose);
+  $$("pvZoomIn").addEventListener("click",function(){pvZoomBy(1.3)});
+  $$("pvZoomOut").addEventListener("click",function(){pvZoomBy(1/1.3)});
+  $$("pvZoomLbl").addEventListener("click",function(){pvZoomBy(0)});
+  $$("pvZoomLbl").title=uiT("Restableix el zoom (ajusta a l'amplada)");
   // Saving leaves the window OPEN and redraws the document with the signature
   // now written into it (2026-11-08). It used to save and close, so to see
   // what you had just signed you had to go back in — and the one thing worth
@@ -12173,7 +12217,9 @@ async function openReview(kind){
   }
   pvWire();
   pv.sid=s.id;pv.rev=rev;pv.parts=[];
-  var doc=$$("pvDoc");doc.innerHTML="";
+  pv.refit=null;if(!pv.anchor)pv.mult=1;     // a redraw after signing keeps the size it was read at
+  $$("pvZoom").style.display="none";
+  var doc=$$("pvDoc");doc.innerHTML="";doc.style.width="";
   $$("pvIntern").style.display="none";
   $$("pvGen").innerHTML="&#128196; Desa i genera el PDF";
   $$("pvSave").innerHTML="&#9997; Desa la signatura";
@@ -12224,12 +12270,36 @@ async function openReview(kind){
     // blank: it looked like the report had come out wrong. The document is
     // scaled to the frame's width instead (zoom, which the layout follows, so
     // the height below stays right) and the frame is never allowed to pan.
-    st.textContent=(inked?"":".sig{display:none!important}")+"body{margin-top:16px!important;margin-bottom:16px!important}html{overflow-x:hidden}";
+    // The details box stays in its three columns whatever the frame's width:
+    // the report's own rule for narrow screens is for the file opened on a
+    // phone, where it is read at full size. Here the page is shown whole, made
+    // smaller, and a page with its box stacked in one column is not the page.
+    st.textContent=(inked?"":".sig{display:none!important}")+"body{margin-top:16px!important;margin-bottom:16px!important}html{overflow:hidden}"
+      // (overflow, both ways: the frame is as tall as the page, and a scroll
+      // bar of its own coming and going while it is measured changes the width
+      // being measured)
+      +".meta{grid-template-columns:repeat(3,1fr)!important;gap:20px!important}";
     d.head.appendChild(st);
+    var sc=$$("pvScroll");
+    // Measured with the frame at the box's width and nothing enlarged, then
+    // set: the zoom that makes the page fit (z), times what was asked for (m).
+    // The frame grows with m, so the page keeps the very same layout and it is
+    // the box around it that pans.
     function fitWidth(){
-      d.body.style.zoom="";
+      var sl=sc.scrollLeft,ps=doc.querySelector(".pv-sign");
+      fr.style.width="";doc.style.width="";if(ps)ps.style.width="";d.body.style.zoom="";
       var cw=d.documentElement.clientWidth,sw=d.documentElement.scrollWidth;
-      if(cw&&sw>cw+2)d.body.style.zoom=String(Math.max(0.4,Math.floor((cw/sw)*990)/1000));
+      var z=(cw&&sw>cw+2)?Math.max(0.4,Math.floor((cw/sw)*990)/1000):1;
+      var m=z<1?Math.min(pv.mult||1,1/z):1;
+      pv.fit=z;
+      if(z*m<0.999)d.body.style.zoom=String(Math.round(z*m*1000)/1000);
+      if(m>1.001)fr.style.width=Math.round(cw*m)+"px";
+      // the pads do not pan with the page: they keep the box's width and stay
+      // at its left edge (sticky), which needs their parent as wide as the page
+      doc.style.width=m>1.001?fr.style.width:"";
+      if(ps)ps.style.width=m>1.001?cw+"px":"";
+      sc.scrollLeft=sl;
+      pvZoomUI(z,m);
     }
     fitWidth();
     // as tall as the report, so the one scroll runs on to the pads
@@ -12238,12 +12308,47 @@ async function openReview(kind){
     // re-measure added another 4 px and the document crept down a step at a
     // time (760, 764, 768) — the fine adjustments you could see. Anything
     // inside that margin is not a change worth moving the page for.
-    function fit(){
-      fitWidth();
-      var h=d.documentElement.scrollHeight+4,now=parseFloat(fr.style.height)||0;
+    // resized===true: the size on screen has changed (− / + or the phone
+    // turned). The page can be SHORTER than before, which scrollHeight never
+    // says while the frame is the taller of the two, so the frame is let go
+    // first; and what was being read stays where it was, by its share of the
+    // page down and across. All in one go, so nothing of it is painted.
+    function fit(resized){
+      if(!fr.isConnected)return;
+      resized=resized===true;
+      var h0=fr.offsetHeight,w0=fr.offsetWidth,
+          ry=h0?(sc.scrollTop-fr.offsetTop)/h0:0,
+          // at the left edge it stays at the left edge: a page is read from there
+          rx=(w0&&sc.scrollLeft>1)?(sc.scrollLeft+sc.clientWidth/2)/w0:0;
+      fitWidth();                          // first, with the box as it is (its scroll bar included)
+      if(resized)fr.style.height="1px";
+      var h=d.documentElement.scrollHeight+4,now=resized?0:(parseFloat(fr.style.height)||0);
       if(Math.abs(h-now)>8){fr.style.height=h+"px";if(pv.anchor)pvToPads()}
+      else if(resized)fr.style.height=h+"px";
+      if(resized&&!pv.anchor){
+        if(ry>0)sc.scrollTop=Math.round(fr.offsetTop+ry*fr.offsetHeight);
+        sc.scrollLeft=rx?Math.max(0,Math.round(rx*fr.offsetWidth-sc.clientWidth/2)):0;
+      }
       if(fr.classList.contains("pv-wait")){fr.classList.remove("pv-wait");fr.style.minHeight=""}
     }
+    pv.refit=fit;
+    // The phone turned, or the window dragged narrower: fit again. Only when
+    // the WIDTH changed — the keyboard coming up for the signer's name
+    // changes the height alone and must not move the page under the finger.
+    // Watched on the box itself where the browser can, and on the window as
+    // well; both let go by themselves once this frame is gone.
+    var boxW=sc.clientWidth,rzTm=0,ro=null;
+    function rzStop(){window.removeEventListener("resize",onRz);if(ro){ro.disconnect();ro=null}}
+    function onRz(){
+      clearTimeout(rzTm);
+      rzTm=setTimeout(function(){
+        if(!fr.isConnected){rzStop();return}
+        if(!sc.clientWidth||sc.clientWidth===boxW)return;
+        boxW=sc.clientWidth;fit(true);
+      },150);
+    }
+    window.addEventListener("resize",onRz);
+    if(window.ResizeObserver){ro=new ResizeObserver(onRz);ro.observe(sc)}
     fit();setTimeout(fit,300);setTimeout(fit,1200);
     Array.prototype.forEach.call(d.images,function(im){if(!im.complete)im.addEventListener("load",fit)});
     // a photo's name jumps to the appendix: move the outer view there

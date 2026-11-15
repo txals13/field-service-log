@@ -4385,6 +4385,58 @@ boxes home. At 375 px: both still open as full-screen windows from the Menu.
 NOT checked: real Drive, archiving from the page to the end (it runs the same
 `archiveSessions`), uploading a manual from the page.
 
+### The report on a phone, in Revisa i signa; and the history window (2026-11-15, version `nou · 2026-11-15 · 15`)
+
+"A la versió Android, a Revisa i signa el format d'informe no és el
+correcte", followed by a screenshot of the **machine history** window on the
+phone. Read as two things, both reproduced at 375 px; he was told so, in case
+the screenshot meant something else.
+
+**Revisa i signa (the report, `openReview("rep")`).** The frame is ~340 px and
+the report needs ~700 (its tables), so `fitWidth` zoomed the body to 49 % —
+and at that frame width the report's own `@media(max-width:640px)` stacked the
+details box (`.meta`) in one column. Half-size text in a phone layout.
+
+- The style injected into the frame forces `.meta` to its three columns: the
+  page is shown as the page at any width. (The rule stays in the report file
+  itself, where it is read at full size on a phone.)
+- **− NN% +** in the window's title (`#pvZoom`, only when the fit is under
+  100 %): `pv.mult` multiplies the fitted zoom, from 1 to real size
+  (`pvZoomBy`, steps of 1.3; the label goes back to fit). `fitWidth` sets
+  body zoom `z*m` and the frame's width `cw*m`, so the layout never changes
+  and `#pvScroll` pans. `#pvDoc` takes the frame's width and `.pv-sign` keeps
+  the box's (sticky, left 0): the pads do not pan away.
+- `fit(true)` for a change of size: the frame is let go to 1 px before its
+  height is read (scrollHeight never shrinks otherwise), and the place being
+  read is kept by its share of the page. Also run when the box's width
+  changes (ResizeObserver + window resize) — not on height alone, which is
+  the keyboard. `html{overflow:hidden}` in the frame, so no scroll bar of its
+  own changes the width while measuring.
+- A redraw after "Desa la signatura" keeps the zoom (`pv.anchor`); opening
+  again starts fitted.
+- The timesheet and the validation report (PDF pages on canvases) are as they
+  were: a whole A4 page across the phone, no zoom. Not asked; offered.
+- `maximum-scale=1` in the viewport means there is no pinch in the app; the
+  buttons are the only zoom. A pinch inside the frame was not built: it
+  cannot be tried here.
+
+**The machine history (`#mhBack`) under 701 px.** The recommended-parts table
+kept "recomanat el 14/11/2026" on one line and was 21 px wider than the
+phone, so the whole window slid sideways (the bar at the foot of his
+screenshot). Cells wrap now and the window does not pan. And in **every**
+window on the phone the buttons' bar stopped 14 px short of each side, with
+the page showing past it: `body.m2 .modal>.modal-actions` is edge to edge
+(12 px for the Més sheet, whose box has 12).
+
+Checked in the preview at 375 px: history with no sideways scroll, bar from
+edge to edge; the report at 49 % with its three columns, + to 64, 83, 100 %,
+− and the label back, the place kept, the pads staying put while panned;
+signing and saving keeps the zoom and shows the signature; validation report
+unchanged. At 1024 px: no zoom control, report and history as before. Turning
+the phone could only be tried by sending the resize event by hand (the pane
+is hidden and fires none): it refits. NOT checked: a real phone — touch
+panning of the enlarged page inside the frame, the rotation, how 49 % reads.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

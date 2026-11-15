@@ -19,6 +19,13 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
 - Project ID: `field-service-log-500615`
 - OAuth scope: `https://www.googleapis.com/auth/drive.file` (minimum required)
 - Auth method: Google Identity Services implicit token flow (no redirect URI needed)
+- **The OAuth client only accepts `https://txals13.github.io` as a JavaScript
+  origin.** Signing in from `http://localhost:8420` (the local preview, root or
+  `nou/`) stops at "Access blocked: Authorization Error — Error 400:
+  origin_mismatch" (checked 2026-11-15: the same request with the github.io
+  origin reaches the sign-in page). To use Drive locally, add
+  `http://localhost:8420` under Clients → the web client → Authorised
+  JavaScript origins; otherwise Drive is tried from the published URL.
 - Status: **In production** since 2026-10-10 (Google Auth Platform → Audience).
   Branding carries the home page, `privacy.html`, `terms.html` and the
   authorised domain `txals13.github.io`. No verification needed: no logo, one
@@ -3902,6 +3909,19 @@ errors. **NOT verified:** the Word file opened in Word; the timesheet PDF and
 the printed machine history (the timesheet needs the calendar's days from
 Drive); a report in Spanish, English or a right-to-left language; a signed
 report; the Excel file (it has no colours of its own); printing on paper.
+
+### The sign-in no longer gives up at 25 s (2026-11-15, version `nou · 2026-11-15 · 1`)
+
+`googleLogin` raced Google's window against a blind 25 s timer, meant for a
+blocked popup. It also fired with the window OPEN, while the account was
+still being chosen: "L'inici de sessió no s'ha completat…" over a sign-in
+that was going fine (seen by the user on the computer). Now Google's own
+`error_callback` answers: `popup_failed_to_open` shows the message at once,
+`popup_closed` returns quietly, and the timer is a last resort at 3 minutes.
+**Only in `nou/` — the root app still has the 25 s timer**; it is a fix to
+carry over when he says so. Checked in the preview with Google's client
+stubbed (closed: no message; blocked: the message; 28 s without an answer: no
+message, still "Connectant…"). NOT checked: a real sign-in.
 
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does

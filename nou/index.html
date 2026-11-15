@@ -908,6 +908,11 @@ body.m2 .sv #pThumbs{order:6;margin:0}
 body.m2 .sv #pParts{order:7}
 body.m2 .sv .input-row>.input-ctrl:last-child{order:8;flex-direction:row;flex-wrap:wrap;align-items:center}
 body.m2 .sv .input-row>.input-ctrl:last-child>button{flex:none;width:48px;height:48px;min-height:0;padding:0;font-size:19px;border-radius:10px;background:var(--bg1)}
+/* The line icon is a block, and a block does not obey the button's
+   text-align: it sat against the left edge while the ✓, which is text, was
+   centred. Auto margins centre it whatever display the button has — some of
+   these are shown and hidden from the script with an inline display. */
+body.m2 .sv .input-row>.input-ctrl:last-child>button>.nv-ico{margin-left:auto;margin-right:auto}
 body.m2 .sv .input-row>.input-ctrl:last-child>#btnAdd{display:flex!important;align-items:center;justify-content:center;order:99;flex:1 0 100%;width:100%;height:52px;margin-top:4px;border-radius:14px;font-size:15px;background:var(--accs);border-color:var(--accs);color:#fff}
 #btnIntern.on{background:var(--int-bg)!important;border:2px solid var(--int-dot)!important;color:var(--int-tx)}
 body.m2 .sv #notesIn,body.m2 .sv #notesIntIn,body.m2 .sv #notesIntLbl{display:none}
@@ -7850,7 +7855,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 9";
+var APP_VERSION="nou · 2026-11-15 · 10";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();

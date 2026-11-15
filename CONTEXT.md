@@ -4259,6 +4259,19 @@ existing one again (into its own folder). NOT checked: real Drive, the form's
 values for a manual that was filed by hand and is uploaded again (changed
 after the test), es/en on screen.
 
+### The composer's icons are centred (2026-11-15, version `nou · 2026-11-15 · 10`)
+
+"Els dibuixos dels botons de baix no estan centrats": in the new-entry
+composer the line icons (photo, voice, drawing, device, internal) sat against
+the left edge of their 48 px buttons while the ✓ was centred. `.nv-ico` is
+`display:block`, and a block ignores the button's `text-align`; the ✓ is text.
+Fixed with auto side margins on the icon inside those buttons
+(`body.m2 .sv .input-row>.input-ctrl:last-child>button>.nv-ico`) — not by
+making the buttons flex, because the drawing and device buttons are shown and
+hidden from the script with an inline `display`, which would win. Measured in
+the preview at 1024 and 375 px: the icon's centre on the button's centre in
+every icon-only button of the visit screen and the composer (0 px off).
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

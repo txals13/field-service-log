@@ -4300,6 +4300,20 @@ Checked in the preview in en, es and ca: the history dialog's labels and the
 Details card. NOT checked: a language of the app other than those three (the
 app has no other), the print.
 
+### The Details card shows a photo, not a drawing sheet (2026-11-15, version `nou · 2026-11-15 · 12`)
+
+"La foto de Details s'ha actualitzat després d'haver afegit un recanvi, però
+la mida no és la correcta… Quina és la lògica?" `nvLastPhoto` took the last
+image of the last entry, and the sheet filed with a picked part is an image
+(`drawPage`): a plan, cropped by `object-fit:cover` to the card's 150 px.
+Offered "photos only" or "let me choose a cover photo", he took the first.
+`nvLastPhoto` now skips `drawPage` images and walks `sortEntries(a.entries)`,
+so it is the newest entry by its time whatever order the array is in (the app
+already keeps it sorted; I had told him it went by the order of adding, which
+was wrong). Not done: a cover photo he picks. Checked in the preview: with a
+later entry that holds only a drawing sheet, the card keeps the last real
+photo.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

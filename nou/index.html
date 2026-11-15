@@ -7855,7 +7855,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 11";
+var APP_VERSION="nou · 2026-11-15 · 12";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -18696,11 +18696,17 @@ function nvMachRender(mc){
 }
 
 // ── the visit's card ──
+// The photo on the Details card: the last PHOTO of the visit — the newest
+// entry by its time that has one, and the last one in it. Not a sheet of the
+// manual filed with a part (`drawPage`): it is an attachment like a photo, so
+// picking a part used to put a plan here, cropped to the card's 150 px
+// ("la mida no és la correcta"), in place of the machine. Asked how the card
+// should choose, he said: photos only (nou · 2026-11-15 · 12).
 function nvLastPhoto(a){
-  var es=a.entries||[];
+  var es=sortEntries(a.entries||[]);
   for(var i=es.length-1;i>=0;i--){
     var im=(es[i]&&es[i].images)||[];
-    for(var j=im.length-1;j>=0;j--){if(im[j]&&im[j].type!=="audio"&&im[j].type!=="video"&&im[j].data)return im[j]}
+    for(var j=im.length-1;j>=0;j--){if(im[j]&&im[j].type!=="audio"&&im[j].type!=="video"&&!im[j].drawPage&&im[j].data)return im[j]}
   }
   return null;
 }

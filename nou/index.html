@@ -6698,15 +6698,23 @@ function renderContent(){
       if(e.target.closest("[data-lbl]")){$$("expMenu").style.display="none";openLabels(reportLang(active));return}
       if(e.target.closest("[data-sign]")){$$("expMenu").style.display="none";openReviewSign();return}
       // (new design) a line of the menu is a button with an icon and two lines inside it
-      var fb=e.target.closest?e.target.closest("[data-fmt]"):null,f=fb&&fb.dataset.fmt;if(f){$$("expMenu").style.display="none";exportRep(active,f)}
+      var fb=e.target.closest?e.target.closest("[data-fmt]"):null,f=fb&&fb.dataset.fmt;if(f){$$("expMenu").style.display="none";exportRep(active,f,"menu")}
     });
   }
   var btnSy=$$("btnSync");if(btnSy)btnSy.addEventListener("click",function(){loadFromDrive().then(renderAll);flushTrash()});
   var btnSS=$$("btnSessSync");if(btnSS)btnSS.addEventListener("click",syncActiveSessionToDrive);
-  var fi=$$("filtIn");if(fi)fi.addEventListener("input",function(e){filterTxt=e.target.value;if(!logFilterActive())expFilterOn=false;refreshExpFiltRow();debLogRender()});
+  // THE FILTER IS ON FOR THE REPORTS AS SOON AS IT IS SET (nou · 2026-11-15 · 28).
+  // "Al generar els reports, no respecta el filtre": it only narrowed a report
+  // once "Només les entrades del filtre" had been ticked in the Informe menu,
+  // a box that started unticked every time — and the buttons that make a
+  // document from anywhere else (the summary, the tests, the visit's page)
+  // had no box at all. Setting or changing the filter now ticks it; it can
+  // still be unticked there for a whole report with the filter left on
+  // screen. See exportRep for the other buttons.
+  var fi=$$("filtIn");if(fi)fi.addEventListener("input",function(e){filterTxt=e.target.value;expFilterOn=logFilterActive();refreshExpFiltRow();debLogRender()});
   // The extra filters: a change redraws the log and the row of the menu; the
   // header itself is redrawn so the chips and the ⚙ badge follow.
-  function filtChanged(){if(!logFilterActive())expFilterOn=false;refreshExpFiltRow();renderContent()}
+  function filtChanged(){expFilterOn=logFilterActive();refreshExpFiltRow();renderContent()}
   var fm=$$("filtMore");if(fm)fm.addEventListener("click",function(){filtPanelOpen=!filtPanelOpen;var p=$$("filtPanel");if(p)p.style.display=filtPanelOpen?"flex":"none"});
   var fp=$$("filtPanel");if(fp){
     $$("fFrom").addEventListener("change",function(){logF.from=this.value||"";filtChanged()});
@@ -8294,7 +8302,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 27";
+var APP_VERSION="nou · 2026-11-15 · 28";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -12596,7 +12604,7 @@ function pvWire(){
     if(!pvCommit())return;
     pvClose();
     var s=sessions.find(function(x){return x.id===id});if(!s)return;
-    if(ts)exportTimesheet(s);else if(val)exportRep(s,"valpdf");else exportRep(s,"pdf");
+    if(ts)exportTimesheet(s);else if(val)exportRep(s,"valpdf","whole");else exportRep(s,"pdf","whole");
   });
 }
 // The pads under one document: names, the two pads, and for the sheet its
@@ -14744,7 +14752,7 @@ function buildReportHTML(s,forPrint,lang,rev,opts){
     +"</body></html>";
 }
 
-async function exportRep(s,fmt){
+async function exportRep(s,fmt,how){
   if(!s)return;
   // the menu was built from the session as it was at render time; re-read it so
   // a language just picked in that same menu is the one used
@@ -14779,7 +14787,18 @@ async function exportRep(s,fmt){
   // It is a partial view, so it gets no revision of its own and never asks for
   // one -- it borrows the visit's current number, or none -- and it says what
   // it is on the page and in the file name.
-  var FQ=(expFilterOn&&logFilterActive())?filterDesc():"",PF=null,sFull=s,keepIds={},keepT={};
+  // `how` says where the document was asked for. "menu": the Informe menu,
+  // where the filter's own box is in front of whoever taps — it decides, in
+  // silence. "whole": Revisa i signa, which has just shown and signed the
+  // whole report — never a part of it. Anything else (the summary's
+  // documents, the tests' button, the visit's page): the filter is not in
+  // view there, so with one active the app asks, once, rather than hand over
+  // a partial report nobody asked for or a whole one against the filter.
+  var useF=expFilterOn&&logFilterActive();
+  if(useF&&how==="whole")useF=false;
+  else if(useF&&how!=="menu")
+    useF=confirm(nvT("Hi ha un filtre actiu al registre: {q}.\n\nAccepta per fer el document només amb el que deixa el filtre (sortirà marcat com a parcial), o cancel·la per fer-lo sencer.").replace("{q}",filterDesc()));
+  var FQ=useF?filterDesc():"",PF=null,sFull=s,keepIds={},keepT={};
   if(FQ){
     var allE=(s.entries||[]).filter(function(e){return !isIntern(e)}),fe=allE.filter(entryPasses);
     // the tests follow the filter's dates and days (testPasses); the validation
@@ -19171,6 +19190,7 @@ function nvGo(v){
   m2Hide();
   if(aid){stopCurAudio();aid=null}
   nvView=v;filterTxt="";nvPageTop=0;
+  nvFilterReset();
   renderAll();
   var p=document.querySelector(".nv-page");if(p)p.scrollTop=0;
   return true;
@@ -19206,8 +19226,12 @@ function nvModalPage(mc,backId,title){
   nvBorrowed={node:node,home:back};
   page.scrollTop=nvPageTop;   // a redraw (a sync, a list that changed) keeps the place
 }
+// A filter is a visit's: the dates, days and severities picked in one must not
+// be waiting, unseen, in the next one opened — now that a filter narrows the
+// reports by itself, that would make the next visit's report partial.
+function nvFilterReset(){logF={from:"",to:"",days:{},sev:{}};expFilterOn=false;filtPanelOpen=false}
 function nvOpen(id,sub){
-  if(aid!==id)stopCurAudio();
+  if(aid!==id){stopCurAudio();nvFilterReset()}
   aid=id;nvSub=sub||"fitxa";nvSubAid=id;nvTab="reg";nvFx="det";nvFxMore=false;filterTxt="";
   renderAll();
 }
@@ -20115,7 +20139,8 @@ function nvSumClick(ev){
     "Fotografia la pantalla de la màquina amb les hores i el comptador":"Fotografía la pantalla de la máquina con las horas y el contador",
     "Tria una foto que ja tens al telèfon o a l'ordinador":"Elige una foto que ya tienes en el teléfono o en el ordenador",
     "pujant…":"subiendo…","no s'ha pogut pujar a Drive":"no se ha podido subir a Drive",
-    "Cap prova de producció coincideix amb el filtre.":"Ninguna prueba de producción coincide con el filtro."};
+    "Cap prova de producció coincideix amb el filtre.":"Ninguna prueba de producción coincide con el filtro.",
+    "Hi ha un filtre actiu al registre: {q}.\n\nAccepta per fer el document només amb el que deixa el filtre (sortirà marcat com a parcial), o cancel·la per fer-lo sencer.":"Hay un filtro activo en el registro: {q}.\n\nAcepta para hacer el documento solo con lo que deja el filtro (saldrá marcado como parcial), o cancela para hacerlo entero."};
   var en={"Índex":"Index","Esquema elèctric":"Electrical schematic","Materials elèctrics":"Electrical materials","Llistes del manual":"The manual's lists",
     "Pàgines marcades":"Marked pages","Índex del manual":"The manual's contents","Tot el manual":"Whole manual","pàg.":"p.","Pàg.":"Page","Full":"Sheet",
     "Recanvis recomanats":"Recommended spare parts","Manteniment":"Maintenance","Peces de format":"Format parts","Requisits i especificacions":"Requirements and specifications",
@@ -20126,7 +20151,8 @@ function nvSumClick(ev){
     "Fotografia la pantalla de la màquina amb les hores i el comptador":"Photograph the machine's screen with the hours and the counter",
     "Tria una foto que ja tens al telèfon o a l'ordinador":"Pick a photo you already have on the phone or the computer",
     "pujant…":"uploading…","no s'ha pogut pujar a Drive":"could not be uploaded to Drive",
-    "Cap prova de producció coincideix amb el filtre.":"No production test matches the filter."};
+    "Cap prova de producció coincideix amb el filtre.":"No production test matches the filter.",
+    "Hi ha un filtre actiu al registre: {q}.\n\nAccepta per fer el document només amb el que deixa el filtre (sortirà marcat com a parcial), o cancel·la per fer-lo sencer.":"There is a filter active in the log: {q}.\n\nAccept to make the document with only what the filter leaves (it will be marked as partial), or cancel to make it whole."};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();

@@ -4838,6 +4838,40 @@ at 23:51 local); no filter → the four, no band. NOT checked: a filter by
 range of dates (the same test function), Word and HTML with the tests
 narrowed (they read the same `prodTests`), a report in another language.
 
+**"Al generar els reports, no respecta el filtre" (version `nou · 2026-11-15 · 28`).**
+With version 27 on his device the reports still came out whole. The filter
+only ever narrowed a report once **"Només les entrades del filtre" had been
+ticked** in the Informe menu — a box that started unticked every time — and
+the buttons that make a document from anywhere else had no box at all. He
+filtered and generated; nothing told him there was a box.
+
+- **Setting or changing the filter ticks the box** (`expFilterOn =
+  logFilterActive()` in the text box's and the panel's handlers). It can be
+  unticked in the menu for a whole report with the filter left on screen.
+- **`exportRep(s,fmt,how)`** — where the document was asked for:
+  - `"menu"` (the Informe menu): the box is in front of whoever taps; it
+    decides, in silence.
+  - `"whole"` (Revisa i signa → "Desa i genera el PDF"): that screen has just
+    shown and signed the whole report; it is never a part of it.
+  - anything else (the summary's documents, the tests' "Informe de
+    validació", the visit's page): the filter is not in view there, so with
+    one active the app **asks once** — Accept: only what the filter leaves,
+    marked as partial; Cancel: whole.
+- **A filter is a visit's.** `nvFilterReset()` clears dates, days, severities
+  and the tick on leaving the visit (`nvGo`) and on opening another
+  (`nvOpen`): now that a filter narrows reports by itself, one left from the
+  last visit would make the next one's report partial without being seen.
+  (The text was already cleared there.)
+
+Checked in the preview at 375 px, reading the PDFs' text: filter Friday →
+the menu's row is ticked by itself and its PDF is the partial one (3 of 8
+entries, Prova 1), no question asked; the tests' own button asks — Accept
+gives the partial validation report, Cancel the whole one; Revisa i signa →
+"Desa i genera" gives the whole report with no question; to Inici and back
+into the visit → no filter row, whole report. NOT checked: his device; the
+summary's documents and the desktop page's button (same code path as the
+tests' button); a text filter.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

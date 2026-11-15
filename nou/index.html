@@ -3826,7 +3826,9 @@ function loadPdfjs(){
   pdfjsReadyP=new Promise(function(res,rej){
     if(window.pdfjsLib){res(window.pdfjsLib);return}
     function tryLoad(urls){
-      if(!urls.length){rej(new Error(uiT("no s'ha pogut carregar pdf.js")));return}
+      // a failed load is not remembered: the next try starts again, instead of
+      // answering with this same failure until the page is reloaded
+      if(!urls.length){pdfjsReadyP=null;rej(drawErr("lib",uiT("no s'ha pogut carregar pdf.js")));return}
       var sc=document.createElement("script");sc.src=urls[0];
       sc.onload=function(){try{window.pdfjsLib.GlobalWorkerOptions.workerSrc=urls[0].replace("pdf.min.js","pdf.worker.min.js")}catch(e){}res(window.pdfjsLib)};
       sc.onerror=function(){tryLoad(urls.slice(1))};
@@ -3839,12 +3841,38 @@ function loadPdfjs(){
 async function getManualPdfBytes(pdfId){
   var key="pdf_"+pdfId;
   if(idb){try{var cached=await idbGet(idb,key);if(cached)return cached}catch(e){}}
-  var token=await ensureToken();if(!token)throw new Error(uiT("no has iniciat la sessió"));
-  var r=await fetch("https://www.googleapis.com/drive/v3/files/"+pdfId+"?alt=media",{headers:{Authorization:"Bearer "+token}});
-  if(!r.ok)throw new Error(uiT("no s'ha pogut descarregar el PDF (")+r.status+")");
+  var token=await ensureToken();if(!token)throw drawErr(navigator.onLine===false?"offline":"nologin",uiT("no has iniciat la sessió"));
+  var r;
+  try{r=await fetch("https://www.googleapis.com/drive/v3/files/"+pdfId+"?alt=media",{headers:{Authorization:"Bearer "+token}})}
+  catch(e){throw drawErr("offline",(e&&e.message)||String(e))}
+  if(!r.ok)throw drawErr(r.status===404?"gone":"http",uiT("no s'ha pogut descarregar el PDF (")+r.status+")",r.status);
   var buf=await r.arrayBuffer();
   if(idb){try{await idbSet(idb,key,buf)}catch(e){}}
   return buf;
+}
+// Why the drawings did not open, said in words (nou · 2026-11-15 · 5). The
+// alert used to be "No s'han pogut obrir els dibuixos: no s'ha pogut
+// descarregar el PDF (404)", over the viewer's empty frame: a Drive code, and
+// nothing about what to do. Each failure carries a code now (drawErr) and
+// drawFail turns it into what happened and what to do next, once the viewer
+// is off the screen. A manual that is not at Drive any more is the one the
+// technician can fix on the spot, so that message offers the window where a
+// manual is linked — unless another window is up, which would cover it.
+function drawErr(code,msg,status){var e=new Error(msg);e.code=code;if(status)e.status=status;return e}
+function drawFail(e,ref){
+  var n=(ref&&(ref.base||ref.serial))||"",c=e&&e.code,m,ask=false;
+  function t(s){return uiT(s).replace(" {m}",n?" «"+n+"»":"").replace("{c}",(e&&e.status)||"")}
+  if(c==="gone"){m=t("El manual {m} no s'ha trobat a Drive: s'ha esborrat, o aquest compte de Google no el pot veure.")+"\n\n"+t("Vincula'n un altre a la visita, o torna'l a pujar a 📚 Manuals de recanvis.");ask=true}
+  else if(c==="http")m=t("Drive no ha deixat baixar el manual {m} (codi {c}).")+"\n\n"+t("Torna-ho a provar d'aquí a una estona. Si continua, tanca la sessió de Google i torna-la a iniciar.");
+  else if(c==="offline")m=t("No hi ha connexió i el manual {m} encara no és en aquest aparell.")+"\n\n"+t("Obre'l un cop amb connexió i es quedarà guardat per a quan no n'hi hagi.");
+  else if(c==="nologin")m=uiT("Inicia la sessió amb Google per obrir els dibuixos.");
+  else if(c==="lib")m=t("No s'ha pogut carregar el visor de PDF.")+"\n\n"+t("Cal connexió el primer cop que s'obre un dibuix.");
+  else m=t("No s'han pogut obrir els dibuixos del manual {m}.")+"\n\n"+((e&&e.message)||e);
+  setTimeout(function(){
+    var covered=Array.prototype.some.call(document.querySelectorAll(".modal-back"),function(b){return b.style.display&&b.style.display!=="none"});
+    if(ask&&!covered){if(confirm(m+"\n\n"+uiT("Vols triar el manual ara?")))openLinkModal()}
+    else alert(m);
+  },60);
 }
 // -- Electrical devices. The manual's JSON carries the schematic's material
 //    list -- every device by its tag, with PRODEC's reference, its designation,
@@ -4005,7 +4033,7 @@ async function openDrawings(targetPage,pickMode,purpose){
     viewerDoc=doc;viewerNumPages=doc.numPages;viewerPdfId=ref.pdfId;
     $$("drawStatus").textContent="";
     renderViewerPage(targetPage||1);
-  }catch(e){$$("drawStatus").textContent="";alert(uiT("No s'han pogut obrir els dibuixos: ")+((e&&e.message)||e));closeDrawings()}
+  }catch(e){$$("drawStatus").textContent="";closeDrawings();drawFail(e,ref)}
 }
 function renderViewerPage(n){
   if(!viewerDoc)return;
@@ -7430,7 +7458,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 4";
+var APP_VERSION="nou · 2026-11-15 · 5";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -8690,6 +8718,16 @@ es:{
   "no s'ha pogut carregar pdf.js":"no se ha podido cargar pdf.js",
   "no has iniciat la sessió":"no has iniciado sesión",
   "no s'ha pogut descarregar el PDF (":"no se ha podido descargar el PDF (",
+  "El manual {m} no s'ha trobat a Drive: s'ha esborrat, o aquest compte de Google no el pot veure.":"El manual {m} no se ha encontrado en Drive: se ha borrado, o esta cuenta de Google no lo puede ver.",
+  "Vincula'n un altre a la visita, o torna'l a pujar a 📚 Manuals de recanvis.":"Vincula otro a la visita, o vuelve a subirlo en 📚 Manuales de recambios.",
+  "Vols triar el manual ara?":"¿Quieres elegir el manual ahora?",
+  "Drive no ha deixat baixar el manual {m} (codi {c}).":"Drive no ha dejado descargar el manual {m} (código {c}).",
+  "Torna-ho a provar d'aquí a una estona. Si continua, tanca la sessió de Google i torna-la a iniciar.":"Vuelve a probarlo dentro de un rato. Si continúa, cierra la sesión de Google y vuelve a iniciarla.",
+  "No hi ha connexió i el manual {m} encara no és en aquest aparell.":"No hay conexión y el manual {m} todavía no está en este dispositivo.",
+  "Obre'l un cop amb connexió i es quedarà guardat per a quan no n'hi hagi.":"Ábrelo una vez con conexión y quedará guardado para cuando no la haya.",
+  "No s'ha pogut carregar el visor de PDF.":"No se ha podido cargar el visor de PDF.",
+  "Cal connexió el primer cop que s'obre un dibuix.":"Hace falta conexión la primera vez que se abre un dibujo.",
+  "No s'han pogut obrir els dibuixos del manual {m}.":"No se han podido abrir los dibujos del manual {m}.",
   "Carregant":"Cargando",
   "No s'ha pogut carregar el catàleg":"No se ha podido cargar el catálogo",
   "Afegit":"Añadido",
@@ -9754,13 +9792,23 @@ en:{
   "(el PDF ja era a Drive — s'ha reaprofitat.)":"(the PDF was already on Drive — it has been reused.)",
   "Manual de recanvis vinculat — clica per canviar-lo":"Linked parts manual — click to change it",
   "Desvincula el manual actual":"Unlink the current manual",
-  "Encara no s'ha pujat cap manual — afegeix-ne un a 📚 Manuals de recanvis":"No manual has been uploaded yet — add one in 📚 Parts manuals",
+  "Encara no s'ha pujat cap manual — afegeix-ne un a 📚 Manuals de recanvis":"No manual has been uploaded yet — add one in 📚 Spare-part manuals",
   "suggerit":"suggested",
   "vinculat":"linked",
   "Obre els dibuixos del manual vinculat":"Open the linked manual's drawings",
   "no s'ha pogut carregar pdf.js":"pdf.js could not be loaded",
   "no has iniciat la sessió":"you are not signed in",
   "no s'ha pogut descarregar el PDF (":"the PDF could not be downloaded (",
+  "El manual {m} no s'ha trobat a Drive: s'ha esborrat, o aquest compte de Google no el pot veure.":"The manual {m} was not found in Drive: it has been deleted, or this Google account cannot see it.",
+  "Vincula'n un altre a la visita, o torna'l a pujar a 📚 Manuals de recanvis.":"Link another one to the visit, or upload it again in 📚 Spare-part manuals.",
+  "Vols triar el manual ara?":"Do you want to choose the manual now?",
+  "Drive no ha deixat baixar el manual {m} (codi {c}).":"Drive did not let the manual {m} be downloaded (code {c}).",
+  "Torna-ho a provar d'aquí a una estona. Si continua, tanca la sessió de Google i torna-la a iniciar.":"Try again in a while. If it keeps happening, sign out of Google and sign in again.",
+  "No hi ha connexió i el manual {m} encara no és en aquest aparell.":"There is no connection and the manual {m} is not on this device yet.",
+  "Obre'l un cop amb connexió i es quedarà guardat per a quan no n'hi hagi.":"Open it once with a connection and it will stay saved for when there is none.",
+  "No s'ha pogut carregar el visor de PDF.":"The PDF viewer could not be loaded.",
+  "Cal connexió el primer cop que s'obre un dibuix.":"It needs a connection the first time a drawing is opened.",
+  "No s'han pogut obrir els dibuixos del manual {m}.":"The drawings of the manual {m} could not be opened.",
   "Carregant":"Loading",
   "No s'ha pogut carregar el catàleg":"The catalogue could not be loaded",
   "Afegit":"Added",

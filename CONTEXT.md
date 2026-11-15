@@ -4043,6 +4043,43 @@ stubbed (closed: no message; blocked: the message; 28 s without an answer: no
 message, still "Connectant…"). NOT checked: a real sign-in — it is a line of
 the device-test list now (section 1).
 
+### The drawings say why they did not open (2026-11-15, version `nou · 2026-11-15 · 5`)
+
+He opened "Pick from the drawings" on a visit whose manual is not at Drive and
+got "The drawings could not be opened: the PDF could not be downloaded (404)"
+over the viewer's empty black frame: "apareix el missatge d'error que vull
+canviar". He did not say to what; I chose: what happened and what to do, in
+words, with the Drive code only where nothing better can be said.
+
+- `drawErr(code,msg,status)` makes an Error with a `code`; `getManualPdfBytes`
+  throws `gone` (404), `http` (any other status), `offline` (the fetch itself
+  failed, or no token and `navigator.onLine===false`), `nologin`; `loadPdfjs`
+  throws `lib` — and no longer keeps its failed promise, so a second try loads
+  again instead of failing until a reload.
+- `openDrawings`' catch closes the viewer FIRST and then calls
+  `drawFail(e,ref)`, which waits 60 ms so the alert comes over the visit, not
+  over the empty viewer. The manual's name goes in the sentence (`{m}`, with
+  its leading space, so a manual without a name leaves no gap).
+- `gone` is the one he can fix on the spot: it is a `confirm` ending in "Vols
+  triar el manual ara?" that opens the link window (`openLinkModal`). Only
+  when no `.modal-back` is showing — `#linkBack` sits before `#editBack` in
+  the DOM, so over an open editor it would come up underneath; there it is a
+  plain alert.
+- Why his visit gave 404 is NOT known: the manual's files deleted, another
+  Google account, or a visit that came with a `manualRef` from somewhere else.
+  If relinking does not fix it, look there.
+- The old key "No s'han pogut obrir els dibuixos: " stays in the tables,
+  unused. The line "No s'ha pogut carregar el catàleg — en tocar no es
+  trobaran els recanvis" is unchanged (the viewer closes right after anyway).
+- `nou/` only; the root app has the old message.
+
+Checked in the preview in English with Google's client and Drive's answers
+stubbed: 404 (confirm; yes opens the link window on top, no closes), 403,
+fetch failing, and 404 with another window open (plain alert); from the
+📐 chip and from "Add a part from the drawing". NOT checked: against the real
+Drive, the `lib` and `nologin` branches, and the Catalan and Spanish wording on
+screen (the keys are in both tables; `tools/i18n_check.py` finds nothing new).
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

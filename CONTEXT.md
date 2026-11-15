@@ -3539,6 +3539,9 @@ is NOT being built. A separate plant version for Android is a maybe, for later.
   needs nothing typed again.
 - Title and manifest name "Field Service Log · nou" / "FSL nou", navy icon and
   theme colour, so the two installed apps can be told apart on the phone.
+  **Since 2026-11-15 the manifest and the icon are files** —
+  `nou/manifest.webmanifest`, `icon-192.png`, `icon-512.png`,
+  `icon-maskable-512.png` — see "Installing both on the computer" below.
 - `APP_VERSION` reads `nou · <date> · <n>`; the manual button opens
   `../manual.html` (the manual still describes the old app).
 
@@ -3556,10 +3559,32 @@ Manuals uploaded to the real Drive folder are not seen by the copy: it has its
 own folder.
 
 **The day of the switch:** set `SEPARAT` to false, move `nou/index.html` and
-`nou/sw.js` to the root, keep the old pair a while under `classic/`. Installed
+`nou/sw.js` to the root — **and the manifest and the three icons with them**
+(drop "· nou" from the manifest's names) — keep the old pair a while under
+`classic/`. Installed
 apps point at the root, so they update themselves, and the copy picks up the
 real data where the old app left it (the redesign changes screens, not the
 data format — keep it that way).
+
+**Installing both on the computer (2026-11-15).** Two things the user ran into
+with Chrome on Windows:
+
+- With the root app installed, Chrome does not offer to install `nou/`: the
+  root app's scope is the whole `/field-service-log/`, so `nou/` counts as
+  "already installed" and the menu only says "Open in Field Service Log".
+  What worked: uninstall the root app (WITHOUT ticking "Also clear data from
+  Chrome" — that box wipes the local data of both), install `nou/` first, then
+  install the root again. The narrower scope wins for its own pages.
+- The two desktop icons came out identical. The manifest was a `data:` URL in
+  the page with an SVG `data:` icon inside it; Chrome read the name and the
+  theme colour from it but not the icon, and drew its own — the first letter
+  of the name, "F" for both apps. `nou/` now has a real manifest file and PNG
+  icons (white ring on navy; the maskable one is full-bleed), and a
+  `<link rel="icon">`. **The root app still has the `data:` manifest and
+  therefore the generated "F"**; nothing was changed there. Checked in the
+  preview: the manifest and the three icons are served and are the size they
+  say. NOT checked: that Chrome swaps the icon of the app already installed —
+  it may need uninstalling and installing `nou/` again.
 
 ### Flux 1 of the redesign (2026-11-13, version `nou · 2026-11-13 · 2`)
 

@@ -808,8 +808,12 @@ body.nv-sub-log .nv-fitxa{display:none}
 .nv-seg{display:flex;border-bottom:1px solid var(--br);margin:0 -14px}
 .nv-seg button{padding:10px 16px;font-size:15px;font-weight:500;color:var(--tx3);background:none;border:0;border-bottom:3px solid transparent;border-radius:0}
 .nv-seg button.on{font-weight:700;color:var(--gold);border-bottom-color:var(--gold)}
-.nv-fx-ph{height:150px;border-radius:12px;overflow:hidden;background:var(--bg2);flex:none;cursor:pointer}
+.nv-fx-ph{position:relative;height:150px;border-radius:12px;overflow:hidden;background:var(--bg2);flex:none;cursor:pointer}
 .nv-fx-ph img{display:block;width:100%;height:100%;object-fit:cover}
+/* the visit's own photo: chosen from the device's files, in the photo's place */
+.nv-fx-pb{position:absolute;right:8px;bottom:8px;display:flex;gap:6px}
+.nv-fx-pb button{width:38px;height:38px;min-height:0;padding:0;border:0;border-radius:10px;background:rgba(15,27,45,.66);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px}
+.nv-fx-add{width:100%;height:96px;flex:none;border:1.5px dashed var(--br2);border-radius:12px;background:var(--bg2);color:var(--tx3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:500}
 .nv-row{font-size:15px;padding:4px 0;word-break:break-word}
 .nv-row b{font-weight:700}
 .nv-row a{color:var(--gold);text-decoration:none}
@@ -7855,7 +7859,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 12";
+var APP_VERSION="nou · 2026-11-15 · 13";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -9112,6 +9116,12 @@ es:{
   "suggerit":"sugerido",
   "vinculat":"vinculado",
   "principal":"principal","Principal":"Principal","Vinculat":"Vinculado","aquesta":"esta",
+  "Tria la foto de la visita":"Elige la foto de la visita",
+  "Tria la foto de la capçalera dels fitxers d'aquest aparell":"Elige la foto de la cabecera de los archivos de este dispositivo",
+  "Treu la foto de la capçalera":"Quita la foto de la cabecera",
+  "Vols treure la foto de la capçalera?":"¿Quieres quitar la foto de la cabecera?",
+  "Només es treu d'aquí: les fotos de les entrades no es toquen.":"Solo se quita de aquí: las fotos de las entradas no se tocan.",
+  "Aquest fitxer no s'ha pogut llegir com a imatge. Tria una foto (JPG o PNG).":"Este archivo no se ha podido leer como imagen. Elige una foto (JPG o PNG).",
   "Sense client":"Sin cliente","Sense número de màquina":"Sin número de máquina",
   "Client d'aquest manual:":"Cliente de este manual:","Número de màquina d'aquest manual:":"Número de máquina de este manual:",
   "El client d'aquest manual: és la carpeta on es desa i on surt a la llista":"El cliente de este manual: es la carpeta donde se guarda y donde sale en la lista",
@@ -10217,6 +10227,12 @@ en:{
   "suggerit":"suggested",
   "vinculat":"linked",
   "principal":"main","Principal":"Main","Vinculat":"Linked","aquesta":"this one",
+  "Tria la foto de la visita":"Choose the visit's photo",
+  "Tria la foto de la capçalera dels fitxers d'aquest aparell":"Choose the header photo from this device's files",
+  "Treu la foto de la capçalera":"Remove the header photo",
+  "Vols treure la foto de la capçalera?":"Remove the header photo?",
+  "Només es treu d'aquí: les fotos de les entrades no es toquen.":"It is only removed from here: the photos in the entries are not touched.",
+  "Aquest fitxer no s'ha pogut llegir com a imatge. Tria una foto (JPG o PNG).":"This file could not be read as an image. Choose a photo (JPG or PNG).",
   "Sense client":"No customer","Sense número de màquina":"No machine number",
   "Client d'aquest manual:":"This manual's customer:","Número de màquina d'aquest manual:":"This manual's machine number:",
   "El client d'aquest manual: és la carpeta on es desa i on surt a la llista":"This manual's customer: the folder it is saved in and listed under",
@@ -18710,11 +18726,58 @@ function nvLastPhoto(a){
   }
   return null;
 }
+// -- The visit's own photo (nou · 2026-11-15 · 13). "Millor vull escollir la
+//    foto que surt a la capçalera. Al mateix espai on és la foto, vull una
+//    mena d'accés als arxius de l'ordinador o el mòbil per poder afegir-la."
+//    `session.cover` = {data,name,at}: a picture picked with the device's own
+//    file dialog (on a phone that is the gallery, the camera or the files),
+//    kept small (1200 px, JPEG) inside the visit like every thumbnail, so it
+//    travels to the other devices with it. It is NOT an attachment: it is not
+//    uploaded to the visit's folder, and no report, ZIP of media or history
+//    shows it. While none is chosen the card still shows the last photo of
+//    the visit (nvLastPhoto), with the same button on it. --
+function nvCoverData(file){
+  return new Promise(function(res){
+    var url=URL.createObjectURL(file),im=new Image();
+    im.onload=function(){
+      try{
+        var w=im.naturalWidth||0,h=im.naturalHeight||0,sc=Math.min(1,1200/(Math.max(w,h)||1));
+        var c=document.createElement("canvas");c.width=Math.max(1,Math.round(w*sc));c.height=Math.max(1,Math.round(h*sc));
+        var ctx=c.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,c.width,c.height);   // a PNG's clear parts would come out black
+        ctx.drawImage(im,0,0,c.width,c.height);
+        URL.revokeObjectURL(url);res(c.toDataURL("image/jpeg",.82));
+      }catch(e){URL.revokeObjectURL(url);res(null)}
+    };
+    im.onerror=function(){URL.revokeObjectURL(url);res(null)};
+    im.src=url;
+  });
+}
+function nvCoverPick(a){
+  var inp=$$("nvCoverIn");
+  if(!inp){
+    inp=document.createElement("input");inp.type="file";inp.accept="image/*";inp.id="nvCoverIn";inp.style.display="none";
+    document.body.appendChild(inp);
+    inp.addEventListener("change",async function(){
+      var f=inp.files&&inp.files[0],id=inp.dataset.sid;inp.value="";
+      if(!f)return;
+      var d=await nvCoverData(f);
+      if(!d){alert(nvT("Aquest fitxer no s'ha pogut llegir com a imatge. Tria una foto (JPG o PNG)."));return}
+      sessions=sessions.map(function(s){return s.id===id?Object.assign({},s,{cover:{data:d,name:f.name||"",at:now()}}):s});
+      scheduleSave();renderAll();
+    });
+  }
+  inp.dataset.sid=a.id;inp.click();
+}
+function nvCoverDrop(a){
+  if(!confirm(nvT("Vols treure la foto de la capçalera?")+"\n\n"+nvT("Només es treu d'aquí: les fotos de les entrades no es toquen.")))return;
+  sessions=sessions.map(function(s){return s.id===a.id?Object.assign({},s,{cover:null}):s});
+  scheduleSave();renderAll();
+}
 function nvFitxaRender(a,isOpen){
   var el=$$("nvFitxa");if(!el||!a)return;
   var tm=TM[a.type]||TM.commissioning;
   function row(l,v,raw){return v?"<div class=\"nv-row\"><b>"+esc(nvT(l))+":</b> "+(raw?v:esc(v))+"</div>":""}
-  var ph=nvLastPhoto(a),body;
+  var cov=(a.cover&&a.cover.data)?a.cover:null,ph=cov||nvLastPhoto(a),body;
   if(nvFx==="eq"){
     body=row("Màquina",a.machine)+row("Núm. de màquina",a.machineNo)+row("Any de fabricació",a.year)
       +"<div style=\"display:flex;gap:8px;flex-wrap:wrap;margin-top:8px\">"
@@ -18745,7 +18808,12 @@ function nvFitxaRender(a,isOpen){
     +"<div class=\"nv-seg\"><button type=\"button\" data-fx=\"det\""+(nvFx==="det"?" class=\"on\"":"")+">"+esc(nvT("Detalls"))+"</button>"
       +"<button type=\"button\" data-fx=\"eq\""+(nvFx==="eq"?" class=\"on\"":"")+">"+esc(nvT("Equip"))+"</button>"
       +(machineSessions(a).length?"<button type=\"button\" data-fx=\"his\">"+esc(nvT("Historial"))+"</button>":"")+"</div>"
-    +(ph&&nvFx==="det"?"<div class=\"nv-fx-ph\" id=\"nvFxPh\"><img src=\""+ph.data+"\" alt=\"\"></div>":"")
+    +(nvFx!=="det"?"":ph
+      ?"<div class=\"nv-fx-ph\" id=\"nvFxPh\"><img src=\""+ph.data+"\" alt=\"\"><div class=\"nv-fx-pb\">"
+        +"<button type=\"button\" id=\"nvFxPick\" title=\""+esc(nvT("Tria la foto de la capçalera dels fitxers d'aquest aparell"))+"\" aria-label=\""+esc(nvT("Tria la foto de la capçalera dels fitxers d'aquest aparell"))+"\">"+nvI("image",20)+"</button>"
+        +(cov?"<button type=\"button\" id=\"nvFxDrop\" title=\""+esc(nvT("Treu la foto de la capçalera"))+"\" aria-label=\""+esc(nvT("Treu la foto de la capçalera"))+"\">&#10005;</button>":"")
+        +"</div></div>"
+      :"<button type=\"button\" class=\"nv-fx-add\" id=\"nvFxPick\">"+nvI("image",26)+"<span>"+esc(nvT("Tria la foto de la visita"))+"</span></button>")
     +"<div>"+body+"</div>"
     +(nvFx==="det"?"<button type=\"button\" class=\"nv-fx-more\" id=\"nvFxMore\">"+esc(nvT(nvFxMore?"Veure menys":"Veure més"))+nvI(nvFxMore?"up":"down",18)+"</button>":"")
     +"</div>";
@@ -18765,6 +18833,12 @@ function nvFitxaRender(a,isOpen){
   on("nvFxMore",function(){nvFxMore=!nvFxMore;nvFitxaRender(a,isOpen)});
   on("nvFxLast",function(){openMachineHistory()});
   on("nvFxPh",function(){openMedia(ph.data,"image",ph.name)});
+  // the two buttons sit on the photo: their tap must not open it as well
+  (function(){
+    var pk=$$("nvFxPick"),dr=$$("nvFxDrop");
+    if(pk)pk.addEventListener("click",function(e){e.stopPropagation();nvCoverPick(a)});
+    if(dr)dr.addEventListener("click",function(e){e.stopPropagation();nvCoverDrop(a)});
+  })();
   on("nvFxNotes",function(){nvNeedLog();m2Show("notes");focusField($$("notesIn"))});
   Array.prototype.forEach.call(el.querySelectorAll("[data-fx]"),function(b){b.addEventListener("click",function(){
     if(b.dataset.fx==="his"){openMachineHistory();return}

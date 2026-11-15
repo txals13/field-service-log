@@ -4314,6 +4314,38 @@ was wrong). Not done: a cover photo he picks. Checked in the preview: with a
 later entry that holds only a drawing sheet, the card keeps the last real
 photo.
 
+### The visit's own photo, picked from the device's files (2026-11-15, version `nou · 2026-11-15 · 13`)
+
+The next message changed his mind: "Millor vull escollir la foto que surt a la
+capçalera. Al mateix espai on és la foto, vull una mena d'accés als arxius de
+l'ordinador o el mòbil per poder afegir-la."
+
+- **`session.cover` = `{data,name,at}`.** `nvCoverPick` opens the browser's
+  own file dialog (a hidden `<input type=file accept="image/*">`, `#nvCoverIn`,
+  made on first use — on a phone that is gallery, camera or files);
+  `nvCoverData` draws the picture at 1200 px at most onto white and keeps it
+  as a JPEG data URL (a dozen to a couple of hundred KB) inside the visit, the
+  way every thumbnail is kept, so it reaches the other devices with the
+  visit's data. A file that is no image says so and changes nothing.
+- **It is not an attachment:** nothing is uploaded to the visit's Drive
+  folder, and no report, media ZIP or history shows it (`session.json` in the
+  project ZIP carries it, being the visit).
+- **In the card:** the photo's place always has the way in. With a picture —
+  the chosen one, or failing that the last photo of the visit (`nvLastPhoto`,
+  kept as the fallback; he did not ask for it to go) — two round buttons sit
+  on its corner: the image icon picks, ✕ removes the chosen one (only shown
+  for a chosen one, asks first). With no picture at all, a dashed box "Tria la
+  foto de la visita". Tapping the photo still opens it large; the buttons stop
+  the tap from doing both. Works on a closed visit too.
+- `nou/` only.
+
+Checked in the preview at 1024 and 375 px: the button on the last photo, a
+2400×1200 PNG picked (stored 1200×600 JPEG, shown, ✕ appears, saved in
+IndexedDB), a text file refused, removing it (back to the last photo), the
+dashed box on a visit with no photo. NOT checked: the file dialog itself (the
+test hands the input a file), a phone's camera/gallery, HEIC photos, that the
+cover arrives on a second device through Drive.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

@@ -4479,9 +4479,19 @@ function buildViewerNav(cat,numPages){
   function add(id,label,pages,items){var g={id:id,label:label,pages:pages,items:items||[]};groups.push(g);by[id]=g;return g}
   cat=cat||{};
   // -- the drawings --
+  // ONE LINE FOR ONE THING (nou · 2026-11-15 · 22). "L'índex no és correcte":
+  // in his manuals a conjunt is often a single drawing, and the splitter
+  // stores it three deep under the same name — conjunt, grup, drawing — so the
+  // index said "GRUPO GUIAS LATERALES" three times running, each with the same
+  // number and page. A grup that only repeats its conjunt's name is not a
+  // line, and neither is a drawing that is the only one under a name it only
+  // repeats: its number goes up to the line that stays. Names are compared
+  // without capitals, accents or punctuation ("…DCHA" is "…DCHA.").
+  function nk(s){return String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim()}
   var conjunts=cat.conjunts||(cat.conjunt?[cat.conjunt]:[]),mp=[],mi=[];
   conjunts.forEach(function(c){
     var cItems=[],cPages=[],grups=c.grups||[];
+    var cNum=(c.num||"").trim(),cName=cleanConjuntName(c.name)||(c.name||"").trim()||cNum||"—",cKey=nk(cName),cUp="";
     grups.forEach(function(g){
       var gp=uniq(g.pages||[]),subs=[];
       (g.subgrups||[]).forEach(function(sg){
@@ -4504,18 +4514,28 @@ function buildViewerNav(cat,numPages){
         if(!s.pages.length){s.at=0;return}
         var p0=s.pages[0];s.at=(inG[p0-1]&&!owned[p0-1])?p0-1:p0;
       });
-      var gName=cleanConjuntName(g.name)||(g.name||"").trim();
+      var gName=cleanConjuntName(g.name)||(g.name||"").trim(),gKey=nk(gName);
       var named=subs.filter(function(s){return s.at&&(s.name||s.num)});
-      var lone=named.length===1&&(!gName||gName===named[0].name);
-      if(gName&&!lone)cItems.push({label:gName,page:full[0],lvl:1});
-      named.forEach(function(s){cItems.push({label:s.name||s.num,sub:s.name&&s.num?"Nº "+s.num:"",page:s.at,lvl:(gName&&!lone)?2:1})});
-      if(!gName&&!named.length)cItems.push({label:nvT("Pàg.")+" "+full[0],page:full[0],lvl:1});
+      var gLine=!!gName&&gKey!==cKey;            // its own line only when it says something the conjunt does not
+      var upKey=gLine?gKey:cKey,gUp="",lines=[];
+      named.forEach(function(s){
+        if(named.length===1&&(!s.name||nk(s.name)===upKey)){   // the only drawing, under its own name: no line
+          if(gLine)gUp=s.num;else if(!cUp)cUp=s.num;
+          return;
+        }
+        lines.push({label:s.name||s.num,sub:s.name&&s.num?"Nº "+s.num:"",page:s.at,lvl:gLine?2:1});
+      });
+      if(gLine)cItems.push({label:gName,sub:gUp?"Nº "+gUp:"",page:full[0],lvl:1});
+      cItems=cItems.concat(lines);
     });
     cPages=uniq(cPages);if(!cPages.length)return;
-    var cName=cleanConjuntName(c.name)||(c.name||"").trim()||(c.num||"").trim()||"—";
-    mi.push({label:cName,sub:(c.num||"").trim()&&cName.indexOf((c.num||"").trim())<0?(c.num||"").trim():"",page:cPages[0],lvl:0});
+    // the conjunt's own number, or its one drawing's; not when the name already carries it
+    var cShow=cNum||cUp;
+    mi.push({label:cName,sub:cShow&&nk(cName).indexOf(nk(cShow))<0?cShow:"",page:cPages[0],lvl:0});
     mi=mi.concat(cItems);mp=mp.concat(cPages);
   });
+  // nothing under any conjunt: the list is flat, and reads as one
+  if(!mi.some(function(x){return x.lvl>0}))mi.forEach(function(x){x.lvl=1});
   mp=uniq(mp);
   if(mp.length)add("mec",nvT("Dibuixos"),mp,mi);
   // -- the electrical schematic --
@@ -8168,7 +8188,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 21";
+var APP_VERSION="nou · 2026-11-15 · 22";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();

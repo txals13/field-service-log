@@ -4653,6 +4653,29 @@ real manuals — whether the conjunts' pages in them really cover every
 drawing sheet (if one is missing it is still under "Tot el manual" and by
 its page number), and how the real sheets and lists read in the index.
 
+**The index said every drawing three times (version `nou · 2026-11-15 · 22`).**
+"L'índex no és correcte", with a screenshot of a real manual
+(`MANUAL_1527_10-2930_…`, 37 pages of drawings): "GRUPO GUIAS LATERALES"
+as a heading, then again under it with the same number and page; "CONJUNTO
+ASCENSOR (H=140mm) DCHA" three times. **In his manuals a conjunt is often a
+single drawing**, and the splitter stores it three deep under one name —
+conjunt, grup, subgrup — sometimes with a full stop of difference. The index
+had been tried only on a made-up catalogue with a real hierarchy.
+
+- A grup whose name is its conjunt's is not a line; a drawing that is the
+  only one under a name it merely repeats is not a line either, and its
+  number goes up to the line that stays. Names are compared through `nk()`:
+  no capitals, accents or punctuation.
+- When no conjunt has anything under it, the list is flat (no headings).
+- A conjunt with real grups and drawings under it reads as before.
+
+Checked in the preview with a catalogue shaped like his (five conjunts of
+one drawing each, in the variants seen in the screenshot, and one with a real
+hierarchy): one line for each of the five, with its number and page; the
+hierarchy kept for the sixth; tapping a line goes to its page and "Conjunt
+sencer" still offers it. NOT checked: his manual itself. He was asked whether
+the repetition was what he meant.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

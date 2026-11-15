@@ -4584,6 +4584,75 @@ Checked in the preview: at 1024 px and with the print rules applied on a
 text has the rest, in all four tables; at 375 px as in version 19. NOT
 checked: a PDF from his Chrome.
 
+### The drawings viewer pages through one group, and has an index (2026-11-15, version `nou · 2026-11-15 · 21`)
+
+"Insereix dibuix només ha de mostrar les pàgines on hi hagi dibuixos, no tot
+el manual. Amb l'elèctric ho vull igual, només el manual elèctric." And, sent
+again on its own: "ha de mostrar també una llista amb el nom dels conjunts /
+grups elèctrics / demés llistes que hi hagi agrupades per poder anar sense
+anar passant pàgines." (There is no button called "Insereix dibuix": it is
+the viewer, `#drawBack`, however it is opened.)
+
+The PDF is the whole manual and the arrows walked all of it. The catalogue
+(the splitter's JSON) already says which pages are which, so:
+
+- **`buildViewerNav(cat,numPages)`** makes the manual's groups:
+  - `mec` **Dibuixos** — every page of the conjunts: each grup's `pages`, its
+    subgrups' `pages` and the pages its rows are on, **and what lies between
+    the first and the last** (a drawing sheet has no rows and is often in
+    nobody's list); a grup known only by its lists also gets the sheet before
+    them. Items: conjunt (heading) › grup › drawing, each drawing at the sheet
+    before its first list page when that sheet is in the section and is no
+    one's list.
+  - `elec` **Esquema elèctric** (+ the schematic's name and revision) — the
+    pages of `sheets` and of the electrical tables. Items: each electrical
+    list, each "Full N" with the tags of the devices drawn on it (from the
+    electrical rows' `full`), and the manual's own headings (`sections`) that
+    fall inside the schematic, as headings. **The sheets have no names in the
+    catalogue**, only numbers: that is why a sheet is named by its devices.
+  - `tab` **Llistes del manual** — the other `tables` (recommended spares,
+    maintenance, format parts, specifications, signals, LOTO, parts lists,
+    free tables), each by its name or its kind.
+  - `ref` **Pàgines marcades** and `sec` **Índex del manual** — names to jump
+    to, with no pages of their own.
+  - `all` **Tot el manual** — always there.
+  A group with no pages in this catalogue is not offered; a catalogue that
+  says nothing, or would not load, leaves only `all` — the viewer as it was,
+  with no selector and no index button.
+- **The arrows, the keys and the swipe go through the group's pages**
+  (`viewerStep`); the label reads "Pàg. 14 · 3 / 57" (the page's number in
+  the manual, then which of the group's it is). A page typed by number
+  (`viewerGoto`) can be any page: if the group does not have it, the viewer
+  moves to the group that does (`viewerScopeOf`: schematic, drawings, lists,
+  else the whole manual).
+- **Which group it opens on** (`viewerStartScope`): a page that was asked for
+  brings its own — a device's "Full" opens the schematic, a part's page the
+  drawings; **picking a part always opens on the drawings**; otherwise the
+  group this manual was last read in (`viewerScopeBy`), else the drawings.
+- **`#drawScope`**, a selector in the toolbar, changes group; **`☰ Índex`**
+  shows the index (`#drawIdx`): groups that fold, the one in use open, the
+  name the page on screen falls under marked. Tapping a name goes to its page
+  in its group. From 900 px the index is a column beside the sheet, open by
+  default; under that it covers the sheet, opens shut every time and shuts
+  itself once a name is tapped.
+- `viewerLoad` reads the catalogue every time now: from Drive to pick (as
+  before), from the copy on the device just to read.
+- Words through `nvT` (added to `NV_T`), the index itself `data-noui`.
+- `nou/` only.
+
+Checked in the preview with a made-up 30-page manual and catalogue put in
+IndexedDB (Drive stubbed): at 1024 px it opens on Dibuixos, 9 pages
+(4-7, 9-10, 12-14 — 9 is the sheet before a list-only grup), the arrows stop
+at both ends, typing 22 moves to the schematic and 17 to the whole manual,
+the selector, the index (a drawing, a sheet, a marked page), the index shut
+and open with the sheet redrawn to fit; picking a part opens on Dibuixos
+after the schematic was the last one read; a device's "Full 520" opens the
+schematic at its page; at 375 px the index opens shut and covers the sheet;
+an empty catalogue gives the whole manual and no controls. NOT checked: his
+real manuals — whether the conjunts' pages in them really cover every
+drawing sheet (if one is missing it is still under "Tot el manual" and by
+its page number), and how the real sheets and lists read in the index.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

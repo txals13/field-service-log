@@ -1346,6 +1346,25 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
 .draw-pick .ft i{flex:1;height:1px;background:var(--br)}
 .draw-pick .ft button{height:44px;padding:0 16px;border-radius:10px;font-size:13px}
 #drawSets button{flex:1 1 100%;min-height:48px;border:1px dashed var(--br2);border-radius:10px;background:var(--bg1);font-size:13px;white-space:normal}
+/* the viewer's index: a column beside the sheet where there is room, over the
+   sheet on a phone */
+#drawBody{flex:1;min-height:200px;display:flex;gap:8px;position:relative}
+#drawIdx{display:none;width:280px;flex:none;overflow:auto;background:var(--bg1);border:1px solid var(--br);border-radius:8px;padding:6px}
+#drawIdx.open{display:block}
+@media(max-width:899px){#drawIdx{position:absolute;inset:0;width:auto;z-index:4}}
+.di-g{display:flex;width:100%;align-items:center;gap:6px;min-height:40px;padding:8px;border:0;border-radius:8px;background:none;font-size:13.5px;font-weight:700;text-align:left;color:var(--tx1);white-space:normal}
+.di-g:hover,.di-it:hover{background:var(--bg2)}
+.di-g.on{color:var(--gold)}
+.di-g i{font-style:normal;width:12px;flex:none;color:var(--tx3)}
+.di-g small{margin-left:auto;flex:none;font-weight:400;font-size:11.5px;color:var(--tx3)}
+.di-list{display:none;margin:0 0 6px}
+.di-g.open+.di-list{display:block}
+.di-it{display:block;width:100%;min-height:0;padding:7px 8px 7px 22px;border:0;border-radius:6px;background:none;font-size:13px;font-weight:400;line-height:1.3;text-align:left;color:var(--tx1);white-space:normal;overflow-wrap:anywhere}
+.di-it.h{padding-left:12px;font-weight:700;color:var(--tx2)}
+.di-it.l2{padding-left:34px}
+.di-it small{display:block;font-size:11px;color:var(--tx3)}
+.di-it.cur{background:var(--goldbg);color:var(--gold)}
+.di-none{padding:8px;font-size:12px;color:var(--tx3)}
 @media(min-width:701px){
   #drawChoices.draw-pick{margin:8px 0 0;border-radius:14px;border:1px solid var(--br);box-shadow:var(--sh)}
   .draw-pick .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -2003,6 +2022,11 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
         <button class="btn-g btn-sm" id="drawClose" style="margin-left:auto">&#10005;</button>
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <!-- What the arrows page through (viewerSetScope): the drawings, the
+             electrical schematic, the manual's lists, or all of it; and the
+             index that jumps to a conjunt, a sheet or a list by its name. -->
+        <button class="btn-sm" id="drawIdxBtn" title="La llista de conjunts, fulls de l'esquema i llistes del manual: toca'n un per anar-hi">&#9776; &Iacute;ndex</button>
+        <select id="drawScope" title="Quines pàgines es passen amb les fletxes" style="font-size:12px;padding:4px 6px;max-width:46vw"></select>
         <button class="btn-sm" id="drawPrev" style="padding:6px 14px;font-size:15px">&#9664;</button>
         <span id="drawPageLbl" style="font-size:12px;font-family:monospace"></span>
         <button class="btn-sm" id="drawNext" style="padding:6px 14px;font-size:15px">&#9654;</button>
@@ -2018,9 +2042,12 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
       <div id="drawPickHint" style="display:none;font-size:12px;background:var(--accs);color:#fff;border-radius:6px;padding:6px 10px;margin-bottom:8px">&#127919; Toca un número de posició al dibuix per afegir aquell recanvi a l'entrada.</div>
       <div id="drawChoices" style="display:none"></div>
       <div id="drawSets" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
-      <div id="drawWrap" style="flex:1;min-height:200px;overflow:auto;background:#0a0b0e;border-radius:6px;touch-action:pan-x pan-y;position:relative">
-        <canvas id="drawCanvas" style="display:block;margin:0 auto"></canvas>
-        <div id="drawMarks" style="position:absolute;left:0;top:0;pointer-events:none"></div>
+      <div id="drawBody">
+        <div id="drawIdx" data-noui></div>
+        <div id="drawWrap" style="flex:1;min-width:0;min-height:0;overflow:auto;background:#0a0b0e;border-radius:6px;touch-action:pan-x pan-y;position:relative">
+          <canvas id="drawCanvas" style="display:block;margin:0 auto"></canvas>
+          <div id="drawMarks" style="position:absolute;left:0;top:0;pointer-events:none"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -2336,6 +2363,10 @@ var pdfjsReadyP=null, viewerDoc=null, viewerNumPages=0, viewerPage=1, viewerPdfI
 // Which manual the viewer is on (a visit can have several): its ref, the one
 // each visit was last read in, and the page each manual was left at.
 var viewerRef=null, viewerManBy={}, viewerPageBy={};
+// What the viewer pages through (nou · 2026-11-15 · 21): viewerNav is the
+// manual's groups (buildViewerNav), viewerScope the one in use, viewerPages its
+// pages in order (null: the whole manual), viewerScopeBy the last one per PDF.
+var viewerNav=null, viewerScope="all", viewerPages=null, viewerScopeBy={}, viewerIdxOpen=null;
 var viewerPickMode=false, viewerRows=[], viewerSubgrups=[], viewerPickItems=[], pickReturnEdit=false;
 // What a tapped number does: attach a spare part, or write its name into the
 // description. Picking from the drawing is the same, only the result differs.
@@ -4395,14 +4426,236 @@ function shotOfCurMan(img){
 // viewer. Throws what getManualPdfBytes / loadPdfjs throw (drawErr).
 async function viewerLoad(ref,targetPage){
   var lib=await loadPdfjs();
-  if(viewerPickMode){try{var vc=buildViewerCatalog(await getManualCatalog(ref.jsonId));viewerRows=vc.rows;viewerSubgrups=vc.subgrups}catch(e){viewerRows=[];viewerSubgrups=[];setDrawStatus("No s'ha pogut carregar el catàleg — en tocar no es trobaran els recanvis.")}}
-  else {viewerRows=[];viewerSubgrups=[]}
-  if(viewerDoc&&viewerPdfId===ref.pdfId){$$("drawStatus").textContent="";renderViewerPage(targetPage||viewerPage);return}
-  var buf=await getManualPdfBytes(ref.pdfId);
-  var doc=await lib.getDocument({data:new Uint8Array(buf.slice(0))}).promise;
-  viewerDoc=doc;viewerNumPages=doc.numPages;viewerPdfId=ref.pdfId;shotBase=null;
+  // The catalogue, every time now: it is what says which pages are drawings,
+  // which the schematic and which a list. To pick parts it has to be today's
+  // (from Drive); only to read, the copy kept on the device will do, and costs
+  // nothing.
+  var cat=null,catErr=false;
+  if(ref.jsonId){
+    try{
+      if(!viewerPickMode&&idb){try{cat=await idbGet(idb,"cat_"+ref.jsonId)}catch(e){}}
+      if(!cat)cat=await getManualCatalog(ref.jsonId);
+    }catch(e){cat=null;catErr=true}
+  }
+  viewerRows=[];viewerSubgrups=[];
+  if(viewerPickMode&&cat){var vc=buildViewerCatalog(cat);viewerRows=vc.rows;viewerSubgrups=vc.subgrups}
+  var same=!!(viewerDoc&&viewerPdfId===ref.pdfId);
+  if(!same){
+    var buf=await getManualPdfBytes(ref.pdfId);
+    var doc=await lib.getDocument({data:new Uint8Array(buf.slice(0))}).promise;
+    viewerDoc=doc;viewerNumPages=doc.numPages;viewerPdfId=ref.pdfId;shotBase=null;
+  }
   $$("drawStatus").textContent="";
-  renderViewerPage(targetPage||viewerPageBy[ref.pdfId]||1);
+  if(viewerPickMode&&catErr)setDrawStatus("No s'ha pogut carregar el catàleg — en tocar no es trobaran els recanvis.");
+  viewerNav=buildViewerNav(cat,viewerNumPages);
+  var page=targetPage||(same?viewerPage:viewerPageBy[ref.pdfId])||0;
+  viewerSetScope(viewerStartScope(page,!!targetPage),page);
+}
+// ── WHAT THE VIEWER PAGES THROUGH, AND ITS INDEX (nou · 2026-11-15 · 21) ──────
+// "Només ha de mostrar les pàgines on hi hagi dibuixos, no tot el manual. Amb
+// l'elèctric ho vull igual, només el manual elèctric. A més, una llista amb el
+// nom dels conjunts / grups elèctrics / altres llistes que hi hagi, agrupades,
+// per poder anar-hi sense anar passant pàgines."
+//
+// The PDF is the whole manual — cover, text, maintenance, the schematic — and
+// the arrows walked all of it. The catalogue already says which pages are
+// which, so the viewer now walks ONE GROUP at a time:
+//   mec   the drawings: every page of the conjunts (each grup's section, its
+//         drawings' own pages and the pages its parts are listed on)
+//   elec  the electrical schematic: the pages of its sheets (`sheets`) and of
+//         the electrical lists
+//   tab   the manual's other lists (recommended spares, maintenance, format
+//         parts…: `tables` that are not electrical)
+//   ref / sec  marked pages and the manual's own index: names to jump to, with
+//         no pages of their own
+//   all   the whole manual, always there
+// A group with no pages in this catalogue is simply not offered, and a manual
+// whose catalogue says nothing (or would not load) has only "all": exactly the
+// viewer as it was.
+function buildViewerNav(cat,numPages){
+  var groups=[],by={};
+  function ok(p){p=parseInt(p,10);return p>=1&&p<=numPages?p:0}
+  function uniq(list){var s={},o=[];list.forEach(function(p){p=ok(p);if(p&&!s[p]){s[p]=1;o.push(p)}});return o.sort(function(a,b){return a-b})}
+  function add(id,label,pages,items){var g={id:id,label:label,pages:pages,items:items||[]};groups.push(g);by[id]=g;return g}
+  cat=cat||{};
+  // -- the drawings --
+  var conjunts=cat.conjunts||(cat.conjunt?[cat.conjunt]:[]),mp=[],mi=[];
+  conjunts.forEach(function(c){
+    var cItems=[],cPages=[],grups=c.grups||[];
+    grups.forEach(function(g){
+      var gp=uniq(g.pages||[]),subs=[];
+      (g.subgrups||[]).forEach(function(sg){
+        var sp=uniq((Array.isArray(sg.pages)?sg.pages:[]).concat((sg.rows||[]).map(function(r){return r.page})));
+        subs.push({name:(sg.name||"").trim(),num:(sg.num||"").trim(),pages:sp});
+      });
+      var all=uniq(gp.concat.apply(gp,subs.map(function(s){return s.pages})));
+      if(!all.length)return;
+      // a section is one run of pages: what lies between its first and its last
+      // is part of it even where nobody listed it (a drawing sheet has no rows)
+      var full=[];for(var p=all[0];p<=all[all.length-1];p++)full.push(p);
+      // a grup known only by its lists: the drawing is the sheet before them
+      if(!gp.length&&all[0]>1)full.unshift(all[0]-1);
+      cPages=cPages.concat(full);
+      var owned={};subs.forEach(function(s){s.pages.forEach(function(p){owned[p]=1})});
+      var inG={};full.forEach(function(p){inG[p]=1});
+      // where a drawing STARTS: the sheet before its first list page, when that
+      // sheet is in the section and is nobody's list
+      subs.forEach(function(s){
+        if(!s.pages.length){s.at=0;return}
+        var p0=s.pages[0];s.at=(inG[p0-1]&&!owned[p0-1])?p0-1:p0;
+      });
+      var gName=cleanConjuntName(g.name)||(g.name||"").trim();
+      var named=subs.filter(function(s){return s.at&&(s.name||s.num)});
+      var lone=named.length===1&&(!gName||gName===named[0].name);
+      if(gName&&!lone)cItems.push({label:gName,page:full[0],lvl:1});
+      named.forEach(function(s){cItems.push({label:s.name||s.num,sub:s.name&&s.num?"Nº "+s.num:"",page:s.at,lvl:(gName&&!lone)?2:1})});
+      if(!gName&&!named.length)cItems.push({label:nvT("Pàg.")+" "+full[0],page:full[0],lvl:1});
+    });
+    cPages=uniq(cPages);if(!cPages.length)return;
+    var cName=cleanConjuntName(c.name)||(c.name||"").trim()||(c.num||"").trim()||"—";
+    mi.push({label:cName,sub:(c.num||"").trim()&&cName.indexOf((c.num||"").trim())<0?(c.num||"").trim():"",page:cPages[0],lvl:0});
+    mi=mi.concat(cItems);mp=mp.concat(cPages);
+  });
+  mp=uniq(mp);
+  if(mp.length)add("mec",nvT("Dibuixos"),mp,mi);
+  // -- the electrical schematic --
+  var tables=cat.tables||[],sheets=[],seenS={};
+  (cat.sheets||[]).forEach(function(x){var p=ok(x&&x.page);if(p&&!seenS[p]){seenS[p]=1;sheets.push({sheet:String(x.sheet).trim(),page:p})}});
+  sheets.sort(function(a,b){return a.page-b.page});
+  var eTabs=tables.filter(function(t){return t&&t.kind==="electrical"}),onSheet={};
+  eTabs.forEach(function(t){(t.rows||[]).forEach(function(r){
+    var f=String(r.full||"").trim(),tag=String(r.tag||"").trim();
+    if(f&&tag){(onSheet[f]=onSheet[f]||[]).push(tag)}
+  })});
+  var ep=sheets.map(function(x){return x.page}),ei=[];
+  eTabs.forEach(function(t){
+    var tp=uniq((t.pages||[]).concat((t.rows||[]).map(function(r){return r.page})));
+    if(!tp.length)return;
+    ep=ep.concat(tp);
+    ei.push({label:(t.name||"").trim()||nvT("Materials elèctrics"),sub:tp.length>1?tp.length+" "+nvT("pàg."):"",page:tp[0],lvl:0});
+  });
+  // the manual's own headings that fall inside the schematic name its parts
+  var secs=(cat.sections||[]).map(function(x){return {num:String(x.num||"").trim(),title:String(x.title||"").trim(),page:ok(x.page)}}).filter(function(x){return x.page});
+  var s0=sheets.length?sheets[0].page:0,s1=sheets.length?sheets[sheets.length-1].page:0,si=0;
+  var eSecs=secs.filter(function(x){return x.page>=s0&&x.page<=s1}).sort(function(a,b){return a.page-b.page});
+  sheets.forEach(function(x){
+    while(si<eSecs.length&&eSecs[si].page<=x.page){ei.push({label:(eSecs[si].num+" "+eSecs[si].title).trim(),page:eSecs[si].page,lvl:0});si++}
+    var tags=onSheet[x.sheet]||[];
+    ei.push({label:nvT("Full")+" "+x.sheet,sub:tags.slice(0,6).join(" · ")+(tags.length>6?" …":""),page:x.page,lvl:1});
+  });
+  ep=uniq(ep);
+  if(ep.length){var sc=schLabel(catSchematic(cat));add("elec",nvT("Esquema elèctric")+(sc?" · "+sc:""),ep,ei)}
+  // -- the manual's other lists --
+  var KIND={spares:"Recanvis recomanats",maint:"Manteniment",format:"Peces de format",spec:"Requisits i especificacions",
+            signals:"Senyals, modes i avisos",loto:"Punts de consignació (LOTO)",parts:"Llista de peces",free:"Taula"};
+  var tp2=[],ti=[];
+  tables.forEach(function(t){
+    if(!t||t.kind==="electrical")return;
+    var pg=uniq((t.pages||[]).concat((t.rows||[]).map(function(r){return r.page})));
+    if(!pg.length)return;
+    tp2=tp2.concat(pg);
+    var kind=nvT(KIND[t.kind]||KIND.free),name=(t.name||"").trim();
+    ti.push({label:name||kind,sub:[name&&name!==kind?kind:"",pg.length>1?pg.length+" "+nvT("pàg."):""].filter(Boolean).join(" · "),page:pg[0],lvl:1});
+  });
+  tp2=uniq(tp2);
+  if(tp2.length)add("tab",nvT("Llistes del manual"),tp2,ti);
+  // -- names with no pages of their own --
+  var RK={location:"Localització",section:"Secció",procedure:"Procediment",other:""};
+  var ri=(cat.refs||[]).map(function(r){return {label:String(r.label||"").trim()||(nvT("Pàg.")+" "+r.page),sub:RK[r.kind]?nvT(RK[r.kind]):"",page:ok(r.page),lvl:1}})
+    .filter(function(x){return x.page}).sort(function(a,b){return a.page-b.page});
+  if(ri.length)add("ref",nvT("Pàgines marcades"),null,ri);
+  if(secs.length)add("sec",nvT("Índex del manual"),null,secs.slice().sort(function(a,b){return a.page-b.page}).map(function(x){
+    return {label:(x.num+" "+x.title).trim(),page:x.page,lvl:x.num.indexOf(".")>=0?2:1}}));
+  add("all",nvT("Tot el manual"),null,[]);
+  return {groups:groups,by:by};
+}
+// The group a page belongs to: the schematic first (a sheet is only ever that),
+// then the drawings, then the lists; none of them, the whole manual.
+function viewerScopeOf(page){
+  var N=viewerNav,ids=["elec","mec","tab"];
+  for(var i=0;i<ids.length;i++){var g=N&&N.by[ids[i]];if(g&&g.pages.indexOf(page)>=0)return g.id}
+  return "all";
+}
+// Which group the viewer opens on. A page that was asked for (a device's
+// sheet, a part's page) brings its own. Picking a part is done on the
+// drawings. Otherwise the one this manual was last read in, else the drawings.
+function viewerStartScope(page,asked){
+  var N=viewerNav,mec=N.by.mec?"mec":"all";
+  if(asked&&page)return viewerScopeOf(page);
+  if(viewerPickMode)return mec;
+  var last=viewerScopeBy[viewerPdfId];
+  return (last&&N.by[last]&&N.by[last].pages)?last:mec;
+}
+function viewerSetScope(id,page){
+  var N=viewerNav||{by:{},groups:[]},g=N.by[id];
+  if(!g||!g.pages)g=N.by.all||{id:"all",pages:null};
+  viewerScope=g.id;viewerPages=g.pages||null;
+  if(viewerPdfId)viewerScopeBy[viewerPdfId]=g.id;
+  // a page the group does not have: the group's first, not a leap to nowhere
+  if(viewerPages&&(!page||viewerPages.indexOf(page)<0))page=viewerPages[0];
+  drawScopeUI();
+  renderViewerPage(page||1);
+}
+// The next or the previous page OF THE GROUP. From a page outside it (reached
+// by typing its number), the nearest one on that side.
+function viewerStep(d){
+  if(!viewerPages){renderViewerPage(viewerPage+d);return}
+  var i=viewerPages.indexOf(viewerPage),n=0;
+  if(i>=0)n=viewerPages[i+d]||0;
+  else if(d>0)n=viewerPages.filter(function(p){return p>viewerPage})[0]||0;
+  else{var b=viewerPages.filter(function(p){return p<viewerPage});n=b[b.length-1]||0}
+  if(n)renderViewerPage(n);
+}
+// A page typed by its number: any page of the manual. If the group in use does
+// not have it, the viewer moves to the group that does.
+function viewerGoto(n){
+  n=Math.max(1,Math.min(parseInt(n,10)||0,viewerNumPages));if(!n)return;
+  if(viewerPages&&viewerPages.indexOf(n)<0)viewerSetScope(viewerScopeOf(n),n);
+  else renderViewerPage(n);
+}
+function drawIdxWide(){return window.innerWidth>=900}
+// The selector and the index, drawn for the manual in the viewer.
+function drawScopeUI(){
+  var N=viewerNav,sel=$$("drawScope"),box=$$("drawIdx"),btn=$$("drawIdxBtn");
+  if(!N||!sel||!box)return;
+  var scopes=N.groups.filter(function(g){return g.pages||g.id==="all"});
+  sel.innerHTML=scopes.map(function(g){
+    return "<option value=\""+g.id+"\""+(g.id===viewerScope?" selected":"")+">"+esc(g.label)+(g.pages?" ("+g.pages.length+")":"")+"</option>"}).join("");
+  sel.style.display=scopes.length>1?"":"none";
+  var lists=N.groups.filter(function(g){return g.items.length});
+  btn.style.display=lists.length?"":"none";
+  // open beside the sheet where there is room, shut on a phone, until he says
+  if(viewerIdxOpen===null)viewerIdxOpen=drawIdxWide();
+  box.classList.toggle("open",!!(viewerIdxOpen&&lists.length));
+  box.innerHTML=lists.map(function(g){
+    var on=g.id===viewerScope;
+    return "<button type=\"button\" class=\"di-g"+(on?" on open":"")+"\" data-g=\""+g.id+"\"><i>"+(on?"▾":"▸")+"</i><span>"+esc(g.label)+"</span>"
+      +"<small>"+(g.pages?g.pages.length+" "+esc(nvT("pàg.")):g.items.length)+"</small></button>"
+      +"<div class=\"di-list\">"+g.items.map(function(it){
+        return "<button type=\"button\" class=\"di-it"+(it.lvl===0?" h":it.lvl===2?" l2":"")+"\" data-g=\""+g.id+"\" data-p=\""+it.page+"\">"+esc(it.label)
+          +"<small>"+esc([it.sub,nvT("pàg.")+" "+it.page].filter(Boolean).join(" · "))+"</small></button>"}).join("")+"</div>";
+  }).join("");
+}
+// Where the page on screen falls in the index: the last name at or before it,
+// in the group in use.
+function drawIdxMark(){
+  var box=$$("drawIdx");if(!box)return;
+  var cur=null;
+  Array.prototype.forEach.call(box.querySelectorAll(".di-it"),function(b){
+    b.classList.remove("cur");
+    if(b.dataset.g===viewerScope&&+b.dataset.p<=viewerPage&&(!cur||+b.dataset.p>=+cur.dataset.p))cur=b;
+  });
+  // outside every group (a marked page, a heading): the name of this very page, if it has one
+  if(!cur&&!viewerPages)cur=box.querySelector(".di-it[data-p=\""+viewerPage+"\"]");
+  if(cur){cur.classList.add("cur");if(box.classList.contains("open")&&cur.scrollIntoView){try{cur.scrollIntoView({block:"nearest"})}catch(e){}}}
+}
+function drawIdxToggle(open){
+  var box=$$("drawIdx");if(!box)return;
+  viewerIdxOpen=open==null?!box.classList.contains("open"):!!open;
+  box.classList.toggle("open",viewerIdxOpen);
+  drawIdxMark();
+  // beside the sheet the index takes its width from it: the page is drawn again to fit
+  if(drawIdxWide()&&viewerDoc)renderViewerPage(viewerPage);
 }
 // The manual's name in the viewer's title: a selector when the visit has more
 // than one, the plain name when it has one.
@@ -4452,6 +4705,7 @@ async function openDrawings(targetPage,pickMode,purpose,manId){
   if(viewerPickMode&&editingId){pickReturnEdit=true;$$("editBack").style.display="none"}
   $$("drawStatus").textContent="Carregant…";
   viewerZoom=1;updateZoomLabel();
+  if(!drawIdxWide())viewerIdxOpen=false;   // on a phone the index covers the sheet: it opens shut, every time
   $$("drawBack").style.display="flex";
   try{await viewerLoad(ref,targetPage)}
   catch(e){$$("drawStatus").textContent="";closeDrawings();drawFail(e,ref)}
@@ -4461,7 +4715,10 @@ function renderViewerPage(n){
   if(!viewerDoc)return;
   n=Math.max(1,Math.min(n||1,viewerNumPages));viewerPage=n;
   if(viewerPdfId)viewerPageBy[viewerPdfId]=n;   // where this manual is taken up again
-  $$("drawPageLbl").textContent=uiT("Pàg.")+" "+n+" / "+viewerNumPages;
+  // in a group: the page's own number in the manual, and which of the group's it is
+  var gi=viewerPages?viewerPages.indexOf(n):-1;
+  $$("drawPageLbl").textContent=nvT("Pàg.")+" "+n+(viewerPages?(gi>=0?"  ·  "+(gi+1)+" / "+viewerPages.length:""):" / "+viewerNumPages);
+  drawIdxMark();
   var cv=$$("drawCanvas");cv.style.transform=""; // clear any live pinch preview
   var dc=$$("drawChoices");if(dc)dc.style.display="none";
   renderDrawSets();
@@ -5170,10 +5427,27 @@ function closeDrawings(){
 }
 $$("drawClose").addEventListener("click",closeDrawings);
 $$("drawBack").addEventListener("click",function(e){if(e.target===$$("drawBack"))closeDrawings()});
-$$("drawPrev").addEventListener("click",function(){renderViewerPage(viewerPage-1)});
-$$("drawNext").addEventListener("click",function(){renderViewerPage(viewerPage+1)});
-$$("drawGotoBtn").addEventListener("click",function(){var v=parseInt($$("drawGoto").value,10);if(v)renderViewerPage(v)});
-$$("drawGoto").addEventListener("keydown",function(e){if(e.key==="Enter"){var v=parseInt($$("drawGoto").value,10);if(v)renderViewerPage(v)}});
+$$("drawPrev").addEventListener("click",function(){viewerStep(-1)});
+$$("drawNext").addEventListener("click",function(){viewerStep(1)});
+$$("drawGotoBtn").addEventListener("click",function(){viewerGoto($$("drawGoto").value)});
+$$("drawGoto").addEventListener("keydown",function(e){if(e.key==="Enter")viewerGoto($$("drawGoto").value)});
+$$("drawScope").addEventListener("change",function(){viewerSetScope(this.value,viewerPage)});
+$$("drawIdxBtn").addEventListener("click",function(){drawIdxToggle()});
+$$("drawIdx").addEventListener("click",function(e){
+  var it=e.target.closest(".di-it"),g=e.target.closest(".di-g");
+  if(it){
+    var p=+it.dataset.p,grp=viewerNav&&viewerNav.by[it.dataset.g];
+    // a name of a group with pages: that group, at that page. A marked page or
+    // a heading of the manual has no group of its own: whichever has the page.
+    viewerSetScope(grp&&grp.pages?grp.id:viewerScopeOf(p),p);
+    if(!drawIdxWide())drawIdxToggle(false);
+    return;
+  }
+  if(g){
+    var open=!g.classList.contains("open");
+    g.classList.toggle("open",open);g.querySelector("i").textContent=open?"▾":"▸";
+  }
+});
 $$("drawZoomIn").addEventListener("click",function(){setViewerZoom(viewerZoom*1.3)});
 $$("drawZoomOut").addEventListener("click",function(){setViewerZoom(viewerZoom/1.3)});
 $$("drawZoomLbl").addEventListener("click",function(){setViewerZoom(1)});
@@ -5181,8 +5455,8 @@ $$("drawZoomLbl").addEventListener("click",function(){setViewerZoom(1)});
 document.addEventListener("keydown",function(e){
   if($$("drawBack").style.display!=="flex")return;
   if(document.activeElement===$$("drawGoto"))return;
-  if(e.key==="ArrowRight")renderViewerPage(viewerPage+1);
-  else if(e.key==="ArrowLeft")renderViewerPage(viewerPage-1);
+  if(e.key==="ArrowRight")viewerStep(1);
+  else if(e.key==="ArrowLeft")viewerStep(-1);
   else if(e.key==="Escape")closeDrawings();
   else if(e.key==="+"||e.key==="=")setViewerZoom(viewerZoom*1.3);
   else if(e.key==="-")setViewerZoom(viewerZoom/1.3);
@@ -5221,7 +5495,7 @@ $$("drawWrap").addEventListener("wheel",function(e){
         if(t-lastTap<300){setViewerZoom(viewerZoom>1?1:2.2);lastTap=0}else lastTap=t;
       }
     } else if(viewerZoom<=1.01&&Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5){
-      renderViewerPage(viewerPage+(dx<0?1:-1)); // swipe pages only when not zoomed (else you pan)
+      viewerStep(dx<0?1:-1); // swipe pages only when not zoomed (else you pan)
     }
     swipe=null;
   });
@@ -7894,7 +8168,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 20";
+var APP_VERSION="nou · 2026-11-15 · 21";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -19571,6 +19845,25 @@ function nvSumClick(ev){
     if(k==="ts"){openTimesheet();return}
 }
 
+// the drawings viewer's groups and index (nou · 2026-11-15 · 21)
+(function(){
+  var es={"Índex":"Índice","Esquema elèctric":"Esquema eléctrico","Materials elèctrics":"Materiales eléctricos","Llistes del manual":"Listas del manual",
+    "Pàgines marcades":"Páginas marcadas","Índex del manual":"Índice del manual","Tot el manual":"Todo el manual","pàg.":"pág.","Pàg.":"Pág.","Full":"Hoja",
+    "Recanvis recomanats":"Recambios recomendados","Manteniment":"Mantenimiento","Peces de format":"Piezas de formato","Requisits i especificacions":"Requisitos y especificaciones",
+    "Senyals, modes i avisos":"Señales, modos y avisos","Punts de consignació (LOTO)":"Puntos de consignación (LOTO)","Llista de peces":"Lista de piezas","Taula":"Tabla",
+    "Localització":"Localización","Secció":"Sección","Procediment":"Procedimiento",
+    "La llista de conjunts, fulls de l'esquema i llistes del manual: toca'n un per anar-hi":"La lista de conjuntos, hojas del esquema y listas del manual: toca uno para ir",
+    "Quines pàgines es passen amb les fletxes":"Qué páginas se pasan con las flechas"};
+  var en={"Índex":"Index","Esquema elèctric":"Electrical schematic","Materials elèctrics":"Electrical materials","Llistes del manual":"The manual's lists",
+    "Pàgines marcades":"Marked pages","Índex del manual":"The manual's contents","Tot el manual":"Whole manual","pàg.":"p.","Pàg.":"Page","Full":"Sheet",
+    "Recanvis recomanats":"Recommended spare parts","Manteniment":"Maintenance","Peces de format":"Format parts","Requisits i especificacions":"Requirements and specifications",
+    "Senyals, modes i avisos":"Signals, modes and warnings","Punts de consignació (LOTO)":"Lockout points (LOTO)","Llista de peces":"Parts list","Taula":"Table",
+    "Localització":"Location","Secció":"Section","Procediment":"Procedure",
+    "La llista de conjunts, fulls de l'esquema i llistes del manual: toca'n un per anar-hi":"The list of assemblies, schematic sheets and lists of the manual: tap one to go there",
+    "Quines pàgines es passen amb les fletxes":"Which pages the arrows go through"};
+  Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
+  Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
+})();
 // ── THE NEW DESIGN, DESKTOP (B33): THE VISIT AS ONE PAGE (2026-11-14) ────────
 // From 701 px there is room for everything at once, so the visit is a page of
 // cards: its details and the timeline on top, then the incidents, the tests,

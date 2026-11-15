@@ -3910,7 +3910,7 @@ the printed machine history (the timesheet needs the calendar's days from
 Drive); a report in Spanish, English or a right-to-left language; a signed
 report; the Excel file (it has no colours of its own); printing on paper.
 
-### The sign-in no longer gives up at 25 s (2026-11-15, version `nou · 2026-11-15 · 1`)
+### The sign-in no longer gives up at 25 s (2026-11-15, versions `2026-11-15 · 1` and `nou · 2026-11-15 · 1`)
 
 `googleLogin` raced Google's window against a blind 25 s timer, meant for a
 blocked popup. It also fired with the window OPEN, while the account was
@@ -3918,10 +3918,12 @@ still being chosen: "L'inici de sessió no s'ha completat…" over a sign-in
 that was going fine (seen by the user on the computer). Now Google's own
 `error_callback` answers: `popup_failed_to_open` shows the message at once,
 `popup_closed` returns quietly, and the timer is a last resort at 3 minutes.
-**Only in `nou/` — the root app still has the 25 s timer**; it is a fix to
-carry over when he says so. Checked in the preview with Google's client
+**In both apps** — found in `nou/`, and carried to the root `index.html` the
+same day at his word (the same lines; the root's version moved to
+`2026-11-15 · 1`). Checked in the preview, in each app, with Google's client
 stubbed (closed: no message; blocked: the message; 28 s without an answer: no
-message, still "Connectant…"). NOT checked: a real sign-in.
+message, still "Connectant…"). NOT checked: a real sign-in — it is a line of
+the device-test list now (section 1).
 
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does

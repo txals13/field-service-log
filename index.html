@@ -2130,15 +2130,22 @@ async function googleLogin(){
   await loadGIS();
   if(!window.google||!window.google.accounts){alert(uiT("No s'ha pogut carregar l'inici de sessió de Google. Comprova la connexió."));return null}
   // If the browser blocks the Google popup, requestAccessToken's callback
-  // never fires and this would hang forever — race it against a timeout so
-  // the caller always gets an answer and can show a useful message.
+  // never fires and this would hang forever. Google says so itself through
+  // error_callback ("popup_failed_to_open"), and says "popup_closed" when the
+  // window is closed without choosing — so those two answer at once.
+  // (2026-11-15) Until now a blind 25 s timer stood in for that, and it also
+  // fired while the window was OPEN and the user was still choosing an
+  // account or reading the consent page: the sign-in was reported as failed
+  // with the window in front. The timer stays only as a last resort, long.
   var opened=new Promise(function(res){
-    var c=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:"https://www.googleapis.com/auth/drive.file",callback:function(r){if(r.error){res(null);return}accessToken=r.access_token;tokenExp=Date.now()+(((r.expires_in||3600)-120)*1000);saveTok();res(accessToken)}});
+    var c=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:"https://www.googleapis.com/auth/drive.file",
+      callback:function(r){if(r.error){res(null);return}accessToken=r.access_token;tokenExp=Date.now()+(((r.expires_in||3600)-120)*1000);saveTok();res(accessToken)},
+      error_callback:function(e){res(e&&e.type==="popup_closed"?null:"blocked")}});
     c.requestAccessToken({prompt:"consent"});
   });
-  var timeout=new Promise(function(res){setTimeout(function(){res("timeout")},25000)});
+  var timeout=new Promise(function(res){setTimeout(function(){res("blocked")},180000)});
   var result=await Promise.race([opened,timeout]);
-  if(result==="timeout"){alert(uiT("L'inici de sessió no s'ha completat. Si s'ha bloquejat una finestra emergent de Google, permet-les per a aquest lloc i torna-ho a provar."));return null}
+  if(result==="blocked"){alert(uiT("L'inici de sessió no s'ha completat. Si s'ha bloquejat una finestra emergent de Google, permet-les per a aquest lloc i torna-ho a provar."));return null}
   return result;
 }
 // ── STAYING CONNECTED (2026-10-18) ───────────────────────────────────────────
@@ -6645,7 +6652,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-11-11 · 1";
+var APP_VERSION="2026-11-15 · 1";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();

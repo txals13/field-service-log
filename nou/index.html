@@ -8205,7 +8205,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 23";
+var APP_VERSION="nou · 2026-11-15 · 24";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -8423,6 +8423,29 @@ function ctrCollect(){
 // be a stray photo in the visit's folder. So it lives in the visit from the
 // start, and ctrCollect reads it back from there.
 var ctrShotFor=null;
+// THE NAME STAYS OURS (nou · 2026-11-15 · 24). "Es canvia el nom en català,
+// però després apareix un altre nom, de números i prou": mediaUploaded takes
+// the name the file WENT UP WITH for the photo's own, unless the photo is one
+// of an entry's that has been named — and the camera's name is a row of
+// digits. So the photo showed "P-2026-061 comptadors arribada.jpg" while it
+// uploaded and "1000123456.jpg" once it had; and the line that then renamed
+// the Drive copy "to ours" renamed it to those digits. The production test's
+// photos had done the same since they were added. Both go through here now:
+// the name is put back, and it is the one Drive gets.
+function shotUploaded(im,r){
+  var nm=im.name;
+  mediaUploaded(im,r);
+  im.name=nm;
+  if(im.driveId&&nm&&nm!==r.name)driveRename(im.driveId,nm);
+}
+// A photo kept under the camera's name by the versions before: given its own
+// the next time it is shown, on Drive too. Says whether it changed anything.
+function shotHealName(im,want){
+  if(!im||!want||im.uploadStatus==="loading"||im.name===want||!camName(im.name))return false;
+  im.name=want;
+  if(im.driveId)driveRename(im.driveId,want);
+  return true;
+}
 function ctrShotName(a,k){
   return cleanName((a&&(a.project||a.machine||a.client)||"Visita")+" comptadors "+(k==="arr"?"arribada":"sortida"),60)+".jpg";
 }
@@ -8443,6 +8466,7 @@ function ctrRenderShots(){
     var box=$$("ctrGrid").querySelector("[data-ctrpv=\""+k+"\"]");if(!box)return;
     var im=c[k]&&c[k].shot;
     if(!im||!(im.data||im.driveId)){box.innerHTML="";return}
+    if(shotHealName(im,ctrShotName(a,k)))scheduleSave();
     box.innerHTML="<div>"+esc(im.name||"")+(im.uploadStatus==="loading"?" · "+esc(uiT("pujant…")):im.uploadStatus==="err"?" · "+esc(uiT("no s'ha pogut pujar a Drive")):"")
       +"<span class=\"x\" data-ctrx=\""+k+"\" title=\""+esc(uiT("Treu la foto"))+"\">&#10005;</span></div>"
       +(im.data?"<img src=\""+im.data+"\" alt=\"\">":"");
@@ -8466,10 +8490,8 @@ async function ctrShotTake(k,file){
   if(isLoggedIn){
     try{
       var r=await uploadMedia(a,file,"photos");
-      if(r)mediaUploaded(im,r);else im.uploadStatus="err";
+      if(r)shotUploaded(im,r);else im.uploadStatus="err";
     }catch(e){im.uploadStatus="err"}
-    // the name is ours, not the camera's: keep it on Drive too
-    if(im.driveId&&im.name)driveRename(im.driveId,im.name);
     // still this reading's photo? It may have been taken off, or taken again,
     // while this one was on its way: then it is nobody's, and leaves Drive
     var now2=sessions.find(function(x){return x.id===sid}),cur=now2&&now2.counters&&now2.counters[k]&&now2.counters[k].shot;
@@ -8690,6 +8712,7 @@ function ptRenderShots(){
     var box=$$("ptShot"+w.toUpperCase());if(!box)return;
     var im=t&&t[ptShotKey(w)];
     if(!im||!(im.data||im.driveId)){box.innerHTML="";return}
+    if(shotHealName(im,ptShotName(t,w)))scheduleSave();
     box.innerHTML="<div style=\"font-size:11px;color:var(--tx3)\">"+esc(im.name||"")
       +"<span class=\"x\" data-x=\""+w+"\" title=\"Treu la foto\">&#10005;</span></div>"
       +(im.data?"<img src=\""+im.data+"\" alt=\"\">":"");
@@ -8718,10 +8741,8 @@ async function ptShotTake(w,file){
   if(sess&&isLoggedIn){
     try{
       var r=await uploadMedia(sess,file,"photos");
-      if(r)mediaUploaded(im,r);else im.uploadStatus="err";
+      if(r)shotUploaded(im,r);else im.uploadStatus="err";
     }catch(e){im.uploadStatus="err"}
-    // the name is ours, not the camera's: keep it on Drive too
-    if(im.driveId&&im.name)driveRename(im.driveId,im.name);
     ptSetTests(function(l){return l});   // stamp the change so it syncs
     ptRenderShots();
   }

@@ -4716,6 +4716,29 @@ buttons open the four inputs and both ways store the photo. NOT checked: a
 real phone (that 📷 opens the camera and 🖼 the gallery), the upload to Drive
 and the rename there, a photo replaced while the first is still uploading.
 
+**The photo's name turned into digits once uploaded (version `nou · 2026-11-15 · 24`).**
+"Es canvia el nom en català, però després apareix un altre nom, però de
+números i prou." `mediaUploaded(im,r)` takes the name the file WENT UP WITH
+as the photo's own unless the photo is flagged `autoName` / `userNamed` —
+flags that belong to an entry's photos — and the camera's name is a row of
+digits. So the photo read "P-2026-061 comptadors arribada.jpg" while it
+uploaded and "1000123456.jpg" once it had, and the line that then renamed
+the Drive copy "to ours" renamed it to those digits. **The production test's
+photos had done the same since 2026-11-08**; nobody had looked at the name.
+
+- `shotUploaded(im,r)`: calls `mediaUploaded`, puts the name back and renames
+  the Drive copy to it. Used by `ctrShotTake` and `ptShotTake`.
+- `shotHealName(im,want)`: a photo kept under a camera's name (`camName`) by
+  the versions before takes its own the next time it is shown
+  (`ctrRenderShots`, `ptRenderShots`), on Drive too. Only camera-like names
+  are touched.
+
+Checked in the preview with Drive stubbed: the file goes up under the
+camera's name, then Drive gets a PATCH with "P-2026-141 comptadors
+arribada.jpg", and the photo keeps that name on screen and in the visit; a
+counters photo and a test photo seeded under camera names take their own on
+being shown, and it is saved. NOT checked: real Drive.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

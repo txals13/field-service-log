@@ -4080,6 +4080,40 @@ fetch failing, and 404 with another window open (plain alert); from the
 Drive, the `lib` and `nologin` branches, and the Catalan and Spanish wording on
 screen (the keys are in both tables; `tools/i18n_check.py` finds nothing new).
 
+### Google's selector can leave its folder (2026-11-15, version `nou · 2026-11-15 · 6`)
+
+"Quan entro a Drive a través de l'aplicació, només tinc accés a la carpeta
+actual i posteriors, però no puc navegar per Drive." I took this to be
+Google's Picker, the only place where the app shows Drive inside itself (the
+"↗ Obre-la a Drive" button opens Drive's own page, where he can go anywhere).
+He did not say which of the three selectors; all three had the same cause: one
+`DocsView` with `setParent(<folder>)`, which shows that folder and what hangs
+from it and gives no way up.
+
+- `pickerViews(P,viewId,folderId,label,tune)` returns the views for a
+  selector: the folder it used to open on (first, so it still opens there) and
+  a second one with `setParent("root")` — My Drive with its folders to walk
+  through. `tune(view)` sets what both share.
+- Used by the three: `folPickFromDrive` ("＋ Agafa'n de Drive", the visit's
+  folder), `pickDriveZips` ("＋ Altres ZIP de Drive…", the archive folder) and
+  `pickDriveArxFolder` (where the project ZIPs go; folders only, a folder can
+  be chosen, in both tabs).
+- The tabs are named with `setLabel` ("Carpeta de la visita" / "Carpeta de
+  l'arxiu" / "Field Service Log", and "El meu Drive"). Google marks
+  `setLabel` deprecated: inside a try, and if it stops working the tabs carry
+  Google's names.
+- The three titles go through `uiT` now (their keys were in the tables and
+  never used).
+- Not added: shared drives and "shared with me". `drive.file` is unchanged:
+  what he picks is what the app gains access to, as before.
+- `nou/` only.
+
+Checked in the preview with the Picker stubbed: the visit's selector is built
+with the two views (folder, then root), multi-select, and its title. NOT
+checked: Google's real Picker — that the second tab shows, that it walks
+through My Drive, and what the tabs are called — and the other two selectors,
+which were not opened. A line of the device-test list.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

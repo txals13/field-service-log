@@ -6562,14 +6562,13 @@ async function pickDriveArxFolder(token){
   var rootId=null;try{rootId=await getRootId(token)}catch(e){}
   return new Promise(function(res){
     try{
-      var view=new P.DocsView(P.ViewId.FOLDERS);
-      view.setIncludeFolders(true);view.setSelectFolderEnabled(true);
-      view.setMimeTypes("application/vnd.google-apps.folder");
-      if(rootId)try{view.setParent(rootId)}catch(e){}
-      new P.PickerBuilder()
-        .setOAuthToken(token).setDeveloperKey(PICKER_KEY).setAppId(PICKER_APP)
-        .addView(view)
-        .setTitle("Assenyala la carpeta on es desen els ZIP del projecte")
+      var pb=new P.PickerBuilder()
+        .setOAuthToken(token).setDeveloperKey(PICKER_KEY).setAppId(PICKER_APP);
+      pickerViews(P,P.ViewId.FOLDERS,rootId,"Field Service Log",function(view){
+        view.setSelectFolderEnabled(true);
+        view.setMimeTypes("application/vnd.google-apps.folder");
+      }).forEach(function(v){pb.addView(v)});
+      pb.setTitle(uiT("Assenyala la carpeta on es desen els ZIP del projecte"))
         .setCallback(function(d){
           if(d.action===P.Action.PICKED){
             var x=(d[P.Response.DOCUMENTS]||[])[0];
@@ -6678,13 +6677,11 @@ async function pickDriveZips(token,folderId){
   if(!P){alert(uiT("No s'ha pogut carregar el selector de Google. Comprova la connexió."));return []}
   return new Promise(function(res){
     try{
-      var view=new P.DocsView(P.ViewId.DOCS);
-      view.setIncludeFolders(true);
-      if(folderId)try{view.setParent(folderId)}catch(e){}
-      new P.PickerBuilder()
+      var pb=new P.PickerBuilder()
         .setOAuthToken(token).setDeveloperKey(PICKER_KEY).setAppId(PICKER_APP)
-        .enableFeature(P.Feature.MULTISELECT_ENABLED)
-        .addView(view).setTitle("Tria els ZIP que vols carregar")
+        .enableFeature(P.Feature.MULTISELECT_ENABLED);
+      pickerViews(P,P.ViewId.DOCS,folderId,uiT("Carpeta de l'arxiu")).forEach(function(v){pb.addView(v)});
+      pb.setTitle(uiT("Tria els ZIP que vols carregar"))
         .setCallback(function(d){
           if(d.action===P.Action.PICKED)res((d[P.Response.DOCUMENTS]||[]).filter(function(x){return /\.(zip|json)$/i.test(x.name||"")})
             .map(function(x){return {name:x.name,size:+x.sizeBytes||0,lastModified:+x.lastEditedUtc||0,_drive:x.id}}));
@@ -7458,7 +7455,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 5";
+var APP_VERSION="nou · 2026-11-15 · 6";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -8814,6 +8811,7 @@ es:{
   "Pujant a Drive":"Subiendo a Drive",
   "sense sessió de Google":"sin sesión de Google",
   "Tria els ZIP que vols carregar":"Elige los ZIP que quieres cargar",
+  "El meu Drive":"Mi unidad","Carpeta de la visita":"Carpeta de la visita","Carpeta de l'arxiu":"Carpeta del archivo",
   "Aquest navegador no ho permet: va a Chrome i a Edge d'escriptori. A la resta, el botó de la foto obre el diàleg de sempre i no et falta res més":"Este navegador no lo permite: funciona en Chrome y Edge de escritorio. En el resto, el botón de la foto abre el diálogo de siempre y no te falta nada más",
   "Ara mateix comença a":"Ahora mismo empieza en",
   "Encara no n'hi ha cap, o sigui que el diàleg s'obre on el vas deixar l'últim cop":"Todavía no hay ninguna, así que el diálogo se abre donde lo dejaste la última vez",
@@ -9897,6 +9895,7 @@ en:{
   "Pujant a Drive":"Uploading to Drive",
   "sense sessió de Google":"not signed in to Google",
   "Tria els ZIP que vols carregar":"Pick the ZIPs you want to load",
+  "El meu Drive":"My Drive","Carpeta de la visita":"Visit folder","Carpeta de l'arxiu":"Archive folder",
   "Aquest navegador no ho permet: va a Chrome i a Edge d'escriptori. A la resta, el botó de la foto obre el diàleg de sempre i no et falta res més":"This browser does not allow it: it works in desktop Chrome and Edge. Elsewhere the photo button opens the usual dialog and you need nothing else",
   "Ara mateix comença a":"Right now it starts at",
   "Encara no n'hi ha cap, o sigui que el diàleg s'obre on el vas deixar l'últim cop":"There is none yet, so the dialog opens where you left it last time",
@@ -13894,6 +13893,28 @@ function loadPicker(){
   });
   return pickerP;
 }
+// What Google's selector shows (nou · 2026-11-15 · 6). A view with a parent
+// folder shows that folder and what hangs from it, and has no way up: "només
+// tinc accés a la carpeta actual i posteriors, però no puc navegar per Drive".
+// So each selector gets two tabs: the folder it used to open on, first, and
+// the whole of My Drive ("root" as the parent, which is what gives it folders
+// to walk through) beside it. `tune` sets what both tabs share (folders only,
+// a folder can be chosen). setLabel is deprecated at Google and may do
+// nothing one day: the tabs then carry Google's own names, and still work.
+function pickerViews(P,viewId,folderId,label,tune){
+  function mk(parent,lbl){
+    var v=new P.DocsView(viewId);
+    v.setIncludeFolders(true);
+    if(tune)tune(v);
+    try{v.setParent(parent)}catch(e){}
+    try{if(lbl&&v.setLabel)v.setLabel(lbl)}catch(e){}
+    return v;
+  }
+  var out=[];
+  if(folderId)out.push(mk(folderId,label));
+  out.push(mk("root",uiT("El meu Drive")));
+  return out;
+}
 async function folPickFromDrive(){
   var s=sessions.find(function(x){return x.id===aid});if(!s)return;
   if(!isLoggedIn){alert(uiT("Inicia la sessió amb Google per triar fitxers de Drive."));return}
@@ -13903,14 +13924,12 @@ async function folPickFromDrive(){
   if(!P){folNote("No s'ha pogut carregar el selector de Google. Comprova la connexió.");return}
   var folderId=await getSessionFolder(token,s);
   try{
-    var view=new P.DocsView(P.ViewId.DOCS);
-    view.setIncludeFolders(true);
-    if(folderId)try{view.setParent(folderId)}catch(e){}
-    var picker=new P.PickerBuilder()
+    var pb=new P.PickerBuilder()
       .setOAuthToken(token).setDeveloperKey(PICKER_KEY).setAppId(PICKER_APP)
-      .enableFeature(P.Feature.MULTISELECT_ENABLED)
-      .addView(view)
-      .setTitle("Tria els fitxers d'aquesta sessió")
+      .enableFeature(P.Feature.MULTISELECT_ENABLED);
+    pickerViews(P,P.ViewId.DOCS,folderId,uiT("Carpeta de la visita")).forEach(function(v){pb.addView(v)});
+    var picker=pb
+      .setTitle(uiT("Tria els fitxers d'aquesta sessió"))
       .setCallback(function(d){
         if(d.action===P.Action.PICKED)folAdopt((d[P.Response.DOCUMENTS]||[]).map(function(x){return x.id}));
         else if(d.action===P.Action.CANCEL)renderFolder();

@@ -137,6 +137,81 @@ the computer")
       first — the new layout, the expenses module — or a third of the app is
       invisible to the sweep.
 
+### The second sweep — `nou/` only (2026-11-15, version `nou · 2026-11-15 · 3`)
+
+The user, with the app in English, sent the drawing viewer still in Catalan
+("Pàg.", "Toca un número de posició…", "Conjunt sencer:") and asked for every
+text to be gone over. What turned up was not three strings but **about 455**:
+
+- **Whole windows had never been translated** — manuals, the drawing viewer,
+  the folder, the archive, the expenses, the licence, the Gemini key, the
+  sync and upload statuses. The first sweep collected what the SCREEN showed,
+  and those need Drive, so they never appeared in front of it.
+- **The redesign had broken dozens that worked.** A key is the Catalan string,
+  glyph and all (`"► Nova visita de servei"`), and the new design drew the
+  same labels without their glyphs.
+- **Text glued to a value** (`"Pàg. "+n`) is never a whole text node, so the
+  pass over the page could not match it: ~225 places.
+
+What changed, all in `nou/index.html`:
+
+- **One lookup, `uiFind(lang,s)`**, used by `uiT`, `nvT` and `uiApply`: the
+  string whole (the app's table, then `NV_T`), then by its **core** — what is
+  left without the glyphs/spaces in front and the punctuation behind
+  (`UI_CORE_RE`; "✓ Desat" and "Desat." both find "Desat"). A label can now
+  gain or lose an icon and keep its translation. The index is built once per
+  language (`uiCoreIdx`) and reset after each of the new design's word lists.
+- **`uiApply` reads `NV_T` too.** It only read the app's table, so the new
+  design's words in the static markup ("Idioma de l'app", the back button's
+  title) stayed in Catalan.
+- **`uiWatch` watches the whole page**, not only `.modal-back`: any text or
+  title/placeholder/aria-label that appears anywhere is looked up. Nothing
+  new has to remember to call `uiApply`. `uiDone` (a WeakMap) keeps the pass
+  from looking twice at what it has just written.
+- **`data-noui`** on an element fences it off (the machine-history preview,
+  `#mhBody`, which is drawn in the REPORT's language on purpose).
+- **~225 literals wrapped in `uiT()`**, by position, with
+  `tools/i18n_check.py`: fragments glued to a value, the branches of a
+  ternary inside a glued sentence, and what goes straight into `alert` /
+  `confirm` / `prompt` / `new Error`. **This goes against "never fragments"
+  above, knowingly**: rewriting 225 call sites around placeholders by hand
+  was not going to be finished, and a fragment translated as a fragment reads
+  right in the three languages for the shapes found (a label in front, a unit
+  behind, "Pos. 12 is not in this drawing's parts list"). Where the order
+  did matter it was rewritten: `pl(n,"prova de producció",…)`,
+  `uiT("de {n} fitxers")`, and the language name now comes from
+  `langIntoUI` ("into Catalan"), not from the Catalan column.
+- **~430 translations added** to `UI.en` and ~415 to `UI.es` (at the top of
+  each block). They are keyed by the CORE, so they serve every variant.
+
+Left in Catalan on purpose: what is DATA (file names "Tiquet …jpg", the
+default test name "Prova 1", the revision note "Primera emissió", the
+placeholder text of a media-only entry), the Drive queries, the prompts sent
+to Gemini, and **the blocks drawn with the report's own labels** — the
+summary of the counters ("Des de la visita anterior…") and the results table
+and stop types of a production test. Those follow the visit's REPORT
+language, as before.
+
+**`tools/i18n_check.py <index.html> scan out.json`** lists what the code
+writes to the screen without a translation (it tokenises the script —
+strings, comments, regexes — splits each literal into tags and text, and
+looks every piece up, whole and by core). `apply tr.txt` wraps the glued
+pieces and adds translations from a file of `català @@ english @@ español`
+lines. Run `scan` after adding screens: 32 keys are left and are meant to be
+(same word in the other language, data, queries).
+
+**Verified in the preview, in English:** every screen and window that opens
+without Drive, at desktop and phone width — home, visits, machines, settings
+and each tool, a visit, the composer, an entry, the Més menu and each of its
+windows, counters, timesheet, summary, production tests, expenses (list and
+one expense), revisions — collecting every text node and keeping what is not
+an English value: only data and the report-language blocks are left. Texts
+of the windows that need Drive were put into the page by hand and came out
+translated. Spanish and Catalan load and read right. No console errors.
+**NOT verified:** the Drive windows themselves (manuals, viewer, folder,
+archive) with real content; every `alert` actually firing; and **the root
+app has none of this** — it still has the first sweep's gaps.
+
 ### The reports were checked against all this (2026-11-06)
 
 The interface's language and the report's are two separate systems, and the

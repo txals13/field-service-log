@@ -274,6 +274,13 @@ textarea{resize:none;line-height:1.4}
 .ts-tbl td.num{text-align:right}
 .ts-tbl input[type=checkbox]{width:17px;height:17px;accent-color:var(--gold);margin:0}
 .pt-shot{margin-top:6px}
+.pt-shot .lb,.ctr-shot .lb{display:block;margin-bottom:4px;font-size:11px;font-weight:600;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase}
+.ctr-shot .bt{display:flex;gap:6px;flex-wrap:wrap}
+.ctr-shot .bt button,.pt-shot>button{min-height:40px;padding:6px 12px;font-size:13px}
+.pt-shot>button{margin:0 6px 4px 0}
+.ctr-shot .pv{font-size:11px;color:var(--tx3);text-transform:none;letter-spacing:0}
+.ctr-shot .pv img{display:block;width:100%;max-width:180px;border-radius:6px;border:1px solid var(--br);margin-top:5px}
+.ctr-shot .pv .x{margin-left:6px;color:var(--red);cursor:pointer;font-size:12px}
 .pt-shot img{display:block;width:100%;max-width:150px;border-radius:6px;border:1px solid var(--br);margin-top:5px}
 .pt-shot .x{margin-left:6px;color:var(--red);cursor:pointer;font-size:12px}
 .ts-sig{border:1px dashed var(--br2);border-radius:8px;background:#fff;touch-action:none;width:100%;height:110px;display:block;cursor:crosshair}
@@ -1737,6 +1744,10 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
       <div class="modal-title">&#9201; Comptadors de la m&agrave;quina</div>
       <div class="ts-note" style="margin-bottom:10px">Les hores de m&agrave;quina i el comptador de producte total, a l'arribada i a la sortida. Amb la lectura de la visita anterior, l'app calcula quant ha treballat la m&agrave;quina entremig.</div>
       <div id="ctrGrid"></div>
+      <!-- the photo of the machine's screen, for either reading: from the
+           camera or from the device's pictures (ctrShotTake) -->
+      <input type="file" id="ctrCamIn" accept="image/*" capture="environment" style="display:none">
+      <input type="file" id="ctrGalIn" accept="image/*" style="display:none">
       <div id="ctrSum" style="margin-top:10px;font-size:13px;line-height:1.5"></div>
       <div class="modal-actions">
         <button id="ctrCancel">Cancel&middot;la</button>
@@ -1769,13 +1780,19 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
         <div class="field"><label>Inici</label><input type="datetime-local" id="ptStart" step="60"></div>
         <div class="field"><label>Final</label><input type="datetime-local" id="ptEnd" step="60"></div>
         <div class="field"><label>Comptador inicial</label><input type="text" id="ptCs" inputmode="numeric" placeholder="opcional" autocomplete="off">
-          <div class="pt-shot"><button class="btn-xs" id="ptShotSBtn" title="Fotografia la pantalla del comptador tal com es veu en comen&ccedil;ar">&#128247; Foto de la pantalla</button>
+          <div class="pt-shot"><span class="lb">Foto de la pantalla</span>
+            <button class="btn-xs" id="ptShotSBtn" title="Fotografia la pantalla del comptador tal com es veu en comen&ccedil;ar">&#128247; Foto</button>
+            <button class="btn-xs" id="ptShotSGal" title="Tria una foto que ja tens al tel&egrave;fon o a l'ordinador">&#128444; De la galeria</button>
             <input type="file" id="ptShotSIn" accept="image/*" capture="environment" style="display:none">
+            <input type="file" id="ptShotSGalIn" accept="image/*" style="display:none">
             <div id="ptShotS"></div></div>
         </div>
         <div class="field"><label>Comptador final</label><input type="text" id="ptCe" inputmode="numeric" placeholder="opcional" autocomplete="off">
-          <div class="pt-shot"><button class="btn-xs" id="ptShotEBtn" title="Fotografia la pantalla del comptador tal com es veu en acabar">&#128247; Foto de la pantalla</button>
+          <div class="pt-shot"><span class="lb">Foto de la pantalla</span>
+            <button class="btn-xs" id="ptShotEBtn" title="Fotografia la pantalla del comptador tal com es veu en acabar">&#128247; Foto</button>
+            <button class="btn-xs" id="ptShotEGal" title="Tria una foto que ja tens al tel&egrave;fon o a l'ordinador">&#128444; De la galeria</button>
             <input type="file" id="ptShotEIn" accept="image/*" capture="environment" style="display:none">
+            <input type="file" id="ptShotEGalIn" accept="image/*" style="display:none">
             <div id="ptShotE"></div></div>
         </div>
         <div class="field"><label>Unitats totals</label><input type="text" id="ptTotal" inputmode="numeric" autocomplete="off"></div>
@@ -8188,7 +8205,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 22";
+var APP_VERSION="nou · 2026-11-15 · 23";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -8332,6 +8349,10 @@ function openCounters(){
       +"<label class=\"at\">Data i hora<span><input type=\"datetime-local\" data-ctr=\""+k+"at\" value=\""+esc(tsToInput(r.at||sug))+"\">"
       +"<button type=\"button\" class=\"btn-xs\" data-ctrsug=\""+k+"\" title=\""+esc(fts(sug))+"\">"+(k==="arr"?uiT("Inici"):uiT("Final"))+"</button>"
       +"<button type=\"button\" class=\"btn-xs\" data-ctrnow=\""+k+"\" title=\"Ara\">Ara</button></span></label>"
+      +"<div class=\"ctr-shot\"><span class=\"lb\">"+uiT("Foto de la pantalla")+"</span>"
+      +"<div class=\"bt\"><button type=\"button\" class=\"btn-xs\" data-ctrcam=\""+k+"\" title=\""+esc(uiT("Fotografia la pantalla de la màquina amb les hores i el comptador"))+"\">&#128247; "+uiT("Foto")+"</button>"
+      +"<button type=\"button\" class=\"btn-xs\" data-ctrgal=\""+k+"\" title=\""+esc(uiT("Tria una foto que ja tens al telèfon o a l'ordinador"))+"\">&#128444; "+uiT("De la galeria")+"</button></div>"
+      +"<div class=\"pv\" data-ctrpv=\""+k+"\"></div></div>"
       +"</div>";
   }
   var cu=c.unit||rateDefUnit();
@@ -8339,8 +8360,15 @@ function openCounters(){
     +"<label class=\"ctr-unit\">"+uiT("Ritme de producció en")
     +"<select id=\"ctrUnit\" style=\"width:auto\"><option value=\"h\""+(cu==="h"?" selected":"")+">unitats/h</option><option value=\"min\""+(cu==="min"?" selected":"")+">unitats/min</option></select></label>";
   $$("ctrBack").style.display="flex";
+  ctrRenderShots();
   if(!ctrWired){
     ctrWired=true;
+    ["ctrCamIn","ctrGalIn"].forEach(function(id){
+      $$(id).addEventListener("change",function(e){
+        var f=(e.target.files||[])[0];e.target.value="";
+        if(f&&ctrShotFor)ctrShotTake(ctrShotFor,f);
+      });
+    });
     $$("ctrCancel").addEventListener("click",function(){$$("ctrBack").style.display="none"});
     $$("ctrBack").addEventListener("click",function(e){if(e.target===$$("ctrBack"))$$("ctrBack").style.display="none"});
     // a number typed with no time yet takes "now": the reading is taken as it is typed
@@ -8353,6 +8381,9 @@ function openCounters(){
     });
     $$("ctrGrid").addEventListener("click",function(e){
       var d=e.target.dataset||{};
+      if(d.ctrcam){ctrShotFor=d.ctrcam;$$("ctrCamIn").click();return}
+      if(d.ctrgal){ctrShotFor=d.ctrgal;$$("ctrGalIn").click();return}
+      if(d.ctrx){ctrShotDrop(d.ctrx);return}
       if(d.ctrnow){$$("ctrGrid").querySelector("[data-ctr=\""+d.ctrnow+"at\"]").value=tsToInput(now());ctrSum();return}
       if(d.ctrsug){$$("ctrGrid").querySelector("[data-ctr=\""+d.ctrsug+"at\"]").value=tsToInput(ctrSuggestTs(d.ctrsug));ctrSum()}
     });
@@ -8369,10 +8400,84 @@ function ctrCollect(){
   ["arr","dep"].forEach(function(k){
     var h=g.querySelector("[data-ctr=\""+k+"h\"]").value.trim(),u=g.querySelector("[data-ctr=\""+k+"u\"]").value.trim(),
         at=g.querySelector("[data-ctr=\""+k+"at\"]").value;
-    if(h||u)o[k]={h:h,u:u,at:at?(inputToTs(at)||""):""};
+    // the photo is kept the moment it is taken (ctrShotTake), not on Desa: it
+    // is read back from the visit so that saving the numbers never drops it
+    var a=sessions.find(function(x){return x.id===ctrSessId}),shot=a&&a.counters&&a.counters[k]&&a.counters[k].shot;
+    if(h||u||shot){o[k]={h:h,u:u,at:at?(inputToTs(at)||""):""};if(shot)o[k].shot=shot}
   });
   var su=g.querySelector("#ctrUnit");if(su&&su.value==="min")o.unit="min";
   return o;
+}
+// ── THE PHOTO OF THE MACHINE'S SCREEN, ON EACH READING (nou · 2026-11-15 · 23) ──
+// "Poder pujar directament foto de pantalla amb les hores de màquina des de la
+// càmera del telèfon, no només des de la galeria." The counters window had no
+// photo at all; the hours typed by hand are only as good as the hand, and the
+// screen photographed is what makes them evidence — the same reason the
+// production test has its own (ptShotTake), and kept the same way: a
+// downscaled copy in the visit, the full file in the visit's photos on Drive,
+// under a name that says what it is. One per reading, `counters.arr.shot` and
+// `counters.dep.shot`.
+//
+// It is saved AS IT IS TAKEN, not with Desa: the file is already on its way to
+// Drive, and a Cancel·la that left it there with nothing pointing at it would
+// be a stray photo in the visit's folder. So it lives in the visit from the
+// start, and ctrCollect reads it back from there.
+var ctrShotFor=null;
+function ctrShotName(a,k){
+  return cleanName((a&&(a.project||a.machine||a.client)||"Visita")+" comptadors "+(k==="arr"?"arribada":"sortida"),60)+".jpg";
+}
+function ctrSetShot(k,im,sid){
+  var id=sid||ctrSessId;
+  sessions=sessions.map(function(x){
+    if(x.id!==id)return x;
+    var c=Object.assign({},x.counters||{}),r=Object.assign({h:"",u:"",at:""},c[k]||{});
+    if(im)r.shot=im;else delete r.shot;
+    if(r.h||r.u||r.shot)c[k]=r;else delete c[k];
+    return Object.assign({},x,{counters:c});
+  });
+  scheduleSave();
+}
+function ctrRenderShots(){
+  var a=sessions.find(function(x){return x.id===ctrSessId}),c=(a&&a.counters)||{};
+  ["arr","dep"].forEach(function(k){
+    var box=$$("ctrGrid").querySelector("[data-ctrpv=\""+k+"\"]");if(!box)return;
+    var im=c[k]&&c[k].shot;
+    if(!im||!(im.data||im.driveId)){box.innerHTML="";return}
+    box.innerHTML="<div>"+esc(im.name||"")+(im.uploadStatus==="loading"?" · "+esc(uiT("pujant…")):im.uploadStatus==="err"?" · "+esc(uiT("no s'ha pogut pujar a Drive")):"")
+      +"<span class=\"x\" data-ctrx=\""+k+"\" title=\""+esc(uiT("Treu la foto"))+"\">&#10005;</span></div>"
+      +(im.data?"<img src=\""+im.data+"\" alt=\"\">":"");
+  });
+}
+function ctrShotDrop(k){
+  var a=sessions.find(function(x){return x.id===ctrSessId});if(!a)return;
+  if(!confirm(uiT("Vols treure aquesta foto?")))return;
+  var im=a.counters&&a.counters[k]&&a.counters[k].shot;
+  if(im&&im.driveId)queueTrash(ctrSessId,[im.driveId]);
+  ctrSetShot(k,null);ctrRenderShots();
+}
+async function ctrShotTake(k,file){
+  var sid=ctrSessId,a=sessions.find(function(x){return x.id===sid});if(!a||!file)return;
+  // one photo per reading: the one it replaces leaves Drive too
+  var old=a.counters&&a.counters[k]&&a.counters[k].shot;
+  if(old&&old.driveId)queueTrash(sid,[old.driveId]);
+  var im={id:uid(),type:"image",name:ctrShotName(a,k),data:null,uploadStatus:isLoggedIn?"loading":""};
+  try{im.data=await makeLocalImageData(file)}catch(e){}
+  ctrSetShot(k,im,sid);ctrRenderShots();
+  if(isLoggedIn){
+    try{
+      var r=await uploadMedia(a,file,"photos");
+      if(r)mediaUploaded(im,r);else im.uploadStatus="err";
+    }catch(e){im.uploadStatus="err"}
+    // the name is ours, not the camera's: keep it on Drive too
+    if(im.driveId&&im.name)driveRename(im.driveId,im.name);
+    // still this reading's photo? It may have been taken off, or taken again,
+    // while this one was on its way: then it is nobody's, and leaves Drive
+    var now2=sessions.find(function(x){return x.id===sid}),cur=now2&&now2.counters&&now2.counters[k]&&now2.counters[k].shot;
+    if(cur&&cur.id===im.id){
+      ctrSetShot(k,im,sid);                       // stamps the change so it syncs
+      if(ctrSessId===sid&&$$("ctrBack").style.display!=="none")ctrRenderShots();
+    }else if(im.driveId)queueTrash(sid,[im.driveId]);
+  }
 }
 // The sums, live, as the numbers are typed.
 function ctrSum(){
@@ -8637,10 +8742,18 @@ function wirePt(){
   });
   ["s","e"].forEach(function(w){
     var W=w.toUpperCase();
-    $$("ptShot"+W+"Btn").addEventListener("click",function(){$$("ptShot"+W+"In").click()});
-    $$("ptShot"+W+"In").addEventListener("change",function(e){
-      var f=(e.target.files||[])[0];e.target.value="";
-      if(f)ptShotTake(w,f);
+    // Two buttons, two inputs (nou · 2026-11-15 · 23): `capture` sends a phone
+    // straight to its camera, and a photo already taken — or a screenshot —
+    // could not be given at all; without `capture` some phones only offer the
+    // gallery. Asking for each by name leaves nothing to the browser.
+    var gal=w==="s"?$$("ptShotSGal"):$$("ptShotEGal"),galIn=w==="s"?$$("ptShotSGalIn"):$$("ptShotEGalIn"),camIn=$$("ptShot"+W+"In");
+    $$("ptShot"+W+"Btn").addEventListener("click",function(){camIn.click()});
+    gal.addEventListener("click",function(){galIn.click()});
+    [camIn,galIn].forEach(function(inp){
+      inp.addEventListener("change",function(e){
+        var f=(e.target.files||[])[0];e.target.value="";
+        if(f)ptShotTake(w,f);
+      });
     });
   });
   $$("ptDone").addEventListener("click",ptClose);
@@ -19873,14 +19986,21 @@ function nvSumClick(ev){
     "Senyals, modes i avisos":"Señales, modos y avisos","Punts de consignació (LOTO)":"Puntos de consignación (LOTO)","Llista de peces":"Lista de piezas","Taula":"Tabla",
     "Localització":"Localización","Secció":"Sección","Procediment":"Procedimiento",
     "La llista de conjunts, fulls de l'esquema i llistes del manual: toca'n un per anar-hi":"La lista de conjuntos, hojas del esquema y listas del manual: toca uno para ir",
-    "Quines pàgines es passen amb les fletxes":"Qué páginas se pasan con las flechas"};
+    "Quines pàgines es passen amb les fletxes":"Qué páginas se pasan con las flechas",
+    // the photo of the screen, on the counters and on the production test (· 23)
+    "Fotografia la pantalla de la màquina amb les hores i el comptador":"Fotografía la pantalla de la máquina con las horas y el contador",
+    "Tria una foto que ja tens al telèfon o a l'ordinador":"Elige una foto que ya tienes en el teléfono o en el ordenador",
+    "pujant…":"subiendo…","no s'ha pogut pujar a Drive":"no se ha podido subir a Drive"};
   var en={"Índex":"Index","Esquema elèctric":"Electrical schematic","Materials elèctrics":"Electrical materials","Llistes del manual":"The manual's lists",
     "Pàgines marcades":"Marked pages","Índex del manual":"The manual's contents","Tot el manual":"Whole manual","pàg.":"p.","Pàg.":"Page","Full":"Sheet",
     "Recanvis recomanats":"Recommended spare parts","Manteniment":"Maintenance","Peces de format":"Format parts","Requisits i especificacions":"Requirements and specifications",
     "Senyals, modes i avisos":"Signals, modes and warnings","Punts de consignació (LOTO)":"Lockout points (LOTO)","Llista de peces":"Parts list","Taula":"Table",
     "Localització":"Location","Secció":"Section","Procediment":"Procedure",
     "La llista de conjunts, fulls de l'esquema i llistes del manual: toca'n un per anar-hi":"The list of assemblies, schematic sheets and lists of the manual: tap one to go there",
-    "Quines pàgines es passen amb les fletxes":"Which pages the arrows go through"};
+    "Quines pàgines es passen amb les fletxes":"Which pages the arrows go through",
+    "Fotografia la pantalla de la màquina amb les hores i el comptador":"Photograph the machine's screen with the hours and the counter",
+    "Tria una foto que ja tens al telèfon o a l'ordinador":"Pick a photo you already have on the phone or the computer",
+    "pujant…":"uploading…","no s'ha pogut pujar a Drive":"could not be uploaded to Drive"};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();

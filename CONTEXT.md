@@ -4674,7 +4674,47 @@ one drawing each, in the variants seen in the screenshot, and one with a real
 hierarchy): one line for each of the five, with its number and page; the
 hierarchy kept for the sixth; tapping a line goes to its page and "Conjunt
 sencer" still offers it. NOT checked: his manual itself. He was asked whether
-the repetition was what he meant.
+the repetition was what he meant ("Sí, era això").
+
+### The photo of the machine's screen: camera or gallery, on the counters too (2026-11-15, version `nou · 2026-11-15 · 23`)
+
+"Poder pujar directament foto de pantalla amb les hores de màquina pujada
+des de la càmera del telèfon, no només des de la galeria." The counters
+window (hours and total product, on arrival and on leaving) had **no photo at
+all**; the only "Foto de la pantalla" was on the production test, one button
+with `capture`. Asked where he wanted it: **"A tots dos llocs"**.
+
+- **Comptadors (`#ctrBack`):** each reading's card has "Foto de la pantalla"
+  with two buttons — **📷 Foto** (`#ctrCamIn`, `capture="environment"`) and
+  **🖼 De la galeria** (`#ctrGalIn`, no `capture`) — and the photo under them
+  with its ✕. One per reading: `counters.arr.shot`, `counters.dep.shot`, an
+  image like an entry's (`{id,type,name,data,driveId,uploadStatus}`).
+  `ctrShotTake` keeps a downscaled copy in the visit and uploads the file to
+  the visit's photos on Drive under "<project> comptadors arribada|sortida.jpg";
+  a second photo for the same reading sends the first to Drive's bin.
+- **Saved as it is taken, not with Desa** (`ctrSetShot`): the file is already
+  going to Drive, and a Cancel·la that left it there with nothing pointing at
+  it would be a stray. `ctrCollect` reads the photo back from the visit, so
+  saving the numbers never drops it; a reading may be a photo with no numbers
+  yet (`ctrRead` gives null for it, so the sums ignore it).
+- **Prova de producció (`#ptBack`):** the one button is now two per counter —
+  **📷 Foto** (the input with `capture`, as before) and **🖼 De la galeria**
+  (`#ptShotSGalIn`, `#ptShotEGalIn`) — both ending in `ptShotTake`. Buttons
+  40 px tall (they were 22).
+- **Why two buttons and not one:** with `capture` a phone goes straight to
+  its camera and a photo already taken cannot be given; without it some
+  phones only offer the gallery. Naming each leaves nothing to the browser.
+- **The counters' photos are NOT in any report** (the production test's are
+  in the validation report). Offered, not asked.
+- `nou/` only.
+
+Checked in the preview at 375 px, with no Google session: each button opens
+its own input (camera with `capture`, gallery without); a picture given to
+each reading shows under it with its name; Cancel·la keeps them; changing a
+number and Desa keeps them; ✕ takes one off; on the production test the four
+buttons open the four inputs and both ways store the photo. NOT checked: a
+real phone (that 📷 opens the camera and 🖼 the gallery), the upload to Drive
+and the rename there, a photo replaced while the first is still uploading.
 
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does

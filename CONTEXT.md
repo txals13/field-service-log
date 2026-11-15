@@ -4346,6 +4346,45 @@ dashed box on a visit with no photo. NOT checked: the file dialog itself (the
 test hands the input a file), a phone's camera/gallery, HEIC photos, that the
 cover arrives on a second device through Drive.
 
+### Manuals and Arxiu are pages, not pop-ups (2026-11-15, version `nou · 2026-11-15 · 14`)
+
+"Pantalla Manuals i Archive surt el pop-up però no es selecciona de la llista,
+i segueix la pantalla anterior al darrera. Haurien de ser iguals que la resta
+i ser tota la pantalla." From 701 px the navigation has Manuals and Arxiu
+beside Inici, Visites and Màquines, and those two raised a window over
+whatever page was up, with nothing marked in the navigation.
+
+- `nvView` has two more values, `"manuals"` and `"arx"`: marked in the
+  navigation, `body.nv-v-manuals` / `nv-v-arx`, a page with its `.nv-h1`.
+- **The content is not written twice.** `nvModalPage(mc,backId,title)` moves
+  the window's own box (`#manualsBack .modal`, `#bulkBack .modal`, with every
+  id and listener) into the page; `nvReturnModal()` — first thing in
+  `renderContent` — puts it back in its `.modal-back` before the page is
+  wiped, so the next render moves it in again. `.modal.nv-inpage` takes the
+  pop-up's looks off (no box, no title, no Tanca / Cancel·la, no inner
+  scroll). The page's scroll survives a redraw (`nvPageTop`).
+- `nvGo("manuals"|"arx")` calls the window's own opening with `asPage`
+  (`openManuals(true)`, `openBulkArchive(true)`): the same getting ready, no
+  pop-up raised, and `false` when it may not be shown (no Google session; no
+  visit to archive) — it has said why with its alert, and the page does not
+  change. `nvGo` returns that; `nvBackStep` falls back to Inici.
+- `openBulkArchive`'s list is `bulkFill()` now, called on every redraw of the
+  Arxiu page and keeping what was ticked (a sync redraws the page).
+- The buttons that used to open the windows (`#btnManuals`, `#btnBulkArx`, on
+  the Configuració page) go to the page from 701 px. **Under 701 px nothing
+  changes:** the windows open from the Menu and already fill the screen.
+- The Arxiu page is what the Arxiu button showed: archiving visits. Loading
+  from the archive (`#arxBack`) is still the window it was.
+- `nou/` only.
+
+Checked in the preview, Google and Drive stubbed, at 1024 px: without a
+session the alert and no page; Manuals and Arxiu as pages with their item
+marked and no pop-up; a folder toggled, a tick kept through a sync; from the
+Configuració page's button; back to Inici and into a visit and back, both
+boxes home. At 375 px: both still open as full-screen windows from the Menu.
+NOT checked: real Drive, archiving from the page to the end (it runs the same
+`archiveSessions`), uploading a manual from the page.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

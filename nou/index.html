@@ -782,6 +782,13 @@ body.m2 #sideTools{order:4;border:1px solid var(--br);border-radius:14px;backgro
 .nv-note{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;font-size:13px;color:var(--tx2)}
 .nv-note span{flex:1;min-width:180px}
 .nv-h1{font-size:20px;font-weight:800;color:var(--tx1);padding:14px 16px 0}
+/* a window's box drawn inside a page (Manuals, Arxiu): no pop-up looks, no
+   title of its own (the page has it), no button to close it, no inner scroll */
+.modal.nv-inpage{position:static!important;display:block!important;width:100%!important;max-width:none!important;height:auto!important;max-height:none!important;overflow:visible!important;margin:0;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important}
+.modal.nv-inpage>.modal-title,.modal.nv-inpage #manualsClose,.modal.nv-inpage #bulkCancel{display:none!important}
+.modal.nv-inpage #manualsList,.modal.nv-inpage #bulkList{max-height:none!important;overflow:visible!important}
+.modal.nv-inpage #bulkList{background:var(--bg1)}
+.modal.nv-inpage .modal-actions{position:static!important;margin-top:14px;padding:0!important;background:none!important;border:0!important}
 .nv-mach{padding:12px 14px 20px}
 .empty{color:var(--tx2)}
 
@@ -3688,15 +3695,19 @@ async function saveManualsIndex(token){
   if(id){await fetch("https://www.googleapis.com/upload/drive/v3/files/"+id+"?uploadType=media",{method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json; charset=UTF-8"},body:content})}
   else{await uploadTextFile(token,"manuals_index.json",content,"application/json",rootId)}
 }
-function openManuals(){
-  if(!isLoggedIn){alert(uiT("Inicia la sessió amb Google per gestionar els manuals a Drive."));return}
+// asPage: the Manuals PAGE of the navigation is this same window's content,
+// drawn inside the page (nvModalPage) — everything is got ready the same way,
+// only the pop-up is not raised. Says whether it went ahead.
+function openManuals(asPage){
+  if(!isLoggedIn){alert(uiT("Inicia la sessió amb Google per gestionar els manuals a Drive."));return false}
   mfPdfFile=null;mfJsonFile=null;mfParsed=null;$$("mfClient").value="";$$("mfSerial").value="";
   $$("mfPdfName").innerHTML="&mdash; cap fitxer &mdash;";
   $$("mfJsonName").innerHTML="&mdash; cap fitxer &mdash;";
   $$("mfInfo").textContent="";$$("mfUpload").disabled=true;
   renderManualsList();
-  $$("manualsBack").style.display="flex";
+  if(asPage!==true)$$("manualsBack").style.display="flex";
   loadManualsIndex().then(renderManualsList);
+  return true;
 }
 function closeManuals(){$$("manualsBack").style.display="none"}
 // -- The manuals as folders: client, then machine number (nou · 2026-11-15 ·
@@ -3887,7 +3898,9 @@ async function deleteManual(idx){
   manuals.splice(idx,1);renderManualsList();
   var token=await ensureToken();if(token){try{await saveManualsIndex(token)}catch(e){}}
 }
-$$("btnManuals").addEventListener("click",openManuals);
+// With room for the navigation (from 701 px) Manuals is a page of its own, like
+// Inici or Màquines; on a phone the window already fills the screen.
+$$("btnManuals").addEventListener("click",function(){if(nvWide())nvGo("manuals");else openManuals()});
 $$("btnGemKey").addEventListener("click",function(){openGemKey()});
 $$("btnLic").addEventListener("click",function(){openLic()});
 // Its value is set further down, beside uiApply(): LS_UILANG and UI are
@@ -6058,12 +6071,16 @@ function renderContent(){
   logCapture();
   var mc=$$("content");
   var active=sessions.find(function(s){return s.id===aid});
+  nvReturnModal();   // a window drawn as a page goes home before the page is wiped
 
   // the header, the navigation and which page is on screen
   nvHeader(active);
 
   if(!active){
-    if(nvView==="mach")nvMachRender(mc);else nvHomeRender(mc);
+    if(nvView==="mach")nvMachRender(mc);
+    else if(nvView==="manuals")nvModalPage(mc,"manualsBack","Manuals");
+    else if(nvView==="arx"){bulkFill();nvModalPage(mc,"bulkBack","Arxiu")}
+    else nvHomeRender(mc);
     return;
   }
 
@@ -7859,7 +7876,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 13";
+var APP_VERSION="nou · 2026-11-15 · 14";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -8373,7 +8390,7 @@ function wirePt(){
 }
 // A page of its own beside the app, so it can be read alongside it.
 $$("btnHelp").addEventListener("click",function(){window.open("../manual.html","_blank","noopener")});
-$$("btnBulkArx").addEventListener("click",function(){if(mob())closeSide();openBulkArchive()});
+$$("btnBulkArx").addEventListener("click",function(){if(mob())closeSide();if(nvWide())nvGo("arx");else openBulkArchive()});
 $$("delBack").addEventListener("click",function(e){if(e.target===$$("delBack"))closeDelModal()});
 $$("delConfirm").addEventListener("click",async function(){
   var s=pendingDel;if(!s){closeDelModal();return}
@@ -8467,10 +8484,21 @@ function wireBulk(){
     await archiveSessions(ids,del);
   });
 }
-function openBulkArchive(){
-  if(!sessions.length){alert(uiT("No hi ha cap sessió per arxivar."));return}
-  if(!isLoggedIn){alert(uiT("Primer inicia la sessió amb Google: el ZIP del projecte es fa amb els fitxers de la carpeta de Drive de cada sessió."));return}
+// asPage: the Arxiu page of the navigation (see openManuals). Says whether it
+// went ahead.
+function openBulkArchive(asPage){
+  if(!sessions.length){alert(uiT("No hi ha cap sessió per arxivar."));return false}
+  if(!isLoggedIn){alert(uiT("Primer inicia la sessió amb Google: el ZIP del projecte es fa amb els fitxers de la carpeta de Drive de cada sessió."));return false}
   wireBulk();
+  bulkFill();
+  if(asPage!==true)$$("bulkBack").style.display="flex";
+  return true;
+}
+// The list of visits to archive. Drawn again whenever the page is (a sync, a
+// visit archived and gone), so what was ticked is kept across the redraw.
+function bulkFill(){
+  var was={};
+  Array.prototype.forEach.call($$("bulkList").querySelectorAll("input[type=checkbox]:checked"),function(c){was[c.dataset.id]=1});
   var list=sessions.slice().sort(function(a,b){return String(b.createdAt||"").localeCompare(String(a.createdAt||""))});
   $$("bulkNote").innerHTML="Cada sessió marcada surt com el seu <strong>ZIP del projecte</strong>"
     +(arxDir&&fsaOK()?" a <code>"+esc(arxDir.name)+"</code>":" "+uiT("a Baixades"))
@@ -8478,7 +8506,7 @@ function openBulkArchive(){
   $$("bulkList").innerHTML=list.map(function(x){
     var rng=tsRange(x),ok=zipIsCurrent(x),r=curRev(x);
     return "<label style=\"display:flex;align-items:center;gap:10px;padding:7px 10px;border-bottom:1px solid var(--br);cursor:pointer\">"
-      +"<input type=\"checkbox\" data-id=\""+esc(x.id)+"\" style=\"width:auto;flex-shrink:0\">"
+      +"<input type=\"checkbox\" data-id=\""+esc(x.id)+"\""+(was[x.id]?" checked":"")+" style=\"width:auto;flex-shrink:0\">"
       +"<span style=\"flex:1;min-width:0\">"
       +"<span style=\"display:block;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\">"+esc(x.client||"—")+"</span>"
       +"<span style=\"display:block;font-size:11px;color:var(--tx3)\">"+(x.project?esc(x.project)+" · ":"")+(x.machine?esc(x.machine)+" · ":"")
@@ -8487,9 +8515,8 @@ function openBulkArchive(){
       +"<span style=\"flex-shrink:0;font-size:11px;color:"+(ok?"var(--green)":"var(--tx3)")+"\" title=\""+(ok?uiT("Ja té un ZIP del projecte posterior a l'últim canvi"):uiT("Encara no té cap ZIP del projecte al dia"))+"\">"
       +(ok?uiT("✓ ZIP al dia"):uiT("sense ZIP"))+"</span>"
       +"</label>";
-  }).join("");
+  }).join("")||"<div class=\"ts-note\" style=\"padding:10px\">"+esc(uiT("No hi ha cap sessió per arxivar."))+"</div>";
   bulkCount();
-  $$("bulkBack").style.display="flex";
 }
 // Where the last project ZIP went: "arxiu" when the archive folder took it (a
 // write the app saw succeed), "download" when it was handed to the browser —
@@ -18422,11 +18449,48 @@ function nvActive(){return aid?sessions.find(function(s){return s.id===aid}):nul
 
 // ── moving about ──
 function nvGo(v){
+  // Manuals and Arxiu are pages too (nou · 2026-11-15 · 14): their windows'
+  // own opening gets the content ready and says if it may be shown (no Google
+  // session, nothing to archive: it has said why, and the page stays put).
+  if(v==="manuals"&&!openManuals(true))return false;
+  if(v==="arx"&&!openBulkArchive(true))return false;
   m2Hide();
   if(aid){stopCurAudio();aid=null}
-  nvView=v;filterTxt="";
+  nvView=v;filterTxt="";nvPageTop=0;
   renderAll();
   var p=document.querySelector(".nv-page");if(p)p.scrollTop=0;
+  return true;
+}
+// -- A window as a page. "Pantalla Manuals i Archive surt el pop-up però no es
+//    selecciona de la llista, i segueix la pantalla anterior al darrera.
+//    Haurien de ser iguals que la resta i ser tota la pantalla." Both were
+//    buttons of the navigation that raised a pop-up over whatever page was
+//    up. They are views now (nvView "manuals" / "arx"), marked in the
+//    navigation like the others. Their content is NOT written twice: the
+//    window's own box (.modal, with every id and listener it has) is moved
+//    into the page while the page is up and put back where it was before the
+//    page is redrawn or left (nvReturnModal, first thing in renderContent).
+//    `.nv-inpage` takes the pop-up's looks off it. Under 701 px nothing
+//    changes: there the same windows open from the Menu and already fill the
+//    screen. --
+var nvBorrowed=null,nvPageTop=0;
+function nvReturnModal(){
+  if(!nvBorrowed)return;
+  var p=document.querySelector(".nv-page");if(p)nvPageTop=p.scrollTop;
+  nvBorrowed.node.classList.remove("nv-inpage");
+  nvBorrowed.home.appendChild(nvBorrowed.node);
+  nvBorrowed=null;
+}
+function nvModalPage(mc,backId,title){
+  var back=$$(backId),node=back&&back.querySelector(".modal");
+  var page=document.createElement("div");page.className="nv-page";
+  page.innerHTML="<div class=\"nv-h1\">"+esc(nvT(title))+"</div><div class=\"nv-mach\"></div>";
+  mc.innerHTML="";mc.appendChild(page);
+  if(!node)return;
+  back.style.display="none";
+  node.classList.add("nv-inpage");page.lastChild.appendChild(node);
+  nvBorrowed={node:node,home:back};
+  page.scrollTop=nvPageTop;   // a redraw (a sync, a list that changed) keeps the place
 }
 function nvOpen(id,sub){
   if(aid!==id)stopCurAudio();
@@ -18439,7 +18503,7 @@ function nvNeedLog(){if(aid&&nvSub!=="log"){nvSub="log";renderAll()}}
 function nvBackStep(){
   if(m2Sheet){m2Hide();return}
   if(aid&&nvSub==="log"&&!nvWide()){nvSub="fitxa";renderAll();return}
-  if(aid){nvGo(nvView);return}
+  if(aid){if(nvGo(nvView)===false)nvGo("home");return}   // a page that may not be shown any more: Inici
   if(nvView!=="home"){nvView="home";renderAll()}
 }
 function nvSetTab(k){
@@ -18493,7 +18557,7 @@ function nvHeader(active){
   if(!active)nvSubAid=null;
   var b=document.body.classList;
   b.toggle("nv-visit",!!active);b.toggle("nv-shell",!active);
-  ["home","visits","mach","menu"].forEach(function(v){b.toggle("nv-v-"+v,!active&&nvView===v)});
+  ["home","visits","mach","menu","manuals","arx"].forEach(function(v){b.toggle("nv-v-"+v,!active&&nvView===v)});
   b.toggle("nv-sub-fitxa",!!active&&nvSub==="fitxa");
   b.toggle("nv-sub-log",!!active&&nvSub==="log");
   var t=$$("m2Title");
@@ -18540,7 +18604,7 @@ function nvNavRender(){
     var who=nvWho(),lw="";try{lw=licWords()||""}catch(e){}
     h="<div class=\"brand\">"+NV_LOGO+"<span>Field Service<br>Log</span></div>"
       +bt("home","home","Inici",nvView==="home")+bt("visits","doc","Visites",nvView==="visits")+bt("mach","hist","Màquines",nvView==="mach")
-      +bt("manuals","book","Manuals",false,"","dk")+bt("arx","box","Arxiu",false,"","dk")
+      +bt("manuals","book","Manuals",nvView==="manuals","","dk")+bt("arx","box","Arxiu",nvView==="arx","","dk")
       +"<button type=\"button\" data-nv=\"menu\" class=\""+(nvView==="menu"?"on":"")+"\"><span class=\"ph\">"+nvI("menu",22)+"</span><span class=\"dki\">"+nvI("gear",22)+"</span>"
         +"<span class=\"ph\">"+esc(nvT("Menú"))+"</span><span class=\"dki\">"+esc(nvT("Configuració"))+"</span></button>"
       +"<div class=\"foot\">"+(q?"<div>"+esc(q)+"</div>":"")
@@ -18551,9 +18615,7 @@ function nvNavRender(){
 $$("nvNav").addEventListener("click",function(e){
   var b=e.target.closest?e.target.closest("[data-nv]"):null;if(!b)return;
   var k=b.dataset.nv;
-  if(k==="home"||k==="visits"||k==="mach"||k==="menu"){nvGo(k);return}
-  if(k==="manuals"){$$("btnManuals").click();return}
-  if(k==="arx"){$$("btnBulkArx").click();return}
+  if(k==="home"||k==="visits"||k==="mach"||k==="menu"||k==="manuals"||k==="arx"){nvGo(k);return}
   if(k==="fitxa"){nvGoSec("fitxa");return}
   if(k.indexOf("t:")===0){nvGoSec(k.slice(2));return}
   if(k==="prod"){nvGoSec("pd");return}

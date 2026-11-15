@@ -4213,6 +4213,52 @@ NOT checked: real Drive and real manuals, the ZIP with two manuals, the
 schematic note with devices from two manuals, the Tag field's conjunts, the
 PDF/Word/HTML notes (same function as the Excel's), es/en on screen.
 
+### The manuals in folders: client, then machine number (2026-11-15, version `nou · 2026-11-15 · 9`)
+
+"Manuals en carpetes filtrats per client i després per número de màquina."
+Asked where, he chose: in the app, and at Drive for what is uploaded from now
+on — what is already at Drive stays where it is.
+
+- **In the app.** Both lists — "Manuals de recanvis" and the unlinked part of
+  the link window — are drawn by `renderManualFolders(box,list,rowOf,again,
+  hint)` from the index entry's `client` and `serial`: a folder per client,
+  one inside per machine number, the manuals in it (`manualTree`; "Sense
+  client" / "Sense número de màquina" last). Open folders are remembered while
+  the app is open (`mfOpen`, shared by the two windows). A folder nobody has
+  touched starts open if it is the only one at its level, or — `manualHint` —
+  if it is the client or the machine number of the visit on screen, or holds
+  the manual the link window suggests or the visit's main manual's machine.
+- **✎ on a row of "Manuals de recanvis"** (`editManualFiling`) asks for the
+  client and the machine number and files the manual there, in the app only:
+  that is how the manuals from before, whose catalogue names no client, get a
+  folder. A visit already linked keeps the serial it was linked with.
+- **At Drive, new uploads** go to Manuals › <client> › <machine number>
+  (`uploadManual`; "Sense client" and the PDF's name stand in for an empty
+  field). The upload form has the two fields (`#mfClient`, `#mfSerial`),
+  filled on picking the JSON: what the list already says for a manual of that
+  name, else the catalogue's `machine.client` / `.serial`, else the open
+  visit's client and machine number; both can be typed over. The index
+  entry's `client` and `serial` are what the form says.
+- **A manual already in the list is uploaded again into its own folder**
+  (`prev.folderId`, if it is still there), wherever that is.
+- **Two bugs this uncovered, both fixed:** `uploadManual` replaced the index
+  entry that had the same FOLDER, so the annex of a machine took its manual's
+  place in the list (the folder was the serial); it goes by name or PDF now.
+  And `sameManual` took two manuals in one folder for the same manual, so
+  linking the annex would have replaced the manual on the visit; by folder
+  only together with the name now.
+- `nou/` only. Not done: moving what is already at Drive (he was offered it
+  and did not take it).
+
+Checked in the preview, Drive stubbed, five manuals of two clients and one
+with no data: the folders in both windows, opening and closing, the visit's
+client open and the suggested manual's machine open; linking a manual and its
+annex from the same Drive folder (both stay linked); ✎; uploading a new manual
+and its annex (the folders created at Drive, both entries kept) and an
+existing one again (into its own folder). NOT checked: real Drive, the form's
+values for a manual that was filed by hand and is uploaded again (changed
+after the test), es/en on screen.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

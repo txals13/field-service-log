@@ -369,6 +369,13 @@ textarea{resize:none;line-height:1.4}
 .manual-row .mr-del{background:none;border:none;color:var(--tx3);cursor:pointer;font-size:13px;flex-shrink:0}
 .manual-row .mr-del:hover{color:var(--red)}
 .manuals-empty{font-size:12px;color:var(--tx3);font-family:monospace;padding:14px 0;text-align:center}
+/* the manuals as folders: client, then machine number */
+.mf-h{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:700;padding:7px 4px;user-select:none;-webkit-user-select:none}
+.mf-h .mf-n{font-weight:400;font-size:11px;color:var(--tx3)}
+.mf-h.mf-m{font-weight:600;font-size:12px;padding:5px 4px}
+.mf-in{margin-left:14px}
+.mf-fields{display:flex;gap:6px;flex-wrap:wrap}
+.mf-fields input{flex:1;min-width:120px;font-size:13px;padding:6px 8px}
 /* Printing the machine history. The class is set by its print button and taken
    off when the dialog closes — NOT on afterprint: on Chrome for Android print()
    returns at once and afterprint can arrive before the page is laid out for
@@ -1475,6 +1482,11 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
           <div class="fname-row"><span class="fi">&#128209; JSON</span><span id="mfJsonName" style="flex:1;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">&mdash; cap fitxer &mdash;</span><button class="btn-sm" id="mfJsonBtn">Tria</button></div>
           <input type="file" id="mfPdfIn" accept="application/pdf,.pdf" style="display:none">
           <input type="file" id="mfJsonIn" accept="application/json,.json" style="display:none">
+          <div class="mf-fields">
+            <input type="text" id="mfClient" placeholder="Client" title="El client d'aquest manual: és la carpeta on es desa i on surt a la llista">
+            <input type="text" id="mfSerial" placeholder="Núm. de màquina" title="El número de màquina d'aquest manual: la carpeta dins de la del client">
+          </div>
+          <div class="ts-note">Es desa a Drive dins de Manuals › Client › Núm. de màquina.</div>
         </div>
         <div id="mfInfo" style="font-size:12px;color:var(--tx3);margin-top:8px"></div>
       </div>
@@ -3669,7 +3681,7 @@ async function saveManualsIndex(token){
 }
 function openManuals(){
   if(!isLoggedIn){alert(uiT("Inicia la sessió amb Google per gestionar els manuals a Drive."));return}
-  mfPdfFile=null;mfJsonFile=null;mfParsed=null;
+  mfPdfFile=null;mfJsonFile=null;mfParsed=null;$$("mfClient").value="";$$("mfSerial").value="";
   $$("mfPdfName").innerHTML="&mdash; cap fitxer &mdash;";
   $$("mfJsonName").innerHTML="&mdash; cap fitxer &mdash;";
   $$("mfInfo").textContent="";$$("mfUpload").disabled=true;
@@ -3678,11 +3690,75 @@ function openManuals(){
   loadManualsIndex().then(renderManualsList);
 }
 function closeManuals(){$$("manualsBack").style.display="none"}
+// -- The manuals as folders: client, then machine number (nou · 2026-11-15 ·
+//    9). A machine has its manual and its annexes, a client has several
+//    machines, and a flat list of file names says none of that. Both lists
+//    (this window and the one that links a manual to a visit) are drawn by
+//    renderManualFolders from the index entry's `client` and `serial`: one
+//    folder per client, one inside per machine number, the manuals in it.
+//    Which folders are open is remembered while the app is open (mfOpen); a
+//    folder nobody has touched starts open when it is the only one at its
+//    level, or when it is the visit's own client or machine (`hint`).
+//    At Drive the same shape holds for what is uploaded FROM NOW ON:
+//    Manuals › <client> › <machine number> (uploadManual). What was already
+//    there stays where it is — a manual uploaded again goes back into its own
+//    folder — and is filed in the app's folders by the same two fields, which
+//    ✎ on a row changes without touching Drive. --
+var mfOpen={};
+function mfKey(v){return normStr(v)}
+function manualTree(list){
+  var cs=[],byC={};
+  list.forEach(function(m){
+    var cn=String(m.client||"").trim(),ck=mfKey(cn),sn=String(m.serial||"").trim(),sk=mfKey(sn);
+    var c=byC[ck];if(!c){c=byC[ck]={key:ck,name:cn,machines:[],by:{}};cs.push(c)}
+    var mc=c.by[sk];if(!mc){mc=c.by[sk]={key:sk,name:sn,items:[]};c.machines.push(mc)}
+    mc.items.push(m);
+  });
+  // the ones with no client, and with no number, go last
+  function ord(a,b){return (!a.key)-(!b.key)||a.name.localeCompare(b.name,undefined,{numeric:true})}
+  cs.sort(ord);
+  cs.forEach(function(c){c.machines.sort(ord);c.machines.forEach(function(mc){mc.items.sort(function(a,b){return manName(a).localeCompare(manName(b),undefined,{numeric:true})})})});
+  return cs;
+}
+function renderManualFolders(box,list,rowOf,again,hint){
+  var tree=manualTree(list);
+  function head(cls,open,name,n,key){
+    var h=document.createElement("div");h.className="mf-h"+cls;
+    h.innerHTML="<span>"+(open?"&#9662; &#128194;":"&#9656; &#128193;")+"</span><span>"+esc(name)+"</span><span class=\"mf-n\">"+n+"</span>";
+    h.addEventListener("click",function(){mfOpen[key]=!open;again()});
+    return h;
+  }
+  tree.forEach(function(c){
+    var ck="c:"+c.key,n=0;c.machines.forEach(function(mc){n+=mc.items.length});
+    var cOpen=(ck in mfOpen)?mfOpen[ck]:(tree.length===1||!!(hint&&hint.client(c)));
+    box.appendChild(head("",cOpen,c.name||uiT("Sense client"),n,ck));
+    if(!cOpen)return;
+    var inC=document.createElement("div");inC.className="mf-in";box.appendChild(inC);
+    c.machines.forEach(function(mc){
+      var mk="m:"+c.key+"|"+mc.key;
+      var mOpen=(mk in mfOpen)?mfOpen[mk]:(c.machines.length===1||!!(hint&&hint.machine(mc)));
+      inC.appendChild(head(" mf-m",mOpen,mc.name||uiT("Sense número de màquina"),mc.items.length,mk));
+      if(!mOpen)return;
+      var inM=document.createElement("div");inM.className="mf-in";inC.appendChild(inM);
+      mc.items.forEach(function(m){inM.appendChild(rowOf(m))});
+    });
+  });
+}
+// Files a manual under another client or machine number, in the app only.
+async function editManualFiling(m){
+  var cli=prompt(uiT("Client d'aquest manual:"),m.client||"");if(cli===null)return;
+  var ser=prompt(uiT("Número de màquina d'aquest manual:"),m.serial||"");if(ser===null)return;
+  m.client=cli.trim();m.serial=ser.trim();
+  mfOpen["c:"+mfKey(m.client)]=true;mfOpen["m:"+mfKey(m.client)+"|"+mfKey(m.serial)]=true;   // show where it went
+  renderManualsList();
+  var token=await ensureToken();if(token){try{await saveManualsIndex(token)}catch(e){}}
+}
 function renderManualsList(){
   var box=$$("manualsList");if(!box)return;
   if(!manuals.length){box.innerHTML="<div class=\"manuals-empty\">Encara no s'ha pujat cap manual.</div>";return}
   box.innerHTML="";
-  manuals.forEach(function(m,idx){
+  renderManualFolders(box,manuals,function(m){
+    var idx=manuals.indexOf(m);
     var row=document.createElement("div");row.className="manual-row";
     var meta=[];
     if(m.model)meta.push(esc(m.model));
@@ -3692,10 +3768,21 @@ function renderManualsList(){
     if(m.devices&&schLabel(m.sch))meta.push(uiT("esquema")+" "+schLabel(m.sch));
     row.innerHTML="<div class=\"mr-info\"><div class=\"mr-name\">"+esc(m.base||m.serial||"manual")+"</div>"
       +"<div class=\"mr-meta\">"+meta.join(" · ")+"</div></div>"
-      +"<button class=\"mr-del\" title=\"Treu de la llista\">&#10005;</button>";
-    row.querySelector(".mr-del").addEventListener("click",function(){deleteManual(idx)});
-    box.appendChild(row);
-  });
+      +"<button class=\"mr-del\" data-mf=\"ed\" title=\"Canvia el client i el número de màquina d'aquest manual: la carpeta on surt en aquesta llista (a Drive no es mou)\">&#9998;</button>"
+      +"<button class=\"mr-del\" data-mf=\"del\" title=\"Treu de la llista\">&#10005;</button>";
+    row.querySelector("[data-mf=del]").addEventListener("click",function(){deleteManual(idx)});
+    row.querySelector("[data-mf=ed]").addEventListener("click",function(){editManualFiling(m)});
+    return row;
+  },renderManualsList,manualHint(sessions.find(function(s){return s.id===aid})));
+}
+// Which folders start open: the client and the machine of the visit on screen
+// (and, when linking, the folder of the manual it suggests or already has).
+function manualHint(sess,best,mainSer){
+  var vc=mfKey(sess&&sess.client),vm=mfKey(sess&&sess.machineNo);
+  return {
+    client:function(c){return (!!c.key&&!!vc&&(c.key.indexOf(vc)>=0||vc.indexOf(c.key)>=0))||c.machines.some(function(mc){return (!!best&&mc.items.indexOf(best)>=0)||(!!mainSer&&mc.key===mainSer)})},
+    machine:function(mc){return (!!mc.key&&(mc.key===vm||mc.key===mainSer))||(!!best&&mc.items.indexOf(best)>=0)}
+  };
 }
 function mfRefresh(){
   $$("mfPdfName").textContent=mfPdfFile?mfPdfFile.name:"— cap fitxer —";
@@ -3712,7 +3799,17 @@ function mfRefresh(){
 function onJsonPick(file){
   mfJsonFile=file;mfParsed=null;mfRefresh();
   var r=new FileReader();
-  r.onload=function(e){try{mfParsed=JSON.parse(e.target.result)}catch(err){mfParsed=null;mfRefresh();$$("mfInfo").textContent="⚠ No és un fitxer JSON vàlid.";return}mfRefresh()};
+  r.onload=function(e){
+    try{mfParsed=JSON.parse(e.target.result)}catch(err){mfParsed=null;mfRefresh();$$("mfInfo").textContent="⚠ No és un fitxer JSON vàlid.";return}
+    // The folder it will be filed in: what the catalogue says, and where it
+    // says nothing, the visit that is open — both can be typed over.
+    // A manual that is in the list already keeps the folder it was given.
+    var mac=(mfParsed&&mfParsed.machine)||{},sv=sessions.find(function(s){return s.id===aid})||{};
+    var nm=baseOf((mfPdfFile&&mfPdfFile.name)||file.name),was=manuals.filter(function(m){return m.base===nm})[0]||{};
+    if(!$$("mfClient").value.trim())$$("mfClient").value=String(was.client||mac.client||sv.client||"").trim();
+    if(!$$("mfSerial").value.trim())$$("mfSerial").value=String(was.serial||mac.serial||sv.machineNo||"").trim();
+    mfRefresh();
+  };
   r.onerror=function(){mfParsed=null;mfRefresh();$$("mfInfo").textContent="⚠ No s'ha pogut llegir el JSON."};
   r.readAsText(file);
 }
@@ -3723,9 +3820,19 @@ async function uploadManual(){
   try{
     var mac=mfParsed.machine||{};
     var base=mfPdfFile.name.replace(/\.pdf$/i,"");
-    var folderName=(mac.serial||base).toString().trim()||base;
+    var cli=$$("mfClient").value.replace(/\s+/g," ").trim(),ser=$$("mfSerial").value.replace(/\s+/g," ").trim();
     var manualsId=await getManualsFolder(token);if(!manualsId)throw new Error(uiT("no s'ha pogut obrir la carpeta Manuals"));
-    var folderId=await driveFolder(token,folderName,manualsId);if(!folderId)throw new Error(uiT("no s'ha pogut crear la carpeta del manual"));
+    // A manual that is already at Drive is uploaded again into the folder it
+    // is in (what was there stays where it is); a new one goes to
+    // Manuals › <client> › <machine number>.
+    var folderId=null;
+    var prev=manuals.filter(function(m){return !m.fromDrive&&m.base===base&&m.folderId})[0];
+    if(prev){var pinfo=await driveFileInfo(token,prev.folderId);if(pinfo&&!pinfo.trashed)folderId=prev.folderId}
+    if(!folderId){
+      var cliId=await driveFolder(token,cli||"Sense client",manualsId);if(!cliId)throw new Error(uiT("no s'ha pogut crear la carpeta del manual"));
+      folderId=await driveFolder(token,ser||base,cliId);
+    }
+    if(!folderId)throw new Error(uiT("no s'ha pogut crear la carpeta del manual"));
     // Reuse a file that's already in this manual's Drive folder (same name)
     // instead of uploading it again.
     var pdfName=mfPdfFile.name, pdfId, pdfReused=false;
@@ -3751,11 +3858,15 @@ async function uploadManual(){
     // keep the local catalog cache fresh — the drawings picker reads cat_<id>
     if(idb){try{await idbSet(idb,"cat_"+jsonId,mfParsed)}catch(e){}}
     var c=catalogCounts(mfParsed);
-    var entry={id:uid(),base:base,serial:mac.serial||"",model:mac.model||"",client:mac.client||"",folderId:folderId,pdfId:pdfId,pdfName:pdfName,jsonId:jsonId,jsonName:jsonName,conjunts:c.conjunts,parts:c.parts,devices:c.devices,sch:catSchematic(mfParsed),uploadedAt:now()};
-    var ex=manuals.findIndex(function(m){return m.folderId===folderId||m.base===base});
+    var entry={id:uid(),base:base,serial:ser,model:mac.model||"",client:cli,folderId:folderId,pdfId:pdfId,pdfName:pdfName,jsonId:jsonId,jsonName:jsonName,conjunts:c.conjunts,parts:c.parts,devices:c.devices,sch:catSchematic(mfParsed),uploadedAt:now()};
+    // The same manual again is the same name or the same PDF. Not the same
+    // folder: a machine's folder holds its manual AND its annexes, and going
+    // by the folder made each annex take the manual's place in the list.
+    var ex=manuals.findIndex(function(m){return m.base===base||m.pdfId===pdfId});
     if(ex>=0)manuals[ex]=entry;else manuals.push(entry);
     await saveManualsIndex(token);
-    mfPdfFile=null;mfJsonFile=null;mfParsed=null;
+    mfPdfFile=null;mfJsonFile=null;mfParsed=null;$$("mfClient").value="";$$("mfSerial").value="";
+    mfOpen["c:"+mfKey(cli)]=true;mfOpen["m:"+mfKey(cli)+"|"+mfKey(ser)]=true;   // show where it went
     renderManualsList();mfRefresh();
     $$("mfInfo").textContent="✓ "+base+(jsonUpdated?" actualitzat.":" desat.")+(pdfReused?" "+uiT("(el PDF ja era a Drive — s'ha reaprofitat.)"):"");
   }catch(e){alert(uiT("No s'ha pogut pujar: ")+((e&&e.message)||e))}
@@ -3819,7 +3930,9 @@ function manualById(s,id){
 // unlinked since — and the main one for a part that names none.
 function partManual(s,p){return (p&&p.man)?manualById(s,p.man):(sessManuals(s)[0]||null)}
 function sameManual(a,b){
-  return !!a&&!!b&&((!!a.id&&a.id===b.id)||(!!a.pdfId&&a.pdfId===b.pdfId)||(!a.fromDrive&&!b.fromDrive&&!!a.folderId&&a.folderId===b.folderId));
+  // by folder only together with the name: a machine's folder holds its manual
+  // and its annexes
+  return !!a&&!!b&&((!!a.id&&a.id===b.id)||(!!a.pdfId&&a.pdfId===b.pdfId)||(!!a.folderId&&a.folderId===b.folderId&&!!a.base&&a.base===b.base));
 }
 function manualChipHTML(sess){
   var refs=sessManuals(sess),ref=refs[0];
@@ -3960,13 +4073,15 @@ function renderLinkList(){
   if(!manuals.length&&!refs.length){var e=document.createElement("div");e.className="manuals-empty";e.textContent="Encara no s'ha pujat cap manual — afegeix-ne un a 📚 Manuals de recanvis.";box.appendChild(e);return}
   var best=null,bestScore=0;
   if(!refs.length)rest.forEach(function(m){var sc=manualMatchScore(sess,m);if(sc>bestScore){bestScore=sc;best=m}});
-  rest.forEach(function(m){
+  // The rest in folders, client › machine number, with the visit's own client
+  // and machine open: that is where its manual and its annexes are.
+  renderManualFolders(box,rest,function(m){
     var row=document.createElement("div");row.className="manual-row";row.style.cursor="pointer";
     row.innerHTML="<div class=\"mr-info\"><div class=\"mr-name\">"+esc(manName(m))+(m===best?"<span style=\"color:var(--gold)\"> · suggerit</span>":"")+"</div><div class=\"mr-meta\">"+metaOf(m)+"</div></div>"
       +"<button class=\"btn-xs\" style=\"flex-shrink:0\">&#65291; Vincula</button>";
     row.addEventListener("click",function(){linkSessionManual(m)});
-    box.appendChild(row);
-  });
+    return row;
+  },renderLinkList,manualHint(sess,best,refs.length?mfKey(refs[0].serial):""));
 }
 function refOfManual(m){
   var ref={id:m.id,base:m.base,serial:m.serial,folderId:m.folderId,pdfId:m.pdfId,pdfName:m.pdfName,jsonId:m.jsonId,jsonName:m.jsonName,sch:m.sch||null};
@@ -7735,7 +7850,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 8";
+var APP_VERSION="nou · 2026-11-15 · 9";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -8992,6 +9107,12 @@ es:{
   "suggerit":"sugerido",
   "vinculat":"vinculado",
   "principal":"principal","Principal":"Principal","Vinculat":"Vinculado",
+  "Sense client":"Sin cliente","Sense número de màquina":"Sin número de máquina",
+  "Client d'aquest manual:":"Cliente de este manual:","Número de màquina d'aquest manual:":"Número de máquina de este manual:",
+  "El client d'aquest manual: és la carpeta on es desa i on surt a la llista":"El cliente de este manual: es la carpeta donde se guarda y donde sale en la lista",
+  "El número de màquina d'aquest manual: la carpeta dins de la del client":"El número de máquina de este manual: la carpeta dentro de la del cliente",
+  "Canvia el client i el número de màquina d'aquest manual: la carpeta on surt en aquesta llista (a Drive no es mou)":"Cambia el cliente y el número de máquina de este manual: la carpeta donde sale en esta lista (en Drive no se mueve)",
+  "Es desa a Drive dins de Manuals › Client › Núm. de màquina.":"Se guarda en Drive dentro de Manuals › Cliente › Núm. de máquina.",
   "Manuals d'aquesta visita":"Manuales de esta visita",
   "Se'n pot vincular més d'un: el manual de la màquina i els seus annexos.":"Se puede vincular más de uno: el manual de la máquina y sus anexos.",
   "Fes-lo el manual principal: és el que dona el número de sèrie a l'historial i el que s'obre primer":"Hazlo el manual principal: es el que da el número de serie al historial y el que se abre primero",
@@ -10091,6 +10212,12 @@ en:{
   "suggerit":"suggested",
   "vinculat":"linked",
   "principal":"main","Principal":"Main","Vinculat":"Linked",
+  "Sense client":"No customer","Sense número de màquina":"No machine number",
+  "Client d'aquest manual:":"This manual's customer:","Número de màquina d'aquest manual:":"This manual's machine number:",
+  "El client d'aquest manual: és la carpeta on es desa i on surt a la llista":"This manual's customer: the folder it is saved in and listed under",
+  "El número de màquina d'aquest manual: la carpeta dins de la del client":"This manual's machine number: the folder inside the customer's",
+  "Canvia el client i el número de màquina d'aquest manual: la carpeta on surt en aquesta llista (a Drive no es mou)":"Change this manual's customer and machine number: the folder it is listed under here (it is not moved in Drive)",
+  "Es desa a Drive dins de Manuals › Client › Núm. de màquina.":"It is saved in Drive inside Manuals › Customer › Machine no.",
   "Manuals d'aquesta visita":"This visit's manuals",
   "Se'n pot vincular més d'un: el manual de la màquina i els seus annexos.":"More than one can be linked: the machine's manual and its annexes.",
   "Fes-lo el manual principal: és el que dona el número de sèrie a l'historial i el que s'obre primer":"Make it the main manual: it is the one that gives the serial number to the history and the one that opens first",

@@ -401,7 +401,9 @@ textarea{resize:none;line-height:1.4}
   html:has(body.print-mh),body.print-mh,body.print-mh #app{height:auto;overflow:visible;display:block}
   body.print-mh #app>*:not(#mhBack){display:none!important}
   body.print-mh #mhBack{display:block!important;position:static;background:none}
-  body.print-mh #mhBack .modal{max-width:none;max-height:none;overflow:visible;border:0;border-radius:0;padding:0;background:#fff}
+  /* box-shadow:none — the window's own shadow printed as a grey band down the
+     right of every page and under the last line (seen in his PDF) */
+  body.print-mh #mhBack .modal{max-width:none;max-height:none;overflow:visible;border:0;border-radius:0;padding:0;background:#fff;box-shadow:none}
   body.print-mh #mhBody{max-height:none!important;overflow:visible!important}
   body.print-mh .no-print{display:none!important}
   body.print-mh .print-only{display:block}
@@ -7892,7 +7894,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 17";
+var APP_VERSION="nou · 2026-11-15 · 18";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -12546,7 +12548,9 @@ var MHR_CSS=".mhr{background:#fff;color:#0F1B2D;font-family:Arial,sans-serif;fon
   +"@media(max-width:640px){.mhr .meta{grid-template-columns:1fr 1fr;gap:12px 16px}.mhr h1{font-size:21px}"
   +".mhr .stats{gap:8px}.mhr .stat{flex:1 1 0;min-width:0;padding:8px 4px}.mhr .stat strong{font-size:22px}"
   +".mhr td,.mhr th{padding:5px}.mhr .sl{display:none}.mhr .vb i{margin-left:6px}}"
-  +"@media print{.mhr tr{break-inside:avoid}.mhr h2{break-after:avoid}}";
+  // on paper: a row is never cut, a heading stays with its table, and a
+  // visit's band stays with the first of its rows
+  +"@media print{.mhr tr{break-inside:avoid}.mhr h2,.mhr .vb{break-after:avoid}}";
 (function(){var st=document.createElement("style");st.textContent=MHR_CSS;document.head.appendChild(st)})();
 var MH_GREEN="#1F7A4D",MH_ORANGE="#C2410C",MH_RED="#B42318";
 function mhLangOf(L){return L===RPT.ca?"ca":(Object.keys(RPT).filter(function(k){return RPT[k]===L})[0]||"ca")}

@@ -4515,6 +4515,22 @@ so. NOT checked: an actual PDF — whether his Chrome now offers A4 by itself
 (it follows `@page size` for "Save as PDF"; a real printer keeps its own
 paper), and how the three pages break.
 
+**His second PDF (version `nou · 2026-11-15 · 18`).** "Surt així": A4
+(595 × 842 pt), 14 mm of margin, every label in Catalan — both fixes worked.
+This time the pages were drawn and looked at (PyMuPDF is on his machine:
+`fitz`, page → PNG in the scratchpad, read as an image; that is the way to
+SEE a PDF he sends). What was wrong: **a grey band down the right of every
+page and under the footer** — the window's own `box-shadow`, which the print
+rules never took off. `body.print-mh #mhBack .modal` has `box-shadow:none`
+now. Also `.mhr .vb{break-after:avoid}` on paper, so a visit's band is not
+left alone at the foot of a page. Seen and left as they are: the blank at
+the foot of pages 1 and 2 (rows are never cut), and the footer naming the
+technician and then the licensee, which for him are the same name.
+
+Checked in the preview by copying every rule inside `@media print` out so it
+applies on screen: the window's shadow is `none`, the sheet has no padding
+or shadow, only the print box shows. NOT checked: a third PDF.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

@@ -6,7 +6,10 @@ technical service visits. Built as a standalone HTML file, deployed via GitHub P
 
 **Live URL:** https://txals13.github.io/field-service-log/
 **Repository:** https://github.com/txals13/field-service-log
-**Main file:** index.html (single file, everything inline)
+**Main file:** index.html (single file, everything inline — except, since
+2026-11-15, the manifest and the icon: `manifest.webmanifest`, `icon-192.png`,
+`icon-512.png`, `icon-maskable-512.png`, beside it; see "Installing both on
+the computer")
 
 ---
 
@@ -3559,8 +3562,9 @@ Manuals uploaded to the real Drive folder are not seen by the copy: it has its
 own folder.
 
 **The day of the switch:** set `SEPARAT` to false, move `nou/index.html` and
-`nou/sw.js` to the root — **and the manifest and the three icons with them**
-(drop "· nou" from the manifest's names) — keep the old pair a while under
+`nou/sw.js` to the root — **and the manifest and the three icons with them**,
+over the root's own (drop "· nou" from the manifest's names; the app's icon
+turns navy that day) — keep the old pair a while under
 `classic/`. Installed
 apps point at the root, so they update themselves, and the copy picks up the
 real data where the old app left it (the redesign changes screens, not the
@@ -3578,13 +3582,18 @@ with Chrome on Windows:
 - The two desktop icons came out identical. The manifest was a `data:` URL in
   the page with an SVG `data:` icon inside it; Chrome read the name and the
   theme colour from it but not the icon, and drew its own — the first letter
-  of the name, "F" for both apps. `nou/` now has a real manifest file and PNG
-  icons (white ring on navy; the maskable one is full-bleed), and a
-  `<link rel="icon">`. **The root app still has the `data:` manifest and
-  therefore the generated "F"**; nothing was changed there. Checked in the
-  preview: the manifest and the three icons are served and are the size they
-  say. NOT checked: that Chrome swaps the icon of the app already installed —
-  it may need uninstalling and installing `nou/` again.
+  of the name, "F" for both apps. Each app now has a real manifest file and
+  PNG icons beside its `index.html` (the maskable one is full-bleed), and a
+  `<link rel="icon">`: `nou/` a white ring on navy (version
+  `nou · 2026-11-15 · 2`), **the root the amber ring on dark it always
+  declared** (version `2026-11-15 · 2`, done the same day at his word). The
+  root's manifest says what the `data:` one said, word for word, plus
+  `"scope":"./"` — which is what Chrome already took by default. Checked in
+  the preview, for each app: the manifest and the three icons are served and
+  are the size they say. NOT checked: that Chrome (or Android) swaps the icon
+  of an app already installed — it may need uninstalling and installing again
+  (never ticking "Also clear data"; and on the computer `nou/` first if both
+  are taken off).
 
 ### Flux 1 of the redesign (2026-11-13, version `nou · 2026-11-13 · 2`)
 

@@ -8,8 +8,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#f59e0b">
 <title>Field Service Log</title>
-<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjogIkZpZWxkIFNlcnZpY2UgTG9nIiwgInNob3J0X25hbWUiOiAiRlNMb2ciLCAic3RhcnRfdXJsIjogIi4vIiwgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMxMTE4MjciLCAidGhlbWVfY29sb3IiOiAiI2Y1OWUwYiIsICJvcmllbnRhdGlvbiI6ICJhbnkiLCAiaWNvbnMiOiBbeyJzcmMiOiAiZGF0YTppbWFnZS9zdmcreG1sO2Jhc2U2NCxQSE4yWnlCNGJXeHVjejBpYUhSMGNEb3ZMM2QzZHk1M015NXZjbWN2TWpBd01DOXpkbWNpSUhacFpYZENiM2c5SWpBZ01DQXhPVElnTVRreUlqNDhjbVZqZENCM2FXUjBhRDBpTVRreUlpQm9aV2xuYUhROUlqRTVNaUlnY25nOUlqTXlJaUJtYVd4c1BTSWpNVEV4T0RJM0lpOCtQR05wY21Oc1pTQmplRDBpT1RZaUlHTjVQU0k1TmlJZ2NqMGlOVEFpSUdacGJHdzlJbTV2Ym1VaUlITjBjbTlyWlQwaUkyWTFPV1V3WWlJZ2MzUnliMnRsTFhkcFpIUm9QU0l4TUNJdlBqeGphWEpqYkdVZ1kzZzlJamsySWlCamVUMGlPVFlpSUhJOUlqRTRJaUJtYVd4c1BTSWpaalU1WlRCaUlpOCtQSEpsWTNRZ2VEMGlPVEFpSUhrOUlqTTBJaUIzYVdSMGFEMGlNVElpSUdobGFXZG9kRDBpTWpBaUlISjRQU0kySWlCbWFXeHNQU0lqWmpVNVpUQmlJaTgrUEhKbFkzUWdlRDBpT1RBaUlIazlJakV6T0NJZ2QybGtkR2c5SWpFeUlpQm9aV2xuYUhROUlqSXdJaUJ5ZUQwaU5pSWdabWxzYkQwaUkyWTFPV1V3WWlJdlBqeHlaV04wSUhnOUlqTTBJaUI1UFNJNU1DSWdkMmxrZEdnOUlqSXdJaUJvWldsbmFIUTlJakV5SWlCeWVEMGlOaUlnWm1sc2JEMGlJMlkxT1dVd1lpSXZQanh5WldOMElIZzlJakV6T0NJZ2VUMGlPVEFpSUhkcFpIUm9QU0l5TUNJZ2FHVnBaMmgwUFNJeE1pSWdjbmc5SWpZaUlHWnBiR3c5SWlObU5UbGxNR0lpTHo0OEwzTjJaejQ9IiwgInNpemVzIjogIjE5MngxOTIiLCAidHlwZSI6ICJpbWFnZS9zdmcreG1sIiwgInB1cnBvc2UiOiAiYW55IG1hc2thYmxlIn1dfQ==">
-<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjMyIiBmaWxsPSIjMTExODI3Ii8+PGNpcmNsZSBjeD0iOTYiIGN5PSI5NiIgcj0iNTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2Y1OWUwYiIgc3Ryb2tlLXdpZHRoPSIxMCIvPjxjaXJjbGUgY3g9Ijk2IiBjeT0iOTYiIHI9IjE4IiBmaWxsPSIjZjU5ZTBiIi8+PHJlY3QgeD0iOTAiIHk9IjM0IiB3aWR0aD0iMTIiIGhlaWdodD0iMjAiIHJ4PSI2IiBmaWxsPSIjZjU5ZTBiIi8+PHJlY3QgeD0iOTAiIHk9IjEzOCIgd2lkdGg9IjEyIiBoZWlnaHQ9IjIwIiByeD0iNiIgZmlsbD0iI2Y1OWUwYiIvPjxyZWN0IHg9IjM0IiB5PSI5MCIgd2lkdGg9IjIwIiBoZWlnaHQ9IjEyIiByeD0iNiIgZmlsbD0iI2Y1OWUwYiIvPjxyZWN0IHg9IjEzOCIgeT0iOTAiIHdpZHRoPSIyMCIgaGVpZ2h0PSIxMiIgcng9IjYiIGZpbGw9IiNmNTllMGIiLz48L3N2Zz4=">
+<!-- The manifest and the icon are FILES (2026-11-15). As data: URLs inside the
+     page, Chrome read the name and the colour but not the icon, and drew its
+     own: the first letter of the name, the same "F" as the new app in nou/. -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden}
@@ -6652,7 +6656,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-11-15 · 1";
+var APP_VERSION="2026-11-15 · 2";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();

@@ -2362,6 +2362,25 @@ function entryPasses(e){
   if(Object.keys(logF.sev).length&&!logF.sev[e.severity||"info"])return false;
   return true;
 }
+// THE PRODUCTION TESTS UNDER THE SAME FILTER (nou · 2026-11-15 · 27). "Al filtrar
+// l'informe per dia de la setmana, només filtra les entrades, no l'informe de
+// validació": a report asked for Monday and Tuesday carried those two days'
+// entries and then every test of the visit, and the validation report took no
+// notice of the filter at all. A test has a day too — the day it started — so
+// the WHEN of the filter (the range of dates, the days of the week) applies to
+// it. The text and the severities do not: they are said of entries, and a
+// test has neither. A test with no start yet is on no day.
+function logFilterTimed(){return !!(logF.from||logF.to||Object.keys(logF.days).length)}
+function testPasses(t){
+  if(!logFilterTimed())return true;
+  var ts=t&&(t.start||t.end);
+  if(!ts)return false;
+  var day=isoDayOf(ts);
+  if(logF.from&&day<logF.from)return false;
+  if(logF.to&&day>logF.to)return false;
+  if(Object.keys(logF.days).length&&!logF.days[new Date(ts).getDay()])return false;
+  return true;
+}
 // Monday first, in the interface's language: 2024-01-01 was a Monday.
 function dayShort(d){try{return new Date(2024,0,1+((d+6)%7)).toLocaleDateString(uiLang()==="ca"?"ca-ES":uiLang(),{weekday:"short"}).replace(/\.$/,"")}catch(e){return ["dg","dl","dt","dc","dj","dv","ds"][d]}}
 // What the filter is, in words: for the menu row, the report's band and the file name.
@@ -2822,8 +2841,11 @@ function refreshExpFiltRow(){
   var sv=sessions.find(function(x){return x.id===aid});
   if(!logFilterActive()||!sv){row.innerHTML="";return}
   var all=(sv.entries||[]).filter(function(e){return !isIntern(e)}),n=all.filter(entryPasses).length;
+  // the tests the filter's days leave, said beside the entries: they follow it too
+  var tests=sv.prodTests||[],tn=tests.filter(testPasses).length;
   row.innerHTML="<div class=\"exp-rev\"><label data-filtlbl=\"1\" style=\"display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px\"><input type=\"checkbox\" data-filt=\"1\""+(expFilterOn?" checked":"")+" style=\"width:auto;margin:0\">"
-    +"<span>🔍 "+uiT("Només les entrades del filtre")+": "+esc(filterDesc())+" ("+n+"/"+all.length+")</span></label></div>";
+    +"<span>🔍 "+uiT("Només les entrades del filtre")+": "+esc(filterDesc())+" ("+n+"/"+all.length+")"
+    +(logFilterTimed()&&tests.length?" · "+esc(nvT("proves"))+" "+tn+"/"+tests.length:"")+"</span></label></div>";
 }
 function openExpMenu(btn,m){
   refreshExpFiltRow();
@@ -8272,7 +8294,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 26";
+var APP_VERSION="nou · 2026-11-15 · 27";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -12370,6 +12392,7 @@ function reportStamp(s,R,rev){
 // the labels have it (ca, es, en); the others fall back to English, which is
 // still a warning and not silence.
 function partialLine(R,PF){
+  if(PF&&PF.line)return PF.line;          // the validation report writes its own (tests, not entries)
   var t=(R&&R.partial)||RPT.en.partial;
   return t.replace("{q}",PF.q).replace("{n}",PF.n).replace("{t}",PF.t);
 }
@@ -14756,13 +14779,18 @@ async function exportRep(s,fmt){
   // It is a partial view, so it gets no revision of its own and never asks for
   // one -- it borrows the visit's current number, or none -- and it says what
   // it is on the page and in the file name.
-  var FQ=(expFilterOn&&logFilterActive())?filterDesc():"",PF=null,sFull=s,keepIds={};
+  var FQ=(expFilterOn&&logFilterActive())?filterDesc():"",PF=null,sFull=s,keepIds={},keepT={};
   if(FQ){
     var allE=(s.entries||[]).filter(function(e){return !isIntern(e)}),fe=allE.filter(entryPasses);
-    if(!fe.length){alert(uiT("Cap entrada coincideix amb el filtre."));return}
+    // the tests follow the filter's dates and days (testPasses); the validation
+    // report is made of them alone, so it is they that must be there
+    var allT=s.prodTests||[],ft=allT.filter(testPasses);
+    if(fmt==="valpdf"){if(!ft.length){alert(nvT("Cap prova de producció coincideix amb el filtre."));return}}
+    else if(!fe.length){alert(uiT("Cap entrada coincideix amb el filtre."));return}
     fe.forEach(function(e){keepIds[e.id]=1});
-    PF={q:FQ,n:fe.length,t:allE.length};
-    s=Object.assign({},s,{entries:fe});
+    ft.forEach(function(t){keepT[t.id]=1});
+    PF={q:FQ,n:fe.length,t:allE.length,tn:ft.length,tt:allT.length};
+    s=Object.assign({},s,{entries:fe,prodTests:ft});
   }
   // Which revision this is goes first: it stamps both the file name and the
   // header, and it's the one question worth asking before any work is done.
@@ -14777,7 +14805,8 @@ async function exportRep(s,fmt){
   R.rev=rev;R.partial=PF;
   // The translation step returns the visit as stored, not the copy it was
   // handed, so the filter is laid over its result again, by entry id.
-  if(PF)R.s=Object.assign({},R.s,{entries:(R.s.entries||[]).filter(function(e){return keepIds[e.id]})});
+  if(PF)R.s=Object.assign({},R.s,{entries:(R.s.entries||[]).filter(function(e){return keepIds[e.id]}),
+                                  prodTests:(R.s.prodTests||[]).filter(function(t){return keepT[t.id]})});
   var base=reportBase(s,R.lang,rev.n)+(PF?"_FILTRAT_"+fileSafe(filterTxt.trim()||"filtre","filtre").slice(0,24):""),P=RPT[R.lang].pre;
   if(fmt==="html"){
     var htmlBlob=new Blob([buildReportHTML(R.s,false,R.lang,R.rev,{partial:PF})],{type:"text/html;charset=utf-8"});
@@ -14788,7 +14817,14 @@ async function exportRep(s,fmt){
   else if(fmt==="valpdf"){
     expBusy("Informe de validació…");
     try{
-      var vb=await buildPdfBlob(R.s,R.lang,R.rev,{validation:true});
+      // a filtered validation report says so too, counting what it is made
+      // of: tests, not entries
+      var vo={validation:true};
+      if(PF){
+        var pl0=(RPT[R.lang]&&RPT[R.lang].partial)||RPT.en.partial;
+        vo.partial=Object.assign({},PF,{line:pl0.split("{q}")[0]+PF.q+": "+PF.tn+" / "+PF.tt+" · "+RPT[R.lang].pt.title});
+      }
+      var vb=await buildPdfBlob(R.s,R.lang,R.rev,vo);
       if(!vb){libFail("No s'ha pogut carregar la llibreria PDF. Comprova la connexió.");return}
       var vn=RPT[R.lang].pt.file+"_"+base+".pdf";
       await saveReport(s,vb,vn,"application/pdf");
@@ -20078,7 +20114,8 @@ function nvSumClick(ev){
     // the photo of the screen, on the counters and on the production test (· 23)
     "Fotografia la pantalla de la màquina amb les hores i el comptador":"Fotografía la pantalla de la máquina con las horas y el contador",
     "Tria una foto que ja tens al telèfon o a l'ordinador":"Elige una foto que ya tienes en el teléfono o en el ordenador",
-    "pujant…":"subiendo…","no s'ha pogut pujar a Drive":"no se ha podido subir a Drive"};
+    "pujant…":"subiendo…","no s'ha pogut pujar a Drive":"no se ha podido subir a Drive",
+    "Cap prova de producció coincideix amb el filtre.":"Ninguna prueba de producción coincide con el filtro."};
   var en={"Índex":"Index","Esquema elèctric":"Electrical schematic","Materials elèctrics":"Electrical materials","Llistes del manual":"The manual's lists",
     "Pàgines marcades":"Marked pages","Índex del manual":"The manual's contents","Tot el manual":"Whole manual","pàg.":"p.","Pàg.":"Page","Full":"Sheet",
     "Recanvis recomanats":"Recommended spare parts","Manteniment":"Maintenance","Peces de format":"Format parts","Requisits i especificacions":"Requirements and specifications",
@@ -20088,7 +20125,8 @@ function nvSumClick(ev){
     "Quines pàgines es passen amb les fletxes":"Which pages the arrows go through",
     "Fotografia la pantalla de la màquina amb les hores i el comptador":"Photograph the machine's screen with the hours and the counter",
     "Tria una foto que ja tens al telèfon o a l'ordinador":"Pick a photo you already have on the phone or the computer",
-    "pujant…":"uploading…","no s'ha pogut pujar a Drive":"could not be uploaded to Drive"};
+    "pujant…":"uploading…","no s'ha pogut pujar a Drive":"could not be uploaded to Drive",
+    "Cap prova de producció coincideix amb el filtre.":"No production test matches the filter."};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();

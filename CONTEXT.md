@@ -4804,6 +4804,40 @@ one; tap 3 (not in the list) → nothing pending; closing with a number
 pending and opening again → only the kept one. NOT checked: his phone, a
 real manual.
 
+### The filter's days reach the production tests (2026-11-15, version `nou · 2026-11-15 · 27`)
+
+"Al filtrar l'informe per dia de la setmana, només filtra les entrades, no
+informe de validació." The filtered report (the log's filter, ticked in the
+Informe menu) fed the builders the entries the filter left and **every**
+production test: a report of Friday carried Friday's entries and the four
+tests of the week, and the validation report — which is made of tests alone —
+took no notice of the filter.
+
+- **`testPasses(t)`**: a test is on the day it started (`t.start`, else
+  `t.end`). The **when** of the filter applies to it — the range of dates and
+  the days of the week (`logFilterTimed()`). The text and the severities do
+  NOT: they are said of entries, and a test has neither. A test with no start
+  is on no day, so a filter with dates leaves it out.
+- `exportRep`: with the filter on, `prodTests` is narrowed beside `entries`
+  (and again by id after the translation step, like the entries). So the
+  service report's own table of tests follows, in every format.
+- **The validation report** under a filter needs tests, not entries: it no
+  longer stops at "Cap entrada coincideix amb el filtre" and has its own "Cap
+  prova de producció coincideix amb el filtre." It carries the partial band
+  too, counting what it is made of: "Informe parcial — filtre dv: 1 / 4 ·
+  Proves de producció" (`PF.line`, read by `partialLine`), and FILTRAT in the
+  file's name as before.
+- The Informe menu's row says it: "…: dv (3/8) · proves 1/4".
+- `nou/` only.
+
+Checked in the preview, reading the PDFs' text in the page (nothing
+downloaded): Friday → the validation report has Prova 1 only, with its band,
+and the service report's table of tests has Prova 1 only; Thursday (no
+tests) → the message, no file; Saturday → Prova 2 and Prova 3 (one started
+at 23:51 local); no filter → the four, no band. NOT checked: a filter by
+range of dates (the same test function), Word and HTML with the tests
+narrowed (they read the same `prodTests`), a report in another language.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

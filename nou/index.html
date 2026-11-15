@@ -7430,7 +7430,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 3";
+var APP_VERSION="nou · 2026-11-15 · 4";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -9366,7 +9366,7 @@ es:{
   "Vols que torni a llegir també els camps que has canviat a mà?\n\nD'acord: es tornen a llegir tots.\nCancel·la: els teus es queden com estan.":"¿Quieres que vuelva a leer también los campos que has cambiado a mano?\n\nDe acuerdo: se vuelven a leer todos.\nCancela: los tuyos se quedan como están.",
   "L'inici de sessió no s'ha completat. Si s'ha bloquejat una finestra emergent de Google, permet-les per a aquest lloc i torna-ho a provar.":"El inicio de sesión no se ha completado. Si se ha bloqueado una ventana emergente de Google, permítelas para este sitio y vuelve a intentarlo.",
   "Vols treure la clau d'aquest navegador?\nEl corrector i la traducció dels informes deixaran de funcionar fins que la tornis a escriure.":"¿Quieres quitar la clave de este navegador?\nEl corrector y la traducción de los informes dejarán de funcionar hasta que la vuelvas a escribir.",
-  "Aquesta sessió encara no té recanvis ni proves de producció.\n\nTria els recanvis d'un dibuix o afegeix-los a mà en una entrada.":"Esta sesión todavía no tiene recambios ni pruebas de producción.\n\nElige los recambios de un dibujo o añádelos a mano en una entrada.",
+  "Aquesta sessió encara no té recanvis.\n\nTria els recanvis d'un dibuix o afegeix-los a mà en una entrada.":"Esta sesión todavía no tiene recambios.\n\nElige los recambios de un dibujo o añádelos a mano en una entrada.",
   "No es pot tornar a provar: el fitxer original ja no està disponible en aquesta sessió. Treu-lo i torna'l a afegir des d'Edita.":"No se puede volver a intentar: el archivo original ya no está disponible en esta sesión. Quítalo y vuelve a añadirlo desde Edita.",
   "\n\nSi els tens en algun altre lloc, afegeix-los a la carpeta de la visita i torna a fer el ZIP abans d'esborrar la visita.":"\n\nSi los tienes en algún otro sitio, añádelos a la carpeta de la visita y vuelve a hacer el ZIP antes de borrar la visita.",
   "El navegador no ha deixat obrir una pestanya nova. Permet les finestres emergents d'aquesta app i torna-ho a provar.":"El navegador no ha dejado abrir una pestaña nueva. Permite las ventanas emergentes de esta app y vuelve a intentarlo.",
@@ -10465,7 +10465,7 @@ en:{
   "Vols que torni a llegir també els camps que has canviat a mà?\n\nD'acord: es tornen a llegir tots.\nCancel·la: els teus es queden com estan.":"Should the fields you changed by hand be read again too?\n\nAccept: every one is read again.\nCancel: yours stay as they are.",
   "L'inici de sessió no s'ha completat. Si s'ha bloquejat una finestra emergent de Google, permet-les per a aquest lloc i torna-ho a provar.":"The sign-in did not finish. If a Google pop-up was blocked, allow pop-ups for this site and try again.",
   "Vols treure la clau d'aquest navegador?\nEl corrector i la traducció dels informes deixaran de funcionar fins que la tornis a escriure.":"Remove the key from this browser?\nThe corrector and the report translations will stop working until you type it in again.",
-  "Aquesta sessió encara no té recanvis ni proves de producció.\n\nTria els recanvis d'un dibuix o afegeix-los a mà en una entrada.":"This session has no parts and no production tests yet.\n\nPick the parts from a drawing, or add them by hand in an entry.",
+  "Aquesta sessió encara no té recanvis.\n\nTria els recanvis d'un dibuix o afegeix-los a mà en una entrada.":"This session has no parts yet.\n\nPick the parts from a drawing, or add them by hand in an entry.",
   "No es pot tornar a provar: el fitxer original ja no està disponible en aquesta sessió. Treu-lo i torna'l a afegir des d'Edita.":"It cannot be tried again: the original file is no longer available in this session. Remove it and add it again from Edita.",
   "\n\nSi els tens en algun altre lloc, afegeix-los a la carpeta de la visita i torna a fer el ZIP abans d'esborrar la visita.":"\n\nIf you have them somewhere else, add them to the visit's folder and make the ZIP again before deleting the visit.",
   "El navegador no ha deixat obrir una pestanya nova. Permet les finestres emergents d'aquesta app i torna-ho a provar.":"The browser would not open a new tab. Allow pop-ups for this app and try again.",
@@ -13529,7 +13529,7 @@ async function exportRep(s,fmt){
   }
   if(fmt==="zip"){openZipPick(s);return}
   if(fmt==="zipdocx"){exportSessionZip(s,"docx");return}
-  if(fmt==="xlsx"&&!collectSessionParts(s).length&&!(s.prodTests||[]).length){alert(uiT("Aquesta sessió encara no té recanvis ni proves de producció.\n\nTria els recanvis d'un dibuix o afegeix-los a mà en una entrada."));return}
+  if(fmt==="xlsx"&&!collectSessionParts(s).length){alert(uiT("Aquesta sessió encara no té recanvis.\n\nTria els recanvis d'un dibuix o afegeix-los a mà en una entrada."));return}
   // A language the app has no labels for yet has to get them before anything
   // is built, or the report comes out with Catalan headings on foreign text.
   if(!await ensureLabels(reportLang(s)))return;
@@ -15660,8 +15660,11 @@ async function exportXLSX(s,R,base){
 // no parts (the ZIP just leaves it out then, without nagging).
 async function buildXlsxBlob(s,lang,rev,opts){
   s=clientCopy(s);
-  var items=collectSessionParts(s),ptTests=s.prodTests||[];
-  if(!items.length&&!ptTests.length)return null;
+  // Parts only. The production tests and their stops had two sheets here until
+  // nou · 2026-11-15 · 4; they belong to the validation report and the service
+  // report, and a session with tests but no parts makes no Excel at all.
+  var items=collectSessionParts(s);
+  if(!items.length)return null;
   var X=await loadXlsxLib();
   if(!X)return null;
   var R=RPT[lang]||RPT.ca,C=R.x;
@@ -15712,38 +15715,10 @@ async function buildXlsxBlob(s,lang,rev,opts){
   var wb=X.utils.book_new();
   if(opts&&opts.partial){var wsP=X.utils.aoa_to_sheet([[partialLine(R,opts.partial)]]);wsP["!cols"]=[{wch:80}];X.utils.book_append_sheet(wb,wsP,"FILTRAT")}
   X.utils.book_append_sheet(wb,wsI,C.sSession);
-  if(items.length){
-    if(PS.rec.length)X.utils.book_append_sheet(wb,sumSheet(PS.rec,true),String(C.sRec).slice(0,31));
-    if(PS.quo.length)X.utils.book_append_sheet(wb,sumSheet(PS.quo,false),String(C.sQuo).slice(0,31));
-    if(PS.fit.length)X.utils.book_append_sheet(wb,sumSheet(PS.fit,false),String(C.sFit).slice(0,31));
-    X.utils.book_append_sheet(wb,wsD,C.sDetail);
-  }
-  if(ptTests.length){
-    // One row per test, numbers as numbers (percentages as fractions, minutes
-    // as minutes), so the sheet can be summed and charted.
-    var PL=R.pt;
-    var xm=ptTests.every(function(t){return ptUnit(t)==="min"}),xu=xm?PL.upm:PL.uph,xd=xm?60:1;
-    var head=[PL.test,PL.product,PL.nominal+" ("+xu+")",PL.start,PL.end,PL.duration+" (min)",PL.plannedStops+" (min)",PL.downtime+" (min)",PL.run+" (min)",
-              PL.total,PL.rejects,PL.good,PL.speedAvg+" ("+xu+")",PL.speedRun+" ("+xu+")",PL.avail,PL.perf,PL.qual,PL.oee,PL.rejPct,PL.result];
-    var rowsT=[head];
-    function r2(v,k){return v==null?"":Math.round(v*Math.pow(10,k))/Math.pow(10,k)}
-    ptTests.forEach(function(t){
-      var r=ptCalc(t);
-      var nomH=ptNum(t.nominal)==null?null:ptNum(t.nominal)*(ptUnit(t)==="min"?60:1);
-      rowsT.push([t.name||"",t.product||"",nomH==null?"":r2(nomH/xd,xm?1:0),t.start?fts(t.start).slice(0,14):"",t.end?fts(t.end).slice(0,14):"",
-        r2(r.durMin,1),r2(r.plannedStopMin,1),r2(r.downMin,1),r2(r.runMin,1),r.total==null?"":r.total,r.rejects==null?"":r.rejects,r.good==null?"":r.good,
-        r.speedAvg==null?"":r2(r.speedAvg/xd,xm?1:0),r.speedRun==null?"":r2(r.speedRun/xd,xm?1:0),r2(r.avail,4),r2(r.perf,4),r2(r.qual,4),r2(r.oee,4),r2(r.rejPct,4),
-        r.verdict?(r.verdict==="pass"?PL.pass:PL.fail):""]);
-    });
-    var wsT=X.utils.aoa_to_sheet(rowsT);wsT["!cols"]=autoCols(rowsT);
-    X.utils.book_append_sheet(wb,wsT,String(PL.title).slice(0,31));
-    var rowsS=[[PL.test,PL.start,PL.end,PL.duration+" (min)",PL.kind,PL.cause]];
-    ptTests.forEach(function(t){(t.stops||[]).forEach(function(x){
-      var m=ptStopMin(x,t);
-      rowsS.push([t.name||"",x.start?fts(x.start).slice(0,14):"",x.end?fts(x.end).slice(0,14):"",m==null?"":Math.round(m*10)/10,(PL.kinds&&PL.kinds[x.kind])||x.kind||"",x.cause||""]);
-    })});
-    if(rowsS.length>1){var wsS=X.utils.aoa_to_sheet(rowsS);wsS["!cols"]=autoCols(rowsS);X.utils.book_append_sheet(wb,wsS,String(PL.stops).slice(0,31))}
-  }
+  if(PS.rec.length)X.utils.book_append_sheet(wb,sumSheet(PS.rec,true),String(C.sRec).slice(0,31));
+  if(PS.quo.length)X.utils.book_append_sheet(wb,sumSheet(PS.quo,false),String(C.sQuo).slice(0,31));
+  if(PS.fit.length)X.utils.book_append_sheet(wb,sumSheet(PS.fit,false),String(C.sFit).slice(0,31));
+  X.utils.book_append_sheet(wb,wsD,C.sDetail);
   var out=X.write(wb,{bookType:"xlsx",type:"array"});
   return new Blob([out],{type:XLSX_MIME});
 }

@@ -887,7 +887,15 @@ Field Service Log/
   (`ptReportHTML`), a PDF section (`pdfProdSection`, autoTable; ">= / <="
   because ≥ ≤ are not in the PDF font), a Word section and two Excel sheets
   (tests, stops; numbers as numbers, percentages as fractions) — the Excel now
-  builds for a session with tests but no spare parts. The **validation
+  builds for a session with tests but no spare parts. **In `nou/` the two
+  Excel sheets are gone** (version `nou · 2026-11-15 · 4`, the user: "Elimina
+  proves de producció i aturades de l'informe en excel"): `buildXlsxBlob` is
+  parts only again — Session, Recommended, Quotation, Replaced, Detail — and
+  returns null without parts, so a session with tests and no parts gets the
+  "no té recanvis" alert and no .xlsx in the ZIP. The tests stay in the
+  service report (PDF, Word, HTML) and the validation report. The machine
+  counters' rows on the Session sheet were not asked about and stay. The root
+  app still writes both sheets until he says otherwise. The **validation
   report** is `buildPdfBlob(…,{validation:true})`: same header, meta and
   signatures, the tests instead of counters/log/photos; "📈 Informe de
   validació" in the export menu and the list, `RPT.pt.file` prefix
@@ -1226,7 +1234,8 @@ Field Service Log/
   nominal is TYPED in it; `ptCalc` turns it into per-hour, so every
   calculation stays per hour and only the display divides (`rateShow`; labels
   `pt.upm`). Switching the unit converts the nominal already typed. The Excel
-  sheet uses u/min only if every test of the visit does. The machine counters
+  sheet uses u/min only if every test of the visit does (root app only: `nou/`
+  has no tests sheet since `nou · 2026-11-15 · 4`). The machine counters
   have `counters.unit` (`#ctrUnit`, "Ritme de producció en"), used by
   `ctrDeltaText` for the units-per-machine-hour figure (`ctr.perMin`). New
   tests and readings start in the last unit used (`fsl_v6_rateunit`).

@@ -400,7 +400,7 @@ textarea{resize:none;line-height:1.4}
   body.print-mh #mhBody{max-height:none!important;overflow:visible!important}
   body.print-mh .no-print{display:none!important}
   body.print-mh .print-only{display:block}
-  body.print-mh .mh-card,body.print-mh .mh-row{break-inside:avoid}
+  body.print-mh #mhPrintBox .mhr{padding:0;border:0;box-shadow:none}
 }
 /* ── THE PHONE LAYOUT (test) ────────────────────────────────────────────────
    Behind a switch (sidebar › Disseny mòbil nou), and only up to 700 px wide:
@@ -1074,23 +1074,12 @@ body.m2 #m2MoreBack .modal>.modal-title{position:static;margin:0;padding:8px 6px
    are also what gets printed, so they are overridden here, on screen only) */
 #mhBack .modal,#pdBack .modal{background:var(--bg0)}
 #mhBack .modal-actions,#pdBack .modal-actions{background:var(--bg1)}
-#mhBody .mh-mets{gap:8px!important;margin-bottom:12px!important}
-#mhBody .mh-met{background:var(--bg1)!important;border:1px solid var(--br)!important;border-radius:14px!important;box-shadow:var(--sh);padding:12px 4px!important;text-align:center}
-#mhBody .mh-met b{font-size:28px!important;font-weight:800;line-height:1.1!important;color:var(--numc)}
-#mhBody .mh-met span{font-size:12.5px!important;font-weight:600;color:var(--tx1)!important}
-#mhBody .mh-h{font-size:16px;font-weight:700!important;color:var(--tx1)!important;margin:14px 2px 8px!important}
-#mhBody .mh-card{background:var(--bg1)!important;border:1px solid var(--br)!important;border-radius:12px!important;box-shadow:var(--sh);padding:10px 12px!important;margin-bottom:8px!important}
-#mhBody .mh-row{font-size:14px;padding:8px 2px!important}
-#mhBody [style*="monospace"]{font-family:inherit!important}
+/* the history is a report now (.mhr, styled from MHR_CSS in the script): here
+   only the sheet it lies on */
+#mhBody .mhr{padding:22px 24px;border:1px solid var(--br);border-radius:10px;box-shadow:var(--sh)}
 #mhNote{font-size:13px}
 @media(max-width:700px){
-  #mhBody .mh-mets{grid-template-columns:repeat(4,minmax(0,1fr))!important}
-  #mhBody .mh-met b{font-size:24px!important}
-  #mhBody .mh-met span{font-size:11.5px!important}
-  /* the parts table kept "recomanat el 14/11/2026" on one line and came out
-     wider than the phone: the whole window then slid sideways */
-  #mhBody table td{white-space:normal!important;overflow-wrap:break-word}
-  #mhBody{overflow-wrap:break-word}
+  #mhBody .mhr{padding:16px 12px}
   #mhBack .modal{overflow-x:hidden}
 }
 /* production tests */
@@ -7894,7 +7883,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 15";
+var APP_VERSION="nou · 2026-11-15 · 16";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -12506,47 +12495,89 @@ function wireMh(){
 function mhDisp(t){return String(t||"").trim().replace(/\s+/g," ")}
 function mhClean(t){return esc(String(t||"").replace(/\s+/g," ").trim())}
 function mhDate(ts){return fts(ts).split(" ")[0]}
-// One entry carried over from an earlier visit. Whole, never cut: this screen
-// is read to decide what to do about a machine before touching it, and a
-// problem that ends in an ellipsis is one you have to go and look up somewhere
-// else — which is the thing this screen exists to save you.
-function mhLine(e){
-  var sm=SM[e.severity]||SM.info;
-  return "<div class=\"mh-row\" style=\"display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--br)\">"
-    +"<span style=\"color:"+sm.tx+";flex-shrink:0;font-size:11px;font-family:monospace\">"+mhDate(e.ts)+"</span>"
-    +"<span style=\"flex:1\">"+(e.tag?"<strong>"+esc(e.tag)+"</strong> — ":"")+mhClean(e.text)
-    +(e.fix?"<div style=\"color:var(--tx3);font-size:11px\">↳ "+mhClean(e.fix.text)+"</div>":"")
-    +"</span></div>";
+// ── THE HISTORY AS A REPORT (nou · 2026-11-15 · 16) ─────────────────────────
+// "L'historial hauria de ser un informe": it was drawn as a screen of the app
+// (tiles, cards on a grey page) and he wants what the reports have — the
+// header with its tag and rule, the details box in three groups, the counts,
+// tables with their grey heads, the footer. So mhRender now writes ONE
+// document, `.mhr`, with the reports' own palette spelled out (no theme
+// variables: a report is the same sheet in the dark theme), and the three
+// places that show a history all show that: the window, the print, the file
+// in the ZIP. Its style is this one string, put in the page once and written
+// into the ZIP's file.
+//
+// Unlike the service report it is not made smaller to fit a phone: it is read
+// standing in front of the machine. Under 640 px the box goes to two columns,
+// the word beside the severity mark is dropped and the cells tighten.
+var MHR_CSS=".mhr{background:#fff;color:#0F1B2D;font-family:Arial,sans-serif;font-size:13px;line-height:1.45;text-align:left;-webkit-print-color-adjust:exact;print-color-adjust:exact}"
+  +".mhr *{box-sizing:border-box}"
+  +".mhr-hd{border-bottom:3px solid #0F2B5B;padding-bottom:14px;margin-bottom:16px}"
+  +".mhr-tag{display:inline-block;background:#1A56C9;color:#fff;border-radius:4px;padding:3px 8px;font-size:10px;font-weight:600;letter-spacing:.08em}"
+  +".mhr h1{font-size:24px;font-weight:700;margin:8px 0 4px;color:#0F2B5B;line-height:1.1;letter-spacing:0}"
+  +".mhr-sub{color:#5A6576;font-size:13px}"
+  +".mhr .meta{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;background:#F7F9FC;border:1px solid #E6EAF0;border-radius:8px;padding:14px 16px;margin:16px 0}"
+  +".mhr .mg{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#0F2B5B;border-bottom:1px solid #1A56C9;padding-bottom:3px;margin-bottom:6px}"
+  +".mhr .ml{font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;color:#5A6576;font-weight:600;margin-top:7px}"
+  +".mhr .mv{font-size:13px;font-weight:700;overflow-wrap:anywhere}"
+  +".mhr .stats{display:flex;gap:12px;margin:16px 0}"
+  +".mhr .stat{text-align:center;padding:10px 20px;border-radius:8px}"
+  +".mhr .stat strong{font-size:26px;display:block;line-height:1.15}.mhr .stat span{font-size:11px}"
+  +".mhr h2{font-size:15px;font-weight:600;color:#0F2B5B;margin:28px 0 8px;padding:1px 0 1px 10px;border-left:3px solid #1A56C9;letter-spacing:0}"
+  +".mhr table{width:100%;border-collapse:collapse;margin:0}"
+  +".mhr td{vertical-align:top;padding:6px 8px;border-bottom:1px solid #E6EAF0;font-size:12.5px;color:#0F1B2D;overflow-wrap:break-word}"
+  +".mhr th{background:#EEF2F7;color:#5A6576;font-weight:700;padding:6px 8px;text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid #CBD3DE}"
+  +".mhr .nw{white-space:nowrap;width:1%}.mhr .mono{font-family:monospace}"
+  +".mhr .vb td{background:#E3EAF4;border-top:1px solid #CBD6E6;border-bottom:1px solid #CBD6E6;padding:7px 8px}"
+  +".mhr .vb[data-sess]{cursor:pointer}"
+  +".mhr .vb b{font-size:12.5px;color:#0F2B5B}.mhr .vb i{font-style:normal;font-size:11px;color:#2C3A4F;margin-left:10px;white-space:nowrap}"
+  +".mhr .vb .ln{font-size:11px;color:#2C3A4F;margin-top:2px}"
+  +".mhr .gap td{height:10px;padding:0;border:none;background:#fff}"
+  +".mhr .st{margin-top:5px;padding:4px 8px;border-left:3px solid #CBD3DE;background:#F7F9FC;border-radius:0 4px 4px 0;font-size:11.5px;color:#3D4756}"
+  +".mhr .ft{margin-top:28px;padding-top:12px;border-top:1px solid #E6EAF0;font-size:11px;color:#8593A6;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}"
+  +"@media(max-width:640px){.mhr .meta{grid-template-columns:1fr 1fr;gap:12px 16px}.mhr h1{font-size:21px}"
+  +".mhr .stats{gap:8px}.mhr .stat{flex:1 1 0;min-width:0;padding:8px 4px}.mhr .stat strong{font-size:22px}"
+  +".mhr td,.mhr th{padding:5px}.mhr .sl{display:none}.mhr .vb i{margin-left:6px}}"
+  +"@media print{.mhr tr{break-inside:avoid}.mhr h2{break-after:avoid}}";
+(function(){var st=document.createElement("style");st.textContent=MHR_CSS;document.head.appendChild(st)})();
+var MH_GREEN="#1F7A4D",MH_ORANGE="#C2410C",MH_RED="#B42318";
+function mhLangOf(L){return L===RPT.ca?"ca":(Object.keys(RPT).filter(function(k){return RPT[k]===L})[0]||"ca")}
+// One line of a table of problems: the mark (and, where there is room, the
+// word), the date, and what it was — with where it stands under it, the way
+// the service report puts "Com ha quedat" under the entry it belongs to.
+// Whole, never cut: this is read to decide what to do about a machine before
+// touching it, and a problem that ends in an ellipsis is one you have to go
+// and look up somewhere else.
+function mhRow(col,mark,word,date,what,st,stCol){
+  return "<tr><td class=\"nw\" style=\"font-weight:700;font-size:11px;color:"+col+"\">"+mark+(word?" <span class=\"sl\">"+esc(word)+"</span>":"")+"</td>"
+    +"<td class=\"nw mono\" style=\"font-size:11px;color:#5A6576\">"+date+"</td>"
+    +"<td>"+what+(st?"<div class=\"st\" style=\"border-left-color:"+stCol+"\">"+st+"</div>":"")+"</td></tr>";
 }
-// The visit's problems and warnings on its own card, each with where it stands:
-// resolved on the visit itself, closed by a later one (and how), or still open.
-// This is what the client reads when the history is printed, so it says what
-// happened, not just a count.
+function mhWhat(e){return (e.tag?"<strong>"+esc(e.tag)+"</strong> — ":"")+mhClean(e.text)}
+function mhSevRow(e,L,what,st,stCol){
+  var sm=SM[e.severity]||SM.info;
+  return mhRow(sm.tx,sm.dot,(L.sev&&L.sev[e.severity])||sm.label,mhDate(e.ts),what,st,stCol);
+}
 // The visit's counter readings and what the machine did since the one before.
 function mhCtrLine(x,all,L){
   var C=L.ctr,r=ctrLast(x);if(!C||!r)return "";
-  var lang=L===RPT.ca?"ca":(Object.keys(RPT).filter(function(k){return RPT[k]===L})[0]||"ca");
+  var lang=mhLangOf(L);
   var pv=ctrPrev(x,all),d=pv?ctrDeltaText(ctrDelta(pv.r,ctrFirst(x)),C,lang,x.counters&&x.counters.unit):"";
-  return "<div style=\"font-size:11.5px;margin-top:3px;color:var(--tx2)\">&#9201; "
+  return "<div class=\"ln\">&#9201; "
     +(r.h!=null?esc(ctrFmt(r.h,lang,1))+" "+esc(C.h):"")+(r.h!=null&&r.u!=null?" · ":"")+(r.u!=null?esc(ctrFmt(r.u,lang,0))+" "+esc(C.u):"")
-    +(d?"<div style=\"color:var(--blue)\">↑ "+esc(d)+"</div>":"")+"</div>";
+    +(d?" <span style=\"color:#1A56C9\">· ↑ "+esc(d)+"</span>":"")+"</div>";
 }
-// The earlier problems a visit closed, as lines under that visit.
-function mhClosedHere(x,all,H){
-  var out=[];
+// The earlier problems a visit closed, as rows under that visit.
+function mhClosedHere(x,all,L){
+  var H=L.h,out=[];
   (x.entries||[]).forEach(function(e){
     if(!e||!e.closes||!e.closes.s||!e.closes.e||e.closes.s===x.id)return;
     var y=all.find(function(v){return v.id===e.closes.s});if(!y)return;
     var r=(y.entries||[]).find(function(v){return v.id===e.closes.e});if(!r)return;
-    out.push("<div class=\"mh-row\" style=\"display:flex;gap:8px;padding:4px 0;border-top:1px solid var(--br);font-size:12px\">"
-      +"<span style=\"color:var(--green);flex-shrink:0;font-family:monospace;font-size:11px\">✓ "+mhDate(e.ts)+"</span>"
-      +"<span style=\"flex:1\">"+(r.tag?"<strong>"+esc(r.tag)+"</strong> — ":"")+mhClean(r.text)
-      +"<div style=\"margin-top:2px;padding-left:9px;border-left:2px solid var(--green);color:var(--tx2)\">"
-      +esc(H.fromVisit)+" "+mhDate(r.ts)+(y.project?" ("+esc(y.project)+")":"")+", "+esc(H.closedHere)
-      +(e.fix&&String(e.fix.text||"").trim()?" · "+mhClean(e.fix.text):(String(e.text||"").trim()?" · "+mhClean(e.text):""))
-      +"</div></span></div>");
+    out.push(mhRow(MH_GREEN,"✓","",mhDate(e.ts),mhWhat(r),
+      esc(H.fromVisit)+" "+mhDate(r.ts)+(y.project?" ("+esc(y.project)+")":"")+", "+esc(H.closedHere)
+      +(e.fix&&String(e.fix.text||"").trim()?" · "+mhClean(e.fix.text):(String(e.text||"").trim()?" · "+mhClean(e.text):"")),MH_GREEN));
   });
-  return out.length?"<div style=\"margin-top:6px\">"+out.join("")+"</div>":"";
+  return out.join("");
 }
 function mhAgeDays(ts){var t=new Date(ts).getTime();return isNaN(t)?0:Math.max(0,Math.floor((Date.now()-t)/86400000))}
 function mhAgo(ts,H){
@@ -12557,29 +12588,30 @@ function mhAgo(ts,H){
   if(y<1)return f(A.m1,A.m,Math.max(1,m));
   return f(A.y1,A.y,y);
 }
-function mhCardIssues(x,closed,all,H){
-  var es=sortEntries((x.entries||[]).filter(function(e){return e&&(e.severity==="issue"||e.severity==="warning")}));
-  if(!es.length)return "";
-  return "<div style=\"margin-top:6px\">"+es.map(function(e){
-    var sm=SM[e.severity]||SM.info,by=closed&&closed[x.id+"|"+e.id],st;
+// The visit's problems and warnings as rows, each with where it stands:
+// resolved on the visit itself, closed by a later one (and how), or still open.
+// This is what the client reads when the history is printed, so it says what
+// happened, not just a count.
+function mhCardIssues(x,closed,all,L){
+  var H=L.h,es=sortEntries((x.entries||[]).filter(function(e){return e&&(e.severity==="issue"||e.severity==="warning")}));
+  return es.map(function(e){
+    var by=closed&&closed[x.id+"|"+e.id],st,col=MH_GREEN;
     if(isResolved(e)){
-      st="<span style=\"color:var(--green);font-weight:600\">✓ "+esc(H.resolvedSt)+"</span>"
+      st="<b style=\"color:"+MH_GREEN+"\">✓ "+esc(H.resolvedSt)+"</b>"
         +(String(e.fix.text||"").trim()?" · "+mhClean(e.fix.text):"");
     }else if(by){
       var fx=by.fix,end=fx&&String(fx.text||"").trim()?mhClean(fx.text):mhClean(by.text);
       var on=all.find(function(v){return (v.entries||[]).indexOf(by)>=0});
-      st="<span style=\"color:var(--green);font-weight:600\">✓ "+esc(H.closedOn)+" "+mhDate(by.ts)+"</span>"
+      st="<b style=\"color:"+MH_GREEN+"\">✓ "+esc(H.closedOn)+" "+mhDate(by.ts)+"</b>"
         +(on&&on.id!==x.id&&on.project?" ("+esc(on.project)+")":"")
         +(end?" · "+end:"");
     }else{
-      st="<span style=\"color:var(--orange);font-weight:600\">⚠ "+esc(H.pendingSt)+"</span>"
+      col=MH_ORANGE;
+      st="<b style=\"color:"+MH_ORANGE+"\">⚠ "+esc(H.pendingSt)+"</b>"
         +(e.fix&&String(e.fix.text||"").trim()?" · "+mhClean(e.fix.text):"");
     }
-    return "<div class=\"mh-row\" style=\"display:flex;gap:8px;padding:4px 0;border-top:1px solid var(--br);font-size:12px\">"
-      +"<span style=\"color:"+sm.tx+";flex-shrink:0;font-family:monospace;font-size:11px\">"+sm.dot+" "+mhDate(e.ts)+"</span>"
-      +"<span style=\"flex:1\">"+(e.tag?"<strong>"+esc(e.tag)+"</strong> — ":"")+mhClean(e.text)
-      +"<div style=\"margin-top:2px;padding-left:9px;border-left:2px solid var(--br2);color:var(--tx2)\">"+st+"</div></span></div>";
-  }).join("")+"</div>";
+    return mhSevRow(e,L,mhWhat(e),st,col);
+  }).join("");
 }
 // The whole history, in the language of the label table L. The screen asks
 // for it in the app's language with the visits as typed; the print asks for it in the
@@ -12589,7 +12621,7 @@ function mhCardIssues(x,closed,all,H){
 // Two differences for paper. What is still pending comes from EVERY visit,
 // this one included: on screen this visit is the one underneath, on paper
 // there is nothing underneath. And "aquesta" means nothing to a client.
-function mhRender(cur,all,L,forPrint){
+function mhRender(cur,all,L,forPrint,stampLbl){
   var H=L.h,serial=null;
   // the machine's own number first, then the one on its manual
   all.forEach(function(x){if(!serial&&x.machineNo)serial=x.machineNo});
@@ -12637,68 +12669,93 @@ function mhRender(cur,all,L,forPrint){
     });
   });
   open.sort(function(a,b){return String(a.e.ts).localeCompare(String(b.e.ts))});
-  function metric(n,lbl,col){return "<div class=\"mh-met\" style=\"background:var(--bg2);border:1px solid var(--br);border-radius:6px;padding:6px 9px\">"
-    +"<b style=\"display:block;font-size:18px;line-height:1.2"+(col?";color:"+col:"")+"\">"+n+"</b><span style=\"font-size:11px;color:var(--tx3)\">"+esc(lbl)+"</span></div>"}
-  var h="<div class=\"mh-mets\" style=\"display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:12px\">"
-    +metric(all.length,H.visits)+metric(open.length,H.kOpen,open.length?"var(--orange)":"")
-    +metric(nDone,H.kDone,"")+metric(urgOpen,H.kUrg,urgOpen?"var(--red)":"")+"</div>";
+  var lang=mhLangOf(L);
+  function rg(x){return x._range||tsRange(x)}
+  function any(k){var v="";all.forEach(function(x){if(!v&&x[k])v=String(x[k])});return v}
+  var oldest=all[all.length-1]||cur,d0=dmy(rg(oldest).from),d1=dmy(rg(newest).to);
+  var period=d0+(d1&&d1!==d0?" → "+d1:"");
+  function th(t,cls){return "<th"+(cls?" class=\""+cls+"\"":"")+">"+esc(t)+"</th>"}
+  function thS(t){return "<th class=\"nw\"><span class=\"sl\">"+esc(t)+"</span></th>"}   // the severity column: just the mark on a phone
+
+  // ── THE HEADER, as on a report: the tag, the title, one grey line ─────────
+  var h="<div class=\"mhr-hd\"><span class=\"mhr-tag\">"+esc((mhDisp(newest.machine)||"—").toUpperCase())+"</span>"
+    +"<h1>"+esc(H.title)+"</h1>"
+    +"<div class=\"mhr-sub\">"+esc(mhDisp(newest.client)||"—")+" · "+all.length+" "+esc(H.visits)+(period?" · "+period:"")+"</div></div>";
+
+  // ── THE DETAILS, in the reports' three groups: client, equipment, visits ──
+  var ctrX=null;all.forEach(function(x){if(!ctrX&&ctrLast(x))ctrX=x});      // the newest visit that read the counters
+  var g3=[[L.total||H.visitsH,String(all.length)]];
+  if(period)g3.push([(L.pt&&L.pt.period)||L.start,period]);
+  if(ctrX&&L.ctr){
+    var cr=ctrLast(ctrX);
+    if(cr.h!=null)g3.push([L.ctr.hours,ctrFmt(cr.h,lang,1)+" "+L.ctr.h]);
+    if(cr.u!=null)g3.push([L.ctr.units,ctrFmt(cr.u,lang,0)+" "+L.ctr.u]);
+  }
+  var groups=[
+    {t:L.gClient||"Client",rows:[[L.client,mhDisp(newest.client)||"—"]].concat(any("location")?[[L.location,any("location")]]:[])},
+    {t:L.gEquip||"Equipment",rows:[[L.machine,mhDisp(newest.machine)||"—"]].concat(serial?[[L.machineNo,String(serial)]]:[],any("year")?[[L.year,any("year")]]:[])},
+    {t:H.visitsH,rows:g3}
+  ];
+  h+="<div class=\"meta\">"+groups.map(function(g){
+    return "<div><div class=\"mg\">"+esc(g.t)+"</div>"
+      +g.rows.map(function(p){return "<div class=\"ml\">"+esc(p[0])+"</div><div class=\"mv\">"+esc(p[1])+"</div>"}).join("")+"</div>";
+  }).join("")+"</div>";
+
+  // ── THE COUNTS, as the reports' tiles ─────────────────────────────────────
+  function stat(n,lbl,bg,col){return "<div class=\"stat\" style=\"background:"+bg+";color:"+col+"\"><strong>"+n+"</strong><span>"+esc(lbl)+"</span></div>"}
+  h+="<div class=\"stats\">"
+    +stat(all.length,H.visits,"#EEF1F5","#3D4756")
+    +stat(open.length,H.kOpen,open.length?"#FFF1E6":"#EEF1F5",open.length?MH_ORANGE:"#3D4756")
+    +stat(nDone,H.kDone,"#EAF6EF",MH_GREEN)
+    +stat(urgOpen,H.kUrg,urgOpen?"#FDECEA":"#EEF1F5",urgOpen?MH_RED:"#3D4756")
+    +"</div>";
+
+  // ── WHAT IS STILL OPEN, oldest first, red once over three months ──────────
+  var head3="<thead><tr>"+thS(L.severity)+th(L.incWhen,"nw")+th(L.incWhat)+"</tr></thead>";
   if(open.length){
-    h+="<div class=\"mh-h\" style=\"font-weight:700;margin:2px 0 4px;color:var(--orange)\">⚠ "+esc(H.openTitle)+" ("+open.length+")</div>";
-    h+=open.map(function(o){
-      var old=mhAgeDays(o.e.ts)>90,sm=SM[o.e.severity]||SM.info;
-      return "<div class=\"mh-row\" style=\"display:flex;gap:8px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--br)\">"
-        +"<span style=\"color:"+sm.tx+";flex-shrink:0;font-size:11px\">"+sm.dot+"</span>"
-        +"<span style=\"flex:1\">"+(o.e.tag?"<strong>"+esc(o.e.tag)+"</strong> — ":"")+mhClean(o.e.text)
-        +"<span style=\"color:var(--tx3);font-size:11px\"> · "+mhDate(o.e.ts)+(o.s.project?" · "+esc(o.s.project):"")+"</span></span>"
-        +"<span style=\"flex-shrink:0;font-size:11px;padding:1px 8px;border-radius:10px;white-space:nowrap;background:"+(old?"var(--redbg)":"var(--orangebg)")
-        +";color:"+(old?"var(--red)":"var(--orange)")+"\">"+esc(mhAgo(o.e.ts,H))+"</span></div>";
-    }).join("");
-    h+="<div style=\"height:14px\"></div>";
+    h+=repH2(H.openTitle+" ("+open.length+")","C2410C")+"<table>"+head3+"<tbody>"
+      +open.map(function(o){
+        var old=mhAgeDays(o.e.ts)>90,c=old?MH_RED:MH_ORANGE,ago=mhAgo(o.e.ts,H);
+        return mhSevRow(o.e,L,mhWhat(o.e)+(o.s.project?" <span style=\"color:#5A6576;font-size:11px\">("+esc(o.s.project)+")</span>":""),
+          "<b style=\"color:"+c+"\">⚠ "+esc(H.pendingSt)+"</b>"+(ago?" · "+esc(ago):""),c);
+      }).join("")+"</tbody></table>";
   }
 
-  // ── 2. ONE TIMELINE OF VISITS ─────────────────────────────────────────────
-  // It replaces the separate "pending" and "closed on a later visit" lists:
-  // every problem sits in its own visit with where it stands, and a visit also
-  // shows the earlier problems it closed. The dot is gold for this visit,
-  // orange while the visit still has something open.
-  h+="<div class=\"mh-h\" style=\"font-weight:700;margin:2px 0 6px\">"+esc(H.visitsH)+"</div>";
-  h+=all.map(function(x,i){
-    var c=x._counts||severityCounts(x.entries||[]),r=curRev(x),isCur=x.id===cur.id&&!forPrint;
-    var rng=x._range||tsRange(x),hasOpen=openEntries(x,closed).length>0,last=i===all.length-1;
-    var issues=mhCardIssues(x,closed,all,H),here=mhClosedHere(x,all,H);
-    var dot=isCur?"var(--gold)":(hasOpen?"var(--orange)":"var(--tx3)");
-    return "<div style=\"display:grid;grid-template-columns:12px minmax(0,1fr);gap:0 8px\">"
-      +"<div style=\"display:flex;flex-direction:column;align-items:center\"><span style=\"width:10px;height:10px;border-radius:50%;background:"+dot+";margin-top:11px;flex-shrink:0\"></span>"
-      +(last?"":"<span style=\"flex:1;width:2px;background:var(--br2)\"></span>")+"</div>"
-      +"<div class=\"mh-card\" data-sess=\""+esc(x.id)+"\" style=\"cursor:pointer;padding:7px 8px;margin-bottom:6px;border-radius:6px;"
-      +"background:"+(isCur?"var(--bg2)":"transparent")+";border:1px solid var(--br)\">"
-      +"<div style=\"display:flex;gap:8px;align-items:baseline;flex-wrap:wrap\">"
-      +"<strong>"+dmy(rng.from)+(rng.to!==rng.from?" → "+dmy(rng.to):"")+"</strong>"
-      +"<span style=\"font-size:11px;color:var(--tx3)\">"+esc((L.types&&L.types[x.type])||L.types.commissioning)+"</span>"
-      +(x.project?"<span style=\"font-size:11px;color:var(--tx3)\">"+esc(x.project)+"</span>":"")
-      +(r?"<span style=\"font-size:11px;color:var(--tx3)\">"+esc(L.revLbl)+" "+("0"+r.n).slice(-2)+"</span>":"")
-      +(x.status==="closed"?"<span style=\"font-size:11px;color:var(--red)\">"+esc(L.closed)+"</span>":"")
-      +(isCur?"<span style=\"font-size:11px;color:var(--gold)\">"+esc(uiT("aquesta"))+"</span>":"")
-      +(x._hist?"<span style=\"font-size:11px;color:var(--tx3)\">🗄 "+esc(H.archived)+"</span>":"")
-      +(!issues&&!here?"<span style=\"font-size:11px;color:var(--green)\">✓ "+esc(H.allOk)+"</span>":"")
-      +"</div>"
-      +"<div style=\"font-size:11px;color:var(--tx3);font-family:monospace;margin-top:2px\">"
-      +(c.issue?"■ "+c.issue+"  ":"")+(c.warning?"▲ "+c.warning+"  ":"")+(c.resolved?"✓ "+c.resolved+"  ":"")
-      +"● "+c.ok+"  ·  "+(x._n!=null?x._n:(x.entries||[]).length)+" "+esc(H.entries)+"</div>"
-      +mhCtrLine(x,all,L)
-      +issues+here+"</div></div>";
-  }).join("");
+  // ── THE VISITS: one table, a band for each visit and its problems under it ─
+  // Every problem sits in its own visit with where it stands, and a visit also
+  // shows the earlier problems it closed. On screen a band opens its visit.
+  h+=repH2(H.visitsH,"1A56C9")+"<table>"+head3+"<tbody>"
+    +all.map(function(x,i){
+      var c=x._counts||severityCounts(x.entries||[]),r=curRev(x),isCur=x.id===cur.id&&!forPrint;
+      var rng=rg(x),issues=mhCardIssues(x,closed,all,L),here=mhClosedHere(x,all,L);
+      var bits=[esc((L.types&&L.types[x.type])||L.types.commissioning)];
+      if(x.project)bits.push(esc(x.project));
+      if(r)bits.push(esc(L.revLbl)+" "+("0"+r.n).slice(-2));
+      if(x.status==="closed")bits.push("<span style=\"color:"+MH_RED+"\">"+esc(L.closed)+"</span>");
+      if(isCur)bits.push("<span style=\"color:#1A56C9;font-weight:700\">"+esc(uiT("aquesta"))+"</span>");
+      if(x._hist)bits.push("🗄 "+esc(H.archived));
+      if(!issues&&!here)bits.push("<span style=\"color:"+MH_GREEN+";font-weight:700\">✓ "+esc(H.allOk)+"</span>");
+      return (i?"<tr class=\"gap\"><td colspan=\"3\"></td></tr>":"")
+        +"<tr class=\"vb\""+(forPrint?"":" data-sess=\""+esc(x.id)+"\"")+"><td colspan=\"3\">"
+        +"<b>"+dmy(rng.from)+(rng.to!==rng.from?" → "+dmy(rng.to):"")+"</b>"
+        +bits.map(function(b){return " <i>"+b+"</i>"}).join("")     // the space is where a narrow screen may break the line
+        +"<div class=\"ln\">"+(c.issue?"■ "+c.issue+"  ":"")+(c.warning?"▲ "+c.warning+"  ":"")+(c.resolved?"✓ "+c.resolved+"  ":"")
+        +"● "+c.ok+"  ·  "+(x._n!=null?x._n:(x.entries||[]).length)+" "+esc(H.entries)+"</div>"
+        +mhCtrLine(x,all,L)+"</td></tr>"
+        +issues+here;
+    }).join("")+"</tbody></table>";
 
+  // ── THE PARTS, as the reports' parts tables ───────────────────────────────
   var pk=Object.keys(parts).sort(function(a,b){return parts[b].last.localeCompare(parts[a].last)});
   if(pk.length){
-    h+="<div style=\"height:14px\"></div><div style=\"font-weight:700;margin:2px 0 6px\">"+esc(H.parts)+" ("+pk.length+")</div>";
-    h+="<table style=\"width:100%;border-collapse:collapse;font-size:12px\">"
+    h+=repH2(H.parts+" ("+pk.length+")",PST_HEX.fit)
+      +"<table><thead><tr><th class=\"nw\" style=\"text-align:right\">"+esc(L.qty)+"</th>"+th(L.ref)+th(L.part)+th(L.incWhen,"nw")+"</tr></thead><tbody>"
       +pk.map(function(k){var p=parts[k];
-        return "<tr class=\"mh-row\"><td style=\"padding:3px 6px 3px 0;color:var(--gold);text-align:right;white-space:nowrap\">"+(p.qty?p.qty+"×":"")+"</td>"
-          +"<td style=\"padding:3px 6px 3px 0;font-family:monospace;color:var(--blue)\">"+esc(p.ref)+"</td>"
-          +"<td style=\"padding:3px 6px 3px 0\">"+esc(p.den)+"</td>"
-          +"<td style=\"padding:3px 0;color:var(--tx3);white-space:nowrap\">"+dmy(String(p.last).slice(0,10))+"</td></tr>";
-      }).join("")+"</table>";
+        return "<tr><td class=\"nw mono\" style=\"text-align:right;color:#B7791F\">"+(p.qty?p.qty+"×":"")+"</td>"
+          +"<td class=\"mono\" style=\"color:#1A56C9\">"+esc(p.ref)+"</td>"
+          +"<td>"+esc(p.den)+"</td>"
+          +"<td class=\"nw\" style=\"color:#5A6576\">"+dmy(String(p.last).slice(0,10))+"</td></tr>";
+      }).join("")+"</tbody></table>";
   }
   var rk=Object.keys(recs);
   if(rk.length){
@@ -12708,20 +12765,24 @@ function mhRender(cur,all,L,forPrint){
     });
     var rank=function(r){return r.done?2:(r.st==="urg"?0:1)};
     rk.sort(function(a,b){var x=recs[a],y=recs[b];return rank(x)-rank(y)||y.ts.localeCompare(x.ts)});
-    var open=rk.filter(function(k){return !recs[k].done}).length;
-    h+="<div style=\"height:14px\"></div><div style=\"font-weight:700;margin:2px 0 6px\">"+esc(H.rec)+" ("+open+"/"+rk.length+")</div>";
-    h+="<table style=\"width:100%;border-collapse:collapse;font-size:12px\">"
+    var recOpen=rk.filter(function(k){return !recs[k].done}).length;
+    h+=repH2(H.rec+" ("+recOpen+"/"+rk.length+")",PST_HEX.urg)
+      +"<table><thead><tr>"+th(L.prio,"nw")+"<th class=\"nw\" style=\"text-align:right\">"+esc(L.qty)+"</th>"+th(L.ref)+th(L.part)+th(L.incWhen)+"</tr></thead><tbody>"
       +rk.map(function(k){var r=recs[k];
-        var col=r.done?"var(--green)":(r.st==="urg"?"var(--red)":"var(--orange)");
-        return "<tr class=\"mh-row\"><td style=\"padding:3px 6px 3px 0;color:"+col+";font-weight:600;white-space:nowrap\">"+(r.done?"✓ ":"")+esc(L.pst[r.st])+"</td>"
-          +"<td style=\"padding:3px 6px 3px 0;color:var(--gold);text-align:right;white-space:nowrap\">"+(r.qty?esc(r.qty)+"×":"")+"</td>"
-          +"<td style=\"padding:3px 6px 3px 0;font-family:monospace;color:var(--blue)\">"+esc(r.ref)+"</td>"
-          +"<td style=\"padding:3px 6px 3px 0;"+(r.done?"color:var(--tx3)":"")+"\">"+esc(r.den)+"</td>"
-          +"<td style=\"padding:3px 0;color:var(--tx3);white-space:nowrap\">"+esc(H.recOn)+" "+dmy(r.ts.slice(0,10))
+        var col=r.done?MH_GREEN:"#"+(PST_HEX[r.st]||PST_HEX.prev);
+        return "<tr><td class=\"nw\" style=\"font-weight:700;color:"+col+"\">"+(r.done?"✓ ":"")+esc(L.pst[r.st])+"</td>"
+          +"<td class=\"nw mono\" style=\"text-align:right;color:#B7791F\">"+(r.qty?esc(r.qty)+"×":"")+"</td>"
+          +"<td class=\"mono\" style=\"color:#1A56C9\">"+esc(r.ref)+"</td>"
+          +"<td"+(r.done?" style=\"color:#5A6576\"":"")+">"+esc(r.den)+"</td>"
+          +"<td style=\"color:#5A6576\">"+esc(H.recOn)+" "+dmy(r.ts.slice(0,10))
           +(r.done?"<br>"+esc(H.fitOn)+" "+dmy(r.done.slice(0,10)):"")+"</td></tr>";
-      }).join("")+"</table>";
+      }).join("")+"</tbody></table>";
   }
-  return {title:title,note:note,body:h};
+
+  // ── THE FOOTER, as on a report ────────────────────────────────────────────
+  h+="<div class=\"ft\"><span>"+esc(stampLbl||L.gen||"")+" "+dmy(todayISO())+(cur.tech?" · "+esc(cur.tech):"")+"</span>"
+    +(licStamp()?"<span>"+esc(licStamp())+"</span>":"")+"<span>Field Service Log</span></div>";
+  return {title:title,note:note,body:"<div class=\"mhr\">"+h+"</div>"};
 }
 function openMachineHistory(sess){
   // (new design) from the list of machines there is no active visit: the one
@@ -12736,7 +12797,8 @@ function openMachineHistory(sess){
   // have the three; what the technician typed stays as typed.
   var v=mhRender(cur,machineSessions(cur),RPT[internLang()]||RPT.ca,false);
   $$("mhTitle").textContent=v.title;
-  $$("mhNote").innerHTML=v.note+" "+uiT("S'agrupen per client i màquina tal com els escrius.");
+  // the count and the serial number are in the document's own header now
+  $$("mhNote").textContent=uiT("S'agrupen per client i màquina tal com els escrius.");
   $$("mhBody").innerHTML=v.body;
   var lang=reportLang(cur);
   $$("mhPrint").innerHTML=uiT("🖨 Imprimeix")+(lang!=="ca"?" · "+esc(langNative(lang)):"");
@@ -12777,12 +12839,8 @@ async function printMachineHistory(){
       +uiT("\n\nVols imprimir-lo igualment, amb els textos tal com els vas escriure?")))return;
   }
   done();
-  var L=RPT[lang]||RPT.en,v=mhRender(cur,loc,L,true),newest=all[0]||cur;
-  $$("mhPrintBox").innerHTML=
-     "<div style=\"font-size:18px;font-weight:700;color:var(--gold)\">&#128220; "+esc(v.title)+"</div>"
-    +"<div class=\"ts-note\" style=\"margin:2px 0 12px\">"+esc(L.h.title)+" · "+v.note+"</div>"
-    +v.body
-    +"<div class=\"ts-note\" style=\"margin-top:14px\">"+esc(L.h.printed)+" "+dmy(todayISO())+(cur.tech?" · "+esc(cur.tech):"")+"</div>";
+  var L=RPT[lang]||RPT.en,v=mhRender(cur,loc,L,true,L.h.printed),newest=all[0]||cur;
+  $$("mhPrintBox").innerHTML=v.body;        // the document brings its own header and footer
   if(mhOldTitle===null)mhOldTitle=document.title;
   document.title=fileSafe(L.h.title,"history")+"_"+sanitize(newest.machine)+"_"+sanitize(newest.client)+"_"+todayISO();
   document.body.classList.add("print-mh");
@@ -12801,18 +12859,8 @@ async function buildHistoryHTML(cur,lang){
   var L=RPT[lang]||RPT.en,v=mhRender(cur,loc,L,true),newest=all[0]||cur;
   var html="<!DOCTYPE html><html lang=\""+esc(lang)+"\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
     +"<title>"+esc(L.h.title)+" - "+esc(v.title)+"</title><style>"
-    +":root{--bg2:#EEF2F7;--br:#CBD3DE;--br2:#CBD3DE;--tx1:#0F1B2D;--tx2:#3D4756;--tx3:#5A6576;"
-    +"--gold:#1A56C9;--green:#1F7A4D;--red:#B42318;--orange:#C2410C;--blue:#1A56C9;--redbg:rgba(180,35,24,.08);--orangebg:rgba(194,65,12,.08)}"
-    +"*{box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:14px;line-height:1.5;max-width:900px;margin:40px auto;padding:0 24px;color:#0F1B2D;background:#fff;"
-    +"-webkit-print-color-adjust:exact;print-color-adjust:exact}"
-    +".ts-note{font-size:11px;color:var(--tx3)}.mh-card{cursor:default!important}"
-    +"@media print{body{margin:0;padding:16px}.mh-card,.mh-row{break-inside:avoid}}</style></head><body>"
-    +"<div style=\"font-size:18px;font-weight:700;color:var(--gold)\">&#128220; "+esc(v.title)+"</div>"
-    +"<div class=\"ts-note\" style=\"margin:2px 0 12px\">"+esc(L.h.title)+" · "+v.note+"</div>"
-    +v.body
-    +"<div class=\"ts-note\" style=\"margin-top:14px\">"+esc(L.gen||"")+" "+dmy(todayISO())+(cur.tech?" · "+esc(cur.tech):"")
-      +(licStamp()?" · "+esc(licStamp()):"")+"</div>"
-    +"</body></html>";
+    +"body{max-width:1000px;margin:40px auto;padding:0 24px;background:#fff}@media print{body{margin:0;padding:16px}}"
+    +MHR_CSS+"</style></head><body>"+v.body+"</body></html>";
   return {name:fileSafe(L.h.title,"history")+"_"+sanitize(newest.machine)+"_"+sanitize(newest.client)+".html",
     blob:new Blob([html],{type:"text/html;charset=utf-8"})};
 }

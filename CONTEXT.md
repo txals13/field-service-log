@@ -4437,6 +4437,61 @@ the phone could only be tried by sending the resize event by hand (the pane
 is hidden and fires none): it refits. NOT checked: a real phone — touch
 panning of the enlarged page inside the frame, the rotation, how 49 % reads.
 
+**That was not what he meant** ("No, una altra cosa"); both fixes stayed, he
+committed them. What he meant is the next section.
+
+### The machine history is a report (2026-11-15, version `nou · 2026-11-15 · 16`)
+
+Asked what was wrong in the screenshot of the history, he chose: "L'historial
+hauria de ser un informe" — it was drawn as a screen of the app (tiles, white
+cards on a grey page, a timeline with dots) and it should have the reports'
+format: header, details box, tables.
+
+- `mhRender(cur,all,L,forPrint,stampLbl)` gathers the same facts as before and
+  writes ONE document, `<div class="mhr">`:
+  - **header** as on the service report: the machine in the blue tag, "Historial
+    de la màquina" as the title, a grey line (client · n visits · first → last
+    date), the navy rule;
+  - **details box** (`.meta`), the reports' three groups: Client (client,
+    location), Equip (machine, number, year) and Visites (total, period, and
+    the hours / units of the newest visit that read the counters);
+  - **counts** as the reports' tiles (visits, open, resolved, urgent parts);
+  - **"Què queda obert"** and **"Visites"** as tables with the grey heads
+    (Gravetat · Quan · Incidència). In Visites each visit is a band (like the
+    day band of the log: dates, kind, project, Rev., Tancada, the counts, the
+    counters line) with its problems as rows under it; where each stands sits
+    under its text, the way "Com ha quedat" does in the report. On screen a
+    band still opens its visit (`data-sess`; not written when `forPrint`);
+  - **parts** as the reports' parts tables (QT. · REF. · RECANVI · Quan; the
+    recommended ones with PRIORITAT first);
+  - **footer**: "Generat el" / "Imprès el" (`stampLbl`), date, technician, the
+    licensee, Field Service Log.
+- **No new labels:** every word comes from the tables the reports already
+  read (`L.gClient`, `L.total`, `L.pt.period`, `L.ctr.hours`, `L.incWhen`,
+  `L.qty`…), so every report language has them.
+- **`MHR_CSS`**, one string in the script, scoped to `.mhr`, the palette as
+  literals (no theme variables: the sheet is white in the dark theme too). It
+  is put in the page once and written into the ZIP's file, so the window, the
+  print (`#mhPrintBox` is now just `v.body`) and `buildHistoryHTML` show the
+  same document. The `#mhBody .mh-*` rules of the card look are gone; the
+  stylesheet only keeps the sheet (`#mhBody .mhr`: padding, border, shadow).
+- **On a phone it is NOT made smaller to fit**, unlike the report in Revisa i
+  signa: it is read in front of the machine. Under 640 px the box is two
+  columns, the word beside the severity mark is dropped (`.sl`), cells
+  tighten. The window's own title stays "machine · client"; its note is only
+  the hint about how visits are grouped.
+- `mhLine` (unused) removed; `mhCardIssues`, `mhClosedHere` return rows.
+- `nou/` only: the app in use keeps the cards.
+
+Checked in the preview: at 375 px no sideways scroll, the four tables inside
+the sheet, two-column box; at 1024 px three columns, the sheet inside the
+window; a band opens its visit; Imprimeix (window.print stubbed) fills the
+print box with the document, "Imprès el", no bands to click; the document
+alone in an empty frame with only `MHR_CSS` keeps its looks (so the ZIP's
+file does); the app in English writes it in English; no console errors.
+NOT checked: the ZIP itself (it wants a Google session), printing on paper
+or to PDF, a history of many visits or with archived ones, a real phone.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

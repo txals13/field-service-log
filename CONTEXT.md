@@ -4739,6 +4739,40 @@ arribada.jpg", and the photo keeps that name on screen and in the visit; a
 counters photo and a test photo seeded under camera names take their own on
 being shown, and it is saved. NOT checked: real Drive.
 
+### The drawings viewer on a phone: room for the part's sheet (2026-11-15, version `nou · 2026-11-15 · 25`)
+
+"Versió mòbil d'afegir recanvi no entra en vertical degut al banner
+superior", with a screenshot: the navy title on three lines (the word, the
+manual's long name wrapped, the ✕ alone), the toolbar on three, the hint on
+three, and the part's sheet running off the bottom with "Cancel·la" and
+"Només informatiu" cut. Under 701 px only:
+
+- **The title is one line**: the manual's name is cut with an ellipsis, the ✕
+  stays on it. 50 px instead of ~125.
+- **The 14 px of white above the title are gone.** They were the window's own
+  inline `padding:14px`, which the phone layout's `body.m2 .modal{padding}`
+  could not override; `#drawBack .modal` now has it with `!important`.
+- **The toolbar (`#drawBar`) is two rows**: index, group, zoom (− +, the
+  percentage is hidden; pinching zooms anyway); then ◀ page ▶ and the page
+  number. A zero-height `::after` ends the first row so the two arrows stay
+  with the page between them.
+- **While a part's sheet is up** the toolbar, the hint and the "conjunt
+  sencer" buttons are hidden: `.picking` on the window, set by a
+  MutationObserver on `#drawChoices` (the sheet is shown and hidden from a
+  dozen places; it is watched rather than told). They come back when the
+  sheet goes.
+- On the computer the group's selector is capped at 280 px: at 46vw it had
+  pushed the zoom onto a second row.
+
+Checked in the preview at 375×745 (his phone's visible area, from the
+screenshot) with a made-up manual of long name: title 50 px at the top edge;
+before a part is picked the drawing's box is 435 px tall (it was ~170 in his
+screenshot); with the sheet up the drawing is right under the title and the
+sheet's last row ends at 729 of 745, whole; Cancel·la brings the rows back.
+At 1024 px: the toolbar on one row, nothing hidden while the sheet is up.
+NOT checked: his phone, a part with a longer name than the one tried (the
+sheet grows upward over the drawing, which scrolls).
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

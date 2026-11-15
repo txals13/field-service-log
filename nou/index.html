@@ -1353,6 +1353,42 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
 .draw-pick .ft i{flex:1;height:1px;background:var(--br)}
 .draw-pick .ft button{height:44px;padding:0 16px;border-radius:10px;font-size:13px}
 #drawSets button{flex:1 1 100%;min-height:48px;border:1px dashed var(--br2);border-radius:10px;background:var(--bg1);font-size:13px;white-space:normal}
+/* THE VIEWER ON A PHONE (nou · 2026-11-15 · 25). "La versió mòbil d'afegir
+   recanvi no entra en vertical degut al banner superior": the title took
+   three lines (the word, the manual's name wrapped, the ✕ on its own), the
+   toolbar three more and the hint three again — 300 px gone before the
+   drawing, and the part's sheet ran off the bottom with its last buttons
+   cut. Every row up there is a row the drawing and the sheet do not get:
+   - the title is ONE line, the manual's name cut with an ellipsis;
+   - the 14 px of air the window had above the title (its own inline padding,
+     which the phone layout could not override) is gone;
+   - the toolbar is two rows: index, group and zoom; then the pages;
+   - while a part's sheet is up (.picking, set by an observer on
+     #drawChoices) the toolbar, the hint and the "conjunt sencer" buttons
+     step aside: nobody turns a page while saying how many of a part. */
+@media(max-width:700px){
+  body.m2 #drawBack .modal{padding:0 14px!important}
+  body.m2 #drawBack .modal>.modal-title{flex-wrap:nowrap!important;padding:10px 8px 10px 14px;margin-bottom:8px!important}
+  #drawBack .modal-title>span:first-child{flex:none}
+  #drawBack #drawManual{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #drawBack #drawManSel{flex:1;min-width:0;max-width:none!important}
+  #drawBack #drawClose{flex:none;margin-left:0!important}
+  #drawBar>*{order:4}
+  #drawBar #drawIdxBtn{order:1}
+  #drawBar #drawScope{order:2;flex:1 1 90px;min-width:0;max-width:none!important}
+  #drawBar #drawZoomBox{order:3;margin-left:auto!important}
+  #drawBar #drawZoomLbl{display:none}
+  /* the row ends after the zoom: the two arrows stay with the page between them */
+  #drawBar::after{content:"";order:3;flex-basis:100%;height:0;margin-top:-6px}
+  #drawBar #drawStatus{order:9}
+  #drawBody{margin-bottom:10px}
+  #drawBack #drawSets{margin-bottom:10px!important}
+  #drawChoices.draw-pick{padding-bottom:max(16px,env(safe-area-inset-bottom))}
+  #drawBack .modal.picking #drawBar,#drawBack .modal.picking #drawPickHint,#drawBack .modal.picking #drawSets{display:none!important}
+}
+/* on the computer the group's selector was let grow to 46vw and pushed the
+   zoom onto a second row: it is as wide as its longest name needs */
+@media(min-width:701px){#drawBar #drawScope{max-width:280px!important}}
 /* the viewer's index: a column beside the sheet where there is room, over the
    sheet on a phone */
 #drawBody{flex:1;min-height:200px;display:flex;gap:8px;position:relative}
@@ -2038,7 +2074,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
         <select id="drawManSel" title="Canvia de manual: aquesta visita en té més d'un" style="display:none;font-size:12px;padding:4px 6px;max-width:58vw"></select>
         <button class="btn-g btn-sm" id="drawClose" style="margin-left:auto">&#10005;</button>
       </div>
-      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+      <div id="drawBar" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
         <!-- What the arrows page through (viewerSetScope): the drawings, the
              electrical schematic, the manual's lists, or all of it; and the
              index that jumps to a conjunt, a sheet or a list by its name. -->
@@ -2049,7 +2085,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
         <button class="btn-sm" id="drawNext" style="padding:6px 14px;font-size:15px">&#9654;</button>
         <input type="text" id="drawGoto" placeholder="pàg" style="width:48px;font-size:12px;padding:4px 6px" inputmode="numeric">
         <button class="btn-sm" id="drawGotoBtn">Vés</button>
-        <span style="margin-left:auto;display:flex;gap:4px;align-items:center">
+        <span id="drawZoomBox" style="margin-left:auto;display:flex;gap:4px;align-items:center">
           <button class="btn-sm" id="drawZoomOut" style="padding:6px 12px;font-size:15px">&minus;</button>
           <button class="btn-sm" id="drawZoomLbl" title="Restableix el zoom (ajusta a l'amplada)" style="min-width:52px;font-size:12px">100%</button>
           <button class="btn-sm" id="drawZoomIn" style="padding:6px 12px;font-size:15px">+</button>
@@ -5443,6 +5479,16 @@ function showPickChoices(pos,rows,offPage){
   box.appendChild(cancel);
 }
 $$("drawCanvas").addEventListener("click",function(e){if(viewerPickMode)attemptPick(e.clientX,e.clientY)});
+// Is a part's sheet up? Said on the window (.picking), for the phone layout to
+// clear the rows above it. The sheet is shown and hidden from a dozen places,
+// so it is watched rather than told.
+(function(){
+  var dc=$$("drawChoices"),m=dc&&dc.closest(".modal");
+  if(!dc||!m||typeof MutationObserver==="undefined")return;
+  new MutationObserver(function(){
+    m.classList.toggle("picking",dc.classList.contains("draw-pick")&&dc.style.display!=="none");
+  }).observe(dc,{attributes:true,attributeFilter:["style","class"]});
+})();
 function closeDrawings(){
   uploadDrawingShots();
   $$("drawBack").style.display="none";viewerPickMode=false;
@@ -8205,7 +8251,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 24";
+var APP_VERSION="nou · 2026-11-15 · 25";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();

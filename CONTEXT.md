@@ -4773,6 +4773,37 @@ At 1024 px: the toolbar on one row, nothing hidden while the sheet is up.
 NOT checked: his phone, a part with a longer name than the one tried (the
 sheet grows upward over the drawing, which scrolls).
 
+### A tapped number is coloured at once (2026-11-15, version `nou · 2026-11-15 · 26`)
+
+"Quan marco un número al dibuix, vull que canviï de color al moment, no
+esperar quan li hagi atribuït un estat. Si cancel·lo o no atribueixo estat no
+s'ha de quedar marcat." The number took its green only in `addResolvedPart`,
+when a state was chosen; between the tap and the choice nothing on the sheet
+said which number the part's sheet was about.
+
+- **`pendMark`**: the number just tapped, while its sheet (or the list of
+  candidates) is up. `attemptPick` sets it and repaints before resolving;
+  `paintPartMarks` paints it with `viewerMarks`, the same green (once only,
+  if that number was already taken).
+- **Never kept.** Choosing a state adds the mark to `viewerMarks` as before;
+  the sheet going away any other way — Cancel·la, another page, another
+  manual, closing the viewer, tapping another number — drops it. That is the
+  observer on `#drawChoices` (the one that sets `.picking`): display none →
+  `pendMark=null` and a repaint. A tap that brings nothing up (not in this
+  drawing's list, no catalogue) clears it on the spot.
+- "Conjunt sencer" asked for after a tap drops the pending number: the whole
+  drawing was asked for, not that number.
+- The picture of the sheet filed with the entry (`captureDrawingShot`) draws
+  `viewerMarks` only: a pending number is never in it.
+
+Checked in the preview with a made-up drawing carrying the numbers 1, 2, 3
+and a catalogue listing 1 and 2: tap 1 → one mark and the sheet; Cancel·la →
+none; tap 1 and "Urgent" → the mark stays; tap 2 → two marks; tapping 1
+again with the sheet up → 2 is dropped; next page and back → only the kept
+one; tap 3 (not in the list) → nothing pending; closing with a number
+pending and opening again → only the kept one. NOT checked: his phone, a
+real manual.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

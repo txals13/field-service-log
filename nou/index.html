@@ -2459,6 +2459,16 @@ var PST_RGB={fit:[31,122,77],urg:[180,35,24],prev:[183,121,31],quo:[26,86,201],i
 var PST_HEX={fit:"1F7A4D",urg:"B42318",prev:"B7791F",quo:"1A56C9",inf:"5A6576"};
 var lastPartSt="fit";   // the next part picked starts where the last one was left
 var lastPickMark=null;  // where the last tap landed on the sheet (see partMark)
+// The number just tapped, coloured AT ONCE (nou · 2026-11-15 · 26): "quan marco
+// un número al dibuix vull que canviï de color al moment, no esperar que li
+// hagi atribuït un estat; si cancel·lo o no atribueixo estat no s'ha de quedar
+// marcat". It used to take its colour only when a state was chosen, so between
+// the tap and the choice nothing on the sheet said which number the sheet
+// below was about. pendMark is that number while its sheet is up: painted like
+// the others, never kept. Choosing a state makes it one of viewerMarks
+// (addResolvedPart); the sheet going away any other way drops it (the
+// observer on #drawChoices).
+var pendMark=null;
 // What has been picked off the drawing on screen, washed over in colour so you
 // can see what you have already taken and what you still have to. It is a note
 // to yourself while the viewer is open, nothing more: it is not saved with the
@@ -5022,7 +5032,9 @@ function paintPartMarks(){
   box.style.transform=cv.style.transform;box.style.transformOrigin=cv.style.transformOrigin;
   if(!viewerPickMode||viewerPickPurpose!=="part")return;
   var w=cv.offsetWidth||1,h=cv.offsetHeight||1;
-  viewerMarks.forEach(function(m){
+  // (a number already taken and tapped again is painted once, not twice over)
+  var pend=pendMark&&!viewerMarks.some(function(o){return o.p===pendMark.p&&(o.m||"")===(pendMark.m||"")&&Math.abs(o.x-pendMark.x)<1e-4&&Math.abs(o.y-pendMark.y)<1e-4});
+  viewerMarks.concat(pend?[pendMark]:[]).forEach(function(m){
     if(m.p!==viewerPage||(m.m||"")!==curManId())return;
     var b=markRect(m,w,h),d=document.createElement("div");
     d.className="draw-mark";
@@ -5298,7 +5310,12 @@ function attemptPick(clientX,clientY){
   var posTok=(item.str.match(/\d+/)||[])[0];
   if(!posTok){setDrawStatus("Això no és un número de posició.");return}
   lastPickMark=partMark(item,cv);   // the part that comes out of this tap wears its colour here
+  pendMark=lastPickMark;paintPartMarks();          // and wears it from now
   resolvePartByPos(posTok);
+  // nothing came up to choose from (not in this drawing's list, no catalogue,
+  // or it went straight into the text): there is nothing pending
+  var dc=$$("drawChoices");
+  if(!dc||dc.style.display==="none"){pendMark=null;paintPartMarks()}
 }
 function addResolvedPart(r,qty,st){
   var cant=(qty===undefined||qty===null)?r.cant:String(qty).trim();
@@ -5343,6 +5360,7 @@ function confirmAndAdd(r){
   if(viewerPickPurpose==="text"){insertPartText(r);return}
   var box=$$("drawChoices");
   if(!box){addResolvedPart(r);return} // no panel available: keep the old behaviour
+  if(r.set&&pendMark){pendMark=null;paintPartMarks()}   // the whole drawing was asked for, not the number tapped before
   // (new design) a sheet under the drawing: what was tapped, how many, and one
   // button for each thing it can be. The look is .draw-pick in the stylesheet;
   // what each button does is what it always did.
@@ -5487,6 +5505,9 @@ $$("drawCanvas").addEventListener("click",function(e){if(viewerPickMode)attemptP
   if(!dc||!m||typeof MutationObserver==="undefined")return;
   new MutationObserver(function(){
     m.classList.toggle("picking",dc.classList.contains("draw-pick")&&dc.style.display!=="none");
+    // the sheet has gone: the number it was about is no longer pending. If a
+    // state was chosen it is already among the marks and stays coloured.
+    if(dc.style.display==="none"&&pendMark){pendMark=null;paintPartMarks()}
   }).observe(dc,{attributes:true,attributeFilter:["style","class"]});
 })();
 function closeDrawings(){
@@ -8251,7 +8272,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 25";
+var APP_VERSION="nou · 2026-11-15 · 26";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();

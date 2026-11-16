@@ -1550,6 +1550,8 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
           <option value="maintenance">Manteniment (MNT)</option>
           <option value="retrofit">Millora / Retrofit (RET)</option>
           <option value="production">Prova de producció (PRD)</option>
+          <option value="assembly">Muntatge (MUN)</option>
+          <option value="setup">Posada a punt i proves de format (PAP)</option>
           <option value="fat">Acceptació en fàbrica (FAT)</option>
         </select>
       </div>
@@ -2320,7 +2322,14 @@ var TM = {
   // (nou · 2026-11-16 · 1) "proves a l'empresa, amb un vocabulari més tècnic":
   // the machine tested at the builder's before it ships — the factory
   // acceptance test, FAT in every language of the trade.
-  fat:          {label:"Acceptació en fàbrica",abbr:"FAT",bg:"rgba(14,116,144,.13)",tx:"#0e7490",bd:"rgba(14,116,144,.5)"}
+  fat:          {label:"Acceptació en fàbrica",abbr:"FAT",bg:"rgba(14,116,144,.13)",tx:"#0e7490",bd:"rgba(14,116,144,.5)"},
+  // (2026-11-16 · 2) "Més aviat estic fent els ajustos i provant els diferents
+  // formats. El FAT vindrà més tard, així que necessito un altre que reflecteixi
+  // el que estic fent. També ha d'haver-hi un altre de muntatge." The work at
+  // the builder's has three stages and each is a kind of visit: the machine
+  // is assembled, then set up and tried format by format, then accepted.
+  assembly:     {label:"Muntatge",abbr:"MUN",bg:"rgba(71,85,105,.13)",tx:"#475569",bd:"rgba(71,85,105,.5)"},
+  setup:        {label:"Posada a punt i proves de format",abbr:"PAP",bg:"rgba(79,70,229,.12)",tx:"#4f46e5",bd:"rgba(79,70,229,.5)"}
 };
 // The kind of visit in a report's language. A label table translated before a
 // kind existed (the languages beyond ca/es/en are translated once and kept)
@@ -8365,7 +8374,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-16 · 1";
+var APP_VERSION="nou · 2026-11-16 · 2";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -8688,7 +8697,7 @@ function ctrSum(){
 }
 function prodChipHTML(s){
   var l=(s&&s.prodTests)||[];
-  if(!l.length&&s.type!=="production"&&s.type!=="fat")return "<span id=\"pdChip\" style=\"cursor:pointer;color:var(--tx3)\" title=\"Registra una prova de producció i en calcula l'OEE\">&#128200; Prova de producció</span>";
+  if(!l.length&&s.type!=="production"&&s.type!=="fat"&&s.type!=="setup")return "<span id=\"pdChip\" style=\"cursor:pointer;color:var(--tx3)\" title=\"Registra una prova de producció i en calcula l'OEE\">&#128200; Prova de producció</span>";
   var run=l.some(function(t){return t.running});
   return "<span id=\"pdChip\" style=\"cursor:pointer"+(run?";color:var(--gold);font-weight:700":"")+"\" title=\"Les proves de producció d'aquesta visita\">&#128200; "
     +(run?uiT("Prova en curs"):(l.length?pl(l.length,"prova de producció","proves de producció"):"Afegeix la prova de producció"))+"</span>";
@@ -9497,7 +9506,7 @@ function dlBlob(blob,filename){
 // manual's data — part names, references — always stays as the manual has it.
 var RPT={
   ca:{title:"Informe de servei tècnic",gen:"Generat el",partial:"Informe parcial — filtre {q}: {n} de {t} entrades",
-      types:{commissioning:"Posada en marxa",maintenance:"Manteniment",retrofit:"Millora / Retrofit",production:"Prova de producció",fat:"Prova d'acceptació en fàbrica (FAT)"},
+      types:{commissioning:"Posada en marxa",maintenance:"Manteniment",retrofit:"Millora / Retrofit",production:"Prova de producció",fat:"Prova d'acceptació en fàbrica (FAT)",assembly:"Muntatge",setup:"Posada a punt i proves de format"},
       sev:{info:"INFO",ok:"OK",warning:"AVÍS",issue:"PROBLEMA"},
       client:"Client",contact:"Persona de contacte",project:"Número de projecte",machine:"Màquina / Equip",machineNo:"Núm. de màquina / equip",phone:"Telèfon",email:"Correu electrònic",year:"Any de fabricació",gClient:"Client",gEquip:"Equip",gVisit:"Visita",location:"Ubicació",tech:"Tècnic",
       start:"Inici",status:"Estat",open:"Oberta",closed:"Tancada",
@@ -9514,7 +9523,7 @@ var RPT={
          date:"Data",sev:"Gravetat",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunt",grup:"Grup / Dibuix",
          page:"Pàgina",project:"Projecte",type:"Tipus",gen:"Generat",lines:"Recanvis (línies)",refs:"Referències diferents"}},
   es:{title:"Informe de servicio técnico",gen:"Generado el",partial:"Informe parcial — filtro {q}: {n} de {t} entradas",
-      types:{commissioning:"Puesta en marcha",maintenance:"Mantenimiento",retrofit:"Mejora / Retrofit",production:"Prueba de producción",fat:"Prueba de aceptación en fábrica (FAT)"},
+      types:{commissioning:"Puesta en marcha",maintenance:"Mantenimiento",retrofit:"Mejora / Retrofit",production:"Prueba de producción",fat:"Prueba de aceptación en fábrica (FAT)",assembly:"Montaje",setup:"Puesta a punto y pruebas de formato"},
       sev:{info:"INFO",ok:"OK",warning:"AVISO",issue:"PROBLEMA"},
       client:"Cliente",contact:"Persona de contacto",project:"Número de proyecto",machine:"Máquina / Equipo",machineNo:"N.º de máquina / equipo",phone:"Teléfono",email:"Correo electrónico",year:"Año de fabricación",gClient:"Cliente",gEquip:"Equipo",gVisit:"Visita",location:"Ubicación",tech:"Técnico",
       start:"Inicio",status:"Estado",open:"Abierta",closed:"Cerrada",
@@ -9531,7 +9540,7 @@ var RPT={
          date:"Fecha",sev:"Gravedad",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunto",grup:"Grupo / Plano",
          page:"Página",project:"Proyecto",type:"Tipo",gen:"Generado",lines:"Recambios (líneas)",refs:"Referencias distintas"}},
   en:{title:"Field Service Report",gen:"Generated on",partial:"Partial report — filter {q}: {n} of {t} entries",
-      types:{commissioning:"Commissioning",maintenance:"Maintenance",retrofit:"Upgrade / Retrofit",production:"Production test",fat:"Factory acceptance test (FAT)"},
+      types:{commissioning:"Commissioning",maintenance:"Maintenance",retrofit:"Upgrade / Retrofit",production:"Production test",fat:"Factory acceptance test (FAT)",assembly:"Assembly",setup:"Set-up and format trials"},
       sev:{info:"INFO",ok:"OK",warning:"WARNING",issue:"ISSUE"},
       client:"Client",contact:"Contact",project:"Project Number",machine:"Machine / Equipment",machineNo:"Machine / equipment no.",phone:"Phone",email:"Email",year:"Year of manufacture",gClient:"Client",gEquip:"Equipment",gVisit:"Visit",location:"Location",tech:"Technician",
       start:"Start",status:"Status",open:"Open",closed:"Closed",
@@ -20210,6 +20219,8 @@ function nvSumClick(ev){
     "Suggerida: ara. La pots canviar.":"Sugerida: ahora. La puedes cambiar.",
     "La data i hora de la resolució no són vàlides.":"La fecha y hora de la resolución no son válidas.",
     "Acceptació en fàbrica":"Aceptación en fábrica","Acceptació en fàbrica (FAT)":"Aceptación en fábrica (FAT)",
+    "Muntatge":"Montaje","Muntatge (MUN)":"Montaje (MUN)",
+    "Posada a punt i proves de format":"Puesta a punto y pruebas de formato","Posada a punt i proves de format (PAP)":"Puesta a punto y pruebas de formato (PAP)",
     "Hi ha un filtre actiu al registre: {q}.\n\nAccepta per fer el document només amb el que deixa el filtre (sortirà marcat com a parcial), o cancel·la per fer-lo sencer.":"Hay un filtro activo en el registro: {q}.\n\nAcepta para hacer el documento solo con lo que deja el filtro (saldrá marcado como parcial), o cancela para hacerlo entero."};
   var en={"Índex":"Index","Esquema elèctric":"Electrical schematic","Materials elèctrics":"Electrical materials","Llistes del manual":"The manual's lists",
     "Pàgines marcades":"Marked pages","Índex del manual":"The manual's contents","Tot el manual":"Whole manual","pàg.":"p.","Pàg.":"Page","Full":"Sheet",
@@ -20228,6 +20239,8 @@ function nvSumClick(ev){
     "Suggerida: ara. La pots canviar.":"Suggested: now. You can change it.",
     "La data i hora de la resolució no són vàlides.":"The date and time of the resolution are not valid.",
     "Acceptació en fàbrica":"Factory acceptance","Acceptació en fàbrica (FAT)":"Factory acceptance test (FAT)",
+    "Muntatge":"Assembly","Muntatge (MUN)":"Assembly (MUN)",
+    "Posada a punt i proves de format":"Set-up and format trials","Posada a punt i proves de format (PAP)":"Set-up and format trials (PAP)",
     "Hi ha un filtre actiu al registre: {q}.\n\nAccepta per fer el document només amb el que deixa el filtre (sortirà marcat com a parcial), o cancel·la per fer-lo sencer.":"There is a filter active in the log: {q}.\n\nAccept to make the document with only what the filter leaves (it will be marked as partial), or cancel to make it whole."};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};

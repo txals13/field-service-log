@@ -4929,6 +4929,25 @@ tag "PROVA D'ACCEPTACIÓ EN FÀBRICA (FAT)". NOT checked: a real photo's EXIF
 time (the test file's own date was used), a video, the PDF and Word with the
 new kind, a report in a language beyond ca/es/en.
 
+**Two more kinds: assembly, and set-up with format trials (version `nou · 2026-11-16 · 2`).**
+He kept FAT ("Sí, FAT") and then said what he is actually doing now: "Més
+aviat estic fent els ajustos i provant els diferents formats. El FAT vindrà
+més tard, així que necessito un altre que reflecteixi el que estic fent.
+També ha d'haver-hi un altre de muntatge." The work at the builder's has
+three stages and each is a kind of visit:
+
+| key | selector | reports ca / es / en |
+|---|---|---|
+| `assembly` | Muntatge (MUN) | Muntatge / Montaje / Assembly |
+| `setup` | Posada a punt i proves de format (PAP) | Posada a punt i proves de format / Puesta a punto y pruebas de formato / Set-up and format trials |
+| `fat` | Acceptació en fàbrica (FAT) | Prova d'acceptació en fàbrica (FAT) / … |
+
+The names for `setup` are mine (he gave the description, not the name); he
+was asked. A `setup` visit's chip for the production tests reads as
+available, like FAT's: trying a format is a production test. Checked in the
+preview: the seven kinds in the selector; saved as each of the two, the
+visit's page and the HTML report's tag and line carry the name.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

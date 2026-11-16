@@ -4872,6 +4872,63 @@ into the visit → no filter row, whole report. NOT checked: his device; the
 summary's documents and the desktop page's button (same code path as the
 tests' button); a text filter.
 
+### The resolution has its own time; a new kind of visit, FAT (2026-11-16, version `nou · 2026-11-16 · 1`)
+
+Two things in one message.
+
+**1. "Poder afegir hores a la resolució d'incidències. Si hi ha media, la de
+media. Si no, suggereix en el moment de generar la nota de resolució i que es
+pugui canviar."** `fix.ts` was the moment the resolution was first SAVED and
+could neither be seen nor changed while writing it: a problem fixed at 10:40
+and written up at 17:00 read "resolt 17:00", and "resolt en …" was wrong.
+
+- "Com ha quedat" in the edit window has **"Data i hora de la resolució"**
+  (`#fTs`, with "Ara" beside it) and a line under it that says where the
+  time comes from (`fixTsShow`).
+- The rule is the entry's own (see ENTRY ORDER):
+  - a time typed by hand wins for good — `fix.tsManual`;
+  - else the earliest time of the resolution's own photos or videos —
+    `fix.tsFromPhoto` (the field follows as each photo's time is read:
+    `renderThumbs("fix")` calls `fixTsShow`);
+  - else the time it already had; on a new one, the moment "Afegeix com ha
+    quedat" was tapped (`fTsSug`), shown in the field to be changed.
+- `saveEdit` settles it after the photos' times are in (the same wait the
+  entry's own time has). A field left at the minute it already showed keeps
+  the stored seconds.
+- Everything that reads `fix.ts` follows by itself: the log, "resolt en", the
+  incidents table, the reports.
+
+**2. "A la fulla Edit the service visit, al globus TYPE, hi hagi també un que
+sigui proves a l'empresa amb un vocabulari més tècnic."** Read as: one more
+kind of visit, for the machine tested at the builder's before it ships, named
+by its technical term — **FAT, factory acceptance test**. He was told that
+reading.
+
+- `type:"fat"`: the Tipus selector has "Acceptació en fàbrica (FAT)"; `TM.fat`
+  (label "Acceptació en fàbrica", abbr FAT, teal); in the reports
+  `types.fat` = "Prova d'acceptació en fàbrica (FAT)" / "Prueba de aceptación
+  en fábrica (FAT)" / "Factory acceptance test (FAT)".
+- **`typeLabel(R,type)`** replaces `R.types[x]||R.types.commissioning` in the
+  five builders: a label table translated before a kind existed (the
+  languages beyond ca/es/en are translated once and kept) does not have it —
+  it gets the English name, never "Commissioning".
+- A FAT visit's chip for the production tests reads as available, like a
+  production-test visit's. It does not open the tests' list by itself on
+  being created (that stays the production test's).
+- `nou/` only: **a visit of kind `fat` opened in the app in use shows as
+  "Posada en marxa"** there (its fallback) until the day of the switch.
+
+Checked in the preview at 375 px: a new resolution proposes now, says so, and
+keeps it on saving; opened again it shows its own time; a photo taken at
+10:40 moves the field to 10:40 with the camera note and is saved as the
+photo's; a time typed (11:05) is saved as hand-set and stays on reopening;
+"Ara" after a photo wins over the photo; the HTML report reads "COM HA
+QUEDAT · OK · 11:05:00 · resolt en 50 min". The selector has the fifth
+kind; saved, the visit's card says "Acceptació en fàbrica" and the report's
+tag "PROVA D'ACCEPTACIÓ EN FÀBRICA (FAT)". NOT checked: a real photo's EXIF
+time (the test file's own date was used), a video, the PDF and Word with the
+new kind, a report in a language beyond ca/es/en.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

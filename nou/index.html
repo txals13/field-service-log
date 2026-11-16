@@ -1550,6 +1550,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
           <option value="maintenance">Manteniment (MNT)</option>
           <option value="retrofit">Millora / Retrofit (RET)</option>
           <option value="production">Prova de producció (PRD)</option>
+          <option value="fat">Acceptació en fàbrica (FAT)</option>
         </select>
       </div>
       <div class="modal-actions">
@@ -2185,6 +2186,15 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
             <option value="issue">&#9632; Problema &mdash; segueix obert</option>
           </select>
         </div>
+        <!-- When it was resolved (fixTsShow): the photo's time when the
+             resolution has one, else a suggestion, and always changeable. -->
+        <div class="field"><label>Data i hora de la resoluci&oacute;</label>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <input type="datetime-local" id="fTs" step="60" style="width:auto;flex:1;min-width:190px">
+            <button type="button" class="btn-xs" id="fTsNow" title="Posa-hi l'hora d'ara">Ara</button>
+          </div>
+          <div id="fTsNote" data-noui style="font-size:11px;color:var(--tx3);margin-top:3px"></div>
+        </div>
         <div class="field"><label>Qu&egrave; s'hi ha fet</label><textarea id="fText" rows="3" style="resize:vertical"></textarea>
           <button class="btn-sm" id="fCorr" style="margin-top:6px" title="Corregeix ortografia i gramàtica">&#10003; Corregeix</button></div>
         <div id="fThumbs" class="thumbs"></div>
@@ -2306,8 +2316,18 @@ var TM = {
   commissioning:{label:"Posada en marxa",abbr:"COM",bg:"rgba(59,130,246,.15)",tx:"#3b82f6",bd:"rgba(59,130,246,.5)"},
   maintenance:  {label:"Manteniment",  abbr:"MNT",bg:"rgba(16,185,129,.12)",tx:"#10b981",bd:"rgba(16,185,129,.5)"},
   retrofit:     {label:"Millora / Retrofit",abbr:"RET",bg:"rgba(245,158,11,.12)",tx:"#f59e0b",bd:"rgba(245,158,11,.5)"},
-  production:   {label:"Prova de producció",abbr:"PRD",bg:"rgba(139,92,246,.15)",tx:"#8b5cf6",bd:"rgba(139,92,246,.5)"}
+  production:   {label:"Prova de producció",abbr:"PRD",bg:"rgba(139,92,246,.15)",tx:"#8b5cf6",bd:"rgba(139,92,246,.5)"},
+  // (nou · 2026-11-16 · 1) "proves a l'empresa, amb un vocabulari més tècnic":
+  // the machine tested at the builder's before it ships — the factory
+  // acceptance test, FAT in every language of the trade.
+  fat:          {label:"Acceptació en fàbrica",abbr:"FAT",bg:"rgba(14,116,144,.13)",tx:"#0e7490",bd:"rgba(14,116,144,.5)"}
 };
+// The kind of visit in a report's language. A label table translated before a
+// kind existed (the languages beyond ca/es/en are translated once and kept)
+// does not have it: English then, never another kind's name.
+function typeLabel(R,type){
+  return (R&&R.types&&R.types[type])||RPT.en.types[type]||(R&&R.types&&R.types.commissioning)||"";
+}
 var SM = {
   info:   {label:"INFO",   dot:"○",dc:"#5A6576",bg:"transparent",tx:"#3D4756"},
   ok:     {label:"OK",     dot:"●",dc:"#1F7A4D",bg:"rgba(31,122,77,.1)",tx:"#1F7A4D"},
@@ -2411,6 +2431,31 @@ var pExif=0, pExifEdit=0, pExifFix=0;
 var corrPrev={};   // "✓ Corregeix": the text as it was, so one more tap undoes it
 // The resolution being edited: its media, and whether the entry has one at all.
 var fImgs=[], fixOn=false;
+// THE RESOLUTION'S OWN TIME (nou · 2026-11-16 · 1). "Poder afegir hores a la
+// resolució d'incidències. Si hi ha media, la de media. Si no, suggereix el
+// moment de generar la nota de resolució, i que es pugui canviar." Until now
+// fix.ts was the moment the resolution was first SAVED and could not be seen
+// or changed while writing it: a problem fixed at 10:40 and written up at
+// 17:00 from the hotel read "resolt 17:00", and the time it took was wrong.
+// The rule is the entry's own (see ENTRY ORDER):
+//   - a time typed by hand wins for good (fix.tsManual);
+//   - else the earliest time of the resolution's own photos or videos
+//     (fix.tsFromPhoto) — taken when the thing was fixed;
+//   - else the time it already had, or, on a new one, the moment "Afegeix
+//     com ha quedat" was tapped (fTsSug), shown in the field to be changed.
+var fTsTouched=false, fTsSug="";
+function fixTsShow(){
+  var el=$$("fTs"),note=$$("fTsNote");if(!el||!note||!fixOn)return;
+  var act=sessions.find(function(s){return s.id===aid});
+  var en=act&&editingId&&(act.entries||[]).find(function(x){return x.id===editingId}),fx=en&&en.fix;
+  if(fTsTouched){note.textContent=nvT("Posada a mà.");return}
+  if(fx&&fx.tsManual){el.value=tsToInput(fx.ts);note.textContent=nvT("Posada a mà.");return}
+  var pts=earliestTs(fImgs);
+  if(pts){el.value=tsToInput(pts);note.textContent="\uD83D\uDCF7 "+nvT("L'hora de la foto o del vídeo de la resolució. La pots canviar.");return}
+  if(fx&&fx.ts){el.value=tsToInput(fx.ts);note.textContent=nvT("El moment en què es va escriure la resolució. La pots canviar.");return}
+  if(!fTsSug)fTsSug=now();
+  el.value=tsToInput(fTsSug);note.textContent=nvT("Suggerida: ara. La pots canviar.");
+}
 // The drawings can be opened from the entry COMPOSER too, not only from the
 // edit modal (2026-11-08): picking a part while writing the entry is the
 // normal order of things — you have the sheet in front of you — and having to
@@ -6836,6 +6881,7 @@ function photoDayWarn(bk,imgs,refDay){
   return "📷 "+(ks.length===1&&days[ks[0]]===1?uiT("Foto del"):uiT("Fotos del"))+" "+what+" — "+tail;
 }
 function renderThumbs(bk){
+  if(bk==="fix")fixTsShow();   // a photo added, or its time just read: the resolution's time follows
   var B=MB[bk],c=$$(B.thumbs);if(!c)return;c.innerHTML="";
   var refDay=photoDayRef(bk);
   B.get().forEach(function(img,i){
@@ -7852,6 +7898,7 @@ function openEdit(entryId){
   $$("eText").value=entry.text||"";
   var fx=entry.fix||null;
   fixOn=!!fx;fImgs=fx&&fx.images?fx.images.slice():[];
+  fTsTouched=false;fTsSug="";$$("fTs").value="";$$("fTsNote").textContent="";
   $$("fSev").value=(fx&&fx.severity)||"ok";
   $$("fText").value=(fx&&fx.text)||"";
   fillCloses(active,entry);
@@ -7893,6 +7940,8 @@ function saveEdit(){
   if(tsVal&&!newTs&&tsVal!==tsToInput(entry0&&entry0.ts)){alert(uiT("La data i hora no són vàlides."));return}
   var fixText=$$("fText").value.trim(),fixSev=$$("fSev").value;
   if(fixOn&&!fixText&&!fImgs.length){alert(uiT("Escriu què s'hi ha fet, o treu la resolució."));return}
+  var fTsVal=$$("fTs").value,fTsNew=(fixOn&&fTsTouched&&fTsVal)?inputToTs(fTsVal):null;
+  if(fixOn&&fTsTouched&&fTsVal&&!fTsNew){alert(nvT("La data i hora de la resolució no són vàlides."));return}
   function tryS(){
     if((pExifEdit>0||pExifFix>0)&&waited<3000){var b=$$("eSave");if(b){b.disabled=true;b.textContent="Processant…"}waited+=150;setTimeout(tryS,150);return}
     var b2=$$("eSave");if(b2){b2.disabled=false;b2.innerHTML="✓ Desa els canvis"}
@@ -7909,9 +7958,21 @@ function saveEdit(){
       // take it back the next time this entry is saved.
       if(newTs){up.ts=newTs;up.tsManual=true;delete up.tsFromPhoto}
       else if(pts&&!up.tsManual&&up.ts!==pts){up.ts=pts;up.tsFromPhoto=true}
-      // The resolution keeps the moment it was first written down.
-      if(fixOn)up.fix={severity:fixSev,text:fixText,images:fImgs.slice(),
-                       ts:(en.fix&&en.fix.ts)||now(),editedAt:en.fix?now():null};
+      // The resolution's time: typed by hand, else its photo's, else the one
+      // it had or the one suggested when it was started (see fixTsShow).
+      if(fixOn){
+        var ofx=en.fix||null,fpts=earliestTs(fImgs),fts2,fman=false,fpho=false;
+        if(fTsNew){
+          // untouched in effect (the same minute it already showed): its seconds stay
+          fts2=(ofx&&ofx.ts&&tsToInput(ofx.ts)===fTsVal)?ofx.ts:fTsNew;fman=true;
+        }
+        else if(ofx&&ofx.tsManual){fts2=ofx.ts;fman=true}
+        else if(fpts){fts2=fpts;fpho=true}
+        else fts2=(ofx&&ofx.ts)||fTsSug||now();
+        up.fix={severity:fixSev,text:fixText,images:fImgs.slice(),ts:fts2,editedAt:ofx?now():null};
+        if(fman)up.fix.tsManual=true;
+        if(fpho)up.fix.tsFromPhoto=true;
+      }
       else delete up.fix;
       var sd=shortDesc(text,newTag);
       autoNameMedia(up.images,sd);
@@ -7950,10 +8011,12 @@ $$("eRec").addEventListener("click",function(){if(mediaRec&&recBk==="edit")stopR
 $$("eSev").addEventListener("change",renderFixUI);
 wireCorrect("eCorr","eText");
 wireCorrect("fCorr","fText");
-$$("fixAdd").addEventListener("click",function(){fixOn=true;renderFixUI();rFThumbs();setTimeout(function(){focusField($$("fText"))},50)});
+$$("fixAdd").addEventListener("click",function(){fixOn=true;fTsTouched=false;fTsSug=now();renderFixUI();rFThumbs();setTimeout(function(){focusField($$("fText"))},50)});
+$$("fTs").addEventListener("input",function(){fTsTouched=true;fixTsShow()});
+$$("fTsNow").addEventListener("click",function(){$$("fTs").value=tsToInput(now());fTsTouched=true;fixTsShow()});
 $$("fixDel").addEventListener("click",function(){
   if(($$("fText").value.trim()||fImgs.length)&&!confirm(uiT("Vols treure la resolució d'aquesta entrada? El problema i la seva descripció es queden com estan.")))return;
-  fixOn=false;fImgs=[];$$("fText").value="";renderFixUI();
+  fixOn=false;fImgs=[];$$("fText").value="";fTsTouched=false;fTsSug="";$$("fTs").value="";renderFixUI();
 });
 $$("fAddPhoto").addEventListener("click",function(){pickMedia("fFileIn",function(e){handleFiles(e,"fix")})});
 wireCapture("fCam","fCamIn","fix");
@@ -8302,7 +8365,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-15 · 28";
+var APP_VERSION="nou · 2026-11-16 · 1";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -8625,7 +8688,7 @@ function ctrSum(){
 }
 function prodChipHTML(s){
   var l=(s&&s.prodTests)||[];
-  if(!l.length&&s.type!=="production")return "<span id=\"pdChip\" style=\"cursor:pointer;color:var(--tx3)\" title=\"Registra una prova de producció i en calcula l'OEE\">&#128200; Prova de producció</span>";
+  if(!l.length&&s.type!=="production"&&s.type!=="fat")return "<span id=\"pdChip\" style=\"cursor:pointer;color:var(--tx3)\" title=\"Registra una prova de producció i en calcula l'OEE\">&#128200; Prova de producció</span>";
   var run=l.some(function(t){return t.running});
   return "<span id=\"pdChip\" style=\"cursor:pointer"+(run?";color:var(--gold);font-weight:700":"")+"\" title=\"Les proves de producció d'aquesta visita\">&#128200; "
     +(run?uiT("Prova en curs"):(l.length?pl(l.length,"prova de producció","proves de producció"):"Afegeix la prova de producció"))+"</span>";
@@ -9434,7 +9497,7 @@ function dlBlob(blob,filename){
 // manual's data — part names, references — always stays as the manual has it.
 var RPT={
   ca:{title:"Informe de servei tècnic",gen:"Generat el",partial:"Informe parcial — filtre {q}: {n} de {t} entrades",
-      types:{commissioning:"Posada en marxa",maintenance:"Manteniment",retrofit:"Millora / Retrofit",production:"Prova de producció"},
+      types:{commissioning:"Posada en marxa",maintenance:"Manteniment",retrofit:"Millora / Retrofit",production:"Prova de producció",fat:"Prova d'acceptació en fàbrica (FAT)"},
       sev:{info:"INFO",ok:"OK",warning:"AVÍS",issue:"PROBLEMA"},
       client:"Client",contact:"Persona de contacte",project:"Número de projecte",machine:"Màquina / Equip",machineNo:"Núm. de màquina / equip",phone:"Telèfon",email:"Correu electrònic",year:"Any de fabricació",gClient:"Client",gEquip:"Equip",gVisit:"Visita",location:"Ubicació",tech:"Tècnic",
       start:"Inici",status:"Estat",open:"Oberta",closed:"Tancada",
@@ -9451,7 +9514,7 @@ var RPT={
          date:"Data",sev:"Gravetat",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunt",grup:"Grup / Dibuix",
          page:"Pàgina",project:"Projecte",type:"Tipus",gen:"Generat",lines:"Recanvis (línies)",refs:"Referències diferents"}},
   es:{title:"Informe de servicio técnico",gen:"Generado el",partial:"Informe parcial — filtro {q}: {n} de {t} entradas",
-      types:{commissioning:"Puesta en marcha",maintenance:"Mantenimiento",retrofit:"Mejora / Retrofit",production:"Prueba de producción"},
+      types:{commissioning:"Puesta en marcha",maintenance:"Mantenimiento",retrofit:"Mejora / Retrofit",production:"Prueba de producción",fat:"Prueba de aceptación en fábrica (FAT)"},
       sev:{info:"INFO",ok:"OK",warning:"AVISO",issue:"PROBLEMA"},
       client:"Cliente",contact:"Persona de contacto",project:"Número de proyecto",machine:"Máquina / Equipo",machineNo:"N.º de máquina / equipo",phone:"Teléfono",email:"Correo electrónico",year:"Año de fabricación",gClient:"Cliente",gEquip:"Equipo",gVisit:"Visita",location:"Ubicación",tech:"Técnico",
       start:"Inicio",status:"Estado",open:"Abierta",closed:"Cerrada",
@@ -9468,7 +9531,7 @@ var RPT={
          date:"Fecha",sev:"Gravedad",tag:"Etiqueta",entry:"Entrada",pos:"Pos.",conj:"Conjunto",grup:"Grupo / Plano",
          page:"Página",project:"Proyecto",type:"Tipo",gen:"Generado",lines:"Recambios (líneas)",refs:"Referencias distintas"}},
   en:{title:"Field Service Report",gen:"Generated on",partial:"Partial report — filter {q}: {n} of {t} entries",
-      types:{commissioning:"Commissioning",maintenance:"Maintenance",retrofit:"Upgrade / Retrofit",production:"Production test"},
+      types:{commissioning:"Commissioning",maintenance:"Maintenance",retrofit:"Upgrade / Retrofit",production:"Production test",fat:"Factory acceptance test (FAT)"},
       sev:{info:"INFO",ok:"OK",warning:"WARNING",issue:"ISSUE"},
       client:"Client",contact:"Contact",project:"Project Number",machine:"Machine / Equipment",machineNo:"Machine / equipment no.",phone:"Phone",email:"Email",year:"Year of manufacture",gClient:"Client",gEquip:"Equipment",gVisit:"Visit",location:"Location",tech:"Technician",
       start:"Start",status:"Status",open:"Open",closed:"Closed",
@@ -13283,7 +13346,7 @@ function mhRender(cur,all,L,forPrint,stampLbl){
     +all.map(function(x,i){
       var c=x._counts||severityCounts(x.entries||[]),r=curRev(x),isCur=x.id===cur.id&&!forPrint;
       var rng=rg(x),issues=mhCardIssues(x,closed,all,L),here=mhClosedHere(x,all,L);
-      var bits=[esc((L.types&&L.types[x.type])||L.types.commissioning)];
+      var bits=[esc(typeLabel(L,x.type))];
       if(x.project)bits.push(esc(x.project));
       if(r)bits.push(esc(L.revLbl)+" "+("0"+r.n).slice(-2));
       if(x.status==="closed")bits.push("<span style=\"color:"+MH_RED+"\">"+esc(L.closed)+"</span>");
@@ -14619,7 +14682,7 @@ function buildReportHTML(s,forPrint,lang,rev,opts){
   s=clientCopy(s);
   var local=!!(opts&&opts.local);
   lang=RPT[lang]?lang:"ca";
-  var R=RPT[lang],tm=TM[s.type]||TM.commissioning,tl=R.types[s.type]||R.types.commissioning;
+  var R=RPT[lang],tm=TM[s.type]||TM.commissioning,tl=typeLabel(R,s.type);
   var entries=s.entries||[];
   var cnt=severityCounts(entries),errs=cnt.issue,warns=cnt.warning,oks=cnt.ok;
   // The pictures, in log order, for the appendix of large photos at the end.
@@ -16408,7 +16471,7 @@ async function buildPdfBlob(s,lang,rev,opts){
   var doc=new L.jsPDF({unit:"mm",format:"a4"});
   pdfLightHeads(doc);
   var M=14,W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),CW=W-M*2;
-  var tl=R.types[s.type]||R.types.commissioning,entries=s.entries||[];
+  var tl=typeLabel(R,s.type),entries=s.entries||[];
   var cnt=severityCounts(entries);
   var y=M;
   // Everything the technician can have typed in a script helvetica can't draw.
@@ -16992,7 +17055,7 @@ async function buildXlsxBlob(s,lang,rev,opts){
 
   // Sheet 3 — who/what/when this list belongs to
   var info=[[R.client,s.client||""],[R.contact,contactLine(s)]].concat(s.contactPhone?[[R.phone,s.contactPhone]]:[],s.contactEmail?[[R.email,s.contactEmail]]:[]).concat([[C.project,s.project||""],[R.machine,s.machine||""]].concat(s.machineNo?[[R.machineNo,s.machineNo]]:[],s.year?[[R.year,s.year]]:[],[[R.location,s.location||""],
-            [R.tech,s.tech||""],[C.type,R.types[s.type]||R.types.commissioning],[R.start,fts(sessionStartTs(s))],
+            [R.tech,s.tech||""],[C.type,typeLabel(R,s.type)],[R.start,fts(sessionStartTs(s))],
             [R.status,s.status==="open"?R.open:R.closed],
             [R.revLbl,rev?("0"+rev.n).slice(-2)+" · "+dmy(rev.date):""],
             [C.gen,fts(new Date().toISOString())],[C.lines,items.length],[C.refs,summarizeParts(items).length]]));
@@ -17059,7 +17122,7 @@ async function buildDocxDocument(D,s,lang,rev,opts){
   s=clientCopy(s);
   var local=!!(opts&&opts.local);
   var R=RPT[lang]||RPT.ca;
-  var tl=R.types[s.type]||R.types.commissioning,entries=s.entries||[];
+  var tl=typeLabel(R,s.type),entries=s.entries||[];
   var cnt=severityCounts(entries),errs=cnt.issue,warns=cnt.warning,oks=cnt.ok;
   var MM=56.6929,M=14,PGW=210,CW=PGW-M*2;      // mm → twips, and the PDF's page
   function tw(mm){return Math.round(mm*MM)}
@@ -20140,6 +20203,13 @@ function nvSumClick(ev){
     "Tria una foto que ja tens al telèfon o a l'ordinador":"Elige una foto que ya tienes en el teléfono o en el ordenador",
     "pujant…":"subiendo…","no s'ha pogut pujar a Drive":"no se ha podido subir a Drive",
     "Cap prova de producció coincideix amb el filtre.":"Ninguna prueba de producción coincide con el filtro.",
+    // the resolution's time and the FAT kind of visit (2026-11-16 · 1)
+    "Data i hora de la resolució":"Fecha y hora de la resolución","Posa-hi l'hora d'ara":"Pon la hora de ahora","Posada a mà.":"Puesta a mano.",
+    "L'hora de la foto o del vídeo de la resolució. La pots canviar.":"La hora de la foto o del vídeo de la resolución. La puedes cambiar.",
+    "El moment en què es va escriure la resolució. La pots canviar.":"El momento en que se escribió la resolución. La puedes cambiar.",
+    "Suggerida: ara. La pots canviar.":"Sugerida: ahora. La puedes cambiar.",
+    "La data i hora de la resolució no són vàlides.":"La fecha y hora de la resolución no son válidas.",
+    "Acceptació en fàbrica":"Aceptación en fábrica","Acceptació en fàbrica (FAT)":"Aceptación en fábrica (FAT)",
     "Hi ha un filtre actiu al registre: {q}.\n\nAccepta per fer el document només amb el que deixa el filtre (sortirà marcat com a parcial), o cancel·la per fer-lo sencer.":"Hay un filtro activo en el registro: {q}.\n\nAcepta para hacer el documento solo con lo que deja el filtro (saldrá marcado como parcial), o cancela para hacerlo entero."};
   var en={"Índex":"Index","Esquema elèctric":"Electrical schematic","Materials elèctrics":"Electrical materials","Llistes del manual":"The manual's lists",
     "Pàgines marcades":"Marked pages","Índex del manual":"The manual's contents","Tot el manual":"Whole manual","pàg.":"p.","Pàg.":"Page","Full":"Sheet",
@@ -20152,6 +20222,12 @@ function nvSumClick(ev){
     "Tria una foto que ja tens al telèfon o a l'ordinador":"Pick a photo you already have on the phone or the computer",
     "pujant…":"uploading…","no s'ha pogut pujar a Drive":"could not be uploaded to Drive",
     "Cap prova de producció coincideix amb el filtre.":"No production test matches the filter.",
+    "Data i hora de la resolució":"Date and time of the resolution","Posa-hi l'hora d'ara":"Set it to now","Posada a mà.":"Set by hand.",
+    "L'hora de la foto o del vídeo de la resolució. La pots canviar.":"The time of the resolution's photo or video. You can change it.",
+    "El moment en què es va escriure la resolució. La pots canviar.":"The moment the resolution was written. You can change it.",
+    "Suggerida: ara. La pots canviar.":"Suggested: now. You can change it.",
+    "La data i hora de la resolució no són vàlides.":"The date and time of the resolution are not valid.",
+    "Acceptació en fàbrica":"Factory acceptance","Acceptació en fàbrica (FAT)":"Factory acceptance test (FAT)",
     "Hi ha un filtre actiu al registre: {q}.\n\nAccepta per fer el document només amb el que deixa el filtre (sortirà marcat com a parcial), o cancel·la per fer-lo sencer.":"There is a filter active in the log: {q}.\n\nAccept to make the document with only what the filter leaves (it will be marked as partial), or cancel to make it whole."};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};

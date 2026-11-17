@@ -5034,6 +5034,35 @@ window; the ✕ takes it out without opening it; no console error. NOT
 checked: a video in any of the three, the resolution's strip (same code,
 not exercised), and a phone.
 
+**The visit's menu, by the moment of the visit (version `nou · 2026-11-17 ·
+5`).** After the Menú page he asked for the same on the window the ⋮ of a
+visit opens (`openM2More`, `#m2MoreList`). It had two groups, INFORME with
+four rows and VISITA with up to fourteen unrelated ones, emoji for icons, and
+"Elimina la visita" right under "Tanca la visita". Three orders went on a
+canvas (his, private) and he chose B. Now: **Durant la visita** (Comptadors,
+Proves de producció, Despeses, Notes generals, Cerca al registre),
+**Consulta** (Manual de recanvis, Dibuixos, Historial de la màquina, Carpeta
+de Drive), **Informe** (Resum, Revisa i signa, Informe i exportació, Full
+d'hores), **Visita** (Dades de la visita, Desa a Drive, Sincronitza ara,
+Tanca / Reobre la visita), and "Elimina la visita" alone at the bottom, in
+red. Every row does what it did and appears under the same conditions; a
+group left with no rows is not drawn. A card per group (`.nm-card`, the
+Menú page's), headings `.nv-msec`, rows `.m2-more-it` as a grid — icon tile
+(`.nm-ic`, line icons from `NV_IC`; twelve were added: right, clip, dl,
+receipt, note, ruler, folder, cloudup, sync, check, undo, trash), label, and
+the state plus a chevron at the right (`.nm-go`, at most 46 % of the row; a
+long label wraps to two lines on a phone). The headings are new strings only
+for "Durant la visita" and "Consulta" (es/en added); "Informe" and "Visita"
+already had theirs. "Resum de la visita" and "Tanca la visita" still open the
+same window: I pointed it out, he has not said to merge them. Checked in the
+preview, signed out, on the demo visit: at 1280 px and at 375 px the order,
+the icons and the red row; Comptadors, Proves, Resum, Dades and Elimina each
+close the menu and open their window; Despeses appears with the module on;
+dark theme; Spanish and English; no console error; the translation checker
+still at 33. NOT checked: a signed-in visit (Desa a Drive, Sincronitza ara,
+a linked manual, Dibuixos), a closed visit ("Reobre la visita"), a real
+phone.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

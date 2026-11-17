@@ -716,7 +716,7 @@ textarea:focus,input[type=text]:focus,input[type=tel]:focus,input[type=email]:fo
 .nv-chip.ok i{background:#3DD68C}.nv-chip.wait i{background:#F0A92E}.nv-chip.busy i{background:#6BA0FF}
 body.nv-shell .topbar #nvBack,body.nv-shell .topbar #nvRep,body.nv-shell .topbar #btnM2More,body.nv-shell #m2Title{display:none!important}
 body.nv-visit .topbar{padding:8px 8px 10px;gap:4px}
-body.nv-visit .topbar .logo,body.nv-visit .topbar #btnSide,body.nv-visit .topbar>#nvChip{display:none!important}
+body.nv-visit .topbar .logo,body.nv-visit .topbar>#nvChip{display:none!important}
 body.nv-visit #m2Title{display:flex!important;flex-direction:column;gap:3px;flex:1;min-width:0}
 #m2Title .t1{display:flex;align-items:center;gap:8px;font-size:17px;line-height:1.25;font-weight:700;min-width:0}
 #m2Title .t1 span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1482,7 +1482,8 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
     </div>
     <button class="nv-ic" id="nvRep" title="Obre el menú d'informes d'aquesta visita" aria-label="Informe"><svg class="nv-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></button>
     <button class="nv-ic" id="btnM2More" title="Més: informe, historial, carpeta, dades…" aria-label="Més"><svg class="nv-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>
-    <button class="nv-ic" id="btnSide" title="Menú" aria-label="Menú"><svg class="nv-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <!-- (2026-11-17) The menu button that was here is gone: Menú is in the
+         bar at the bottom (the side bar from 701 px), and one way in is enough. -->
   </div>
   <div class="body">
     <nav id="nvNav" aria-label="Navegació principal"></nav>
@@ -6331,7 +6332,6 @@ function libFail(msg){
 // ── SIDEBAR ──────────────────────────────────────────────────────────────────
 function openSide(){m2Side();$$("sidebar").classList.remove("collapsed");$$("sidebar").classList.add("open");$$("overlay").style.display="block"}
 function closeSide(){$$("sidebar").classList.remove("open");$$("overlay").style.display="none";navSideRoot=false}
-$$("btnSide").addEventListener("click",function(){nvGo(nvView==="menu"?"home":"menu")});
 $$("btnSideX").addEventListener("click",closeSide);
 $$("sessFiltIn").addEventListener("input",function(e){sessFilterTxt=e.target.value;debSidebarRender()});
 $$("overlay").addEventListener("click",closeSide);
@@ -8415,7 +8415,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-17 · 2";
+var APP_VERSION="nou · 2026-11-17 · 3";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();

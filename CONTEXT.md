@@ -5006,6 +5006,17 @@ Google" in red at the foot. NOT checked: a real sign-in (the chip and
 `#driveInfo` with an account, the queue lines), the dark theme by eye, and a
 real phone.
 
+**One way into Menú (version `nou · 2026-11-17 · 3`).** "Vull eliminar
+l'opció de menú a la part superior, només a la cinta inferior." The top bar
+had a ☰ (`#btnSide`) that opened the same Menú page as the fourth button of
+the bar at the bottom — two buttons a thumb apart for one page. The button,
+its listener and its mention in the stylesheet are gone; the top bar outside
+a visit is the logo and the sync chip. Menú is reached from `#nvNav`: the
+bar at the bottom on a phone, the side bar ("Configuració") from 701 px.
+Inside a visit nothing changes: the ☰ was already hidden there. Checked in
+the preview at 375, 760 and 1024 px: no `#btnSide`, the entry in `#nvNav`
+visible at the three widths and it opens the page, no console error.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

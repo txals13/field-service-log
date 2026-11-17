@@ -4948,6 +4948,64 @@ available, like FAT's: trying a format is a production test. Checked in the
 preview: the seven kinds in the selector; saved as each of the two, the
 visit's page and the HTML report's tag and line carry the name.
 
+**The delete window's three buttons fit (version `nou · 2026-11-17 · 1`).**
+On the desktop, "Elimina la visita de servei" with no current ZIP has three
+buttons (Cancel·la · Primer exporta el ZIP · Elimina igualment). The
+redesign's wider buttons (`padding:8px 18px`) add up to about 480 px and a
+window has 420 inside; the row is `justify-content:flex-end` and did not
+wrap, so it ran out past the LEFT edge, where a box cannot be scrolled, and
+"Cancel·la" was cut. Two things: `#delBack .modal{max-width:580px}` from
+701 px up, so the three sit in one row in ca/es/en; and the base
+`.modal-actions` now has `flex-wrap:wrap`, so no row of buttons in any window
+can be cut again — at worst it takes a second line. Checked in the preview at
+1024 px with the three labels in the three languages (one row, all inside),
+and a sweep of the 27 windows with their default buttons (none wraps, none
+overflows). NOT checked: the windows whose extra buttons only appear in some
+state, nor a real desktop window narrower than 1024 px.
+
+**The Menú page: what is done most goes first (version `nou · 2026-11-17 · 2`).**
+"La veig molt diferent de la resta." It was the old drawer's `#sideTools`
+shown as a page: one card, an emoji in front of every line, and the drawer's
+order (Compte · Aquest aparell · Dades · Ajuda), which left the manuals, the
+archive and the import under the Gemini key and the licence. Three orders
+were drawn on a Design canvas beside the page as it was; he chose **B**.
+
+- **Order now:** the account in one strip (the sync chip every page has,
+  `#driveInfo` under it, and "Entra amb Google" or "Sincronitza" at its
+  side — on a phone, under it) · **Feina**: Manuals de recanvis, Arxiva
+  visites…, Importa JSON o ZIP, Carpetes · **Preferències**: Idioma de l'app,
+  Tema, Despeses, Còpia de les fotos al telèfon (handhelds only) ·
+  **Aplicació**: Llicència, Clau de Gemini, Manual d'ús · at the foot the
+  version and "Surt de Google".
+- **Dress:** a card per group (`.nm-card`), each row `.nm-row` = a line icon
+  in a tile (`.nm-ic`), the name and one line on what it does (`.nm-tx`),
+  and at the right a chevron, the value, or a switch (`.nm-tog`).
+- **Every button kept its id** and its listener; only the markup around them
+  and the `#sideTools` rules changed. Three do something different to draw
+  themselves: `exLabel()` and `camCopyLabel()` no longer rewrite the label
+  ("Despeses: no") — they set the class `on` and `aria-pressed`, and the
+  switch follows; `applyTheme()` writes "Clar" / "Fosc" into `#nmThemeVal`.
+- **Words:** "Arxiva sessions…" is "Arxiva visites…" (the rest of the app
+  says visites); "Canvia el tema" is the row "Tema"; "Sincronitza-ho tot" is
+  "Sincronitza" with the old words as its tooltip. The headings are typed in
+  lower case and capitalised by the stylesheet, so they translate as words.
+  The labels that lost their emoji keep their translation through the core
+  lookup; the new ones are in an NV_T block of their own.
+- The chip in the strip is one more `.nv-chip`: `nvChipPaint()` fills every
+  one on the page and the delegated click syncs, so it needed no code. It
+  rewrites the element's whole class, which is why the strip styles it by
+  place (`#sideTools .nv-chip`) and not with a class of its own.
+
+Checked in the preview, signed out: desktop (1024) and phone (375) — the
+order, no row out of the page, the switch (class, `aria-pressed`, colour and
+knob with the transition off: a hidden pane does not advance one), the theme
+row both ways, the three languages (every label, line and tooltip), no
+console error, and the checker's count unchanged (33). With the sign-in
+buttons forced as if signed in: "Sincronitza" in the strip and "Surt de
+Google" in red at the foot. NOT checked: a real sign-in (the chip and
+`#driveInfo` with an account, the queue lines), the dark theme by eye, and a
+real phone.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

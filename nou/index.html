@@ -247,7 +247,7 @@ textarea{resize:none;line-height:1.4}
 .modal-title{font-size:15px;font-weight:700;margin-bottom:16px;color:var(--gold)}
 .field{margin-bottom:11px}
 .field label{display:block;font-size:11px;color:var(--tx2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px;font-weight:600}
-.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
 /* media viewer */
 .media-modal{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;cursor:pointer}
 .media-modal img{max-width:95vw;max-height:90vh;object-fit:contain;border-radius:6px}
@@ -686,6 +686,11 @@ textarea:focus,input[type=text]:focus,input[type=tel]:focus,input[type=email]:fo
 .field label,.nv-lbl{display:block;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
 .nv-sec{color:var(--tx3);font-size:13px;letter-spacing:.06em;border-bottom:1px solid var(--br)}
 .modal-actions button{min-height:44px;border-radius:12px;padding:8px 18px}
+/* Three long buttons (cancel, export the ZIP first, delete anyway) do not fit
+   the 460 px of a window: the row ran out past the left edge and the first
+   button was cut. This window is wider; and every row of buttons wraps (the
+   base rule) rather than ever cut one. */
+@media(min-width:701px){#delBack .modal{max-width:580px}}
 @media(max-width:700px){
   /* a window fills the phone: its title becomes the navy bar of that screen */
   body.m2 .modal{padding:0 14px 0}
@@ -759,17 +764,39 @@ body.m2 .sidebar .s-list{order:3;flex:none;overflow:visible;padding:0;background
 @media(max-width:700px){.sitem{padding-right:14px!important}.sitem-del{display:none}}
 .sitem-hit{padding:6px 14px 6px 16px;font-size:12.5px;border-radius:0}
 .sitem-hit-more{padding:2px 14px 8px 16px}
-/* Menú: the tools, as rows under their headings */
-body.m2 #sideTools{order:4;border:1px solid var(--br);border-radius:14px;background:var(--bg1);box-shadow:var(--sh);padding:6px 8px 12px}
-.nv-msec{font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--tx3);padding:12px 6px 4px}
-#sideTools button{display:flex!important;align-items:center;gap:10px;width:100%;min-height:48px;margin:0;padding:4px 8px;text-align:left;white-space:normal;background:none;border:0;border-radius:10px;font-size:14px!important;font-weight:600;color:var(--tx1)}
-#sideTools button:hover{background:var(--bg2)}
+/* Menú (2026-11-17): the account in one strip, then a card per group; each
+   row an icon in a tile, what it is and what it does, and its value or a
+   switch at the right — the same rows as the rest of the app. */
+body.m2 #sideTools{order:4;border:0;background:none;box-shadow:none;padding:0;display:flex;flex-direction:column;gap:8px}
+.nv-msec{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--tx3);padding:6px 4px 0}
+.nm-card{background:var(--bg1);border:1px solid var(--br);border-radius:14px;box-shadow:var(--sh);overflow:hidden}
+#sideTools .nm-row{display:grid!important;grid-template-columns:36px minmax(0,1fr) auto;column-gap:12px;align-items:center;width:100%;min-height:56px;margin:0;padding:6px 14px;text-align:left;white-space:normal;background:none;border:0;border-top:1px solid var(--br);border-radius:0;font-size:15px!important;font-weight:400;color:var(--tx1);cursor:pointer}
+#sideTools .nm-card>.nm-row:first-child{border-top:0}
+#sideTools .nm-row:hover{background:var(--bg2)}
 #sideTools button[style*="display: none"],#sideTools button[style*="display:none"],#sideTools #btnM2{display:none!important}
-#sideTools .m2-side{display:block!important;margin:0!important;padding:0!important;border:0!important}
-#sideTools .nv-lang{display:flex;align-items:center;gap:10px;min-height:48px;padding:4px 8px;font-size:14px;font-weight:600}
-#sideTools .nv-lang select{flex:1;min-width:0;border-radius:10px;background:var(--bg1);border:1px solid var(--br2);font-weight:500;color:var(--tx1)}
-#driveInfo{font-size:12.5px!important;color:var(--tx3);text-align:left!important;padding:2px 8px 6px;margin:0!important;line-height:1.5!important}
-#appVer{font-family:inherit!important;font-size:12px!important;text-align:left!important;color:var(--tx3);padding:12px 8px 0;margin:8px 0 0!important;border-top:1px solid var(--br)}
+.nm-ic{width:36px;height:36px;border-radius:10px;background:var(--goldbg);color:var(--gold);display:flex;align-items:center;justify-content:center}
+.nm-tx{display:flex;flex-direction:column;gap:1px;min-width:0}
+.nm-tx b{font-size:15px;font-weight:600}
+.nm-tx small{font-size:12.5px;font-weight:400;color:var(--tx3)}
+.nm-go{display:flex;align-items:center;gap:4px;font-size:14px;color:var(--tx3)}
+.nm-tog{width:44px;height:26px;border-radius:13px;background:#9AA6B6;padding:3px;display:flex;align-items:center;transition:background .15s}
+.nm-tog i{width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.nm-row.on .nm-tog{background:var(--green)}
+.nm-row.on .nm-tog i{transform:translateX(18px)}
+#sideTools .nm-row select{width:auto;max-width:170px;min-height:44px;border:0!important;background-color:transparent!important;box-shadow:none;color:var(--tx3);font-size:14px!important;font-weight:500;text-align:right;padding:6px 2px!important;cursor:pointer}
+.nm-acct{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px}
+.nm-av{width:40px;height:40px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center}
+#sideTools .nv-chip{max-width:100%;color:var(--green);background:var(--greenbg);font-size:12px;padding:3px 10px;border-radius:20px}
+#sideTools .nv-chip.wait{color:var(--orange);background:var(--orangebg)}
+#sideTools .nv-chip.busy,#sideTools .nv-chip.off{color:var(--tx2);background:var(--bg2)}
+#driveInfo{font-size:12.5px!important;color:var(--tx3);text-align:left!important;padding:4px 0 0;margin:0!important;line-height:1.5!important;overflow-wrap:anywhere}
+#sideTools .m2-side{display:flex!important;gap:8px;margin:0!important;padding:0!important;border:0!important}
+#sideTools .m2-side button{min-height:44px;margin:0;padding:0 14px;border-radius:10px;border:1px solid var(--gold);background:var(--bg1);color:var(--gold);font-size:14px!important;font-weight:600;white-space:nowrap;cursor:pointer}
+#sideTools #m2In{background:var(--accs);border-color:var(--accs);color:#fff}
+@media(max-width:480px){.nm-acct .m2-side{grid-column:1/-1}.nm-acct .m2-side button{flex:1}}
+.nm-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 4px;min-height:44px}
+#appVer{font-family:inherit!important;font-size:12px!important;text-align:left!important;color:var(--tx3);padding:0;margin:0!important;border:0}
+#sideTools #m2Out{min-height:44px;margin:0;padding:0 6px;background:none;border:0;color:var(--red);font-size:14px!important;font-weight:600;white-space:nowrap;cursor:pointer}
 
 /* ── cards and the home page ── */
 .nv-page{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -1471,33 +1498,46 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
         <input type="text" id="sessFiltIn" placeholder="Filtra les sessions…" style="font-size:12px;padding:5px 8px">
       </div>
       <div id="sideTools">
-        <div class="nv-msec">COMPTE</div>
-        <div id="driveInfo"></div>
-        <div class="m2-side">
-        <button id="m2In">Entra amb Google</button>
-        <button id="m2Sync">&#9729; Sincronitza-ho tot</button>
-        <button id="m2Out">Surt de Google</button>
+        <!-- (2026-11-17) What is done most goes first: the account in one strip,
+             then the work, the preferences, and what is set once. The buttons
+             keep their ids; only their order and their dress changed. -->
+        <div class="nm-card nm-acct">
+          <span class="nm-av"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4 4 0 01-.6-7.96A6 6 0 0118 9.6 4.2 4.2 0 0117.6 18z"/></svg></span>
+          <div class="nm-acct-b"><button type="button" class="nv-chip"></button><div id="driveInfo"></div></div>
+          <div class="m2-side">
+          <button id="m2In">Entra amb Google</button>
+          <button id="m2Sync" title="Sincronitza-ho tot">Sincronitza</button>
+          </div>
         </div>
-        <div class="nv-msec">AQUEST APARELL</div>
-        <button id="btnGemKey" title="La clau de Gemini que fa servir el corrector i la traducció dels informes; es desa només en aquest navegador">&#128273; Clau de Gemini</button>
-        <button id="btnLic" title="La llicència d'ús de l'aplicació: es desa només en aquest aparell i es comprova sense cobertura">&#128274; Llic&egrave;ncia</button>
-        <div class="nv-lang"><span title="Idioma de l'aplicació">&#127760;</span><span>Idioma de l'app</span><select id="uiLangSel">
+        <div class="nv-msec">Feina</div>
+        <div class="nm-card">
+        <button id="btnManuals" class="nm-row" title="Manuals de recanvis guardats a Drive"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5a2 2 0 012-2h13v16H6a2 2 0 00-2 2z"/><path d="M4 19a2 2 0 002 2h13"/></svg></span><span class="nm-tx"><b>Manuals de recanvis</b><small>Els que hi ha desats a Drive</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+        <button id="btnBulkArx" class="nm-row" title="Tria les sessions acabades: cadascuna es desa com el seu ZIP del projecte i surt de l'aplicació"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h16v12H4zM3 4h18v4H3zM10 12h4"/></svg></span><span class="nm-tx"><b>Arxiva visites&hellip;</b><small>Desa el ZIP de les acabades i les treu de l'app</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+        <button id="m2Imp" class="nm-row"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg></span><span class="nm-tx"><b>Importa JSON o ZIP</b><small>Carrega una visita desada</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+        <button id="btnOutDir" class="nm-row" title="On es desa el ZIP del projecte (Drive o una carpeta de l'ordinador), i on s'obre el diàleg de fotos"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h6l2 3h10v10H3z"/></svg></span><span class="nm-tx"><b>Carpetes</b><small>On es desa el ZIP i on s'obren les fotos</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+        </div>
+        <div class="nv-msec">Preferències</div>
+        <div class="nm-card">
+        <label class="nm-row" for="uiLangSel" title="Idioma de l'aplicació"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg></span><span class="nm-tx"><b>Idioma de l'app</b></span><select id="uiLangSel">
             <option value="ca">Català</option>
             <option value="es">Castellano</option>
             <option value="en">English</option>
-          </select></div>
-        <button id="btnExOn" title="Mostra el mòdul de despeses: fotografia els tiquets de cada visita. Es recorda en aquest aparell; amagat, les despeses que ja hi ha no s'esborren.">&#128182; Despeses: no</button>
-        <button id="btnCamCopy" style="display:none" title="Cada foto feta amb 📷 també es desa a Baixades del telèfon, amb el client i el projecte al nom">&#128247; Còpia de les fotos al telèfon: no</button>
-        <button id="m2Theme">&#9788; Canvia el tema</button>
-        <div class="nv-msec">DADES</div>
-        <button id="btnManuals" title="Manuals de recanvis guardats a Drive">&#128218; Manuals de recanvis</button>
-        <button id="btnBulkArx" title="Tria les sessions acabades: cadascuna es desa com el seu ZIP del projecte i surt de l'aplicació">&#128452; Arxiva sessions&hellip;</button>
-        <button id="btnOutDir" title="On es desa el ZIP del projecte (Drive o una carpeta de l'ordinador), i on s'obre el diàleg de fotos">&#128193; Carpetes</button>
-        <button id="m2Imp">&#8679; Importa JSON o ZIP</button>
-        <div class="nv-msec">AJUDA</div>
-        <button id="btnHelp" title="Com fer servir l'aplicació">&#128214; Manual d'&uacute;s</button>
-        <button id="btnM2" title="Prova el disseny nou: al mòbil, pantalla neta amb tres botons a baix; a l'ordinador, comptadors a dalt i un sol menú «Més». Es pot tornar enrere quan vulguis.">&#129514; Disseny nou: no</button>
-        <div id="appVer">&mdash;</div>
+          </select></label>
+        <button id="m2Theme" class="nm-row"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg></span><span class="nm-tx"><b>Tema</b></span><span class="nm-go"><span id="nmThemeVal"></span><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+        <button id="btnExOn" class="nm-row" aria-pressed="false" title="Mostra el mòdul de despeses: fotografia els tiquets de cada visita. Es recorda en aquest aparell; amagat, les despeses que ja hi ha no s'esborren."><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg></span><span class="nm-tx"><b>Despeses</b><small>Els tiquets de cada visita</small></span><span class="nm-go"><span class="nm-tog"><i></i></span></span></button>
+        <button id="btnCamCopy" class="nm-row" style="display:none" aria-pressed="false" title="Cada foto feta amb 📷 també es desa a Baixades del telèfon, amb el client i el projecte al nom"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span class="nm-tx"><b>Còpia de les fotos al telèfon</b><small>Cada foto també es desa a Baixades</small></span><span class="nm-go"><span class="nm-tog"><i></i></span></span></button>
+        </div>
+        <div class="nv-msec">Aplicació</div>
+        <div class="nm-card">
+        <button id="btnLic" class="nm-row" title="La llicència d'ús de l'aplicació: es desa només en aquest aparell i es comprova sense cobertura"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span><span class="nm-tx"><b>Llic&egrave;ncia</b><small>Es comprova sense cobertura</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+        <button id="btnGemKey" class="nm-row" title="La clau de Gemini que fa servir el corrector i la traducció dels informes; es desa només en aquest navegador"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/></svg></span><span class="nm-tx"><b>Clau de Gemini</b><small>Corrector i traducció dels informes</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+        <button id="btnHelp" class="nm-row" title="Com fer servir l'aplicació"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 113.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg></span><span class="nm-tx"><b>Manual d'&uacute;s</b><small>Com fer servir l'aplicació</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+        </div>
+        <div class="nm-foot">
+          <div id="appVer">&mdash;</div>
+          <button id="m2Out">Surt de Google</button>
+          <button id="btnM2" style="display:none">&#129514; Disseny nou: no</button>
+        </div>
       </div>
       <div class="s-list" id="sList"></div>
     </div>
@@ -6223,6 +6263,7 @@ $$("btnLoginTop").addEventListener("click",async function(){
 function applyTheme(t){
   if(t==="light"){document.documentElement.classList.add("light");$$("btnTheme").textContent="☽";$$("btnTheme").title="Canvia a fosc"}
   else{document.documentElement.classList.remove("light");$$("btnTheme").textContent="☀";$$("btnTheme").title="Canvia a clar"}
+  var tv=$$("nmThemeVal");if(tv)tv.textContent=uiT(t==="light"?"Clar":"Fosc");
   try{localStorage.setItem(LS_THEME,t)}catch(e){}
 }
 // light is the design as drawn, so it is what a device starts with (the theme is
@@ -7216,7 +7257,7 @@ function camCopyOn(){try{return localStorage.getItem(LS_CAMCOPY)==="1"}catch(e){
 function camCopyLabel(){
   var b=$$("btnCamCopy");if(!b)return;
   b.style.display=handheld()?"":"none";
-  b.innerHTML=uiT("📷 Còpia de les fotos al telèfon:")+" "+uiT(camCopyOn()?"sí":"no");
+  b.classList.toggle("on",camCopyOn());b.setAttribute("aria-pressed",camCopyOn()?"true":"false");
 }
 function camCopy(fileList){
   if(!camCopyOn())return;
@@ -8374,7 +8415,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-16 · 2";
+var APP_VERSION="nou · 2026-11-17 · 2";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -17963,7 +18004,7 @@ var EX_FIELDS=["date","time","category","merchant","legalName","taxId","address"
 function exOn(){try{return localStorage.getItem(LS_EXON)==="1"}catch(e){return false}}
 function exLast4(){try{return localStorage.getItem(LS_EXLAST4)||""}catch(e){return ""}}
 function exCatLabel(k){var c=EX_CATS.filter(function(x){return x[0]===k})[0];return c?c[1]:""}
-function exLabel(){var b=$$("btnExOn");if(b)b.innerHTML=uiT("💶 Despeses:")+" "+uiT(exOn()?"sí":"no")}
+function exLabel(){var b=$$("btnExOn");if(!b)return;b.classList.toggle("on",exOn());b.setAttribute("aria-pressed",exOn()?"true":"false")}
 exLabel();
 $$("btnExOn").addEventListener("click",function(){
   try{localStorage.setItem(LS_EXON,exOn()?"0":"1")}catch(e){}
@@ -20324,6 +20365,24 @@ function nvDeskRender(a,isOpen){
   var en={"HORES":"HOURS","UNITATS":"UNITS","Lectura anterior":"Previous reading","En marxa":"Running","Aturada":"Stopped","des de les":"since",
     "la prova":"the test","min en marxa":"min running","min perduts":"min lost","disponibilitat":"availability","Represa":"Resume",
     "Finalitza":"Finish","Només informatiu":"For information only"};
+  Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
+  Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
+})();
+// The Menú page's own words (2026-11-17): its three headings, what each row
+// does, and the theme's two names.
+(function(){
+  var es={"Feina":"Trabajo","Preferències":"Preferencias","Aplicació":"Aplicación","Sincronitza":"Sincroniza","Arxiva visites…":"Archiva visitas…",
+    "Els que hi ha desats a Drive":"Los que hay guardados en Drive","Desa el ZIP de les acabades i les treu de l'app":"Guarda el ZIP de las acabadas y las saca de la app",
+    "Carrega una visita desada":"Carga una visita guardada","On es desa el ZIP i on s'obren les fotos":"Dónde se guarda el ZIP y dónde se abren las fotos",
+    "Els tiquets de cada visita":"Los tiques de cada visita","Es comprova sense cobertura":"Se comprueba sin cobertura",
+    "Corrector i traducció dels informes":"Corrector y traducción de los informes","Tema":"Tema","Clar":"Claro","Fosc":"Oscuro",
+    "Cada foto també es desa a Baixades":"Cada foto también se guarda en Descargas"};
+  var en={"Feina":"Work","Preferències":"Preferences","Aplicació":"Application","Sincronitza":"Sync","Arxiva visites…":"Archive visits…",
+    "Els que hi ha desats a Drive":"The ones saved on Drive","Desa el ZIP de les acabades i les treu de l'app":"Saves the ZIP of the finished ones and takes them out of the app",
+    "Carrega una visita desada":"Load a saved visit","On es desa el ZIP i on s'obren les fotos":"Where the ZIP is saved and where the photos open",
+    "Els tiquets de cada visita":"Each visit's receipts","Es comprova sense cobertura":"Checked with no connection",
+    "Corrector i traducció dels informes":"Spell check and report translation","Tema":"Theme","Clar":"Light","Fosc":"Dark",
+    "Cada foto també es desa a Baixades":"Each photo is also saved to Downloads"};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();

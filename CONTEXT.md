@@ -5017,6 +5017,23 @@ Inside a visit nothing changes: the ☰ was already hidden there. Checked in
 the preview at 375, 760 and 1024 px: no `#btnSide`, the entry in `#nvNav`
 visible at the three widths and it opens the page, no console error.
 
+**A photo being added opens too (version `nou · 2026-11-17 · 4`).** "Quan
+tinc una foto inclosa en una entrada, vull poder clicar-la i que s'obri a la
+pantalla." The log's thumbnails already opened the viewer (`#mediaModal`);
+the ones drawn by `renderThumbs` — the composer (`#pThumbs`), the edit window
+(`#eThumbs`) and the resolution (`#fThumbs`) — only had the ✕ that takes
+them out, so a photo just taken could not be looked at before saving. What
+the log did on a tap is now `openAttachment(img)` (photo: the viewer; video:
+from memory, from the queue, or from Drive, with the same messages), and both
+places call it. In `renderThumbs` the ✕ stops the tap from reaching the
+thumbnail, and the thumbnail takes the focus and opens with Enter. The
+viewer sits over the edit window (z-index 200 over 100) and closing it leaves
+the window as it was. Checked in the preview at 1024 px with a generated
+JPEG: composer, log and edit window open it; closing returns to the edit
+window; the ✕ takes it out without opening it; no console error. NOT
+checked: a video in any of the three, the resolution's strip (same code,
+not exercised), and a phone.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

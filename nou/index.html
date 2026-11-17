@@ -6435,6 +6435,27 @@ function logThumbsHTML(list,isFix){
   return h+"</div>";
 }
 // How the problem ended, shown under the entry it belongs to.
+// Opens a photo or a video on the screen: the log's thumbnails, and (2026-11-17)
+// the ones in the composer, the edit window and the resolution, which until
+// now could only be taken out, not looked at.
+function openAttachment(img){
+  if(!img)return;
+  if(img.type==="video"){
+    var fc=fileCache.get(img);
+    if(fc){openMedia(URL.createObjectURL(fc),"video",img.name);return}   // still in memory here: play it straight
+    if(img.qid&&!img.driveId){                                          // waiting in the queue
+      mqBlob(img.qid).then(function(b){
+        if(b)openMedia(URL.createObjectURL(b),"video",img.name);
+        else alert(uiT("Aquest vídeo és a la cua de l'aparell on el vas afegir: es pujarà quan aquell aparell tingui connexió."));
+      });
+      return;
+    }
+    if(!img.driveId||!accessToken){alert(img.uploadStatus==="err"?uiT("No s'ha pogut pujar el vídeo. Toca la marca ! per tornar-ho a provar.")
+      :!img.driveId&&isLoggedIn?uiT("Aquest vídeo no és a Drive: la visita es va importar d'un ZIP que no el portava. Torna a importar el ZIP de la visita (⇧ Importa): si el vídeo encara és a Drive, també a la paperera, l'app el recupera.")
+      :uiT("El vídeo és a Drive. Inicia la sessió per reproduir-lo."));return}
+    openDriveVideo(img.driveId,img.name);
+  } else if(img.data)openMedia(img.data,"image",img.name);
+}
 function logImgAt(e,t){
   var list=t.dataset.fix?((e.fix&&e.fix.images)||[]):(e.images||[]);
   return list[parseInt(t.dataset.idx)];
@@ -6526,24 +6547,7 @@ function renderLogArea(){
             scheduleSave();renderLogArea();
           });
         });
-        t.addEventListener("click",function(){
-          var img=logImgAt(e,t);if(!img)return;
-          if(img.type==="video"){
-            var fc=fileCache.get(img);
-            if(fc){openMedia(URL.createObjectURL(fc),"video",img.name);return}   // still in memory here: play it straight
-            if(img.qid&&!img.driveId){                                          // waiting in the queue
-              mqBlob(img.qid).then(function(b){
-                if(b)openMedia(URL.createObjectURL(b),"video",img.name);
-                else alert(uiT("Aquest vídeo és a la cua de l'aparell on el vas afegir: es pujarà quan aquell aparell tingui connexió."));
-              });
-              return;
-            }
-            if(!img.driveId||!accessToken){alert(img.uploadStatus==="err"?uiT("No s'ha pogut pujar el vídeo. Toca la marca ! per tornar-ho a provar.")
-              :!img.driveId&&isLoggedIn?uiT("Aquest vídeo no és a Drive: la visita es va importar d'un ZIP que no el portava. Torna a importar el ZIP de la visita (⇧ Importa): si el vídeo encara és a Drive, també a la paperera, l'app el recupera.")
-              :uiT("El vídeo és a Drive. Inicia la sessió per reproduir-lo."));return}
-            openDriveVideo(img.driveId,img.name);
-          } else openMedia(img.data,"image",img.name);
-        });
+        t.addEventListener("click",function(){openAttachment(logImgAt(e,t))});
       });
       // audio voice-note chips (appended as elements — chips need real handlers)
       var audioAtt=(e.images||[]).concat((e.fix&&e.fix.images)||[]).filter(function(im){return im.type==="audio"});
@@ -6955,7 +6959,10 @@ function renderThumbs(bk){
       +(offDay?"<span class=\"thumb-date\" title=\""+esc(fts(img.capturedAt))+"\">"+dmy(isoDayOf(img.capturedAt)).slice(0,5)+"</span>":"")
       +"<button class=\"thumb-del\">✕</button>";
     var up=d.querySelector(".thumb-up.err");if(up)up.addEventListener("click",function(ev){ev.stopPropagation();retryUpload(img,bk)});
-    d.querySelector(".thumb-del").addEventListener("click",removeAt);
+    d.querySelector(".thumb-del").addEventListener("click",function(ev){ev.stopPropagation();removeAt()});
+    d.tabIndex=0;d.title=uiT(isVid?"Obre el vídeo":"Obre la foto");
+    d.addEventListener("click",function(){openAttachment(img)});
+    d.addEventListener("keydown",function(ev){if(ev.key==="Enter"&&ev.target===d){ev.preventDefault();openAttachment(img)}});
     c.appendChild(d);
   });
   var pw=photoDayWarn(bk,B.get(),refDay);
@@ -8415,7 +8422,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-17 · 3";
+var APP_VERSION="nou · 2026-11-17 · 4";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -20376,13 +20383,13 @@ function nvDeskRender(a,isOpen){
     "Carrega una visita desada":"Carga una visita guardada","On es desa el ZIP i on s'obren les fotos":"Dónde se guarda el ZIP y dónde se abren las fotos",
     "Els tiquets de cada visita":"Los tiques de cada visita","Es comprova sense cobertura":"Se comprueba sin cobertura",
     "Corrector i traducció dels informes":"Corrector y traducción de los informes","Tema":"Tema","Clar":"Claro","Fosc":"Oscuro",
-    "Cada foto també es desa a Baixades":"Cada foto también se guarda en Descargas"};
+    "Cada foto també es desa a Baixades":"Cada foto también se guarda en Descargas","Obre la foto":"Abre la foto","Obre el vídeo":"Abre el vídeo"};
   var en={"Feina":"Work","Preferències":"Preferences","Aplicació":"Application","Sincronitza":"Sync","Arxiva visites…":"Archive visits…",
     "Els que hi ha desats a Drive":"The ones saved on Drive","Desa el ZIP de les acabades i les treu de l'app":"Saves the ZIP of the finished ones and takes them out of the app",
     "Carrega una visita desada":"Load a saved visit","On es desa el ZIP i on s'obren les fotos":"Where the ZIP is saved and where the photos open",
     "Els tiquets de cada visita":"Each visit's receipts","Es comprova sense cobertura":"Checked with no connection",
     "Corrector i traducció dels informes":"Spell check and report translation","Tema":"Theme","Clar":"Light","Fosc":"Dark",
-    "Cada foto també es desa a Baixades":"Each photo is also saved to Downloads"};
+    "Cada foto també es desa a Baixades":"Each photo is also saved to Downloads","Obre la foto":"Open the photo","Obre el vídeo":"Open the video"};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();

@@ -1002,6 +1002,25 @@ body.m2 #m2MoreBack .modal>.modal-title{position:static;margin:0;padding:8px 6px
 .m2-more-it.del .nm-ic{background:var(--redbg);color:var(--red)}
 .exp-menu{background:var(--bg1);border:1px solid var(--br);border-radius:14px;box-shadow:0 12px 40px rgba(11,31,58,.28)}
 .exp-menu button{font-weight:600}
+/* The app's own camera (2026-11-17): a Windows tablet has no camera behind a
+   file input, so the picture is taken here, over everything else. */
+#camWin{position:fixed;inset:0;z-index:300;background:#000;color:#fff;display:flex;flex-direction:column}
+#camVideo{flex:1 1 0;min-height:0;width:100%;object-fit:contain;background:#000}
+#camWin button{margin:0;padding:0;min-height:0;border:0;background:none;box-shadow:none;color:#fff;font:inherit;cursor:pointer}
+#camWin .cam-top{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;background:rgba(0,0,0,.45)}
+#camInfo{font-size:15px;font-weight:600;padding-left:6px;font-variant-numeric:tabular-nums}
+#camWin.rec #camInfo{color:#FF8A80}
+#camWin #camClose,#camWin #camFlip{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center}
+#camWin .cam-bar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:12px;padding:14px 18px calc(14px + env(safe-area-inset-bottom));background:#0B1220}
+#camWin .cam-r{display:flex;justify-content:flex-end}
+#camMode{display:inline-flex;border-radius:24px;background:rgba(255,255,255,.14);padding:3px}
+#camWin #camMode button{min-height:44px;padding:0 16px;border-radius:22px;font-size:14px;font-weight:600;color:#C9D3E0}
+#camWin #camMode button.on{background:#fff;color:#0B1220}
+#camWin #camShot{width:72px;height:72px;border-radius:50%;border:4px solid #fff;display:flex;align-items:center;justify-content:center}
+#camShot i{width:54px;height:54px;border-radius:50%;background:#fff;transition:all .12s}
+#camWin.vid #camShot i{background:#E5372B}
+#camWin.rec #camShot i{width:26px;height:26px;border-radius:6px}
+#camWin button:focus-visible{outline:3px solid #7FB0FF;outline-offset:2px}
 
 /* ── from 701 px: the rail on the left, the visit side by side ── */
 @media(min-width:701px){
@@ -2293,6 +2312,20 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
     <div class="media-name" id="mediaName" style="display:none"></div>
     <div id="mediaVidSt" style="display:none;color:#e5e7eb;font-size:13px;text-align:center;margin-top:10px;max-width:90vw"></div>
     <a id="mediaDrive" href="#" target="_blank" rel="noopener" class="btn-sm" style="display:none;margin-top:10px;text-decoration:none">&#8599; Obre'l a Drive</a>
+  </div>
+
+  <!-- The app's own camera: where a file input cannot open one (Windows) -->
+  <div id="camWin" role="dialog" aria-modal="true" aria-label="Càmera" style="display:none">
+    <video id="camVideo" autoplay playsinline muted></video>
+    <div class="cam-top">
+      <span id="camInfo" aria-live="polite"></span>
+      <button type="button" id="camClose" title="Tanca" aria-label="Tanca"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="cam-bar">
+      <div class="cam-l"><div id="camMode"><button type="button" data-m="photo">Foto</button><button type="button" data-m="video">Vídeo</button></div></div>
+      <button type="button" id="camShot"><i></i></button>
+      <div class="cam-r"><button type="button" id="camFlip" title="Canvia de càmera" aria-label="Canvia de càmera"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 01-14 5.3M4 12a8 8 0 0114-5.3M18 3v4h-4M6 21v-4h4"/></svg></button></div>
+    </div>
   </div>
 </div>
 
@@ -6711,7 +6744,12 @@ function renderContent(){
         +"<button class=\"btn-gold btn-sm\" id=\"btnAdd\">Afegeix</button>"
         // On a phone the point of the thing is the camera; on a laptop it is the
         // folder. Same button row, different first button.
-        +(handheld()
+        // A Windows tablet (ownCam): the camera is the app's own window, which
+        // records video too, so the "pick a video" button has nothing to add.
+        +(ownCam()
+          ?"<button class=\"btn-sm\" id=\"btnCam\" title=\"Fes una foto o grava un vídeo amb la càmera\">"+nvI("cam",20)+"</button>"
+           +"<button class=\"btn-sm\" id=\"btnPhoto\" title=\"Tria una foto o un vídeo que ja tens\">"+nvI("image",20)+"</button>"
+          :handheld()
           ?"<button class=\"btn-sm\" id=\"btnCam\" title=\"Fes una foto\">"+nvI("cam",20)+"</button>"
            +"<button class=\"btn-sm\" id=\"btnVid\" title=\"Tria un vídeo de la galeria. Grava'l abans amb la càmera del mòbil: hi tens la càmera lenta, i el vídeo queda guardat al telèfon\">"+nvI("video",20)+"</button>"
            +"<button class=\"btn-sm\" id=\"btnPhoto\" title=\"Tria una foto o un vídeo que ja tens\">"+nvI("image",20)+"</button>"
@@ -7259,6 +7297,163 @@ function wireCapture(btnId,inputId,bk){
   b.addEventListener("click",function(){i.click()});
   i.addEventListener("change",function(e){camCopy(e.target.files);handleFiles(e,bk)});
 }
+// ── THE APP'S OWN CAMERA ─────────────────────────────────────────────────────
+// (2026-11-17) `capture` on a file input opens the camera on Android and iOS
+// only. Windows ignores it: on a Surface every 📷 in the app opened the file
+// picker, and the camera buttons were not even drawn with the keyboard on
+// (handheld() is false with a mouse). So on a touch screen that is not a
+// phone, a click on ANY <input capture> is caught before the picker opens and
+// this window takes its place: live picture, a shutter, the other camera, and
+// video where the place takes videos. What it shoots is put into that same
+// input and its `change` fires, so every caller — the entry, the edit window,
+// the resolution, counters, production tests, expenses — goes on as if the
+// phone's camera had answered. A desktop with no touch screen keeps the
+// picker: its webcam points at the person, not at the machine.
+var LS_CAMDEV=LSP+"camdev";      // the camera chosen last time (front or rear)
+var CAM_VIDEO_IN=/^(camIn|eCamIn|fCamIn)$/;   // the inputs whose handler takes a video too
+var cam={inp:null,stream:null,audio:null,rec:null,chunks:[],mode:"photo",video:false,devs:[],dev:"",t0:0,tick:null,drop:false};
+function capNative(){
+  var ua=navigator.userAgent||"";
+  return /Android|iPhone|iPad|iPod/i.test(ua)||(/Macintosh/.test(ua)&&(navigator.maxTouchPoints||0)>1);
+}
+function ownCam(){
+  try{return !capNative()&&(navigator.maxTouchPoints||0)>0&&!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)}
+  catch(e){return false}
+}
+function camHere(){return handheld()||ownCam()}
+function camStamp(){
+  var d=new Date();function p2(x){return ("0"+x).slice(-2)}
+  return d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+"_"+p2(d.getHours())+p2(d.getMinutes())+p2(d.getSeconds());
+}
+function camPaint(){
+  var w=$$("camWin"),rec=!!cam.rec,isV=cam.mode==="video";
+  w.classList.toggle("vid",isV);w.classList.toggle("rec",rec);
+  $$("camMode").style.display=cam.video&&!rec?"":"none";
+  Array.prototype.forEach.call($$("camMode").querySelectorAll("button"),function(b){
+    var on=b.dataset.m===cam.mode;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on?"true":"false");
+  });
+  $$("camFlip").style.display=cam.devs.length>1&&!rec?"":"none";
+  var lab=uiT(rec?"Atura la gravació":isV?"Grava un vídeo":"Fes la foto"),sh=$$("camShot");
+  sh.title=lab;sh.setAttribute("aria-label",lab);
+  var s="";
+  if(rec){var n=Math.floor((Date.now()-cam.t0)/1000);s="● "+("0"+Math.floor(n/60)).slice(-2)+":"+("0"+n%60).slice(-2)}
+  else if(!cam.stream)s=uiT("Obrint la càmera…");
+  $$("camInfo").textContent=s;
+}
+function camStopTracks(s){if(s)try{s.getTracks().forEach(function(t){t.stop()})}catch(e){}}
+async function camStart(devId){
+  camStopTracks(cam.stream);cam.stream=null;
+  var v={width:{ideal:2560},height:{ideal:1440}};
+  if(devId)v.deviceId={exact:devId};else v.facingMode={ideal:"environment"};
+  var s=await navigator.mediaDevices.getUserMedia({video:v,audio:false});
+  if(!cam.inp){camStopTracks(s);return}          // closed while the browser was asking
+  cam.stream=s;
+  var el=$$("camVideo");el.srcObject=s;try{await el.play()}catch(e){}
+  var tr=s.getVideoTracks()[0],st=tr&&tr.getSettings?tr.getSettings():{};
+  cam.dev=st.deviceId||devId||"";
+}
+async function camOpen(inp){
+  if(cam.inp)return;
+  cam.inp=inp;cam.mode="photo";cam.devs=[];cam.dev="";
+  cam.video=CAM_VIDEO_IN.test(inp.id||"")&&!!window.MediaRecorder;
+  $$("camWin").style.display="flex";camPaint();
+  try{$$("camShot").focus()}catch(e){}
+  try{
+    var saved="";try{saved=localStorage.getItem(LS_CAMDEV)||""}catch(e){}
+    try{await camStart(saved)}
+    catch(e){if(!saved)throw e;await camStart("")}     // the camera remembered is not there any more
+    if(!cam.inp)return;
+    // the cameras have a name only now, with the permission given
+    var all=await navigator.mediaDevices.enumerateDevices();
+    if(!cam.inp)return;
+    cam.devs=all.filter(function(d){return d.kind==="videoinput"&&d.deviceId});
+    // Windows rarely says which way a camera faces, so the first time the one
+    // named as the rear one is taken: that is the one pointed at a machine.
+    if(!saved&&cam.devs.length>1){
+      var rear=cam.devs.find(function(d){return /rear|back|environment|poster|traser|arri[eè]re|rück/i.test(d.label||"")});
+      if(rear&&rear.deviceId!==cam.dev)try{await camStart(rear.deviceId)}catch(e){await camStart("")}
+    }
+    camPaint();
+  }catch(e){
+    camClose();
+    alert(uiT(e&&(e.name==="NotAllowedError"||e.name==="SecurityError")
+      ?"El navegador no té permís per fer servir la càmera. Dona-l'hi a la icona que hi ha al costat de l'adreça i torna-ho a provar. Mentrestant pots triar una foto que ja tinguis amb el botó de la galeria."
+      :"No s'ha pogut obrir la càmera d'aquest aparell. Pots triar una foto que ja tinguis amb el botó de la galeria."));
+  }
+}
+function camClose(){
+  if(cam.rec){cam.drop=true;try{cam.rec.stop()}catch(e){}}
+  clearInterval(cam.tick);cam.tick=null;
+  camStopTracks(cam.stream);camStopTracks(cam.audio);cam.stream=null;cam.audio=null;
+  try{$$("camVideo").srcObject=null}catch(e){}
+  cam.inp=null;
+  $$("camWin").style.display="none";
+}
+// Into the input the click was meant for, and its `change`: the caller's own
+// handler does the rest. The input may have been redrawn meanwhile (the
+// composer's is, on every render); the old one still carries its listeners.
+function camDeliver(file){
+  var inp=cam.inp;if(!inp)return;
+  camClose();
+  try{var dt=new DataTransfer();dt.items.add(file);inp.files=dt.files}
+  catch(e){alert(uiT("No s'ha pogut obrir la càmera d'aquest aparell. Pots triar una foto que ja tinguis amb el botó de la galeria."));return}
+  inp.dispatchEvent(new Event("change",{bubbles:true}));
+}
+function camShoot(){
+  var v=$$("camVideo"),w=v.videoWidth,h=v.videoHeight;
+  if(!w||!h||!cam.inp)return;
+  var c=document.createElement("canvas");c.width=w;c.height=h;
+  c.getContext("2d").drawImage(v,0,0,w,h);
+  c.toBlob(function(b){
+    if(b&&cam.inp)camDeliver(new File([b],"foto_"+camStamp()+".jpg",{type:"image/jpeg",lastModified:Date.now()}));
+  },"image/jpeg",0.92);
+}
+async function camRecStart(){
+  if(!cam.stream||cam.rec)return;
+  // the microphone is asked for only here; without it the video is silent
+  if(!cam.audio){try{cam.audio=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){cam.audio=null}}
+  if(!cam.inp||!cam.stream||cam.rec)return;
+  var tracks=cam.stream.getVideoTracks().concat(cam.audio?cam.audio.getAudioTracks():[]);
+  var mime=["video/mp4;codecs=avc1.42E01E,mp4a.40.2","video/mp4","video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"]
+    .filter(function(m){try{return MediaRecorder.isTypeSupported(m)}catch(e){return false}})[0]||"";
+  var r;
+  try{r=new MediaRecorder(new MediaStream(tracks),mime?{mimeType:mime}:undefined)}
+  catch(e){alert(uiT("Aquest navegador no pot gravar vídeo amb la càmera. Grava'l amb l'aplicació Càmera de l'aparell i tria'l amb el botó de la galeria."));return}
+  cam.chunks=[];cam.drop=false;
+  r.ondataavailable=function(e){if(e.data&&e.data.size)cam.chunks.push(e.data)};
+  r.onstop=function(){
+    var type=(r.mimeType||mime||"video/webm").split(";")[0],chunks=cam.chunks,drop=cam.drop;
+    cam.chunks=[];cam.rec=null;cam.drop=false;clearInterval(cam.tick);cam.tick=null;
+    if(drop||!cam.inp||!chunks.length){if(cam.inp)camPaint();return}
+    camDeliver(new File(chunks,"video_"+camStamp()+(/mp4/.test(type)?".mp4":".webm"),{type:type,lastModified:Date.now()}));
+  };
+  r.start(1000);cam.rec=r;cam.t0=Date.now();cam.tick=setInterval(camPaint,500);camPaint();
+}
+$$("camShot").addEventListener("click",function(){
+  if(cam.mode==="video"){if(cam.rec){try{cam.rec.stop()}catch(e){}}else camRecStart()}
+  else camShoot();
+});
+$$("camMode").addEventListener("click",function(e){
+  var b=e.target.closest("[data-m]");if(!b||cam.rec)return;
+  cam.mode=b.dataset.m;camPaint();
+});
+$$("camFlip").addEventListener("click",async function(){
+  if(cam.rec||cam.devs.length<2)return;
+  var i=cam.devs.findIndex(function(d){return d.deviceId===cam.dev}),next=cam.devs[(i+1)%cam.devs.length];
+  try{await camStart(next.deviceId);try{localStorage.setItem(LS_CAMDEV,next.deviceId)}catch(e){}}
+  catch(e){try{await camStart("")}catch(e2){}}
+  camPaint();
+});
+$$("camClose").addEventListener("click",camClose);
+$$("camWin").addEventListener("keydown",function(e){if(e.key==="Escape"){e.preventDefault();e.stopPropagation();camClose()}});
+// before the picker opens: the click on the input is the one thing every
+// camera button in the app has in common
+document.addEventListener("click",function(e){
+  var t=e.target;
+  if(!t||t.nodeName!=="INPUT"||t.type!=="file"||!t.hasAttribute("capture")||!ownCam())return;
+  e.preventDefault();e.stopPropagation();
+  camOpen(t);
+},true);
 // ── A COPY OF EACH CAMERA PHOTO ON THE PHONE ─────────────────────────────────
 // A photo taken through the app goes to the app and to Drive, and the camera
 // app usually keeps none of it in the gallery. With this on, each one is also
@@ -7298,8 +7493,10 @@ camCopyLabel();
 // the old one for what it now is: once the camera has its own button, "afegeix
 // una foto" is the gallery.
 function showCaptureButtons(){
-  if(!handheld())return;
+  if(!camHere())return;
   Array.prototype.forEach.call(document.querySelectorAll(".cap-only"),function(b){b.style.display=""});
+  // the app's own camera records video as well, and the gallery button picks one
+  if(ownCam())["eVid","fVid"].forEach(function(id){var v=$$(id);if(v)v.style.display="none"});
   ["eAddPhoto","fAddPhoto"].forEach(function(id){
     var b=$$(id);if(b){b.innerHTML="&#128444;&#65039; De la galeria";b.title="Tria una foto o un vídeo que ja tens al telèfon"}
   });
@@ -8353,7 +8550,7 @@ function m2Wire(active,isOpen){
   // somebody's half-written entry, so the photo joins it instead.
   $$("m2Foto").addEventListener("click",function(){
     var t=$$("entIn"),empty=!(t&&t.value.trim())&&!pImgs.length;
-    if(!handheld()){m2Show("compose");$$("btnPhoto").click();return}
+    if(!camHere()){m2Show("compose");$$("btnPhoto").click();return}
     var cam=$$("camIn");
     if(empty){
       // camIn is rebuilt on every render, so a listener left by a cancelled
@@ -8443,7 +8640,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-17 · 5";
+var APP_VERSION="nou · 2026-11-17 · 6";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -18804,7 +19001,7 @@ function openExpenses(){
   var a=sessions.find(function(x){return x.id===aid});if(!a)return;
   exSessId=a.id;wireEx();
   $$("exLast4").value=exLast4();
-  var hh=handheld();
+  var hh=camHere();
   $$("exCam").style.display=hh?"":"none";
   $$("exFile").classList.toggle("btn-gold",!hh);
   exRender();$$("exBack").style.display="flex";
@@ -18946,7 +19143,7 @@ var EX_DOC={bill:"rebut",voucher:"comprovant de la targeta",invoice:"factura (co
 function exImgLabel(im){return im.extra?"documentació (no es llegeix)":EX_DOC[im.doc]||""}
 function xeRenderStrip(){
   var x=xeEx();if(!x)return;
-  var l=exShown(x),hh=handheld(),cur=xeImg();
+  var l=exShown(x),hh=camHere(),cur=xeImg();
   $$("xeStrip").innerHTML=(l.length>1?l.map(function(im){
       var d=xeEdits[im.id]||im.th||im.data;
       return "<button class=\"th"+(cur&&cur.id===im.id?" on":"")+"\" data-im=\""+esc(im.id)+"\" title=\""+esc(exImgLabel(im)||im.name||"")+"\">"
@@ -19007,8 +19204,8 @@ function xeReadLine(){
   if(miss.length){
     nb.style.display="";
     nb.innerHTML="&#9888; <b>"+uiT("Falta {x}.").replace("{x}",miss.map(function(k){return esc(uiT(EX_MISS[k][1]))}).join(uiT(" i ")))+"</b> "+uiT("Cada despesa porta el comprovant de la targeta i el rebut. Afegeix-lo aquí:")
-      +"<div class=\"bt\">"+(handheld()?"<button class=\"btn-sm btn-gold\" data-add=\"cam\">&#128247; Fotografia'l</button>":"")
-      +"<button class=\"btn-sm"+(handheld()?"":" btn-gold")+"\" data-add=\"file\">&#65291; Imatge o PDF</button></div>";
+      +"<div class=\"bt\">"+(camHere()?"<button class=\"btn-sm btn-gold\" data-add=\"cam\">&#128247; Fotografia'l</button>":"")
+      +"<button class=\"btn-sm"+(camHere()?"":" btn-gold")+"\" data-add=\"file\">&#65291; Imatge o PDF</button></div>";
   }else{nb.style.display="none";nb.innerHTML=""}
   // what the form says now, so a card being corrected is judged as typed
   var wb=$$("xeWarn"),ws=exWarns(Object.assign({},x,{pay:$$("xePay").value,last4:$$("xeLast4").value}));
@@ -20418,14 +20615,26 @@ function nvDeskRender(a,isOpen){
     "Els tiquets de cada visita":"Los tiques de cada visita","Es comprova sense cobertura":"Se comprueba sin cobertura",
     "Corrector i traducció dels informes":"Corrector y traducción de los informes","Tema":"Tema","Clar":"Claro","Fosc":"Oscuro",
     "Cada foto també es desa a Baixades":"Cada foto también se guarda en Descargas","Obre la foto":"Abre la foto","Obre el vídeo":"Abre el vídeo",
-    "Durant la visita":"Durante la visita","Consulta":"Consulta"};
+    "Durant la visita":"Durante la visita","Consulta":"Consulta",
+    "Càmera":"Cámara","Foto":"Foto","Vídeo":"Vídeo","Canvia de càmera":"Cambia de cámara","Fes la foto":"Haz la foto",
+    "Grava un vídeo":"Graba un vídeo","Atura la gravació":"Para la grabación","Obrint la càmera…":"Abriendo la cámara…",
+    "Fes una foto o grava un vídeo amb la càmera":"Haz una foto o graba un vídeo con la cámara",
+    "El navegador no té permís per fer servir la càmera. Dona-l'hi a la icona que hi ha al costat de l'adreça i torna-ho a provar. Mentrestant pots triar una foto que ja tinguis amb el botó de la galeria.":"El navegador no tiene permiso para usar la cámara. Dáselo en el icono que hay junto a la dirección y vuelve a probarlo. Mientras tanto puedes elegir una foto que ya tengas con el botón de la galería.",
+    "No s'ha pogut obrir la càmera d'aquest aparell. Pots triar una foto que ja tinguis amb el botó de la galeria.":"No se ha podido abrir la cámara de este aparato. Puedes elegir una foto que ya tengas con el botón de la galería.",
+    "Aquest navegador no pot gravar vídeo amb la càmera. Grava'l amb l'aplicació Càmera de l'aparell i tria'l amb el botó de la galeria.":"Este navegador no puede grabar vídeo con la cámara. Grábalo con la aplicación Cámara del aparato y elígelo con el botón de la galería."};
   var en={"Feina":"Work","Preferències":"Preferences","Aplicació":"Application","Sincronitza":"Sync","Arxiva visites…":"Archive visits…",
     "Els que hi ha desats a Drive":"The ones saved on Drive","Desa el ZIP de les acabades i les treu de l'app":"Saves the ZIP of the finished ones and takes them out of the app",
     "Carrega una visita desada":"Load a saved visit","On es desa el ZIP i on s'obren les fotos":"Where the ZIP is saved and where the photos open",
     "Els tiquets de cada visita":"Each visit's receipts","Es comprova sense cobertura":"Checked with no connection",
     "Corrector i traducció dels informes":"Spell check and report translation","Tema":"Theme","Clar":"Light","Fosc":"Dark",
     "Cada foto també es desa a Baixades":"Each photo is also saved to Downloads","Obre la foto":"Open the photo","Obre el vídeo":"Open the video",
-    "Durant la visita":"During the visit","Consulta":"Reference"};
+    "Durant la visita":"During the visit","Consulta":"Reference",
+    "Càmera":"Camera","Foto":"Photo","Vídeo":"Video","Canvia de càmera":"Switch camera","Fes la foto":"Take the photo",
+    "Grava un vídeo":"Record a video","Atura la gravació":"Stop recording","Obrint la càmera…":"Opening the camera…",
+    "Fes una foto o grava un vídeo amb la càmera":"Take a photo or record a video with the camera",
+    "El navegador no té permís per fer servir la càmera. Dona-l'hi a la icona que hi ha al costat de l'adreça i torna-ho a provar. Mentrestant pots triar una foto que ja tinguis amb el botó de la galeria.":"The browser has no permission to use the camera. Give it at the icon beside the address and try again. Meanwhile you can pick a photo you already have with the gallery button.",
+    "No s'ha pogut obrir la càmera d'aquest aparell. Pots triar una foto que ja tinguis amb el botó de la galeria.":"This device's camera could not be opened. You can pick a photo you already have with the gallery button.",
+    "Aquest navegador no pot gravar vídeo amb la càmera. Grava'l amb l'aplicació Càmera de l'aparell i tria'l amb el botó de la galeria.":"This browser cannot record video with the camera. Record it with the device's Camera app and pick it with the gallery button."};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();

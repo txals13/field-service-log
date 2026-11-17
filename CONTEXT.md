@@ -5063,6 +5063,44 @@ still at 33. NOT checked: a signed-in visit (Desa a Drive, Sincronitza ara,
 a linked manual, Dibuixos), a closed visit ("Reobre la visita"), a real
 phone.
 
+**The app's own camera, for a Windows tablet (version `nou · 2026-11-17 ·
+6`).** He installed `nou/` on a Surface Go and could not take photos or
+videos: "com és un ordinador em porta a la galeria directament". Two causes.
+`capture` on a file input opens the camera on Android and iOS only — Windows
+ignores it and opens the file picker; and with the keyboard on, `handheld()`
+is false (fine pointer), so the camera buttons were not even drawn. Now
+`ownCam()` is true on a touch screen that is not Android/iOS and has
+`getUserMedia`; `camHere()` (= `handheld()||ownCam()`) replaces `handheld()`
+wherever a camera button is decided (composer, `showCaptureButtons`, the
+quick 📷 `m2Foto`, expenses). One capturing `click` listener on the document
+catches the click on ANY `<input type=file capture>` when `ownCam()`, stops
+the picker and opens `#camWin` (z-index 300, over everything): live picture,
+shutter, ✕, the other camera (`#camFlip`, when there are two; the choice is
+kept in `fsln_v6_camdev`), and Foto / Vídeo where the input's handler takes
+videos (`camIn`, `eCamIn`, `fCamIn`). The first time, the camera whose label
+says rear/back is taken, because Windows rarely answers `facingMode`. A photo
+is the video frame on a canvas → JPEG 0.92 (`foto_YYYYMMDD_HHMMSS.jpg`); a
+video is `MediaRecorder`, MP4 if the browser can, WebM if not, with the
+microphone asked for only then (refused: a silent video). What is shot goes
+INTO that same input (`DataTransfer`) and its `change` fires, so every caller
+goes on untouched — entry, edit window, resolution, counters, production
+tests, expenses, and the quick 📷 still makes the entry by itself. One shot
+and the window closes, like the phone's camera. ✕ or Esc closes and adds
+nothing; closing while recording throws the recording away. On `ownCam()`
+the composer shows 📷 and the gallery button only (the "pick a video" button
+has nothing to add), and `eVid`/`fVid` stay hidden. A desktop with no touch
+screen is as before: the picker. Checked in the preview with a simulated
+touch screen and two fake cameras (a canvas stream): no camera button without
+touch; with it, the rear one is chosen, flip switches and is remembered, a
+photo and a 2.6 s MP4 land in the composer and the video plays in the viewer,
+✕ / Esc / ✕-while-recording add nothing, a refused permission says so, the
+quick 📷 makes an entry, the counters' 📷 opens it with no Vídeo; no console
+error. The translation checker's count goes from 33 to 37: the four new ones
+are not text (`SecurityError` and three MIME types in `camRecStart`), so 37
+is the new baseline. NOT checked: a real Surface (the real cameras, which
+one opens first, the permission prompt, the sound of a video, the picture
+size, an installed app), Edge, and Spanish/English on screen.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

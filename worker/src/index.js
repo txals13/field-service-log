@@ -4,7 +4,8 @@
    show a valid licence. That is what gives the licence teeth: a copy of
    index.html taken from the public page has no key of its own, so the
    corrector, the report translations, the day summary and the ticket reader
-   are simply not there for it. The buyer, in exchange, never has to make a
+   are simply not there for it — and the ticket reader only for a licence that
+   includes the expenses module. The buyer, in exchange, never has to make a
    Gemini key or open a billing account — which is one obstacle less in every
    sale, and the reason this is worth paying for.
 
@@ -88,6 +89,28 @@ async function licCheck(tok){
   return d;
 }
 
+/* Modules (2026-11-18). The licence's `f` lists what it grants beyond the base
+   app: "exp" the expenses, "*" everything. The app hides a module it was not
+   granted, but the app is a page anyone can edit — this is the half of that
+   lock that cannot be edited.
+
+   The Worker forwards a request it does not otherwise read, and a label saying
+   "this one is a ticket" could simply be left out by whoever wanted in. So it
+   does not ask what the call is FOR; it looks at what the call CARRIES. Reading
+   a ticket is the only thing the app does that sends a picture or a PDF to the
+   model — the corrector, the translations and the day summary are text — so:
+   no "exp", no files. If a base feature ever sends pictures, this is the rule
+   to revisit. */
+function licHas(lic, k){
+  const f = Array.isArray(lic && lic.f) ? lic.f : [];
+  return f.includes("*") || f.includes(k);
+}
+function carriesFiles(req){
+  const turns = [].concat(req.contents || [], req.systemInstruction || [], req.system_instruction || []);
+  return turns.some(t => [].concat((t && t.parts) || []).some(p =>
+    p && (p.inline_data || p.inlineData || p.file_data || p.fileData)));
+}
+
 function cors(origin, allowed){
   const h = {"Vary":"Origin"};
   if(origin && allowed.includes(origin)){
@@ -130,6 +153,10 @@ export default {
     const model = body && typeof body.model === "string" ? body.model : "";
     if(!MODELS.includes(model)) return fail(400, "unknown model", origin, allowed);
     if(!body.req || typeof body.req !== "object") return fail(400, "nothing to ask", origin, allowed);
+
+    /* Pictures and PDFs are the expenses module's: see carriesFiles. */
+    if(carriesFiles(body.req) && !licHas(lic, "exp"))
+      return fail(403, "this licence does not include the expenses module", origin, allowed);
 
     if(!env.GEMINI_KEY) return fail(500, "the service has no key configured", origin, allowed);
 

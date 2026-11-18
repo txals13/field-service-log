@@ -8668,7 +8668,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-18 · 1";
+var APP_VERSION="nou · 2026-11-18 · 2";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -19143,7 +19143,11 @@ function exApplyRead(sessId,id,v,all,ids){
 // yet — looked at again two minutes later, not in a loop.
 var exReadLater={};
 async function exReadPending(){
-  if(exReadBusy||!gemKey()||navigator.onLine===false)return;
+  // No module, no reading — not even of tickets that came in with a synced
+  // visit. And the model may be ours (the Worker) as well as the user's key:
+  // it used to wait for a key of its own, so a licensed device with none
+  // never read a ticket by itself.
+  if(exReadBusy||!modOn("exp")||!(gemKey()||wkCan())||navigator.onLine===false)return;
   exReadBusy=true;
   try{
     for(;;){

@@ -2872,6 +2872,28 @@ configured"**, which is the expected first response, not a fault.
 
 Then `WK_URL` in index.html, and deploy the page.
 
+### Modules (2026-11-18)
+
+The Worker forwards a request it does not otherwise read, so a label saying
+"this call is a ticket" would be left out by whoever wanted in. It does not ask
+what a call is **for**; it looks at what it **carries**: reading a ticket is
+the only thing the app does that sends a picture or a PDF to the model (the
+corrector, the translations and the day summary are text). `carriesFiles(req)`
+looks for `inline_data` / `inlineData` / `file_data` / `fileData` in any part
+of `contents` or the system instruction, and without `exp` (or `*`) in the
+licence's `f` the answer is **403 "this licence does not include the expenses
+module"**. If a base feature ever sends pictures, this is the rule to revisit.
+In the app a 403 falls back to the user's own Gemini key when there is one,
+as before.
+
+Checked 2026-11-18 by loading `worker/src/index.js` itself as a module in a
+preview tab, with the signature check and the call to Gemini stubbed: text
+goes through with any licence; a picture (either spelling), a file reference,
+`contents` as a single object, and `f` that is not a list are refused without
+`exp` and pass with `exp` or `*`; with the real check a made-up token still
+gets 401. **Not checked:** the deployed Worker — it is still not deployed, and
+`WK_URL` is still empty, so none of this is live.
+
 **Not done yet: a quota per licence.** Nothing counts calls, so one customer
 could run up the Gemini bill. Counting needs storage the Worker does not have
 a binding for (KV, or the native rate-limit binding); the only brakes today are
@@ -5132,8 +5154,14 @@ goes out in the ZIP, in "Revisa i signa" and in a closed visit's documents.
   app only.** The user's own must be re-issued with "Tots" and pasted again on
   every device that runs `nou/`.
 - Same honesty as the licence: the check is in the page of a public repo. It
-  hides the feature from the honest case. The Worker does not look at modules
-  yet (it cannot tell a ticket reading from a spell check).
+  hides the feature from the honest case. The half that cannot be edited is
+  the Worker: without `exp` it forwards no picture and no PDF to the model
+  (see "The Worker" → "Modules"). The timesheet has no such half — it needs
+  no server — so for `ts` the page's check is all there is.
+- (`nou · 2026-11-18 · 2`) `exReadPending()` (tickets read by themselves) now needs the module, and
+  runs with the Worker as well as with the user's own key: it used to wait
+  for a key of its own, so a licensed device with none never read a ticket
+  unless asked.
 
 *The timesheet inside FSL.* It used to read the hours **only** from the
 Calendari laboral Drive file, so for anyone but the author the window held an

@@ -311,6 +311,10 @@ textarea{resize:none;line-height:1.4}
 .ts-col.on{background:var(--goldbg);border-color:var(--golddim);color:var(--goldtx);font-weight:700}
 .ts-col.lock{opacity:.5;cursor:default}
 #tsSigGrid{display:grid;grid-template-columns:1fr;gap:12px}
+/* the visit's own hours (2026-11-18): a row opens its day; a proposed day reads as one */
+.ts-tbl tr[data-d]{cursor:pointer}
+.ts-tbl tr.sug td{font-style:italic}
+#tdGrid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
 @media(min-width:620px){#tsSigGrid{grid-template-columns:1fr 1fr}}
 .pv-modal{max-width:min(98vw,1100px);width:98vw;height:94vh;max-height:94vh;display:flex;flex-direction:column;padding:12px}
 .pv-scroll{flex:1;overflow:auto;position:relative;border:1px solid var(--br);border-radius:8px;background:#e5e7eb;-webkit-overflow-scrolling:touch}
@@ -1671,7 +1675,8 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
     </div>
   </div>
 
-  <!-- Timesheet — hours clocked in the Calendari laboral app, for the client to sign -->
+  <!-- Timesheet — the visit's own hours (session.hours), for the client to sign.
+       The Calendari laboral buttons only show with the "cal" module. -->
   <div class="modal-back" id="tsBack" style="display:none">
     <div class="modal" style="max-width:min(96vw,780px)">
       <div class="modal-title">&#128339; Full d'hores</div>
@@ -1681,8 +1686,10 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
         <div class="field" style="margin:0"><label>Fins a</label><input type="date" id="tsTo" style="width:auto"></div>
         <div class="field" style="margin:0"><label>Idioma del full</label><select id="tsLang" style="width:auto"></select>
           <div id="tsLangNote" class="ts-note" style="display:none"></div></div>
-        <button class="btn-sm" id="tsReload" title="Torna a llegir el calendari de Drive">&#8635; Recarrega</button>
+        <span id="tsCalBox" style="display:none;gap:8px;flex-wrap:wrap">
+        <button class="btn-sm" id="tsReload" title="Copia a la visita les hores fitxades al Calendari laboral per a aquests dies">&#8635; Omple des del Calendari laboral</button>
         <button class="btn-sm" id="tsImportBtn" title="Fes servir un JSON exportat des de l'app Calendari laboral (&#9881; Exporta c&ograve;pia)">&#8593; Importa JSON</button>
+        </span>
         <input type="file" id="tsImportIn" accept="application/json,.json" style="display:none">
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
@@ -1692,7 +1699,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
       </div>
       <div id="tsRows" style="max-height:36vh;overflow:auto;border:1px solid var(--br);border-radius:8px"></div>
       <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap">
-        <button class="btn-xs" id="tsAll">Tots</button><button class="btn-xs" id="tsNone">Cap</button>
+        <button class="btn-xs" id="tsAll">Tots</button><button class="btn-xs" id="tsNone">Cap</button><button class="btn-xs" id="tsAddDay" title="Afegeix un dia que no surt a la llista, per exemple un de viatge">+ Afegeix un dia</button>
         <span id="tsTot" style="font-family:monospace;font-size:12px;color:var(--tx2);margin-left:auto"></span>
       </div>
       <div class="field" style="margin-top:12px"><label>Observacions (s'imprimeixen al full)</label><textarea id="tsRem" rows="2" class="inp-notes"></textarea>
@@ -1715,6 +1722,27 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
         <button id="tsCancel">Cancel·la</button>
         <button class="btn-sm" id="tsSave">&#10003; Desa</button>
         <button class="btn-gold" id="tsPdf">&#128196; Desa i PDF</button>
+      </div>
+    </div>
+  </div>
+  <!-- One day's hours, kept on the visit. Opens over the timesheet. -->
+  <div class="modal-back" id="tsDayBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,440px)">
+      <div class="modal-title">&#128339; Hores del dia</div>
+      <div class="field"><label for="tdDate">Dia</label><input type="date" id="tdDate"></div>
+      <div id="tdGrid">
+        <div class="field"><label for="tdVi">Sortida</label><input type="time" id="tdVi"><div class="ts-note">de casa o de l'hotel</div></div>
+        <div class="field"><label for="tdI">Arribada</label><input type="time" id="tdI"><div class="ts-note">a la planta</div></div>
+        <div class="field"><label for="tdF">Fi</label><input type="time" id="tdF"><div class="ts-note">en sortir de la planta</div></div>
+        <div class="field"><label for="tdVf">Tornada</label><input type="time" id="tdVf"><div class="ts-note">a casa o a l'hotel</div></div>
+      </div>
+      <div class="field"><label for="tdP">Pausa (minuts)</label><input type="number" id="tdP" min="0" max="600" step="5" inputmode="numeric"></div>
+      <div class="field"><label for="tdDest">Destinació o nota</label><input type="text" id="tdDest"></div>
+      <div id="tdSum" style="font-family:monospace;font-size:12px;color:var(--tx2);min-height:18px"></div>
+      <div class="modal-actions">
+        <button id="tdDel" style="margin-right:auto">Treu el dia</button>
+        <button id="tdCancel">Cancel·la</button>
+        <button class="btn-gold" id="tdSave">&#10003; Desa</button>
       </div>
     </div>
   </div>
@@ -6682,7 +6710,7 @@ function renderContent(){
     +nvRepBtn("docx","file","Word (DOCX)",nvT("El mateix informe, editable"))
     +nvRepBtn("html","file","HTML",nvT("Per obrir a qualsevol navegador"))
     +nvRepBtn("xlsx","grid","Recanvis (Excel)",nvT("Recomanats · Cotització · Canviats · Detall"))
-    +nvRepBtn("timesheet","sign","Full d'hores…",nvT("Les hores fitxades, per signar"))
+    +(modOn("ts")?nvRepBtn("timesheet","sign","Full d'hores…",nvT("Les hores fitxades, per signar")):"")
     +((active.prodTests||[]).length?nvRepBtn("valpdf","trend","Informe de validació (PDF)",nvPl(active.prodTests.length,"prova","proves")+" · "+nvT("amb signatures")):"")
     +(hasIntern(active)?nvRepBtn("internpdf","lock","Informe intern (PDF)",nvT("No és per al client"),"Les entrades internes i les notes internes, en un PDF a part. No és per al client.","int"):"")
     +nvRepBtn("zip","box","ZIP del projecte",nvT("Tot · es pot reimportar"),"Tot: tots els informes, els fitxers multimèdia i session.json — la còpia que es pot tornar a importar")
@@ -8429,7 +8457,7 @@ function m2Hide(){
 var NAV_BTN={nvSumBack:"nvSumClose",arxBack:"arxCancel",bulkBack:"bulkCancel",ctrBack:"ctrCancel",delBack:"delCancel",drawBack:"drawClose",
   exBack:"exClose",folBack:"folClose",fsaBack:"fsaCancel",gemBack:"gemCancel",lblBack:"lblCancel",linkBack:"linkClose",
   m2MoreBack:"m2MoreClose",manualsBack:"manualsClose",mhBack:"mhClose",newBack:"nCancel",pdBack:"pdClose",ptBack:"ptDone",
-  pvBack:"pvCancel",pvPickBack:"pvPickCancel",revBack:"revCancel",tsBack:"tsCancel",zipPickBack:"zipPickCancel",
+  pvBack:"pvCancel",pvPickBack:"pvPickCancel",revBack:"revCancel",tsBack:"tsCancel",tsDayBack:"tdCancel",zipPickBack:"zipPickCancel",
   mediaModal:"mediaClose",editBack:"eCancel",xeBack:"xeCancel"};
 var NAV_ASK={editBack:1,newBack:1,xeBack:1,tsBack:1,pvBack:1,ctrBack:1,lblBack:1};
 var navStack=[],navDirty={},navSideRoot=false,navArmed=0,navGoing=false,navQueued=false,navTok=String(Date.now());
@@ -8599,7 +8627,7 @@ function openM2More(){
         if(!anc||!anc.offsetParent)anc=$$("btnExp");
         openExpMenu(anc,m);m2Show("exp");
       }),
-      it("clock","Full d'hores","",function(){openTimesheet()})
+      modOn("ts")?it("clock","Full d'hores","",function(){openTimesheet()}):null
     ]],
     ["Visita",[
       it("pencil","Dades de la visita",a.contact||"",function(){openNewModal(a)}),
@@ -8640,7 +8668,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-17 · 6";
+var APP_VERSION="nou · 2026-11-18 · 1";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -12442,6 +12470,36 @@ function licState(){
   if(tl>0)return{ok:true,kind:"trial",days:tl};
   return{ok:false,kind:"none"};
 }
+// ── MODULES · what the licence grants beyond the base app (2026-11-18) ───
+// The payload's `f` (the issuing tool's "extres", signed with the rest) is the
+// list: "exp" the expenses, "ts" the timesheet, "cal" the bridge to the
+// Calendari laboral app (the author's own tool, never sold), "*" all of them
+// and whatever comes later. No licence, the trial, or a licence past its
+// grace: the base app. A module that is off only HIDES its way in — what a
+// visit already holds (its expenses, its hours, a signed sheet) is never
+// dropped and still goes out in the ZIP.
+// Like the licence itself, this stops the honest case, not somebody editing a
+// copy of the file.
+var LIC_MODS={exp:"Despeses",ts:"Full d'hores",cal:"Calendari laboral"};
+function licMods(){
+  if(!LIC_ON)return["*"];
+  if(!licReady||!lic||licDays(lic)<=-LIC_GRACE)return[];
+  return Array.isArray(lic.f)?lic.f:[];
+}
+function modOn(k){var m=licMods();return m.indexOf("*")>=0||m.indexOf(k)>=0}
+function licModWords(){
+  var m=licMods();
+  if(m.indexOf("*")>=0)return uiT("tots els mòduls");
+  var w=Object.keys(LIC_MODS).filter(function(k){return m.indexOf(k)>=0}).map(function(k){return uiT(LIC_MODS[k])});
+  return w.length?w.join(", "):uiT("cap mòdul");
+}
+// The licence has just been read, pasted or taken out: what it grants shows
+// or goes at once, with no reload.
+function licApply(){
+  verLine();
+  try{exLabel()}catch(e){}
+  try{if(sessions)renderAll()}catch(e){}
+}
 // What goes in the footer of every report. The licensee is the company whose
 // technician writes the report, so its name there reads as a letterhead, not as
 // licence paperwork — which is also why it is only the name.
@@ -12463,7 +12521,7 @@ async function licBoot(){
   var t=licStored();
   if(t)lic=await licCheck(t);
   licReady=true;
-  verLine();
+  licApply();
 }
 // The gate. It never stands between a technician and work already begun: a
 // visit that exists can be written, finished, exported and archived whatever
@@ -12490,14 +12548,14 @@ function wireLic(){
       +(LIC_PUB?"":" <b>(Aquesta c\u00f2pia de l'aplicaci\u00f3 encara no t\u00e9 clau p\u00fablica: cap llic\u00e8ncia no hi pot valer.)</b>");return}
     try{localStorage.setItem(LS_LIC,t)}
     catch(err){alert(uiT("No s'ha pogut desar la llic\u00e8ncia en aquest navegador: ")+((err&&err.message)||err));return}
-    lic=d;verLine();close();
-    alert(uiT("Llicència de {n}, fins al {x}.").replace("{n}",d.n).replace("{x}",d.x));
+    lic=d;licApply();close();
+    alert(uiT("Llicència de {n}, fins al {x}.").replace("{n}",d.n).replace("{x}",d.x)+"\n"+uiT("Mòduls:")+" "+licModWords());
   });
   $$("licClear").addEventListener("click",function(){
     if(!licStored()){close();return}
     if(!confirm(uiT("Vols treure la llic\u00e8ncia d'aquest aparell?")))return;
     try{localStorage.removeItem(LS_LIC)}catch(err){}
-    lic=null;verLine();close();
+    lic=null;licApply();close();
   });
 }
 function openLic(msg){
@@ -12506,6 +12564,7 @@ function openLic(msg){
   $$("licNote").innerHTML=msg?esc(msg)
     :(d?"Aquest aparell t\u00e9 la llic\u00e8ncia de <b>"+esc(d.n)+"</b>, fins al <b>"+esc(d.x)+"</b>"
         +(d.s?uiT(", per a")+" "+esc(String(d.s))+" "+uiT("tècnic")+(d.s==1?"":"s"):"")+"."
+        +" "+uiT("Mòduls:")+" <b>"+esc(licModWords())+"</b>."
         +(st.kind==="grace"?" <b>Ha caducat</b>"+uiT(", i segueix funcionant durant")+" "+LIC_GRACE+" "+uiT("dies de cortesia."):"")
        :(st.kind==="trial"?"Estem de prova: queden <b>"+st.days+"</b> dies. Enganxa la llic\u00e8ncia quan la tinguis."
                           :"Aquest aparell no t\u00e9 llic\u00e8ncia."));
@@ -15201,6 +15260,9 @@ async function exportRep(s,fmt,how){
 // authorises per (user, file, OAuth client), and both apps ship the SAME
 // client id. If the read fails — never synced, signed out, no coverage — a
 // cached copy or a hand-imported JSON (⚙️ Exporta còpia over there) stands in.
+// 2026-11-18: that file is the author's own, so for anyone else the sheet was a
+// window with an error in it. The hours now live on the VISIT (session.hours,
+// further down) and this file is one way to fill them, behind the "cal" module.
 var CAL_FILE="calendari_laboral_data.json";
 var LS_CAL=LSP+"cal";
 var calCache=null;   // {at, src, db}
@@ -15715,11 +15777,12 @@ async function folDoDelete(f){
   renderFolder();renderContent();
 }
 function tsChipHTML(sess){
+  if(!modOn("ts"))return "";
   var T=sess.timesheet;
   if(T&&T.rows&&T.rows.length)
     return "<span id=\"tsChip\" style=\"cursor:pointer\" title=\"Full d'hores: clica per revisar-lo, tornar-lo a signar o canviar els dies\">&#129534; "
       +T.rows.length+"d · "+tsSum(T.rows,"total").toFixed(2)+"h"+((T.cliSig||T.techSig)?" &#9997;":"")+"</span>";
-  return "<span id=\"tsChip\" style=\"cursor:pointer;color:var(--tx3)\" title=\"Fes un full d'hores amb les hores fitxades al Calendari laboral\">&#129534; Full d'hores</span>";
+  return "<span id=\"tsChip\" style=\"cursor:pointer;color:var(--tx3)\" title=\"Fes un full d'hores amb les hores de la visita, per signar\">&#129534; Full d'hores</span>";
 }
 
 // ── TIMESHEET · modal ─────────────────────────────────────────────────────────
@@ -15782,14 +15845,92 @@ function tsInitPad(id,dataUrl){
 function tsSetSrc(msg){var e=$$("tsSrc");if(e)e.innerHTML=msg}
 function tsCacheLabel(){var c=loadCalCache();return c?esc(c.src)+" · "+esc(fts(c.at)):""}
 
-// Loads the days for the current range. Drive first when signed in, otherwise
-// whatever copy is cached here, so a timesheet can still be put together on a
-// plant floor with no coverage.
-async function tsLoad(force){
+// ── TIMESHEET · the visit's own hours (2026-11-18) ───────────────────────────
+// session.hours holds one record per day, in the calendar's own shape
+// ({vi,i,f,vf,p,d} and, for a day brought over with no clock times, h and v),
+// so tsDayRow reads both the same way and the sheet, its PDF and the signed
+// copy did not have to change.
+// A day with entries and no hours yet is PROPOSED: on site from its first
+// entry to its last, by the clock on the wall. It is marked ≈ and becomes the
+// visit's own only when it is edited or goes onto a saved sheet.
+var tsH={},tsDayDate="",tsDayNew=false;
+// A row of the sheet, or a day of the calendar, as a record of the visit.
+function tsRec(r){
+  var o={};
+  ["vi","i","f","vf"].forEach(function(k){if(r[k])o[k]=r[k]});
+  if(+r.p)o.p=tsR2(+r.p);
+  var d=r.dest||r.d||r.note||r.n||"";if(d)o.d=d;
+  if(!tsLegs(o)){o.h=tsR2(+r.total||+r.h||0);o.v=tsR2(+r.travel||+r.v||0)}
+  return o;
+}
+function tsHoursOf(s){
+  if(s&&s.hours)return JSON.parse(JSON.stringify(s.hours));
+  // a sheet saved before the hours lived here: its rows ARE those hours
+  var h={},T=s&&s.timesheet;
+  ((T&&T.rows)||[]).forEach(function(r){if(r&&r.date)h[r.date]=tsRec(r)});
+  return h;
+}
+function tsSuggest(s){
+  var by={};
+  ((s&&s.entries)||[]).forEach(function(e){
+    var t=e&&e.ts?new Date(e.ts):null;
+    if(!t||isNaN(t.getTime()))return;
+    var d=tsIso(t),hm=tsPad2(t.getHours())+":"+tsPad2(t.getMinutes()),o=by[d];
+    if(!o)by[d]={i:hm,f:hm};
+    else{if(hm<o.i)o.i=hm;if(hm>o.f)o.f=hm}
+  });
+  return by;
+}
+function tsBuild(){
+  var from=$$("tsFrom").value,to=$$("tsTo").value,S=tsSuggest(tsSess),out=[];
+  if(!from||!to||from>to)return out;
+  Object.keys(tsH).forEach(function(d){if(d>=from&&d<=to)out.push(tsDayRow(d,tsH[d]))});
+  Object.keys(S).forEach(function(d){
+    if(tsH[d]||d<from||d>to)return;
+    var r=tsDayRow(d,S[d]);r.sug=true;out.push(r);
+  });
+  out.sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0});
+  return out;
+}
+function tsNote(html){
+  if(html){tsSetSrc(html);return}
+  var n=tsAll.filter(function(r){return r.sug}).length;
+  tsSetSrc(esc(uiT("Les hores es desen amb la visita. Toca un dia per corregir-lo."))
+    +(n?" <span style=\"color:var(--orange)\">"+esc(uiT("≈ és una proposta, de la primera a l'última entrada del dia: revisa-la."))+"</span>":""));
+}
+// Redraws the list from the visit. A first look ticks every day that has
+// hours, or exactly the days a saved sheet used.
+function tsRefresh(){
+  tsAll=tsBuild();
+  if(tsPick===null){
+    var saved=tsSess&&tsSess.timesheet&&tsSess.timesheet.rows;
+    tsPick={};
+    if(saved&&saved.length)saved.forEach(function(r){tsPick[r.date]=true});
+    else tsAll.forEach(function(r){tsPick[r.date]=r.total>0});
+  } else {
+    tsAll.forEach(function(r){if(!(r.date in tsPick))tsPick[r.date]=r.total>0});
+  }
+  tsNote();
+  tsRenderRows();
+}
+// The hours are the visit's the moment a day is saved, whatever happens to
+// the sheet afterwards: closing the window without "Desa" keeps them.
+function tsHoursSave(){
+  if(!tsSess)return;
+  var id=tsSess.id,h=JSON.parse(JSON.stringify(tsH));
+  sessions=sessions.map(function(s){return s.id===id?Object.assign({},s,{hours:h}):s});
+  scheduleSave();
+  tsSess=sessions.find(function(s){return s.id===id})||tsSess;
+}
+// Only with the "cal" module: copies the days clocked in Calendari laboral
+// into the visit. Drive first when signed in, otherwise the copy cached here,
+// so it still works on a plant floor with no coverage.
+async function tsCalFill(force){
+  if(!modOn("cal")||!tsSess)return;
   var from=$$("tsFrom").value,to=$$("tsTo").value;
   tsSetSrc("<span class=\"spinner\"></span> Llegint el calendari…");
   var db=null,src="";
-  if(isLoggedIn&&(force||!loadCalCache())){
+  if(isLoggedIn&&force){
     try{db=await fetchCalendarDB()}catch(e){db=null}
   }
   if(db)src="Calendari laboral · Drive · "+esc(fts(now()));
@@ -15797,26 +15938,84 @@ async function tsLoad(force){
     var c=loadCalCache();
     if(c&&c.db){db=c.db;src="Calendari laboral · "+tsCacheLabel()}
   }
+  if(!tsSess)return;                       // the window was closed meanwhile
   if(!db){
     tsSetSrc("<span style=\"color:var(--orange)\">"+uiT("⚠ No s'ha pogut llegir el fitxer del Calendari laboral.")
       +(isLoggedIn?" "+uiT("Potser no s'ha sincronitzat mai des d'aquella app.")
                   :" "+uiT("Inicia la sessió amb Google, o"))
       +" "+uiT("fes servir ↑ Importa JSON amb una còpia exportada d'allà (⚙ Exporta còpia).")+"</span>");
-    tsAll=[];tsRenderRows();return;
+    return;
   }
-  tsSetSrc(src);
-  tsAll=tsCollect(db,from,to);
-  // Keep whatever is already ticked; tick everything on a first look, or
-  // re-tick exactly the days a saved timesheet used.
-  if(tsPick===null){
-    var saved=tsSess&&tsSess.timesheet&&tsSess.timesheet.rows;
-    tsPick={};
-    if(saved&&saved.length)saved.forEach(function(r){tsPick[r.date]=true});
-    else tsAll.forEach(function(r){tsPick[r.date]=true});
-  } else {
-    tsAll.forEach(function(r){if(!(r.date in tsPick))tsPick[r.date]=true});
+  var days=tsCollect(db,from,to);
+  if(!days.length){tsSetSrc(src+" · "+esc(uiT("no hi ha cap dia fitxat en aquest interval")));return}
+  var clash=days.filter(function(r){return tsH[r.date]&&JSON.stringify(tsH[r.date])!==JSON.stringify(tsRec(r))}).length;
+  if(clash&&!confirm(uiT("Alguns dies ({n}) ja tenen hores escrites aquí que no són les del calendari. Les del calendari les substituiran. Vols continuar?").replace("{n}",clash))){tsNote();return}
+  if(!tsPick)tsPick={};
+  days.forEach(function(r){tsH[r.date]=tsRec(r);tsPick[r.date]=true});
+  tsHoursSave();
+  tsRefresh();
+  tsSetSrc(src+" · "+esc(pl(days.length,"dia copiat a la visita","dies copiats a la visita")));
+}
+// ── one day ──
+function tsDayFill(r){
+  r=r||{};
+  $$("tdVi").value=r.vi||"";$$("tdI").value=r.i||"";$$("tdF").value=r.f||"";$$("tdVf").value=r.vf||"";
+  $$("tdP").value=+r.p?Math.round(+r.p*60):"";
+  $$("tdDest").value=r.d||"";
+}
+function tsDayRead(){
+  var o={};
+  [["vi","tdVi"],["i","tdI"],["f","tdF"],["vf","tdVf"]].forEach(function(x){var v=$$(x[1]).value;if(v)o[x[0]]=v.slice(0,5)});
+  var m=parseFloat(String($$("tdP").value).replace(",","."));
+  if(m>0)o.p=tsR2(m/60);
+  var d=$$("tdDest").value.trim();if(d)o.d=d;
+  return o;
+}
+function tsDaySum(){
+  var L=tsLegs(tsDayRead());
+  $$("tdSum").textContent=L?uiT("Viatge")+" "+L.travel.toFixed(2)+" h · "+uiT("Treball")+" "+L.work.toFixed(2)+" h · "+uiT("Total")+" "+L.total.toFixed(2)+" h":"";
+}
+// With a date: that day, as the visit has it or as it is proposed. Without:
+// a new one, the day after the last on the list.
+function tsDayOpen(date){
+  if(!tsSess)return;
+  tsDayNew=!date;
+  var r=date?(tsH[date]||tsSuggest(tsSess)[date]||{}):{};
+  if(!date){
+    var last=tsAll.length?tsAll[tsAll.length-1].date:"";
+    if(last){var d=new Date(last+"T00:00:00");d.setDate(d.getDate()+1);date=tsIso(d)}
+    else date=$$("tsFrom").value||todayISO();
+    if(tsH[date])r=tsH[date];
   }
-  tsRenderRows();
+  tsDayDate=date;
+  $$("tdDate").value=date;$$("tdDate").disabled=!tsDayNew;
+  tsDayFill(r);
+  $$("tdDel").style.display=(!tsDayNew&&tsH[date])?"":"none";
+  $$("tsDayBack").style.display="flex";
+  tsDaySum();
+}
+function tsDayShut(){$$("tsDayBack").style.display="none"}
+function tsDaySave(){
+  var date=tsDayNew?$$("tdDate").value:tsDayDate,o=tsDayRead(),old=tsH[date];
+  if(!date){alert(uiT("Falta el dia."));return}
+  if(!tsLegs(o)){
+    // a day brought over as totals only keeps them while no time is typed
+    if(old&&+old.h&&!o.vi&&!o.i&&!o.f&&!o.vf){o.h=old.h;o.v=old.v||0}
+    else{alert(uiT("Escriu com a mínim l'arribada i la fi, o la sortida i la tornada."));return}
+  }
+  tsH[date]=o;
+  // a day outside the sheet's dates widens them: it was added to be on it
+  if(date<$$("tsFrom").value)$$("tsFrom").value=date;
+  if(date>$$("tsTo").value)$$("tsTo").value=date;
+  if(tsPick)tsPick[date]=true;
+  tsHoursSave();tsDayShut();tsRefresh();
+}
+function tsDayDel(){
+  if(!tsH[tsDayDate])return;
+  if(!confirm(uiT("Vols treure les hores d'aquest dia?")))return;
+  delete tsH[tsDayDate];
+  if(tsPick)tsPick[tsDayDate]=false;     // if it comes back as a proposal, it comes back unticked
+  tsHoursSave();tsDayShut();tsRefresh();
 }
 // The chips drive both this table and the PDF, so what you tick is literally
 // what the client will be signing.
@@ -15845,7 +16044,7 @@ function tsRenderRows(){
   var box=$$("tsRows"),t=TSL[$$("tsLang").value]||TSL.en;
   tsRenderColChips();
   if(!tsAll.length){
-    box.innerHTML="<div class=\"ts-note\" style=\"padding:16px;text-align:center\">No hi ha dies fitxats en aquest interval.</div>";
+    box.innerHTML="<div class=\"ts-note\" style=\"padding:16px;text-align:center\">Encara no hi ha cap dia amb hores en aquest interval.</div>";
     $$("tsTot").textContent="";return;
   }
   var h="<table class=\"ts-tbl\"><thead><tr><th></th>"
@@ -15853,23 +16052,29 @@ function tsRenderRows(){
       var c=tsColMeta(k);
       return "<th"+(c.al==="right"?" style=\"text-align:right\"":"")+">"+esc(t[c.lab])+"</th>";
     }).join("")
-    +"</tr></thead><tbody>";
+    +"<th></th></tr></thead><tbody>";
   tsAll.forEach(function(r){
     var on=!!tsPick[r.date];
-    h+="<tr class=\""+(on?"":"off")+"\">"
+    h+="<tr data-d=\""+r.date+"\" class=\""+(on?"":"off")+(r.sug?" sug":"")+"\">"
       +"<td><input type=\"checkbox\" data-d=\""+r.date+"\""+(on?" checked":"")+"></td>"
       +tsCols.map(function(k){
-        var c=tsColMeta(k),v=esc(tsCell(r,k,t));
+        var c=tsColMeta(k),v=(k==="date"&&r.sug?"≈ ":"")+esc(tsCell(r,k,t));
         if(k==="total")return "<td class=\"num\" style=\"color:var(--tx1);font-weight:700\">"+v+"</td>";
         return "<td"+(c.al==="right"?" class=\"num\"":"")+">"+v+"</td>";
       }).join("")
-      +"</tr>";
+      +"<td><button type=\"button\" class=\"btn-xs\" title=\"Corregeix les hores d'aquest dia\">&#9998;</button></td></tr>";
   });
   box.innerHTML=h+"</tbody></table>";
+  // the whole row opens its day, except the tick's own cell
+  box.onclick=function(e){
+    var el=e.target,td=el&&el.closest?el.closest("td"):null,tr=td?td.parentNode:null;
+    if(!tr||!tr.dataset||!tr.dataset.d||td.cellIndex===0)return;
+    tsDayOpen(tr.dataset.d);
+  };
   Array.prototype.forEach.call(box.querySelectorAll("input[type=checkbox]"),function(cb){
     cb.addEventListener("change",function(){
       tsPick[cb.dataset.d]=cb.checked;
-      var tr=cb.parentNode.parentNode;if(tr)tr.className=cb.checked?"":"off";
+      var tr=cb.parentNode.parentNode;if(tr)tr.classList.toggle("off",!cb.checked);
       tsTotals();
     });
   });
@@ -15887,9 +16092,14 @@ function tsTotals(){
 }
 function openTimesheet(){
   var active=sessions.find(function(s){return s.id===aid});
-  if(!active)return;
+  if(!active||!modOn("ts"))return;
   tsSess=active;tsPick=null;tsAll=[];
+  tsH=tsHoursOf(active);
   var T=active.timesheet||{},R=tsDefaultRange(active);
+  // Every day the visit has hours for, and every day with an entry (by the
+  // clock on the wall, where tsRange cuts by UTC), is inside what it opens with.
+  Object.keys(tsH).concat(Object.keys(tsSuggest(active))).forEach(function(d){if(d<R.from)R.from=d;if(d>R.to)R.to=d});
+  $$("tsCalBox").style.display=modOn("cal")?"flex":"none";
   // The saved range wins, but it cannot cut the intervention: a sheet saved
   // before an earlier entry moved the start (2026-11-10) opens from that
   // start, and one saved before a later entry runs on to it. Wider by hand
@@ -15926,9 +16136,18 @@ function openTimesheet(){
     wireCorrect("tsCorr","tsRem");
     $$("tsCancel").addEventListener("click",closeTimesheet);
     $$("tsBack").addEventListener("click",function(e){if(e.target===$$("tsBack"))closeTimesheet()});
-    $$("tsReload").addEventListener("click",function(){tsLoad(true)});
-    $$("tsFrom").addEventListener("change",function(){tsPick=null;tsLoad(false)});
-    $$("tsTo").addEventListener("change",function(){tsPick=null;tsLoad(false)});
+    $$("tsReload").addEventListener("click",function(){tsCalFill(true)});
+    $$("tsFrom").addEventListener("change",function(){tsPick=null;tsRefresh()});
+    $$("tsTo").addEventListener("change",function(){tsPick=null;tsRefresh()});
+    $$("tsAddDay").addEventListener("click",function(){tsDayOpen("")});
+    $$("tdCancel").addEventListener("click",tsDayShut);
+    $$("tsDayBack").addEventListener("click",function(e){if(e.target===$$("tsDayBack"))tsDayShut()});
+    $$("tdSave").addEventListener("click",tsDaySave);
+    $$("tdDel").addEventListener("click",tsDayDel);
+    ["tdVi","tdI","tdF","tdVf","tdP"].forEach(function(id){$$(id).addEventListener("input",tsDaySum)});
+    // a new day set on a date the visit already has hours for: show them
+    // (and only then — times typed before the date was changed stay)
+    $$("tdDate").addEventListener("change",function(){var h=tsH[$$("tdDate").value];if(tsDayNew&&h){tsDayFill(h);tsDaySum()}});
     $$("tsLang").addEventListener("change",function(){tsRenderRows();tsLangNote()});
     $$("tsColReset").addEventListener("click",function(){tsCols=TSCOL_ALL.slice();tsColSaveDef(tsCols);tsRenderRows()});
     $$("tsAll").addEventListener("click",function(){tsAll.forEach(function(r){tsPick[r.date]=true});tsRenderRows()});
@@ -15946,7 +16165,7 @@ function openTimesheet(){
       exportTimesheet(sessions.find(function(x){return x.id===id}));
     });
   }
-  tsLoad(undefined);
+  tsRefresh();
 }
 // The preview below is drawn with whatever labels the app already has, which
 // for a language it hasn't met yet means English. Saying so beats letting it
@@ -15958,7 +16177,7 @@ function tsLangNote(){
   el.style.display=missing?"":"none";
   if(missing)el.textContent=uiT("Les etiquetes en")+" "+langNative(l)+" "+uiT("es traduiran en exportar; aquí sota encara es veuen en anglès.");
 }
-function closeTimesheet(){$$("tsBack").style.display="none";tsSess=null}
+function closeTimesheet(){$$("tsDayBack").style.display="none";$$("tsBack").style.display="none";tsSess=null}
 function tsImportFile(e){
   var f=e.target.files&&e.target.files[0];e.target.value="";
   if(!f)return;
@@ -15968,7 +16187,7 @@ function tsImportFile(e){
     try{db=JSON.parse(rd.result)}catch(err){}
     if(!db||!db.years){alert(uiT("Això no és una exportació del Calendari laboral: no hi ha \"years\"."));return}
     saveCalCache(db,"fitxer importat");
-    tsPick=null;tsLoad(false);
+    tsCalFill(false);
   };
   rd.readAsText(f);
 }
@@ -15985,6 +16204,8 @@ function tsSignDate(T){
 function tsCommit(){
   var rows=tsChosen();
   if(!rows.length){alert(uiT("Tria com a mínim un dia per al full d'hores."));return false}
+  // a proposed day that goes onto the sheet is the visit's own from here on
+  rows.forEach(function(r){if(r.sug)tsH[r.date]=tsRec(r)});
   var T={
     from:$$("tsFrom").value,to:$$("tsTo").value,lang:$$("tsLang").value,
     cols:tsCols.slice(),
@@ -15992,11 +16213,11 @@ function tsCommit(){
     techName:$$("tsTechName").value.trim(),cliName:$$("tsCliName").value.trim(),
     techSig:tsPads.tech?tsPads.tech.data():"",cliSig:tsPads.cli?tsPads.cli.data():"",
     signDate:$$("tsSigDate").value||"",
-    rows:rows.map(function(r){return Object.assign({},r)}),
+    rows:rows.map(function(r){var o=Object.assign({},r);delete o.sug;return o}),
     generatedAt:now()
   };
-  var id=tsSess.id;
-  sessions=sessions.map(function(s){return s.id===id?Object.assign({},s,{timesheet:T}):s});
+  var id=tsSess.id,H=JSON.parse(JSON.stringify(tsH));
+  sessions=sessions.map(function(s){return s.id===id?Object.assign({},s,{timesheet:T,hours:H}):s});
   scheduleSave();renderAll();
   return true;
 }
@@ -18226,10 +18447,11 @@ var EX_CATS=[["meal","Àpat"],["hotel","Hotel"],["fuel","Combustible"],["taxi","
 var EX_PAY={company:"Targeta d'empresa",personal:"Targeta personal",cash:"Efectiu"};
 // what a reading fills, and what a hand edit protects from the next reading
 var EX_FIELDS=["date","time","category","merchant","legalName","taxId","address","ticketNo","currency","base","vatRate","vat","total","pay","last4","concept","other"];
-function exOn(){try{return localStorage.getItem(LS_EXON)==="1"}catch(e){return false}}
+// Two keys: the licence grants the module, the switch turns it on here.
+function exOn(){try{return modOn("exp")&&localStorage.getItem(LS_EXON)==="1"}catch(e){return false}}
 function exLast4(){try{return localStorage.getItem(LS_EXLAST4)||""}catch(e){return ""}}
 function exCatLabel(k){var c=EX_CATS.filter(function(x){return x[0]===k})[0];return c?c[1]:""}
-function exLabel(){var b=$$("btnExOn");if(!b)return;b.classList.toggle("on",exOn());b.setAttribute("aria-pressed",exOn()?"true":"false")}
+function exLabel(){var b=$$("btnExOn");if(!b)return;b.style.display=modOn("exp")?"":"none";b.classList.toggle("on",exOn());b.setAttribute("aria-pressed",exOn()?"true":"false")}
 exLabel();
 $$("btnExOn").addEventListener("click",function(){
   try{localStorage.setItem(LS_EXON,exOn()?"0":"1")}catch(e){}
@@ -19687,7 +19909,7 @@ function nvNavRender(){
       +bt("t:reg","clock","Cronologia")
       +bt("t:inc","alert","Incidències",false,inc?"<span class=\"cnt\">"+inc+"</span>":"")
       +bt("prod","chart","Proves")+bt("t:rec","wrench","Recanvis")
-      +bt("fol","image","Evidències")+bt("ctr","gauge","Comptadors")+bt("ts","cal","Full d'hores")+bt("sum","sign","Resum")
+      +bt("fol","image","Evidències")+bt("ctr","gauge","Comptadors")+(modOn("ts")?bt("ts","cal","Full d'hores"):"")+bt("sum","sign","Resum")
       +(q?"<div class=\"foot\">"+esc(q)+"</div>":"");
   }else{
     var who=nvWho(),lw="";try{lw=licWords()||""}catch(e){}
@@ -20382,8 +20604,8 @@ function nvSumState(a){
     {k:"rec",label:nvT("Recanvis")+" ("+parts+")",st:parts?"ok":"none",note:parts?"":nvT("cap")},
     {k:"fotos",label:nvT("Fotografies")+" ("+nPh+")",st:nPh?"ok":"none",note:nQ?"⏳ "+nQ+" "+nvT("a la cua"):nPh?"":nvT("cap")},
     {k:"ctr",label:nvT("Comptadors"),st:arr&&!dep?"warn":(arr||dep)?"ok":"none",note:arr&&!dep?nvT("sortida pendent"):(arr||dep)?"":nvT("sense lectures")},
-    {k:"ts",label:nvT("Full d'hores"),st:!hasT?"none":tsSigned(a)?"ok":"warn",note:!hasT?nvT("sense full"):tsSigned(a)?nvT("signat"):nvT("sense signar")}
   ];
+  if(modOn("ts"))rows.push({k:"ts",label:nvT("Full d'hores"),st:!hasT?"none":tsSigned(a)?"ok":"warn",note:!hasT?nvT("sense full"):tsSigned(a)?nvT("signat"):nvT("sense signar")});
   if(nInt)rows.push({k:"",label:nvT("Notes internes")+" ("+nInt+")",st:"lock",note:nvT("queden fora")});
   return {rows:rows,nPh:nPh,parts:parts,tests:tests.length,hasT:hasT};
 }
@@ -20635,6 +20857,49 @@ function nvDeskRender(a,isOpen){
     "El navegador no té permís per fer servir la càmera. Dona-l'hi a la icona que hi ha al costat de l'adreça i torna-ho a provar. Mentrestant pots triar una foto que ja tinguis amb el botó de la galeria.":"The browser has no permission to use the camera. Give it at the icon beside the address and try again. Meanwhile you can pick a photo you already have with the gallery button.",
     "No s'ha pogut obrir la càmera d'aquest aparell. Pots triar una foto que ja tinguis amb el botó de la galeria.":"This device's camera could not be opened. You can pick a photo you already have with the gallery button.",
     "Aquest navegador no pot gravar vídeo amb la càmera. Grava'l amb l'aplicació Càmera de l'aparell i tria'l amb el botó de la galeria.":"This browser cannot record video with the camera. Record it with the device's Camera app and pick it with the gallery button."};
+  Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
+  Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
+})();
+// The modules of the licence and the visit's own hours (2026-11-18).
+(function(){
+  var es={"tots els mòduls":"todos los módulos","cap mòdul":"ningún módulo","Mòduls:":"Módulos:","Calendari laboral":"Calendari laboral",
+    "Fes un full d'hores amb les hores de la visita, per signar":"Haz una hoja de horas con las horas de la visita, para firmar",
+    "Les hores es desen amb la visita. Toca un dia per corregir-lo.":"Las horas se guardan con la visita. Toca un día para corregirlo.",
+    "≈ és una proposta, de la primera a l'última entrada del dia: revisa-la.":"≈ es una propuesta, de la primera a la última entrada del día: revísala.",
+    "no hi ha cap dia fitxat en aquest interval":"no hay ningún día fichado en este intervalo",
+    "Alguns dies ({n}) ja tenen hores escrites aquí que no són les del calendari. Les del calendari les substituiran. Vols continuar?":"Algunos días ({n}) ya tienen horas escritas aquí que no son las del calendario. Las del calendario las sustituirán. ¿Quieres continuar?",
+    "dia copiat a la visita":"día copiado a la visita","dies copiats a la visita":"días copiados a la visita",
+    "Viatge":"Viaje","Treball":"Trabajo","Total":"Total","Falta el dia.":"Falta el día.",
+    "Escriu com a mínim l'arribada i la fi, o la sortida i la tornada.":"Escribe como mínimo la llegada y el fin, o la salida y el regreso.",
+    "Vols treure les hores d'aquest dia?":"¿Quieres quitar las horas de este día?",
+    "Encara no hi ha cap dia amb hores en aquest interval.":"Todavía no hay ningún día con horas en este intervalo.",
+    "Corregeix les hores d'aquest dia":"Corrige las horas de este día",
+    "Hores del dia":"Horas del día","Dia":"Día","Sortida":"Salida","Arribada":"Llegada","Fi":"Fin","Tornada":"Regreso",
+    "de casa o de l'hotel":"de casa o del hotel","a la planta":"a la planta","en sortir de la planta":"al salir de la planta",
+    "a casa o a l'hotel":"a casa o al hotel","Pausa (minuts)":"Pausa (minutos)","Destinació o nota":"Destino o nota",
+    "Treu el dia":"Quita el día","Afegeix un dia":"Añade un día","+ Afegeix un dia":"+ Añade un día",
+    "Afegeix un dia que no surt a la llista, per exemple un de viatge":"Añade un día que no sale en la lista, por ejemplo uno de viaje",
+    "Omple des del Calendari laboral":"Rellena desde Calendari laboral",
+    "Copia a la visita les hores fitxades al Calendari laboral per a aquests dies":"Copia a la visita las horas fichadas en Calendari laboral para estos días"};
+  var en={"tots els mòduls":"all modules","cap mòdul":"no modules","Mòduls:":"Modules:","Calendari laboral":"Calendari laboral",
+    "Fes un full d'hores amb les hores de la visita, per signar":"Make a timesheet from the visit's hours, to be signed",
+    "Les hores es desen amb la visita. Toca un dia per corregir-lo.":"The hours are kept with the visit. Tap a day to correct it.",
+    "≈ és una proposta, de la primera a l'última entrada del dia: revisa-la.":"≈ is a suggestion, from the day's first entry to its last: check it.",
+    "no hi ha cap dia fitxat en aquest interval":"no clocked days in this range",
+    "Alguns dies ({n}) ja tenen hores escrites aquí que no són les del calendari. Les del calendari les substituiran. Vols continuar?":"Some days ({n}) already have hours typed here that differ from the calendar's. The calendar's will replace them. Continue?",
+    "dia copiat a la visita":"day copied to the visit","dies copiats a la visita":"days copied to the visit",
+    "Viatge":"Travel","Treball":"Work","Total":"Total","Falta el dia.":"The day is missing.",
+    "Escriu com a mínim l'arribada i la fi, o la sortida i la tornada.":"Enter at least the arrival and the end, or the departure and the return.",
+    "Vols treure les hores d'aquest dia?":"Remove this day's hours?",
+    "Encara no hi ha cap dia amb hores en aquest interval.":"No day has hours in this range yet.",
+    "Corregeix les hores d'aquest dia":"Correct this day's hours",
+    "Hores del dia":"The day's hours","Dia":"Day","Sortida":"Depart","Arribada":"On site","Fi":"Off site","Tornada":"Back",
+    "de casa o de l'hotel":"from home or the hotel","a la planta":"at the plant","en sortir de la planta":"on leaving the plant",
+    "a casa o a l'hotel":"home or at the hotel","Pausa (minuts)":"Break (minutes)","Destinació o nota":"Destination or note",
+    "Treu el dia":"Remove the day","Afegeix un dia":"Add a day","+ Afegeix un dia":"+ Add a day",
+    "Afegeix un dia que no surt a la llista, per exemple un de viatge":"Add a day that is not on the list, a travel day for instance",
+    "Omple des del Calendari laboral":"Fill from Calendari laboral",
+    "Copia a la visita les hores fitxades al Calendari laboral per a aquests dies":"Copies the hours clocked in Calendari laboral for these days into the visit"};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();

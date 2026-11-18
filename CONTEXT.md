@@ -2734,6 +2734,9 @@ whatever Android phone the technician carries. P-256 is everywhere.
   `tools/*.json` and `fsl-clau-privada.json`). Lose it and licences already
   issued keep working — the public key in the app is what checks them — but no
   new ones can be signed without a new key pair and a new release.
+- **Modules (2026-11-18, `nou/` only):** `f` in the payload is the list of
+  modules the licence grants — see "Modules granted by the licence" further
+  down. A licence with no `f` opens the base app only.
 
 ### On since 2026-11-03
 `LIC_ON = true`, `LIC_PUB` holds the real public key, and the first licence is
@@ -5100,6 +5103,73 @@ are not text (`SecurityError` and three MIME types in `camRecStart`), so 37
 is the new baseline. NOT checked: a real Surface (the real cameras, which
 one opens first, the permission prompt, the sound of a video, the picture
 size, an installed app), Edge, and Spanish/English on screen.
+
+**Modules granted by the licence, and the visit's own hours (version `nou ·
+2026-11-18 · 1`).** Two things the user decided the same day, in `nou/` only
+(the app in use is untouched and still shows both to everybody).
+
+*Modules.* The licence payload's `f` — the issuing tool's "extres", which the
+app had never read — is now the list of modules: `exp` Despeses, `ts` Full
+d'hores, `cal` the bridge to the Calendari laboral app (the author's own tool:
+it computes his payroll and travel allowances, it is **not** part of the
+product and is not gated itself), `*` all of them and whatever comes later.
+`licMods()` / `modOn(k)` / `licModWords()` / `licApply()` sit next to
+`licState`. No licence, the 30-day trial, or a licence past its grace = the
+base app. A module that is off only **hides its way in**; what a visit already
+holds (expenses, hours, a saved or signed sheet) is never dropped and still
+goes out in the ZIP, in "Revisa i signa" and in a closed visit's documents.
+- Despeses: `exOn()` is now licence **and** the per-device switch; the switch
+  row in Menú (`#btnExOn`) is hidden without the module.
+- Full d'hores: its chip, the visit menu's row, the side-nav item, the row in
+  the summary, the entry in the export menu, and `openTimesheet()` itself.
+- `licApply()` runs after the licence is read at boot, pasted or removed, so
+  the modules show or go at once with no reload. The licence window and the
+  "saved" message name the modules.
+- `tools/llicencies.html`: four ticks (Despeses, Full d'hores, Calendari
+  laboral, Tots) that fill `f`, the free "altres extres" field kept beside
+  them; modules shown when a licence is checked, in the register, the CSV and
+  the mail text. **A licence issued before this has no `f`: it opens the base
+  app only.** The user's own must be re-issued with "Tots" and pasted again on
+  every device that runs `nou/`.
+- Same honesty as the licence: the check is in the page of a public repo. It
+  hides the feature from the honest case. The Worker does not look at modules
+  yet (it cannot tell a ticket reading from a spell check).
+
+*The timesheet inside FSL.* It used to read the hours **only** from the
+Calendari laboral Drive file, so for anyone but the author the window held an
+error. The hours now live on the visit: `session.hours`, one record per day in
+the calendar's own shape (`{vi,i,f,vf,p,d}`, and `h`,`v` for a day brought over
+with no clock times), so `tsDayRow` reads both and the sheet, its PDF and the
+frozen `session.timesheet` did not change.
+- `tsHoursOf(s)`: `s.hours`, or — for a sheet saved before this — the rows of
+  that sheet turned back into hours, so old visits open as they were.
+- `tsSuggest(s)`: a day with entries and no hours is **proposed**, on site from
+  its first entry to its last (local time). Marked `≈`, italic, unticked when
+  it adds up to nothing; it becomes the visit's own when edited or when it
+  goes onto a saved sheet.
+- `tsBuild` / `tsRefresh` replace `tsLoad`. The window opens wide enough for
+  every day with hours or entries.
+- A row opens "Hores del dia" (`#tsDayBack`: four times, break in minutes,
+  destination/note, live totals, "Treu el dia"); "+ Afegeix un dia" adds one
+  that is not listed (a travel day) and widens the dates to hold it. A day is
+  saved to the visit at once (`tsHoursSave`), whatever happens to the sheet.
+- Only with `cal`: "↻ Omple des del Calendari laboral" and "↑ Importa JSON"
+  (`tsCalFill`) **copy** the calendar's days of the range into the visit,
+  asking first if that would overwrite hours typed here. Nothing is read from
+  the calendar on its own any more.
+
+The translation checker's baseline is **36** (was 37: "Total" got a
+translation). Checked in the preview with a made-up licence and the signature
+check stubbed in that tab: no licence → neither module anywhere; `ts` alone →
+the timesheet appears with no reload, Despeses stays hidden; `*` → both, and
+the calendar buttons; a proposed day, editing it, adding and removing a day,
+the validation message, closing without saving the sheet (hours stay), saving
+it, a reload (data intact, modules gone with the invalid licence), a made-up
+calendar copied in (holiday skipped, totals-only day kept), Spanish, the day
+window at 375 px, and the issuing tool with a throw-away key pair. **Not
+checked:** a real licence signed with the real key, the PDF of a sheet made
+from typed hours (its code did not change), the calendar read from Drive
+signed in, a phone or the Surface.
 
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does

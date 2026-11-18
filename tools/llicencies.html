@@ -10,7 +10,7 @@
 
   Com funciona una llicència:
     FSL1.<dades>.<signatura>
-  Les dades són un JSON curt (titular, caducitat, tècnics) en base64url, i la
+  Les dades són un JSON curt (titular, caducitat, tècnics i mòduls) en base64url, i la
   signatura és ECDSA P-256 sobre el text de les dades tal com queda escrit.
   L'aplicació porta només la clau PÚBLICA, i per això pot comprovar una
   llicència sense cobertura i sense cap servidor. La clau PRIVADA no surt mai
@@ -20,6 +20,12 @@
   comprova la pública, que és a l'app), però no se'n poden emetre de noves:
   caldria un parell de claus nou i una versió nova de l'app. Guarda-la com
   guardes les claus del cotxe.
+
+  Els mòduls (2026-11-18) van al camp `f` de les dades, signats amb la resta:
+    exp = Despeses · ts = Full d'hores · cal = Calendari laboral (privat) ·
+    * = tots, també els que vinguin.
+  Sense cap mòdul, la llicència obre l'app base. Afegir-ne un a algú és
+  emetre-li una llicència nova i que la torni a enganxar a cada aparell.
 -->
 <style>
   :root{
@@ -62,6 +68,10 @@
   .warn{background:#2a2015;border:1px solid #4a3a1c;border-radius:7px;padding:10px 12px;
         color:#e8d3a3;font-size:12.5px;margin-bottom:12px}
   .key{color:var(--tx3);font-size:12px}
+  .mods{display:flex;flex-wrap:wrap;gap:6px 18px;padding:4px 0}
+  label.ck{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--tx);
+           text-transform:none;letter-spacing:0;cursor:pointer}
+  label.ck input{width:16px;height:16px;margin:0;accent-color:var(--gold)}
 </style>
 </head>
 <body>
@@ -111,8 +121,17 @@
           <option value="365" selected>1 any</option>
           <option value="730">2 anys</option>
         </select></div>
-      <div class="f grow"><label>Extres (separats per comes; buit = res)</label>
+      <div class="f grow"><label>Altres extres (separats per comes; buit = res)</label>
         <input type="text" id="f" placeholder="ai"></div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div class="f grow"><label>Mòduls — el que obre a més de l'app base</label>
+        <div class="mods">
+          <label class="ck"><input type="checkbox" id="mExp"> Despeses</label>
+          <label class="ck"><input type="checkbox" id="mTs"> Full d'hores</label>
+          <label class="ck"><input type="checkbox" id="mCal"> Calendari laboral <span class="key">(privat)</span></label>
+          <label class="ck"><input type="checkbox" id="mAll"> Tots, també els que vinguin <span class="key">(la teva)</span></label>
+        </div></div>
       <button class="gold" id="mk" disabled>Genera la llicència</button>
     </div>
     <div class="out" id="tokOut"></div>
@@ -140,7 +159,7 @@
       <button id="csv">&#8681; Baixa el CSV</button>
       <button id="wipe">Buida el registre</button>
     </div>
-    <table id="reg"><thead><tr><th>Emesa</th><th>Titular</th><th>Fins a</th><th>Tèc.</th><th>Id</th><th>Llicència</th></tr></thead><tbody></tbody></table>
+    <table id="reg"><thead><tr><th>Emesa</th><th>Titular</th><th>Fins a</th><th>Tèc.</th><th>Mòduls</th><th>Id</th><th>Llicència</th></tr></thead><tbody></tbody></table>
   </section>
 
 </div>
@@ -205,6 +224,21 @@ $("keyFile").addEventListener("change",async function(){
 });
 
 /* ── 3 · emetre ────────────────────────────────────────────────────────────── */
+var MODS=[["exp","mExp","Despeses"],["ts","mTs","Full d'hores"],["cal","mCal","Calendari laboral"]];
+function modList(){
+  if($("mAll").checked)return["*"];
+  return MODS.filter(function(m){return $(m[1]).checked}).map(function(m){return m[0]});
+}
+function modWords(f){
+  f=f||[];
+  if(f.indexOf("*")>=0)return "tots els mòduls";
+  var w=f.map(function(k){var m=MODS.filter(function(x){return x[0]===k})[0];return m?m[2]:k});
+  return w.length?w.join(", "):"cap mòdul";
+}
+$("mAll").addEventListener("change",function(){
+  var all=this.checked;
+  MODS.forEach(function(m){$(m[1]).disabled=all;if(all)$(m[1]).checked=false});
+});
 function addDays(n){var d=new Date();d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
 function setDur(){var v=$("dur").value;if(v)$("x").value=addDays(parseInt(v,10))}
 $("dur").addEventListener("change",setDur);
@@ -212,7 +246,8 @@ setDur();
 
 $("mk").addEventListener("click",async function(){
   var n=$("n").value.trim(),x=$("x").value,s=parseInt($("s").value,10)||1;
-  var f=$("f").value.split(",").map(function(t){return t.trim()}).filter(Boolean);
+  var f=modList();
+  $("f").value.split(",").map(function(t){return t.trim()}).filter(Boolean).forEach(function(t){if(f.indexOf(t)<0)f.push(t)});
   if(!n){say("mkSt","Falta el titular.","bad");return}
   if(!/^\d{4}-\d{2}-\d{2}$/.test(x)){say("mkSt","Falta la data de caducitat.","bad");return}
   if(!priv){say("mkSt","Carrega la clau privada (pas 2).","bad");return}
@@ -224,7 +259,7 @@ $("mk").addEventListener("click",async function(){
   lastPay=pay;
   show("tokOut",lastTok);
   $("cp").style.display="";$("cpMail").style.display="";
-  say("mkSt","Emesa per a "+n+", fins al "+x+". Comprova-la al pas 4 abans d'enviar-la.","good");
+  say("mkSt","Emesa per a "+n+", fins al "+x+", amb "+modWords(pay.f)+". Comprova-la al pas 4 abans d'enviar-la.","good");
   regAdd(pay,lastTok);
 });
 function copy(t,msg){
@@ -235,7 +270,8 @@ $("cp").addEventListener("click",function(){if(lastTok)copy(lastTok,"Llicència 
 $("cpMail").addEventListener("click",function(){
   if(!lastTok)return;
   copy("Bon dia,\n\nAquí teniu la llicència del Field Service Log per a "+lastPay.n
-    +", vàlida fins al "+lastPay.x+" per a "+lastPay.s+" tècnic"+(lastPay.s==1?"":"s")+".\n\n"
+    +", vàlida fins al "+lastPay.x+" per a "+lastPay.s+" tècnic"+(lastPay.s==1?"":"s")+"."
+    +(lastPay.f&&lastPay.f.length?" Inclou: "+modWords(lastPay.f)+".":"")+"\n\n"
     +lastTok+"\n\nPer activar-la, a cada aparell: obriu l'aplicació, menú lateral → 🔒 Llicència,"
     +" enganxeu-la sencera i Desa. No cal cobertura, i es desa només en aquell aparell, de manera"
     +" que s'ha de fer un cop a cada telèfon o ordinador.\n\nEl vostre nom sortirà al peu de cada"
@@ -255,7 +291,7 @@ $("vGo").addEventListener("click",async function(){
   catch(e){say("vSt","La signatura val, però les dades no es llegeixen.","bad");return}
   var left=Math.ceil((Date.parse(d.x+"T23:59:59")-Date.now())/864e5);
   say("vSt","Bona. Titular: "+d.n+" · fins al "+d.x+" ("+(left>=0?"queden "+left+" dies":"caducada fa "+(-left)+" dies")
-    +") · "+(d.s||1)+" tècnic"+((d.s||1)==1?"":"s")+(d.f?" · extres: "+d.f.join(", "):"")+" · id "+(d.i||"—"),
+    +") · "+(d.s||1)+" tècnic"+((d.s||1)==1?"":"s")+" · mòduls: "+modWords(d.f)+" · id "+(d.i||"—"),
     left>=0?"good":"bad");
 });
 
@@ -264,21 +300,21 @@ function regGet(){try{return JSON.parse(localStorage.getItem(LS_REG)||"[]")}catc
 function regSet(a){try{localStorage.setItem(LS_REG,JSON.stringify(a))}catch(e){}}
 function regAdd(pay,tok){
   var a=regGet();
-  a.unshift({d:new Date().toISOString().slice(0,16).replace("T"," "),n:pay.n,x:pay.x,s:pay.s,i:pay.i,t:tok});
+  a.unshift({d:new Date().toISOString().slice(0,16).replace("T"," "),n:pay.n,x:pay.x,s:pay.s,f:pay.f||[],i:pay.i,t:tok});
   regSet(a);regDraw();
 }
 function regDraw(){
   var b=$("reg").querySelector("tbody"),a=regGet();
   b.innerHTML=a.length?a.map(function(r){
     return "<tr><td>"+esc(r.d)+"</td><td>"+esc(r.n)+"</td><td>"+esc(r.x)+"</td><td>"+esc(r.s)
-      +"</td><td>"+esc(r.i)+"</td><td class=\"tok\">"+esc(r.t)+"</td></tr>"}).join("")
-    :"<tr><td colspan=\"6\" style=\"color:var(--tx3)\">Encara no n'has emesa cap.</td></tr>";
+      +"</td><td>"+esc(r.f?modWords(r.f):"—")+"</td><td>"+esc(r.i)+"</td><td class=\"tok\">"+esc(r.t)+"</td></tr>"}).join("")
+    :"<tr><td colspan=\"7\" style=\"color:var(--tx3)\">Encara no n'has emesa cap.</td></tr>";
 }
 $("csv").addEventListener("click",function(){
   var a=regGet();
   var q=function(v){return "\""+String(v==null?"":v).replace(/"/g,"\"\"")+"\""};
-  var txt="emesa,titular,caduca,tecnics,id,llicencia\n"
-    +a.map(function(r){return [r.d,r.n,r.x,r.s,r.i,r.t].map(q).join(",")}).join("\n");
+  var txt="emesa,titular,caduca,tecnics,moduls,id,llicencia\n"
+    +a.map(function(r){return [r.d,r.n,r.x,r.s,(r.f||[]).join(" "),r.i,r.t].map(q).join(",")}).join("\n");
   var bl=new Blob(["﻿"+txt],{type:"text/csv;charset=utf-8"});
   var el=document.createElement("a");
   el.href=URL.createObjectURL(bl);el.download="llicencies-fsl.csv";el.click();

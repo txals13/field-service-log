@@ -2034,9 +2034,13 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
       <div class="ts-note">Es desa només en aquest aparell. Un tiquet que porti aquestes xifres queda marcat com a targeta d'empresa; si en porta unes altres, com a targeta personal.</div>
       <input type="file" id="exCamIn" accept="image/*" capture="environment" style="display:none">
       <input type="file" id="exFileIn" accept="image/*,application/pdf" multiple style="display:none">
+      <!-- the company's own expense sheet: the empty .xlsx is chosen once and kept on this device -->
+      <div class="ts-note" id="exTplNote" style="margin-top:10px"></div>
+      <input type="file" id="exTplIn" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none">
       <div class="modal-actions" style="flex-wrap:wrap">
         <button id="exClose">Tanca</button>
         <button id="exXlsx" style="display:none" title="Un Excel amb una fila per despesa i un full de resum, a la carpeta del projecte">&#128202; Excel</button>
+        <button id="exTpl" style="display:none" title="Omple el full de despeses de l'empresa amb les despeses d'aquesta visita, a la carpeta del projecte">&#128196; Full de l'empresa</button>
       </div>
     </div>
   </div>
@@ -2072,6 +2076,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
         <div class="field"><label>Data</label><input type="date" id="xeDate"></div>
         <div class="field"><label>Hora</label><input type="time" id="xeTime"></div>
         <div class="field"><label>Categoria</label><select id="xeCat"></select></div>
+        <div class="field" id="xeMealBox" style="display:none"><label>Àpat (al full de l'empresa)</label><select id="xeMeal"><option value="">Per l'hora</option><option value="b">Esmorzar</option><option value="l">Dinar</option><option value="d">Sopar</option></select></div>
         <div class="field"><label>NIF / VAT / RFC</label><input type="text" id="xeTaxId" autocomplete="off" spellcheck="false"></div>
         <div class="field pt-wide"><label>Establiment</label><input type="text" id="xeMerchant" autocomplete="off"></div>
         <div class="field pt-wide"><label>Raó social</label><input type="text" id="xeLegal" autocomplete="off" placeholder="si el rebut la porta"></div>
@@ -8668,7 +8673,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-18 · 2";
+var APP_VERSION="nou · 2026-11-19 · 1";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -18316,6 +18321,8 @@ async function exportSessionZip(s,kind,pick){
       }
       // and the expenses themselves, readable without the app
       try{var exX=await exBuildXlsx(s);if(exX)zip.file(exXlsxName(s),exX)}catch(e){}
+      // and the company's sheet, when its empty copy is on this device
+      try{var exT=await exBuildTpl(s);((exT&&exT.files)||[]).forEach(function(f){zip.file(f.name,f.blob)})}catch(e){}
     }
     // THE EARLIER REVISIONS. Everything sitting at the folder's root: the
     // reports of Rev. 01, Rev. 02…, each already carrying its number in its
@@ -18725,6 +18732,168 @@ async function exBuildXlsx(s){
   X.utils.book_append_sheet(wb,ws,"Despeses");
   X.utils.book_append_sheet(wb,wr,"Resum");
   return new Blob([X.write(wb,{bookType:"xlsx",type:"array"})],{type:XLSX_MIME});
+}
+
+// ── THE COMPANY'S OWN EXPENSE SHEET (2026-11-19) ─────────────────────────────
+// The sheet the company wants handed in, filled from the visit's tickets. It
+// helps fill the paperwork; it never stands in for the papers themselves —
+// every amount on it still needs its ticket, and the sheet says so itself.
+//
+// The empty sheet is the company's document, so it is NOT in this (public)
+// repository: the user picks it once and it stays on the device (IndexedDB,
+// "extpl"). What is here is only where things go — EX_TPL, cell addresses.
+// Another company's sheet is another EX_TPL.
+//
+// It is filled by editing the .xlsx itself (a ZIP of XML): the cells' values
+// are set inside the sheet's XML and nothing else is touched, so the logo,
+// the borders, the formulas, the print set-up and the notes come out exactly
+// as the company made them. A spreadsheet library would have rebuilt the file
+// and lost most of that.
+//
+// The user's rules (2026-11-19): EVERY expense of the visit goes on it,
+// whoever paid; "cargo imputable a" is left blank, marked by hand; a meal
+// goes to breakfast, lunch or dinner by its time, and the expense can say
+// otherwise. One row per day, one file per currency (the sheet asks for
+// that), a second file past the sheet's twenty rows.
+var EX_TPL={first:21,last:40,date:"B",total:"N",
+  cols:{b:"E",l:"F",d:"G",fuel:"I",taxi:"J",parking:"K",other:"M"},
+  sheetDate:"M7",currency:"M8",name:"C11",reason:"C13",
+  grand:["N41","F47","F48","C50"],                    // formulas that all come to the total, with nothing advanced
+  probe:[["N21","SUM(D21:M21)"],["N41","SUM(N21:N40)"]]};   // how the sheet is recognised
+var EX_MEAL={b:"Esmorzar",l:"Dinar",d:"Sopar"};
+// Before 11 breakfast, from 11 to 17 lunch, later dinner; with no time, lunch.
+function exMealAuto(time){
+  var m=/^(\d{1,2}):(\d\d)/.exec(time||"");if(!m)return "l";
+  var h=+m[1]+(+m[2])/60;
+  return h<11?"b":h<17?"l":"d";
+}
+function exMealOf(x){return EX_MEAL[x.meal]?x.meal:exMealAuto(x.time)}
+function exTplCol(x){
+  if(x.category==="meal")return EX_TPL.cols[exMealOf(x)];
+  return EX_TPL.cols[x.category]||EX_TPL.cols.other;
+}
+// The meal's own choice, shown only for a meal; "by the time" says which.
+function xeMealShow(){
+  var box=$$("xeMealBox"),sel=$$("xeMeal");if(!box||!sel)return;
+  var on=$$("xeCat").value==="meal";
+  box.style.display=on?"":"none";
+  if(!on)sel.value="";
+  sel.options[0].textContent=uiT("Per l'hora")+": "+uiT(EX_MEAL[exMealAuto($$("xeTime").value)]).toLowerCase();
+}
+// ── the empty sheet, on this device ──
+var exTplMem=null,exTplThen=false;
+async function exTplGet(){
+  if(exTplMem)return exTplMem;
+  try{var t=idb?await idbGet(idb,"extpl"):null;if(t&&t.buf)exTplMem=t}catch(e){}
+  return exTplMem;
+}
+async function exTplLabel(){
+  var el=$$("exTplNote");if(!el)return;
+  var t=await exTplGet();
+  el.innerHTML=t?esc(uiT("Full buit de l'empresa:"))+" <b>"+esc(t.name||"")+"</b> "
+      +"<button class=\"btn-xs\" data-tpl=\"pick\">"+esc(uiT("Canvia'l"))+"</button> <button class=\"btn-xs\" data-tpl=\"drop\">"+esc(uiT("Treu-lo"))+"</button>"
+    :"";
+}
+function xlSheetPath(wbXml,relsXml){
+  var m=/<sheet\b[^>]*\br:id="([^"]+)"/.exec(wbXml||"");if(!m)return null;
+  var tags=(relsXml||"").match(/<Relationship\b[^>]*>/g)||[],t=null;
+  tags.forEach(function(x){if(new RegExp("\\bId=\""+m[1]+"\"").test(x)){var k=/\bTarget="([^"]+)"/.exec(x);if(k)t=k[1]}});
+  if(!t)return null;
+  return t.charAt(0)==="/"?t.slice(1):"xl/"+t;
+}
+function xlCell(xml,ref){return new RegExp("<c r=\""+ref+"\"([^>]*?)(?:/>|>([\\s\\S]*?)</c>)").exec(xml)}
+function xlEsc(t){return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+// One cell's value, its style and its formula left as they are. A cell the
+// sheet does not have is left alone: the sheet was checked before it was kept.
+function xlSet(xml,ref,v){
+  var m=xlCell(xml,ref);if(!m)return xml;
+  var at=m[1].replace(/\s+t="[^"]*"/,""),fm=(/<f\b[^>]*?(?:\/>|>[\s\S]*?<\/f>)/.exec(m[2]||"")||[""])[0],c;
+  if(typeof v==="number")c="<c r=\""+ref+"\""+at+">"+fm+"<v>"+v+"</v></c>";
+  else c="<c r=\""+ref+"\""+at+" t=\"inlineStr\"><is><t xml:space=\"preserve\">"+xlEsc(v)+"</t></is></c>";
+  return xml.slice(0,m.index)+c+xml.slice(m.index+m[0].length);
+}
+async function exTplOpen(buf){
+  var JS=await loadJSZip();if(!JS)return null;
+  var zip=await JS.loadAsync(buf);
+  var wbF=zip.file("xl/workbook.xml"),rlF=zip.file("xl/_rels/workbook.xml.rels");
+  if(!wbF||!rlF)return null;
+  var wb=await wbF.async("string"),path=xlSheetPath(wb,await rlF.async("string"));
+  var shF=path?zip.file(path):null;if(!shF)return null;
+  var xml=await shF.async("string");
+  var ok=EX_TPL.probe.every(function(pr){var m=xlCell(xml,pr[0]);return !!m&&(m[2]||"").indexOf(pr[1])>=0});
+  return ok?{zip:zip,wb:wb,path:path,xml:xml}:null;
+}
+// Kept only if it is the sheet this version knows how to fill.
+async function exTplStore(f){
+  var buf=null;try{buf=await f.arrayBuffer()}catch(e){}
+  var t=null;try{t=buf?await exTplOpen(buf):null}catch(e){t=null}
+  if(!t){alert(uiT("Aquest fitxer no és el full de despeses que l'app sap omplir. Tria el full buit de l'empresa, en .xlsx, tal com te'l van donar."));return false}
+  exTplMem={name:f.name,at:now(),buf:buf};
+  try{if(idb)await idbSet(idb,"extpl",exTplMem)}catch(e){}
+  return true;
+}
+function exTplName(s,cur,multi,part,parts){
+  return exSafe((s.project||s.client||"Visita")+" hoja de gastos"+(multi||cur!=="EUR"?" "+cur:"")+(parts>1?" "+part:""))+".xlsx";
+}
+// → {files:[{name,blob}], n, noAmt, noDate}, or null with no sheet on the device
+async function exBuildTpl(s){
+  var tpl=await exTplGet();if(!tpl)return null;
+  var by={},out={files:[],n:0,noAmt:0,noDate:0};
+  exList(s).forEach(function(x){
+    var n=exNum(x.total);
+    if(n==null){out.noAmt++;return}
+    if(!/^\d{4}-\d\d-\d\d$/.test(x.date||"")){out.noDate++;return}
+    var cur=(x.currency||"EUR").toUpperCase(),g=by[cur]||(by[cur]={}),d=g[x.date]||(g[x.date]={}),col=exTplCol(x);
+    d[col]=(d[col]||0)+n;out.n++;
+  });
+  function r2(n){return Math.round((n+Number.EPSILON)*100)/100}
+  function serial(d){var m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(d);return Math.round((Date.UTC(+m[1],+m[2]-1,+m[3])-Date.UTC(1899,11,30))/864e5)}
+  var curs=Object.keys(by).sort(),per=EX_TPL.last-EX_TPL.first+1;
+  for(var ci=0;ci<curs.length;ci++){
+    var cur=curs[ci],days=Object.keys(by[cur]).sort(),parts=Math.ceil(days.length/per);
+    for(var pi=0;pi<parts;pi++){
+      var T=await exTplOpen(tpl.buf.slice(0));if(!T)return null;
+      var xml=T.xml,grand=0;
+      days.slice(pi*per,(pi+1)*per).forEach(function(day,i){
+        var row=EX_TPL.first+i,cols=by[cur][day],sum=0;
+        xml=xlSet(xml,EX_TPL.date+row,serial(day));
+        Object.keys(cols).forEach(function(c){var v=r2(cols[c]);sum+=v;xml=xlSet(xml,c+row,v)});
+        xml=xlSet(xml,EX_TPL.total+row,r2(sum));          // the formula stays; this is what a viewer that does not calculate shows
+        grand+=sum;
+      });
+      EX_TPL.grand.forEach(function(ref){xml=xlSet(xml,ref,r2(grand))});
+      xml=xlSet(xml,EX_TPL.sheetDate,serial(todayISO()));
+      if(cur!=="EUR")xml=xlSet(xml,EX_TPL.currency,cur);
+      if(s.tech)xml=xlSet(xml,EX_TPL.name,s.tech);
+      var why=[s.client,s.location,s.project].filter(Boolean).join(" · ");
+      if(why)xml=xlSet(xml,EX_TPL.reason,why);
+      // createFolders:false — the package keeps exactly the entries it came with
+      T.zip.file(T.path,xml,{createFolders:false});
+      // Excel works the formulas out again on opening, whatever was cached
+      if(!/fullCalcOnLoad/.test(T.wb))T.zip.file("xl/workbook.xml",/<calcPr\b/.test(T.wb)?T.wb.replace(/<calcPr\b/,"<calcPr fullCalcOnLoad=\"1\""):T.wb.replace("</workbook>","<calcPr fullCalcOnLoad=\"1\"/></workbook>"),{createFolders:false});
+      var blob=await T.zip.generateAsync({type:"blob",mimeType:XLSX_MIME,compression:"DEFLATE"});
+      out.files.push({name:exTplName(s,cur,curs.length>1,pi+1,parts),blob:blob});
+    }
+  }
+  return out;
+}
+async function exTplRun(){
+  var b=$$("exTpl"),s=exSess();if(!s||b.disabled)return;
+  b.disabled=true;var was=b.innerHTML;b.innerHTML="Preparant&hellip;";
+  try{
+    var R=null;try{R=await exBuildTpl(s)}catch(e){R=null}
+    if(!R){alert(uiT("No s'ha pogut omplir el full de l'empresa. Cal connexió el primer cop, per carregar una llibreria; si segueix igual, torna a triar el full buit."));return}
+    var left=[];
+    if(R.noAmt)left.push(pl(R.noAmt,"despesa sense import","despeses sense import"));
+    if(R.noDate)left.push(pl(R.noDate,"despesa sense data","despeses sense data"));
+    if(!R.files.length){alert(uiT("No hi ha cap despesa amb data i import per posar al full.")+(left.length?"\n"+left.join(", ")+".":""));return}
+    var ok=true;
+    for(var i=0;i<R.files.length;i++)ok=(await saveReport(s,R.files[i].blob,R.files[i].name,XLSX_MIME))&&ok;
+    b.innerHTML=ok?"&#10003; Desat a Drive":"&#9203; Es pujarà a Drive";
+    setTimeout(function(){b.innerHTML=was},3500);
+    if(left.length||R.files.length>1)alert((R.files.length>1?uiT("S'han fet {n} fulls: un per moneda, i un de nou cada vint dies.").replace("{n}",R.files.length)+"\n":"")
+      +(left.length?uiT("No hi són, i s'han d'afegir a mà:")+" "+left.join(", ")+".":""));
+  }finally{b.disabled=false;if(/Preparant/.test(b.innerHTML))b.innerHTML=was}
 }
 
 // ── a PDF goes to Gemini whole (version 2026-10-20 · 2) ──────────────────────
@@ -19268,6 +19437,8 @@ function exRender(){
   if(nNo)html+="<div class=\"ex-sum-no\">"+esc(pl(nNo,"despesa","despeses"))+" "+uiT("encara sense import: no hi compten.")+"</div>";
   $$("exSum").innerHTML=html;
   $$("exXlsx").style.display=l.length?"":"none";
+  $$("exTpl").style.display=l.length?"":"none";
+  exTplLabel();
   exSugs=exSuggest(s);
   var sug=exSugs.map(function(g,i){
     if(g.kind==="dup")return "<div class=\"ex-sug\">&#128196; Sembla el mateix paper fotografiat dues vegades: <b>"+esc(g.keep.merchant||"tiquet")+"</b>, "
@@ -19314,6 +19485,25 @@ function wireEx(){
   ["exCamIn","exFileIn"].forEach(function(k){
     $$(k).addEventListener("change",function(e){var f=Array.from(e.target.files||[]);e.target.value="";if(f.length)exAddFiles(f)});
   });
+  $$("exTpl").addEventListener("click",async function(){
+    if(!(await exTplGet())){exTplThen=true;$$("exTplIn").click();return}
+    exTplRun();
+  });
+  $$("exTplIn").addEventListener("change",async function(e){
+    var f=(e.target.files||[])[0];e.target.value="";
+    var go=exTplThen;exTplThen=false;
+    if(!f)return;
+    if(!(await exTplStore(f)))return;
+    exTplLabel();
+    if(go)exTplRun();
+  });
+  $$("exTplNote").addEventListener("click",async function(e){
+    var b=e.target.closest?e.target.closest("[data-tpl]"):null;if(!b)return;
+    if(b.dataset.tpl==="pick"){exTplThen=false;$$("exTplIn").click();return}
+    if(!confirm(uiT("Vols treure d'aquest aparell el full buit de l'empresa? El tornaràs a triar el pròxim cop.")))return;
+    exTplMem=null;try{if(idb)await idbDel(idb,"extpl")}catch(err){}
+    exTplLabel();
+  });
   $$("exList").addEventListener("click",function(e){
     var g=e.target.closest("[data-sg]");
     if(g){
@@ -19331,7 +19521,7 @@ function wireEx(){
   });
 }
 // ── one expense ──
-var XE_F=[["xeDate","date"],["xeTime","time"],["xeCat","category"],["xeMerchant","merchant"],["xeLegal","legalName"],["xeTaxId","taxId"],
+var XE_F=[["xeDate","date"],["xeTime","time"],["xeCat","category"],["xeMeal","meal"],["xeMerchant","merchant"],["xeLegal","legalName"],["xeTaxId","taxId"],
   ["xeAddr","address"],["xeTicketNo","ticketNo"],["xeConcept","concept"],["xeOther","other"],
   ["xeCur","currency"],["xeBase","base"],["xeVatRate","vatRate"],["xeVat","vat"],["xeTotal","total"],["xePay","pay"],
   ["xeLast4","last4"],["xeNotes","notes"]];
@@ -19346,6 +19536,7 @@ function openExpense(id){
   xeEdits={};xeTouched={};xeImgId=(exShown(x)[0]||{}).id||null;
   $$("xeCat").innerHTML="<option value=\"\">&mdash;</option>"+EX_CATS.map(function(c){return "<option value=\""+c[0]+"\">"+esc(c[1])+"</option>"}).join("");
   XE_F.forEach(function(f){$$(f[0]).value=x[f[1]]||""});
+  xeMealShow();
   $$("xeTitle").textContent=exTitle(x);
   $$("xeImgBox").classList.remove("big");
   xeDoubts();xeCropEnd();xeRenderStrip();xeUpLabel();xeReadLine();
@@ -19362,6 +19553,7 @@ function xeFillRead(all){
   var x=xeEx();if(!x)return;
   XE_F.forEach(function(f){if(f[1]!=="notes"&&(all||!xeTouched[f[1]]))$$(f[0]).value=x[f[1]]||""});
   if(all)xeTouched={};
+  xeMealShow();
   if(!xeTouched.merchant)$$("xeTitle").textContent=exTitle(x);
   xeDoubts();xeReadLine();xeRenderStrip();
 }
@@ -19549,6 +19741,8 @@ function xeDelete(){
 }
 function wireXe(){
   if(xeWired)return;xeWired=true;
+  $$("xeCat").addEventListener("change",xeMealShow);
+  $$("xeTime").addEventListener("input",xeMealShow);
   $$("xeCancel").addEventListener("click",function(){
     if(Object.keys(xeEdits).length&&!confirm(uiT("Vols descartar els canvis de la imatge?")))return;
     xeClose();
@@ -20904,6 +21098,37 @@ function nvDeskRender(a,isOpen){
     "Afegeix un dia que no surt a la llista, per exemple un de viatge":"Add a day that is not on the list, a travel day for instance",
     "Omple des del Calendari laboral":"Fill from Calendari laboral",
     "Copia a la visita les hores fitxades al Calendari laboral per a aquests dies":"Copies the hours clocked in Calendari laboral for these days into the visit"};
+  Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
+  Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
+})();
+// The company's expense sheet and the meal of a ticket (2026-11-19).
+(function(){
+  var es={"Esmorzar":"Desayuno","Dinar":"Comida","Sopar":"Cena","Per l'hora":"Por la hora",
+    "Àpat (al full de l'empresa)":"Comida (en la hoja de la empresa)",
+    "Full de l'empresa":"Hoja de la empresa",
+    "Omple el full de despeses de l'empresa amb les despeses d'aquesta visita, a la carpeta del projecte":"Rellena la hoja de gastos de la empresa con los gastos de esta visita, en la carpeta del proyecto",
+    "Full buit de l'empresa:":"Hoja vacía de la empresa:","Canvia'l":"Cámbiala","Treu-lo":"Quítala",
+    "Aquest fitxer no és el full de despeses que l'app sap omplir. Tria el full buit de l'empresa, en .xlsx, tal com te'l van donar.":"Este archivo no es la hoja de gastos que la app sabe rellenar. Elige la hoja vacía de la empresa, en .xlsx, tal como te la dieron.",
+    "No s'ha pogut omplir el full de l'empresa. Cal connexió el primer cop, per carregar una llibreria; si segueix igual, torna a triar el full buit.":"No se ha podido rellenar la hoja de la empresa. Hace falta conexión la primera vez, para cargar una librería; si sigue igual, vuelve a elegir la hoja vacía.",
+    "despesa sense import":"gasto sin importe","despeses sense import":"gastos sin importe",
+    "despesa sense data":"gasto sin fecha","despeses sense data":"gastos sin fecha",
+    "No hi ha cap despesa amb data i import per posar al full.":"No hay ningún gasto con fecha e importe para poner en la hoja.",
+    "S'han fet {n} fulls: un per moneda, i un de nou cada vint dies.":"Se han hecho {n} hojas: una por moneda, y una nueva cada veinte días.",
+    "No hi són, i s'han d'afegir a mà:":"No están, y hay que añadirlos a mano:",
+    "Vols treure d'aquest aparell el full buit de l'empresa? El tornaràs a triar el pròxim cop.":"¿Quieres quitar de este aparato la hoja vacía de la empresa? La volverás a elegir la próxima vez."};
+  var en={"Esmorzar":"Breakfast","Dinar":"Lunch","Sopar":"Dinner","Per l'hora":"By the time",
+    "Àpat (al full de l'empresa)":"Meal (on the company sheet)",
+    "Full de l'empresa":"Company sheet",
+    "Omple el full de despeses de l'empresa amb les despeses d'aquesta visita, a la carpeta del projecte":"Fills the company's expense sheet with this visit's expenses, in the project folder",
+    "Full buit de l'empresa:":"The company's empty sheet:","Canvia'l":"Change it","Treu-lo":"Remove it",
+    "Aquest fitxer no és el full de despeses que l'app sap omplir. Tria el full buit de l'empresa, en .xlsx, tal com te'l van donar.":"This file is not the expense sheet the app knows how to fill. Pick the company's empty sheet, in .xlsx, as it was given to you.",
+    "No s'ha pogut omplir el full de l'empresa. Cal connexió el primer cop, per carregar una llibreria; si segueix igual, torna a triar el full buit.":"The company sheet could not be filled. A connection is needed the first time, to load a library; if it stays the same, pick the empty sheet again.",
+    "despesa sense import":"expense with no amount","despeses sense import":"expenses with no amount",
+    "despesa sense data":"expense with no date","despeses sense data":"expenses with no date",
+    "No hi ha cap despesa amb data i import per posar al full.":"No expense has both a date and an amount to put on the sheet.",
+    "S'han fet {n} fulls: un per moneda, i un de nou cada vint dies.":"{n} sheets were made: one per currency, and a new one every twenty days.",
+    "No hi són, i s'han d'afegir a mà:":"Not on it, to be added by hand:",
+    "Vols treure d'aquest aparell el full buit de l'empresa? El tornaràs a triar el pròxim cop.":"Remove the company's empty sheet from this device? You will pick it again next time."};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();

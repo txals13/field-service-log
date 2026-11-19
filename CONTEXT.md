@@ -5199,6 +5199,57 @@ checked:** a real licence signed with the real key, the PDF of a sheet made
 from typed hours (its code did not change), the calendar read from Drive
 signed in, a phone or the Surface.
 
+**The company's own expense sheet, filled from the tickets (version `nou ·
+2026-11-19 · 1`).** The template the expenses module had been waiting for
+since October. `nou/` only. It helps fill the paperwork and never stands in
+for the papers: every amount still needs its ticket.
+
+- **The empty sheet is the company's document and is not in this repository.**
+  The user picks it once in the Despeses window ("📄 Full de l'empresa") and it
+  stays on that device — IndexedDB key `extpl` (`{name, at, buf}`), with
+  "Canvia'l" / "Treu-lo" under the list. Each device needs it picked once.
+  What the code holds is only where things go: `EX_TPL` (first and last row,
+  the date column, one column per kind of expense, the cells for the sheet's
+  date, the currency, the name and the reason, the formula cells that all come
+  to the total, and two formula texts by which the sheet is recognised). A
+  file that does not match is refused and not kept. Another company's sheet
+  is another `EX_TPL`.
+- **Filled by editing the .xlsx itself**, not by rebuilding it: JSZip opens it,
+  `xlSet()` sets cell values inside the sheet's XML (style and formula left
+  as they are; numbers as numbers, dates as day numbers, text as inline
+  strings), `fullCalcOnLoad` is set in the workbook so Excel recalculates, and
+  the totals are also written as the formulas' cached values for viewers that
+  do not calculate. Only two parts of the package change (the sheet and
+  `workbook.xml`); the logo, borders, print set-up, comment and notes are
+  byte-identical. SheetJS or ExcelJS would have lost most of that.
+- **The user's rules (2026-11-19):** every expense of the visit goes on it,
+  whoever paid (what the company card already paid is his to put under the
+  advance, by hand); "cargo imputable a" is left blank; a meal goes to
+  breakfast, lunch or dinner by its time — before 11, 11 to 17, later; no
+  time, lunch — and the expense form has "Àpat" (`x.meal`: `b`/`l`/`d`, empty
+  = by the time) to say otherwise, shown only for a meal.
+- One row per day (same day and column add up), fuel / taxi / parking in
+  their columns, everything else under "otros". **One file per currency** (the
+  sheet asks for that) and a second file past its twenty rows. An expense
+  with no amount or no date is left out and the user is told how many.
+- `exBuildTpl(s)` → `{files:[{name,blob}], n, noAmt, noDate}`; saved like every
+  report (`saveReport`: the visit's Drive folder, or waiting on the device)
+  and added to the project ZIP when the empty sheet is on the device. The
+  earlier "📊 Excel" (one row per ticket + summary) stays: it is the numbered
+  index to the papers.
+
+The translation checker's baseline is **40** (four more non-text strings: two
+formula texts, a path inside the .xlsx, the file name). Checked in the preview
+with the real empty sheet (a temporary copy in the git-ignored `_visites/`,
+removed afterwards) and twelve made-up expenses: a wrong file is refused; the
+sheet is kept across a reload; the columns, the day sums, the meal by time and
+by hand, the second file for a second currency and the "left out" message are
+right; only the two parts change; and the EUR file, rebuilt on disk, **opens in
+Excel with no repair**, with the formulas giving the same totals and the logo
+and the comment in place. **Not checked:** saving to Drive signed in, more
+than twenty days, a phone, and how the company wants the card's expenses
+shown — that is the user's to settle with them.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

@@ -5250,6 +5250,41 @@ and the comment in place. **Not checked:** saving to Drive signed in, more
 than twenty days, a phone, and how the company wants the card's expenses
 shown — that is the user's to settle with them.
 
+**The timesheet's window in the look of the rest (version `nou · 2026-11-20 ·
+1`).** "Flux 4" (2026-11-14) had already redrawn the expenses; the timesheet
+window (`#tsBack`) and the day window added on 2026-11-18 (`#tsDayBack`) were
+the last two in the old arrangement — flat, small buttons, a monospace table.
+The user asked for both modules to look like the rest, **with the timesheet
+document itself staying formal: the PDF and its builder are not touched.**
+
+- Grey page, white cards (`.nv-card.ts-blk`, the counters' block under its own
+  name): *Període i idioma* (with the Calendari laboral buttons when the `cal`
+  module is there), *Dies*, *Columnes del full*, *Observacions*, *Signatures*.
+  Every id is the one it was, so nothing else in the code moved.
+- **The days are rows of a card, not a table** (`.ts-day`, built by
+  `tsRenderRows`): the tick, the weekday and date in the APP's language, the
+  four times and the break in words, the destination, the day's total with
+  travel/work under it (hidden under 420 px), a chevron. The whole row opens
+  the day, the tick's own cell does not; Enter on a focused row opens it too.
+  A proposed day carries a "Proposta" tag (the `≈` is gone, and the note above
+  the cards says so in the new words).
+- **The column chips no longer change what the window shows** — a row always
+  says everything the visit knows about its day. They are what the PDF prints,
+  and the card's heading says so. This is the one change of behaviour.
+- Totals are four boxes (`.ts-stats`, `tsStat()`): days, travel, work, total,
+  always all four whatever columns are ticked. The day window ends with the
+  same boxes for that day.
+- "Tots" now ticks the days that have hours; a proposal that adds up to
+  nothing is ticked by hand.
+- Expenses: the card's last four digits and the company sheet's line sit in a
+  card of their own, "En aquest aparell", at the foot of the list.
+
+Checked in the preview: 800 px and 375 px, light and dark, Spanish, ticking
+and the totals, a day opened by tap and by Enter, a day removed coming back as
+a proposal, saving the sheet, no console errors. The checker's baseline stays
+at **40**. **Not checked:** the signature pads with a finger, a real phone or
+the Surface.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

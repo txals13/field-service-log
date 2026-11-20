@@ -1342,6 +1342,49 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
    picked on a drawing (B13) ── */
 #ctrBack .modal,#ptBack .modal{background:var(--bg0)}
 #ctrBack .modal-actions,#ptBack .modal-actions{background:var(--bg1)}
+/* ── The timesheet, a day of it, and the foot of the expenses (2026-11-20):
+   the last windows still in the old arrangement. The same grey page and white
+   cards as the rest; the days are rows of a card, not a monospace table. Only
+   the WINDOW changes — the PDF the client signs stays the formal document it
+   was. ── */
+#tsBack .modal,#tsDayBack .modal{background:var(--bg0)}
+#tsBack .modal-actions,#tsDayBack .modal-actions{background:var(--bg1)}
+.ts-blk{padding:12px 14px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px}
+.ts-blk>.hd{display:flex;justify-content:space-between;align-items:baseline;gap:4px 8px;flex-wrap:wrap}
+.ts-blk>.hd b{font-size:14px;font-weight:600}
+.ts-blk>.hd span{font-size:12px;color:var(--tx3)}
+.ts-blk .field{margin:0}
+.ts-blk .ts-note:empty{display:none}
+.ts-g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.ts-g3 input,.ts-g3 select,#tsDayBack .ts-blk input,#tsBack .ts-blk .field>input{width:100%;min-width:0}
+.ts-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ts-row>button{min-height:40px;border-radius:10px;padding:6px 14px}
+#tsRows{margin:0 -14px}
+.ts-day{display:grid;grid-template-columns:auto minmax(0,1fr) auto 18px;column-gap:10px;align-items:center;min-height:60px;padding:8px 14px 8px 6px;border-top:1px solid var(--br);cursor:pointer}
+.ts-day:hover{background:var(--bg2)}
+.ts-day:focus-visible{outline:2px solid var(--accs);outline-offset:-2px}
+.ts-day .ck{display:flex;align-items:center;justify-content:center;width:40px;height:44px;cursor:pointer}
+.ts-day input[type=checkbox]{width:22px;height:22px;margin:0}
+.ts-day .bd{min-width:0}
+.ts-day .t{display:block;font-size:14px;font-weight:600;color:var(--tx1)}
+.ts-day .t .ex-badge{margin:0 0 0 6px;vertical-align:1px}
+.ts-day .s{display:block;font-size:12px;color:var(--tx3);margin-top:2px;overflow-wrap:anywhere}
+.ts-day .am{text-align:right;white-space:nowrap}
+.ts-day .am b{display:block;font-size:15px;font-weight:600;color:var(--tx1)}
+.ts-day .am small{display:block;font-size:11.5px;color:var(--tx3)}
+.ts-day .go{color:var(--tx3);display:flex}
+.ts-day.off .bd,.ts-day.off .am{opacity:.45}
+.ts-empty{padding:18px 14px;text-align:center;font-size:13px;color:var(--tx3);border-top:1px solid var(--br)}
+.ts-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(62px,1fr));gap:8px}
+.ts-stats>div{background:var(--bg2);border-radius:10px;padding:8px 10px;min-width:0}
+.ts-stats small{display:block;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em}
+.ts-stats b{display:block;font-size:15px;font-weight:700;color:var(--tx1);white-space:nowrap}
+.ts-stats .tot{background:var(--goldbg)}
+#tsBack .ts-col{font-size:13px;padding:6px 12px;min-height:36px}
+#tsBack .ts-sig{height:130px;border-radius:10px}
+#tsBack textarea{width:100%}
+#tsDayBack #tdGrid{gap:8px 10px}
+@media(max-width:420px){.ts-day .am small{display:none}.ts-stats{gap:6px}.ts-stats>div{padding:8px 7px}.ts-stats b{font-size:14px}}
 /* counters */
 .ctr-blk{padding:12px 14px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px}
 .ctr-blk.pend{border-color:#F0A92E}
@@ -1678,46 +1721,59 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
   <!-- Timesheet — the visit's own hours (session.hours), for the client to sign.
        The Calendari laboral buttons only show with the "cal" module. -->
   <div class="modal-back" id="tsBack" style="display:none">
-    <div class="modal" style="max-width:min(96vw,780px)">
+    <div class="modal" style="max-width:min(96vw,640px)">
       <div class="modal-title">&#128339; Full d'hores</div>
       <div id="tsSrc" class="ts-note" style="margin-bottom:10px">&mdash;</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px">
-        <div class="field" style="margin:0"><label>Des de</label><input type="date" id="tsFrom" style="width:auto"></div>
-        <div class="field" style="margin:0"><label>Fins a</label><input type="date" id="tsTo" style="width:auto"></div>
-        <div class="field" style="margin:0"><label>Idioma del full</label><select id="tsLang" style="width:auto"></select>
-          <div id="tsLangNote" class="ts-note" style="display:none"></div></div>
-        <span id="tsCalBox" style="display:none;gap:8px;flex-wrap:wrap">
-        <button class="btn-sm" id="tsReload" title="Copia a la visita les hores fitxades al Calendari laboral per a aquests dies">&#8635; Omple des del Calendari laboral</button>
-        <button class="btn-sm" id="tsImportBtn" title="Fes servir un JSON exportat des de l'app Calendari laboral (&#9881; Exporta c&ograve;pia)">&#8593; Importa JSON</button>
-        </span>
+      <section class="nv-card ts-blk">
+        <div class="hd"><b>Per&iacute;ode i idioma</b></div>
+        <div class="ts-g3">
+          <div class="field"><label for="tsFrom">Des de</label><input type="date" id="tsFrom"></div>
+          <div class="field"><label for="tsTo">Fins a</label><input type="date" id="tsTo"></div>
+          <div class="field"><label for="tsLang">Idioma del full</label><select id="tsLang"></select></div>
+        </div>
+        <div id="tsLangNote" class="ts-note" style="display:none"></div>
+        <div id="tsCalBox" class="ts-row" style="display:none">
+          <button id="tsReload" title="Copia a la visita les hores fitxades al Calendari laboral per a aquests dies">&#8635; Omple des del Calendari laboral</button>
+          <button id="tsImportBtn" title="Fes servir un JSON exportat des de l'app Calendari laboral (&#9881; Exporta c&ograve;pia)">&#8593; Importa JSON</button>
+        </div>
         <input type="file" id="tsImportIn" accept="application/json,.json" style="display:none">
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-        <span class="ts-note" style="flex-shrink:0">Columnes</span>
-        <span id="tsColBar" style="display:flex;gap:5px;flex-wrap:wrap"></span>
-        <button class="btn-xs" id="tsColReset" title="Torna a mostrar totes les columnes">Restableix</button>
-      </div>
-      <div id="tsRows" style="max-height:36vh;overflow:auto;border:1px solid var(--br);border-radius:8px"></div>
-      <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap">
-        <button class="btn-xs" id="tsAll">Tots</button><button class="btn-xs" id="tsNone">Cap</button><button class="btn-xs" id="tsAddDay" title="Afegeix un dia que no surt a la llista, per exemple un de viatge">+ Afegeix un dia</button>
-        <span id="tsTot" style="font-family:monospace;font-size:12px;color:var(--tx2);margin-left:auto"></span>
-      </div>
-      <div class="field" style="margin-top:12px"><label>Observacions (s'imprimeixen al full)</label><textarea id="tsRem" rows="2" class="inp-notes"></textarea>
-        <button class="btn-sm" id="tsCorr" style="margin-top:6px" title="Corregeix ortografia i gramàtica">&#10003; Corregeix</button></div>
-      <div style="border-top:1px solid var(--br);margin-top:12px;padding-top:12px">
-        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap"><strong style="font-size:12px;color:var(--tx2)">Signatures</strong><span class="ts-note">signa amb el dit o amb un llapis tàctil &mdash; deixa-ho en blanc per imprimir línies buides</span></div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap"><label for="tsSigDate" style="font-size:11px;color:var(--tx3)">Data de signatura</label><input type="date" id="tsSigDate" style="font-size:12px;padding:4px 8px"><span class="ts-note">es posa sola el dia que es signa; la pots canviar</span></div>
+      </section>
+      <section class="nv-card ts-blk">
+        <div class="hd"><b>Dies</b><span>toca un dia per corregir-ne les hores</span></div>
+        <div id="tsRows"></div>
+        <div class="ts-row">
+          <button id="tsAll">Tots</button><button id="tsNone">Cap</button>
+          <button id="tsAddDay" style="margin-left:auto" title="Afegeix un dia que no surt a la llista, per exemple un de viatge">+ Afegeix un dia</button>
+        </div>
+        <div id="tsTot"></div>
+      </section>
+      <section class="nv-card ts-blk">
+        <div class="hd"><b>Columnes del full</b><span>el que surt imprès al PDF</span></div>
+        <div id="tsColBar" class="ts-row" style="gap:6px"></div>
+        <div class="ts-row"><button id="tsColReset" title="Torna a mostrar totes les columnes">Restableix</button></div>
+      </section>
+      <section class="nv-card ts-blk">
+        <div class="hd"><b>Observacions</b><span>s'imprimeixen al full</span></div>
+        <textarea id="tsRem" rows="3" class="inp-notes" aria-label="Observacions"></textarea>
+        <div class="ts-row"><button id="tsCorr" title="Corregeix ortografia i gramàtica">&#10003; Corregeix</button></div>
+      </section>
+      <section class="nv-card ts-blk">
+        <div class="hd"><b>Signatures</b><span>amb el dit o amb un llapis tàctil; en blanc, s'imprimeixen línies buides</span></div>
+        <div class="field"><label for="tsSigDate">Data de signatura</label><input type="date" id="tsSigDate"></div>
+        <div class="ts-note">es posa sola el dia que es signa; la pots canviar</div>
         <div id="tsSigGrid">
           <div>
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:11px;color:var(--tx3);flex-shrink:0">Tècnic</span><input type="text" id="tsTechName" placeholder="Nom" style="flex:1;font-size:12px;padding:4px 8px"><button class="btn-xs" id="tsTechClr">Esborra</button></div>
+            <div class="field" style="margin-bottom:6px"><label for="tsTechName">Tècnic</label>
+              <div class="ts-row" style="flex-wrap:nowrap"><input type="text" id="tsTechName" placeholder="Nom" style="flex:1;min-width:0"><button id="tsTechClr">Esborra</button></div></div>
             <canvas class="ts-sig" id="tsTechSig"></canvas>
           </div>
           <div>
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:11px;color:var(--tx3);flex-shrink:0">Client</span><input type="text" id="tsCliName" placeholder="Nom / càrrec" style="flex:1;font-size:12px;padding:4px 8px"><button class="btn-xs" id="tsCliClr">Esborra</button></div>
+            <div class="field" style="margin-bottom:6px"><label for="tsCliName">Client</label>
+              <div class="ts-row" style="flex-wrap:nowrap"><input type="text" id="tsCliName" placeholder="Nom / càrrec" style="flex:1;min-width:0"><button id="tsCliClr">Esborra</button></div></div>
             <canvas class="ts-sig" id="tsCliSig"></canvas>
           </div>
         </div>
-      </div>
+      </section>
       <div class="modal-actions">
         <button id="tsCancel">Cancel·la</button>
         <button class="btn-sm" id="tsSave">&#10003; Desa</button>
@@ -1729,6 +1785,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
   <div class="modal-back" id="tsDayBack" style="display:none">
     <div class="modal" style="max-width:min(96vw,440px)">
       <div class="modal-title">&#128339; Hores del dia</div>
+      <section class="nv-card ts-blk">
       <div class="field"><label for="tdDate">Dia</label><input type="date" id="tdDate"></div>
       <div id="tdGrid">
         <div class="field"><label for="tdVi">Sortida</label><input type="time" id="tdVi"><div class="ts-note">de casa o de l'hotel</div></div>
@@ -1738,7 +1795,8 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
       </div>
       <div class="field"><label for="tdP">Pausa (minuts)</label><input type="number" id="tdP" min="0" max="600" step="5" inputmode="numeric"></div>
       <div class="field"><label for="tdDest">Destinació o nota</label><input type="text" id="tdDest"></div>
-      <div id="tdSum" style="font-family:monospace;font-size:12px;color:var(--tx2);min-height:18px"></div>
+      </section>
+      <div id="tdSum"></div>
       <div class="modal-actions">
         <button id="tdDel" style="margin-right:auto">Treu el dia</button>
         <button id="tdCancel">Cancel·la</button>
@@ -2030,12 +2088,15 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
       </div>
       <div id="exSum" class="ex-sum"></div>
       <div id="exList"></div>
-      <div class="field" style="margin-top:12px;margin-bottom:4px"><label>Targeta d'empresa acabada en</label><input type="text" id="exLast4" inputmode="numeric" maxlength="4" placeholder="4 xifres" autocomplete="off" style="max-width:110px"></div>
-      <div class="ts-note">Es desa només en aquest aparell. Un tiquet que porti aquestes xifres queda marcat com a targeta d'empresa; si en porta unes altres, com a targeta personal.</div>
+      <section class="nv-card ts-blk" style="margin-top:12px">
+        <div class="hd"><b>En aquest aparell</b></div>
+        <div class="field"><label for="exLast4">Targeta d'empresa acabada en</label><input type="text" id="exLast4" inputmode="numeric" maxlength="4" placeholder="4 xifres" autocomplete="off" style="max-width:110px"></div>
+        <div class="ts-note">Es desa només en aquest aparell. Un tiquet que porti aquestes xifres queda marcat com a targeta d'empresa; si en porta unes altres, com a targeta personal.</div>
+        <div class="ts-note" id="exTplNote"></div>
+      </section>
       <input type="file" id="exCamIn" accept="image/*" capture="environment" style="display:none">
       <input type="file" id="exFileIn" accept="image/*,application/pdf" multiple style="display:none">
       <!-- the company's own expense sheet: the empty .xlsx is chosen once and kept on this device -->
-      <div class="ts-note" id="exTplNote" style="margin-top:10px"></div>
       <input type="file" id="exTplIn" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none">
       <div class="modal-actions" style="flex-wrap:wrap">
         <button id="exClose">Tanca</button>
@@ -8673,7 +8734,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-19 · 1";
+var APP_VERSION="nou · 2026-11-20 · 1";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -15856,8 +15917,8 @@ function tsCacheLabel(){var c=loadCalCache();return c?esc(c.src)+" · "+esc(fts(
 // so tsDayRow reads both the same way and the sheet, its PDF and the signed
 // copy did not have to change.
 // A day with entries and no hours yet is PROPOSED: on site from its first
-// entry to its last, by the clock on the wall. It is marked ≈ and becomes the
-// visit's own only when it is edited or goes onto a saved sheet.
+// entry to its last, by the clock on the wall. Its row says "Proposta", and
+// it becomes the visit's own only when it is edited or goes onto a saved sheet.
 var tsH={},tsDayDate="",tsDayNew=false;
 // A row of the sheet, or a day of the calendar, as a record of the visit.
 function tsRec(r){
@@ -15901,7 +15962,7 @@ function tsNote(html){
   if(html){tsSetSrc(html);return}
   var n=tsAll.filter(function(r){return r.sug}).length;
   tsSetSrc(esc(uiT("Les hores es desen amb la visita. Toca un dia per corregir-lo."))
-    +(n?" <span style=\"color:var(--orange)\">"+esc(uiT("≈ és una proposta, de la primera a l'última entrada del dia: revisa-la."))+"</span>":""));
+    +(n?" <span style=\"color:var(--orange)\">"+esc(uiT("Un dia marcat «Proposta» surt de la primera i l'última entrada d'aquell dia: revisa'l."))+"</span>":""));
 }
 // Redraws the list from the visit. A first look ticks every day that has
 // hours, or exactly the days a saved sheet used.
@@ -15978,7 +16039,7 @@ function tsDayRead(){
 }
 function tsDaySum(){
   var L=tsLegs(tsDayRead());
-  $$("tdSum").textContent=L?uiT("Viatge")+" "+L.travel.toFixed(2)+" h · "+uiT("Treball")+" "+L.work.toFixed(2)+" h · "+uiT("Total")+" "+L.total.toFixed(2)+" h":"";
+  $$("tdSum").innerHTML=L?"<div class=\"ts-stats\">"+tsStat("Viatge",L.travel.toFixed(2)+" h")+tsStat("Treball",L.work.toFixed(2)+" h")+tsStat("Total",L.total.toFixed(2)+" h","tot")+"</div>":"";
 }
 // With a date: that day, as the visit has it or as it is proposed. Without:
 // a new one, the day after the last on the list.
@@ -16045,41 +16106,43 @@ function tsRenderColChips(){
     });
   });
 }
+// The days are rows of a card (2026-11-20; a monospace table until then). The
+// columns ticked above no longer show HERE — they are what the PDF prints —
+// so a row always says everything the visit knows about its day.
+function tsStat(label,val,cls){return "<div"+(cls?" class=\""+cls+"\"":"")+"><small>"+esc(uiT(label))+"</small><b>"+esc(val)+"</b></div>"}
 function tsRenderRows(){
-  var box=$$("tsRows"),t=TSL[$$("tsLang").value]||TSL.en;
+  var box=$$("tsRows");
   tsRenderColChips();
   if(!tsAll.length){
-    box.innerHTML="<div class=\"ts-note\" style=\"padding:16px;text-align:center\">Encara no hi ha cap dia amb hores en aquest interval.</div>";
-    $$("tsTot").textContent="";return;
+    box.innerHTML="<div class=\"ts-empty\">Encara no hi ha cap dia amb hores en aquest interval.</div>";
+    box.onclick=null;box.onkeydown=null;tsTotals();return;
   }
-  var h="<table class=\"ts-tbl\"><thead><tr><th></th>"
-    +tsCols.map(function(k){
-      var c=tsColMeta(k);
-      return "<th"+(c.al==="right"?" style=\"text-align:right\"":"")+">"+esc(t[c.lab])+"</th>";
-    }).join("")
-    +"<th></th></tr></thead><tbody>";
-  tsAll.forEach(function(r){
-    var on=!!tsPick[r.date];
-    h+="<tr data-d=\""+r.date+"\" class=\""+(on?"":"off")+(r.sug?" sug":"")+"\">"
-      +"<td><input type=\"checkbox\" data-d=\""+r.date+"\""+(on?" checked":"")+"></td>"
-      +tsCols.map(function(k){
-        var c=tsColMeta(k),v=(k==="date"&&r.sug?"≈ ":"")+esc(tsCell(r,k,t));
-        if(k==="total")return "<td class=\"num\" style=\"color:var(--tx1);font-weight:700\">"+v+"</td>";
-        return "<td"+(c.al==="right"?" class=\"num\"":"")+">"+v+"</td>";
-      }).join("")
-      +"<td><button type=\"button\" class=\"btn-xs\" title=\"Corregeix les hores d'aquest dia\">&#9998;</button></td></tr>";
-  });
-  box.innerHTML=h+"</tbody></table>";
-  // the whole row opens its day, except the tick's own cell
+  var W={wd:(TSL[uiLang()]||TSL.en).wd};
+  box.innerHTML=tsAll.map(function(r){
+    var on=!!tsPick[r.date],bits=[],dest=r.dest||r.note||"";
+    [["vi","Sortida"],["i","Arribada"],["f","Fi"],["vf","Tornada"]].forEach(function(x){if(r[x[0]])bits.push(uiT(x[1])+" "+r[x[0]])});
+    if(r.p)bits.push(uiT("Pausa")+" "+r.p.toFixed(2)+" h");
+    if(!bits.length)bits.push(uiT("Sense hores de rellotge"));
+    return "<div class=\"ts-day"+(on?"":" off")+(r.sug?" sug":"")+"\" data-d=\""+r.date+"\" role=\"button\" tabindex=\"0\" title=\"Corregeix les hores d'aquest dia\">"
+      +"<label class=\"ck\"><input type=\"checkbox\" data-d=\""+r.date+"\""+(on?" checked":"")+"></label>"
+      +"<span class=\"bd\"><span class=\"t\">"+esc(tsWd(W,r.date)+" "+tsDMY(r.date))+(r.sug?"<span class=\"ex-badge rd\">"+esc(uiT("Proposta"))+"</span>":"")+"</span>"
+      +"<span class=\"s\">"+esc(bits.join(" · "))+"</span>"+(dest?"<span class=\"s\">"+esc(dest)+"</span>":"")+"</span>"
+      +"<span class=\"am\"><b>"+r.total.toFixed(2)+" h</b><small>"+esc(uiT("viatge")+" "+r.travel.toFixed(2)+" · "+uiT("treball")+" "+r.work.toFixed(2))+"</small></span>"
+      +"<span class=\"go\">"+nvI("right",18)+"</span></div>";
+  }).join("");
+  // the whole row opens its day, except the tick
   box.onclick=function(e){
-    var el=e.target,td=el&&el.closest?el.closest("td"):null,tr=td?td.parentNode:null;
-    if(!tr||!tr.dataset||!tr.dataset.d||td.cellIndex===0)return;
-    tsDayOpen(tr.dataset.d);
+    var el=e.target;if(!el||!el.closest||el.closest(".ck"))return;
+    var d=el.closest(".ts-day");if(d)tsDayOpen(d.dataset.d);
+  };
+  box.onkeydown=function(e){
+    if(e.key!=="Enter"||!e.target.classList||!e.target.classList.contains("ts-day"))return;
+    e.preventDefault();tsDayOpen(e.target.dataset.d);
   };
   Array.prototype.forEach.call(box.querySelectorAll("input[type=checkbox]"),function(cb){
     cb.addEventListener("change",function(){
       tsPick[cb.dataset.d]=cb.checked;
-      var tr=cb.parentNode.parentNode;if(tr)tr.classList.toggle("off",!cb.checked);
+      var d=cb.closest(".ts-day");if(d)d.classList.toggle("off",!cb.checked);
       tsTotals();
     });
   });
@@ -16087,13 +16150,10 @@ function tsRenderRows(){
 }
 function tsChosen(){return tsAll.filter(function(r){return tsPick&&tsPick[r.date]})}
 function tsTotals(){
-  var rows=tsChosen(),t=TSL[$$("tsLang").value]||TSL.en;
-  var sums=tsCols.filter(function(k){return TSCOL_SUM[k]}).map(function(k){
-    return t[tsColMeta(k).lab]+" "+tsSum(rows,k).toFixed(2);
-  });
-  $$("tsTot").textContent=rows.length
-    ?[rows.length+" "+t.daysN.toLowerCase()].concat(sums).join(" · ")
-    :t.none;
+  var rows=tsChosen(),el=$$("tsTot");
+  if(!rows.length){el.innerHTML=tsAll.length?"<div class=\"ts-note\">"+esc(uiT("Cap dia seleccionat"))+"</div>":"";return}
+  el.innerHTML="<div class=\"ts-stats\">"+tsStat("Dies",String(rows.length))+tsStat("Viatge",tsSum(rows,"travel").toFixed(2)+" h")
+    +tsStat("Treball",tsSum(rows,"work").toFixed(2)+" h")+tsStat("Total",tsSum(rows,"total").toFixed(2)+" h","tot")+"</div>";
 }
 function openTimesheet(){
   var active=sessions.find(function(s){return s.id===aid});
@@ -16155,7 +16215,7 @@ function openTimesheet(){
     $$("tdDate").addEventListener("change",function(){var h=tsH[$$("tdDate").value];if(tsDayNew&&h){tsDayFill(h);tsDaySum()}});
     $$("tsLang").addEventListener("change",function(){tsRenderRows();tsLangNote()});
     $$("tsColReset").addEventListener("click",function(){tsCols=TSCOL_ALL.slice();tsColSaveDef(tsCols);tsRenderRows()});
-    $$("tsAll").addEventListener("click",function(){tsAll.forEach(function(r){tsPick[r.date]=true});tsRenderRows()});
+    $$("tsAll").addEventListener("click",function(){tsAll.forEach(function(r){tsPick[r.date]=r.total>0});tsRenderRows()});
     $$("tsNone").addEventListener("click",function(){tsAll.forEach(function(r){tsPick[r.date]=false});tsRenderRows()});
     $$("tsSigDate").addEventListener("input",function(){tsDateHand=true});
     $$("tsTechClr").addEventListener("click",function(){if(tsPads.tech)tsPads.tech.clear()});
@@ -21063,7 +21123,7 @@ function nvDeskRender(a,isOpen){
   var es={"tots els mòduls":"todos los módulos","cap mòdul":"ningún módulo","Mòduls:":"Módulos:","Calendari laboral":"Calendari laboral",
     "Fes un full d'hores amb les hores de la visita, per signar":"Haz una hoja de horas con las horas de la visita, para firmar",
     "Les hores es desen amb la visita. Toca un dia per corregir-lo.":"Las horas se guardan con la visita. Toca un día para corregirlo.",
-    "≈ és una proposta, de la primera a l'última entrada del dia: revisa-la.":"≈ es una propuesta, de la primera a la última entrada del día: revísala.",
+    "Un dia marcat «Proposta» surt de la primera i l'última entrada d'aquell dia: revisa'l.":"Un día marcado «Propuesta» sale de la primera y la última entrada de ese día: revísalo.",
     "no hi ha cap dia fitxat en aquest interval":"no hay ningún día fichado en este intervalo",
     "Alguns dies ({n}) ja tenen hores escrites aquí que no són les del calendari. Les del calendari les substituiran. Vols continuar?":"Algunos días ({n}) ya tienen horas escritas aquí que no son las del calendario. Las del calendario las sustituirán. ¿Quieres continuar?",
     "dia copiat a la visita":"día copiado a la visita","dies copiats a la visita":"días copiados a la visita",
@@ -21082,7 +21142,7 @@ function nvDeskRender(a,isOpen){
   var en={"tots els mòduls":"all modules","cap mòdul":"no modules","Mòduls:":"Modules:","Calendari laboral":"Calendari laboral",
     "Fes un full d'hores amb les hores de la visita, per signar":"Make a timesheet from the visit's hours, to be signed",
     "Les hores es desen amb la visita. Toca un dia per corregir-lo.":"The hours are kept with the visit. Tap a day to correct it.",
-    "≈ és una proposta, de la primera a l'última entrada del dia: revisa-la.":"≈ is a suggestion, from the day's first entry to its last: check it.",
+    "Un dia marcat «Proposta» surt de la primera i l'última entrada d'aquell dia: revisa'l.":"A day marked “Suggested” comes from that day's first and last entry: check it.",
     "no hi ha cap dia fitxat en aquest interval":"no clocked days in this range",
     "Alguns dies ({n}) ja tenen hores escrites aquí que no són les del calendari. Les del calendari les substituiran. Vols continuar?":"Some days ({n}) already have hours typed here that differ from the calendar's. The calendar's will replace them. Continue?",
     "dia copiat a la visita":"day copied to the visit","dies copiats a la visita":"days copied to the visit",
@@ -21129,6 +21189,23 @@ function nvDeskRender(a,isOpen){
     "S'han fet {n} fulls: un per moneda, i un de nou cada vint dies.":"{n} sheets were made: one per currency, and a new one every twenty days.",
     "No hi són, i s'han d'afegir a mà:":"Not on it, to be added by hand:",
     "Vols treure d'aquest aparell el full buit de l'empresa? El tornaràs a triar el pròxim cop.":"Remove the company's empty sheet from this device? You will pick it again next time."};
+  Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
+  Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
+})();
+// The timesheet's window in the look of the rest (2026-11-20).
+(function(){
+  var es={"Període i idioma":"Periodo e idioma","Dies":"Días","toca un dia per corregir-ne les hores":"toca un día para corregir sus horas",
+    "Columnes del full":"Columnas de la hoja","el que surt imprès al PDF":"lo que sale impreso en el PDF",
+    "Observacions":"Observaciones","s'imprimeixen al full":"se imprimen en la hoja",
+    "amb el dit o amb un llapis tàctil; en blanc, s'imprimeixen línies buides":"con el dedo o con un lápiz táctil; en blanco, se imprimen líneas vacías",
+    "Proposta":"Propuesta","Sense hores de rellotge":"Sin horas de reloj","Cap dia seleccionat":"Ningún día seleccionado",
+    "Pausa":"Pausa","viatge":"viaje","treball":"trabajo","En aquest aparell":"En este aparato"};
+  var en={"Període i idioma":"Period and language","Dies":"Days","toca un dia per corregir-ne les hores":"tap a day to correct its hours",
+    "Columnes del full":"The sheet's columns","el que surt imprès al PDF":"what is printed on the PDF",
+    "Observacions":"Remarks","s'imprimeixen al full":"printed on the sheet",
+    "amb el dit o amb un llapis tàctil; en blanc, s'imprimeixen línies buides":"with a finger or a stylus; left blank, empty lines are printed",
+    "Proposta":"Suggested","Sense hores de rellotge":"No clock times","Cap dia seleccionat":"No days selected",
+    "Pausa":"Break","viatge":"travel","treball":"work","En aquest aparell":"On this device"};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();

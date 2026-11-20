@@ -5285,6 +5285,39 @@ a proposal, saving the sheet, no console errors. The checker's baseline stays
 at **40**. **Not checked:** the signature pads with a finger, a real phone or
 the Surface.
 
+**A timesheet holds a month; a longer visit starts a new sheet (version `nou ·
+2026-11-20 · 2`).** The user asked to check that a whole month and the
+signatures fit on one sheet, and that a visit longer than a month starts a
+new sheet with the same signature on both. `buildTimesheetBlob` only.
+
+- **Checked first, as it was:** 31 days, two lines of remarks and both
+  signatures were already one page (7.5 pt, the table ending at 206 mm of
+  297). What did NOT fit: a month where some days carry a destination or note
+  long enough to wrap — the fit counted rows, not lines, so the table ran to
+  273 mm and the signatures went alone to a second page.
+- **`TS_PER = 31`.** The rows are cut in sheets of 31; each sheet is a whole
+  sheet in the same PDF — header with "1 / 2", its own period, its own totals,
+  the remarks, and **the same two signatures** (the visit is signed once). The
+  last of several also has one line with the total of them all. The window
+  says so under the totals when more than 31 days are ticked.
+- **`fit(rows, y, extra)`** replaces the inline sum: it counts the LINES each
+  destination will take at each size (7.5 pt down to 6 in quarter points) and
+  shares the room out; if no size fits with the signatures where they always
+  sit, it tries again letting them slide down to the last place that clears
+  the page number.
+- **`sigNeed` is `boxH + 20.5`** (was `boxH + 16`): the gap above the block,
+  the box and the three lines under it. With the old number a block pushed to
+  the very bottom could print its date over the page number.
+
+Checked in the preview by catching the jsPDF document as the app makes it
+(downloads stubbed in that tab): 31 short days → 1 page; 31 days with 6 long
+notes → 1 page (6.75 pt), 2 pages before; 32 days → 2 sheets (31 + 1), 63 →
+3 sheets, each with header, totals, remarks and signatures, the last with the
+overall total; looked at in "Revisa i signa". **Still two pages:** a month in
+which about a third of the days have a three-line note — at 6 pt it does not
+fit, and the signatures go to a page of their own. **Not checked:** a sheet
+in a non-Latin language, the PDF opened in a viewer outside the app.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

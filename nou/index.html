@@ -8734,7 +8734,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-20 · 1";
+var APP_VERSION="nou · 2026-11-20 · 2";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -16153,7 +16153,9 @@ function tsTotals(){
   var rows=tsChosen(),el=$$("tsTot");
   if(!rows.length){el.innerHTML=tsAll.length?"<div class=\"ts-note\">"+esc(uiT("Cap dia seleccionat"))+"</div>":"";return}
   el.innerHTML="<div class=\"ts-stats\">"+tsStat("Dies",String(rows.length))+tsStat("Viatge",tsSum(rows,"travel").toFixed(2)+" h")
-    +tsStat("Treball",tsSum(rows,"work").toFixed(2)+" h")+tsStat("Total",tsSum(rows,"total").toFixed(2)+" h","tot")+"</div>";
+    +tsStat("Treball",tsSum(rows,"work").toFixed(2)+" h")+tsStat("Total",tsSum(rows,"total").toFixed(2)+" h","tot")+"</div>"
+    +(rows.length>TS_PER?"<div class=\"ts-note\" style=\"margin-top:8px\">"+esc(uiT("Un full porta {m} dies. Amb {n}, el PDF en tindrà {k}, cadascun amb el seu total i amb les mateixes signatures.")
+        .replace("{m}",TS_PER).replace("{n}",rows.length).replace("{k}",Math.ceil(rows.length/TS_PER)))+"</div>":"");
 }
 function openTimesheet(){
   var active=sessions.find(function(s){return s.id===aid});
@@ -16290,6 +16292,14 @@ function tsCommit(){
 // ── TIMESHEET · PDF ───────────────────────────────────────────────────────────
 // Built from the session's own frozen copy, never from the calendar: the sheet
 // a client signed has to keep saying what they signed.
+// A SHEET HOLDS A MONTH (2026-11-20, the user: "check that a whole month and
+// the signatures fit on one sheet; a visit longer than a month starts a new
+// sheet, and the signature is the same on both"). TS_PER days go on one page
+// with the header, the totals, the remarks and the signatures; day 32 opens a
+// second sheet — its own header and period, its own totals, the same remarks
+// and the same two signatures — in the same PDF. The last sheet also carries
+// one line with the total of them all.
+var TS_PER=31;
 async function buildTimesheetBlob(s){
   var T=s&&s.timesheet;
   if(!T||!T.rows||!T.rows.length)return null;
@@ -16299,60 +16309,23 @@ async function buildTimesheetBlob(s){
   var doc=new L.jsPDF({unit:"mm",format:"a4"});
   pdfLightHeads(doc,true);
   var M=14,W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),CW=W-M*2;
-  var y=M;
   var tsTexts=[s.client,s.project,s.machine,s.location,s.tech,T.techName,T.cliName,T.remarks]
     .concat(T.rows.map(function(r){return r.dest||r.note||""}));
   var ar=await pdfArabicFont(doc,tsTexts);
   await pdfUniFont(doc,tsTexts.concat(labelTexts(t)));
 
-  // header
-  doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(15,43,91);
-  doc.text(t.title,M,y+6);
-  doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(90,101,118);
-  doc.text(t.gen+" "+fts(T.generatedAt||now()),M,y+12);
-  doc.setDrawColor(15,43,91);doc.setLineWidth(0.8);doc.line(M,y+15,W-M,y+15);
-  y+=21;
-
-  // metadata, two columns — same measured-label layout as the service report
-  var period=tsDMY(T.rows[0].date)+" – "+tsDMY(T.rows[T.rows.length-1].date);
-  var meta=[[t.meta[0],s.client||"—"],[t.meta[1],contactLine(s)||"—"],[t.meta[2],s.project||"—"],[t.meta[3],s.machine||"—"],
-            [t.meta[4],s.location||"—"],[t.meta[5],T.techName||s.tech||"—"],[t.meta[6],period]];
-  y=pdfMetaBlock(doc,meta,M,CW,y,ar);
-
   // Only the columns this sheet was built with — the chips in the modal are
-  // the same list, so the printout matches what was reviewed on screen.
+  // the same list.
   var cols=(T.cols&&T.cols.length)?TSCOL_ALL.filter(function(k){return T.cols.indexOf(k)>=0}):TSCOL_ALL.slice();
   if(cols.indexOf("date")<0)cols.unshift("date");
-  var body=T.rows.map(function(r){return cols.map(function(k){return tsCell(r,k,t)})});
-
-  // One TOTAL label spanning the descriptive columns up to the first figure —
-  // as separate cells it lands in the 9mm Day column and comes out "TOT"/"AL".
-  var days=T.rows.length+" "+t.daysN.toLowerCase();
   var firstSum=-1;
   cols.forEach(function(k,i){if(firstSum<0&&TSCOL_SUM[k])firstSum=i});
-  var foot;
-  if(firstSum<1){
-    foot=[[{content:t.tot+" · "+days,colSpan:cols.length,styles:{halign:"right"}}]];
-  } else {
-    // Each total carries its own halign: autoTable gives footStyles priority
-    // over columnStyles, and footStyles has no alignment of its own, so left
-    // is what the figures fall back to — under a right-aligned column of
-    // body figures, which reads as a broken table.
-    foot=[[{content:t.tot,colSpan:firstSum,styles:{halign:"right"}}].concat(
-      cols.slice(firstSum).map(function(k){
-        return {content:TSCOL_SUM[k]?tsSum(T.rows,k).toFixed(2):(k==="dest"?days:""),
-                styles:{halign:tsColMeta(k).al}};
-      }))];
-    // Nowhere to put the day count if the sheet has no Destination column.
-    if(cols.indexOf("dest")<0)foot[0][0].content=t.tot+" · "+days;
-  }
-
   // Fixed widths for everything but Destination, which takes the remainder.
   // Drop Destination and they are scaled up instead, so the table still fills
   // the page rather than trailing off half-width.
   var fixed=cols.filter(function(k){return k!=="dest"}),sumW=0;
   fixed.forEach(function(k){sumW+=tsColMeta(k).w});
-  var scale=cols.indexOf("dest")>=0?1:(sumW?CW/sumW:1);
+  var hasDest=cols.indexOf("dest")>=0,scale=hasDest?1:(sumW?CW/sumW:1);
   var colStyles={};
   cols.forEach(function(k,i){
     var c=tsColMeta(k);
@@ -16360,82 +16333,150 @@ async function buildTimesheetBlob(s){
     if(k!=="dest")colStyles[i].cellWidth=c.w*scale;
     if(k==="total")colStyles[i].fontStyle="bold";
   });
+  // The signature block's place is the same `sigRest` on every sheet.
+  // sigNeed: the gap above the block (8), the box, and the three lines under
+  // it down to the date (12.4). It was boxH+16 until 2026-11-20, which let a
+  // block pushed to the very bottom print its date over the page number.
+  var boxH=16,sigNeed=boxH+20.5,sigRest=H-(boxH+40);   // smaller since 2026-10-13
+  var remH=0;
+  if(T.remarks){doc.setFontSize(8.5);pdfFont(doc,ar,T.remarks,"normal");remH=doc.splitTextToSize(T.remarks,CW).length*4+8;doc.setFont("helvetica","normal")}
+  var K=doc.internal.scaleFactor,HEADH=2*7/K*1.15+4;   // head: two lines at most
   // A whole month on ONE page with its header and signatures (2026-10-17).
   // The room between the visit data and the signature block (minus the
   // remarks) is shared out among the rows: the padding shrinks first, then —
   // only if that is not enough — the type, never below 6pt. A short sheet
-  // keeps the usual spacing. The signature block's place is the same `sigRest`
-  // used below, so the two cannot disagree.
-  var boxH=16,sigNeed=boxH+16,sigRest=H-(boxH+40);   // smaller since 2026-10-13
-  var remH=0;
-  if(T.remarks){doc.setFontSize(8.5);pdfFont(doc,ar,T.remarks,"normal");remH=doc.splitTextToSize(T.remarks,CW).length*4+8;doc.setFont("helvetica","normal")}
-  var K=doc.internal.scaleFactor,fs=7.5,padV=1.8,HEADH=2*7/K*1.15+4;   // head: two lines at most
-  var rowH=(sigRest-16-remH-y-HEADH)/(T.rows.length+1);                // +1: the totals row
-  if(rowH<fs/K*1.15+2*padV){
-    padV=Math.max(0.5,(rowH-fs/K*1.15)/2);
-    if(rowH<fs/K*1.15+2*padV)fs=Math.max(6,(rowH-2*padV)*K/1.15);
-  }
-  doc.autoTable({
-    startY:y,margin:{left:M,right:M},
-    head:[cols.map(function(k){return t[tsColMeta(k).lab]})],
-    body:body,foot:foot,
-    styles:{fontSize:fs,cellPadding:{top:padV,bottom:padV,left:1.8,right:1.8},overflow:"linebreak",valign:"middle"},
-    // Tight side padding on the head only: the widest headings ("H. trabajo",
-    // "H. treball") otherwise wrap mid-word inside their column.
-    headStyles:{fillColor:[15,27,45],textColor:255,fontSize:7,halign:"center",
-                cellPadding:{top:2,bottom:2,left:0.8,right:0.8}},
-    footStyles:{fillColor:[238,242,247],textColor:[15,27,45],fontStyle:"bold",fontSize:fs},
-    alternateRowStyles:{fillColor:[247,249,252]},
-    columnStyles:colStyles,
-    didParseCell:function(d){
-      if(!ar||d.section!=="body")return;
-      var x=[].concat(d.cell.text||[]).join("\n");
-      if(!hasArabic(x))return;
-      d.cell.styles.font=ar;d.cell.styles.fontStyle="normal";
+  // keeps the usual spacing. Since 2026-11-20 the count is of LINES, not rows:
+  // a destination or a note long enough to wrap used to push the last days,
+  // and the signatures with them, onto a second page.
+  function fit(rows,y,extra){
+    var room=sigRest-16-remH-extra-y-HEADH,n=rows.length+1,destW=hasDest?CW-sumW-3.6:0,fs,padV,pass;   // +1: the totals row
+    // Twice: first with the signatures where they always sit, then — only if
+    // no size fits — letting them slide down to the last place they still
+    // clear the page number (the same H-10 the block is tested against below).
+    for(pass=0;pass<2;pass++){
+      if(pass)room+=(H-10-sigNeed-8)-(sigRest-16);
+      for(fs=7.5;fs>=6;fs-=0.25){
+        var lines=1;
+        doc.setFont("helvetica","normal");doc.setFontSize(fs);
+        rows.forEach(function(r){var tx=destW?String(tsCell(r,"dest",t)||""):"";lines+=tx?Math.max(1,doc.splitTextToSize(tx,destW).length):1});
+        padV=Math.min(1.8,(room-lines*fs/K*1.15)/(2*n));
+        if(padV>=0.5)return{fs:fs,padV:padV};
+      }
     }
-  });
-  y=doc.lastAutoTable.finalY+8;
-
-  if(T.remarks){
-    if(y>H-40){doc.addPage();y=M}
-    doc.setFont("helvetica","bold");doc.setFontSize(9);doc.setTextColor(15,27,45);doc.text(t.rem,M,y);y+=4;
-    pdfFont(doc,ar,T.remarks,"normal");doc.setFontSize(8.5);doc.setTextColor(61,71,86);
-    var rl=doc.splitTextToSize(T.remarks,CW),rr=startsRtl(T.remarks);
-    rl.forEach(function(l,k){doc.text(l,M+(rr?CW-doc.getTextWidth(l):0),y+k*4)});
-    y+=rl.length*4+4;
+    return{fs:6,padV:0.5};
   }
+  function footOf(rows){
+    // One TOTAL label spanning the descriptive columns up to the first figure —
+    // as separate cells it lands in the 9mm Day column and comes out "TOT"/"AL".
+    var days=rows.length+" "+t.daysN.toLowerCase(),foot;
+    if(firstSum<1)return[[{content:t.tot+" · "+days,colSpan:cols.length,styles:{halign:"right"}}]];
+    // Each total carries its own halign: autoTable gives footStyles priority
+    // over columnStyles, and footStyles has no alignment of its own, so left
+    // is what the figures fall back to — under a right-aligned column of
+    // body figures, which reads as a broken table.
+    foot=[[{content:t.tot,colSpan:firstSum,styles:{halign:"right"}}].concat(
+      cols.slice(firstSum).map(function(k){
+        return {content:TSCOL_SUM[k]?tsSum(rows,k).toFixed(2):(k==="dest"?days:""),
+                styles:{halign:tsColMeta(k).al}};
+      }))];
+    // Nowhere to put the day count if the sheet has no Destination column.
+    if(!hasDest)foot[0][0].content=t.tot+" · "+days;
+    return foot;
+  }
+  var parts=[],pi;
+  for(pi=0;pi<T.rows.length;pi+=TS_PER)parts.push(T.rows.slice(pi,pi+TS_PER));
 
-  // signature boxes — the on-device signature if there is one, otherwise the
-  // same empty line the sheet has always had, for signing on paper
-  // The block runs from y down to the date line at y+boxH+8, and has to stay
-  // clear of the page number at H-6. Two separate numbers on purpose: `rest`
-  // is where it sits when there is room, `need` is what it takes to fit at
-  // all. Tying them together would make raising the block start a new page
-  // earlier and waste a sheet.
-  if(y+sigNeed>H-10){doc.addPage();y=M}
-  y=Math.max(y+8,sigRest);
-  var bw=CW/2-6;
-  [[t.sigT,T.techName||s.tech||"",T.techSig,M],
-   [t.sigC,T.cliName||"",T.cliSig,M+CW/2+6]].forEach(function(b){
-    var x=b[3];
-    if(b[2])try{
-      // Sit the signature ON the line at its own proportions — stretched to
-      // the box it would read as a different hand than the one that signed.
-      var pr=doc.getImageProperties(b[2]);
-      var iw=Math.min(bw,45),ih=iw*pr.height/pr.width;
-      // 1 mm clear of the rule: ink on the line hid it
-      if(ih>boxH-1){ih=boxH-1;iw=ih*pr.width/pr.height}
-      doc.addImage(b[2],"PNG",x,y+boxH-1-ih,iw,ih);
-    }catch(err){}
-    doc.setDrawColor(90,101,118);doc.setLineWidth(0.2);
-    doc.line(x,y+boxH,x+bw,y+boxH);
-    // as the report has it: the label, then the name in bold on its own line
-    doc.setFontSize(8);doc.setTextColor(90,101,118);
-    pdfFont(doc,ar,b[0],"normal");doc.text(b[0],x,y+boxH+4);
-    if(b[1]){doc.setFontSize(8.5);doc.setTextColor(15,27,45);pdfFont(doc,ar,b[1],"bold");doc.text(b[1],x,y+boxH+8.2)}
-    doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(90,101,118);
-    var sd=tsSignDate(T),showD=sd&&(b[2]||!(T.techSig||T.cliSig));
-    doc.text(t.dt+": "+(showD?tsDMY(sd):""),x,y+boxH+12.4);
+  parts.forEach(function(rows,idx){
+    if(idx)doc.addPage();
+    var y=M,last=idx===parts.length-1,many=parts.length>1;
+    // header
+    doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(15,43,91);
+    doc.text(t.title,M,y+6);
+    if(many){doc.setFontSize(11);doc.text((idx+1)+" / "+parts.length,W-M,y+6,{align:"right"})}
+    doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(90,101,118);
+    doc.text(t.gen+" "+fts(T.generatedAt||now()),M,y+12);
+    doc.setDrawColor(15,43,91);doc.setLineWidth(0.8);doc.line(M,y+15,W-M,y+15);
+    y+=21;
+
+    // metadata, two columns — same measured-label layout as the service report
+    var period=tsDMY(rows[0].date)+" – "+tsDMY(rows[rows.length-1].date);
+    var meta=[[t.meta[0],s.client||"—"],[t.meta[1],contactLine(s)||"—"],[t.meta[2],s.project||"—"],[t.meta[3],s.machine||"—"],
+              [t.meta[4],s.location||"—"],[t.meta[5],T.techName||s.tech||"—"],[t.meta[6],period]];
+    y=pdfMetaBlock(doc,meta,M,CW,y,ar);
+
+    var F=fit(rows,y,many&&last?6:0);
+    doc.autoTable({
+      startY:y,margin:{left:M,right:M},
+      head:[cols.map(function(k){return t[tsColMeta(k).lab]})],
+      body:rows.map(function(r){return cols.map(function(k){return tsCell(r,k,t)})}),foot:footOf(rows),
+      styles:{fontSize:F.fs,cellPadding:{top:F.padV,bottom:F.padV,left:1.8,right:1.8},overflow:"linebreak",valign:"middle"},
+      // Tight side padding on the head only: the widest headings ("H. trabajo",
+      // "H. treball") otherwise wrap mid-word inside their column.
+      headStyles:{fillColor:[15,27,45],textColor:255,fontSize:7,halign:"center",
+                  cellPadding:{top:2,bottom:2,left:0.8,right:0.8}},
+      footStyles:{fillColor:[238,242,247],textColor:[15,27,45],fontStyle:"bold",fontSize:F.fs},
+      alternateRowStyles:{fillColor:[247,249,252]},
+      columnStyles:colStyles,
+      didParseCell:function(d){
+        if(!ar||d.section!=="body")return;
+        var x=[].concat(d.cell.text||[]).join("\n");
+        if(!hasArabic(x))return;
+        d.cell.styles.font=ar;d.cell.styles.fontStyle="normal";
+      }
+    });
+    y=doc.lastAutoTable.finalY+8;
+
+    // the last of several sheets: what they all add up to
+    if(many&&last){
+      var sums=cols.filter(function(k){return TSCOL_SUM[k]}).map(function(k){return t[tsColMeta(k).lab]+" "+tsSum(T.rows,k).toFixed(2)});
+      var gt=[t.tot+" "+tsDMY(T.rows[0].date)+" – "+tsDMY(T.rows[T.rows.length-1].date),T.rows.length+" "+t.daysN.toLowerCase()].concat(sums).join(" · ");
+      pdfFont(doc,ar,gt,"bold");doc.setFontSize(8.5);doc.setTextColor(15,27,45);
+      doc.text(gt,W-M,y-2,{align:"right"});
+      doc.setFont("helvetica","normal");y+=6;
+    }
+
+    if(T.remarks){
+      if(y>H-40){doc.addPage();y=M}
+      doc.setFont("helvetica","bold");doc.setFontSize(9);doc.setTextColor(15,27,45);doc.text(t.rem,M,y);y+=4;
+      pdfFont(doc,ar,T.remarks,"normal");doc.setFontSize(8.5);doc.setTextColor(61,71,86);
+      var rl=doc.splitTextToSize(T.remarks,CW),rr=startsRtl(T.remarks);
+      rl.forEach(function(l,k){doc.text(l,M+(rr?CW-doc.getTextWidth(l):0),y+k*4)});
+      y+=rl.length*4+4;
+    }
+
+    // signature boxes — the on-device signature if there is one, otherwise the
+    // same empty line the sheet has always had, for signing on paper. The SAME
+    // two on every sheet: a visit is signed once, however many sheets it takes.
+    // The block runs from y down to the date line at y+boxH+8, and has to stay
+    // clear of the page number at H-6. Two separate numbers on purpose: `rest`
+    // is where it sits when there is room, `need` is what it takes to fit at
+    // all. Tying them together would make raising the block start a new page
+    // earlier and waste a sheet.
+    if(y+sigNeed>H-10){doc.addPage();y=M}
+    y=Math.max(y+8,sigRest);
+    var bw=CW/2-6;
+    [[t.sigT,T.techName||s.tech||"",T.techSig,M],
+     [t.sigC,T.cliName||"",T.cliSig,M+CW/2+6]].forEach(function(b){
+      var x=b[3];
+      if(b[2])try{
+        // Sit the signature ON the line at its own proportions — stretched to
+        // the box it would read as a different hand than the one that signed.
+        var pr=doc.getImageProperties(b[2]);
+        var iw=Math.min(bw,45),ih=iw*pr.height/pr.width;
+        // 1 mm clear of the rule: ink on the line hid it
+        if(ih>boxH-1){ih=boxH-1;iw=ih*pr.width/pr.height}
+        doc.addImage(b[2],"PNG",x,y+boxH-1-ih,iw,ih);
+      }catch(err){}
+      doc.setDrawColor(90,101,118);doc.setLineWidth(0.2);
+      doc.line(x,y+boxH,x+bw,y+boxH);
+      // as the report has it: the label, then the name in bold on its own line
+      doc.setFontSize(8);doc.setTextColor(90,101,118);
+      pdfFont(doc,ar,b[0],"normal");doc.text(b[0],x,y+boxH+4);
+      if(b[1]){doc.setFontSize(8.5);doc.setTextColor(15,27,45);pdfFont(doc,ar,b[1],"bold");doc.text(b[1],x,y+boxH+8.2)}
+      doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(90,101,118);
+      var sd=tsSignDate(T),showD=sd&&(b[2]||!(T.techSig||T.cliSig));
+      doc.text(t.dt+": "+(showD?tsDMY(sd):""),x,y+boxH+12.4);
+    });
   });
 
   var n=doc.internal.getNumberOfPages();
@@ -21199,13 +21240,15 @@ function nvDeskRender(a,isOpen){
     "Observacions":"Observaciones","s'imprimeixen al full":"se imprimen en la hoja",
     "amb el dit o amb un llapis tàctil; en blanc, s'imprimeixen línies buides":"con el dedo o con un lápiz táctil; en blanco, se imprimen líneas vacías",
     "Proposta":"Propuesta","Sense hores de rellotge":"Sin horas de reloj","Cap dia seleccionat":"Ningún día seleccionado",
-    "Pausa":"Pausa","viatge":"viaje","treball":"trabajo","En aquest aparell":"En este aparato"};
+    "Pausa":"Pausa","viatge":"viaje","treball":"trabajo","En aquest aparell":"En este aparato",
+    "Un full porta {m} dies. Amb {n}, el PDF en tindrà {k}, cadascun amb el seu total i amb les mateixes signatures.":"Una hoja lleva {m} días. Con {n}, el PDF tendrá {k}, cada una con su total y con las mismas firmas."};
   var en={"Període i idioma":"Period and language","Dies":"Days","toca un dia per corregir-ne les hores":"tap a day to correct its hours",
     "Columnes del full":"The sheet's columns","el que surt imprès al PDF":"what is printed on the PDF",
     "Observacions":"Remarks","s'imprimeixen al full":"printed on the sheet",
     "amb el dit o amb un llapis tàctil; en blanc, s'imprimeixen línies buides":"with a finger or a stylus; left blank, empty lines are printed",
     "Proposta":"Suggested","Sense hores de rellotge":"No clock times","Cap dia seleccionat":"No days selected",
-    "Pausa":"Break","viatge":"travel","treball":"work","En aquest aparell":"On this device"};
+    "Pausa":"Break","viatge":"travel","treball":"work","En aquest aparell":"On this device",
+    "Un full porta {m} dies. Amb {n}, el PDF en tindrà {k}, cadascun amb el seu total i amb les mateixes signatures.":"A sheet holds {m} days. With {n}, the PDF will have {k}, each with its own total and the same signatures."};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();

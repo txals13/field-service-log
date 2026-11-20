@@ -5318,6 +5318,41 @@ which about a third of the days have a three-line note — at 6 pt it does not
 fit, and the signatures go to a page of their own. **Not checked:** a sheet
 in a non-Latin language, the PDF opened in a viewer outside the app.
 
+**The week on the timesheet (version `nou · 2026-11-20 · 3`).** The user asked
+for something that marks one week from the next, and the week number. Three
+proposals on a design canvas — a band before each week, a week column, a
+subtotal after each week — and he picked **B, the column**: it costs no rows,
+and a month (five or six weeks) has to stay on one page with its signatures.
+
+- `TSCOLS` gains `wk` as its FIRST column (10 mm, centred). In the PDF it
+  carries the ISO week number (`isoWeek`, as the report's week bands) on the
+  first day of each week on that sheet, is tinted all the way down
+  (`didParseCell`), and a 0.45 mm navy rule is drawn above each new week
+  (`didDrawCell`, on the row's last cell so no fill lands on it). A sheet that
+  continues a week from the previous sheet repeats the number at its top.
+- It is a column like the others: its chip in "Columnes del full" turns the
+  number **and** the rules off. Destination gets the 10 mm less.
+- **Its heading is not in `TSL`, on purpose.** A new key would change the
+  shape of `TSL.en`, and `sameShape` would throw away every language Gemini
+  translated earlier — a sheet that cannot be made at a plant with no signal.
+  `TS_WK` holds the abbreviations by hand (29 languages; a missing one prints
+  "Wk"), read through `tsColLab(k, t, lang)`.
+- **Columns chosen before this existed get it.** A saved sheet with no
+  `colsV` (`tsColsOf(T)`; `tsCommit` now writes `colsV: 2`) and a default list
+  in this browser with no `…tscolsv` = "2" marker both gain `wk`: it is the
+  date's own week, nothing anybody typed or signed. After that the lists are
+  taken as they are.
+
+The checker's baseline is **59** (was 40: the abbreviations in `TS_WK` are
+not interface text). Checked in the preview: 17 days over three weeks look
+like the proposal; a whole month is still one page (7.5 pt); 36 days make two
+sheets, the second opening with the week it continues; the chip off gives 11
+columns and no rules; the chip reads "Sem." with the sheet in Spanish.
+**Not checked:** a PDF in Spanish or another language (the preview has no
+Gemini key and the remarks wanted translating), non-Latin headings, a sheet
+saved before today reopened on a real device. The window's list of days does
+not show the week; only the document does.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

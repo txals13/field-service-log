@@ -8734,7 +8734,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-20 · 2";
+var APP_VERSION="nou · 2026-11-20 · 3";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -15439,6 +15439,7 @@ var TSL={
 // survives a change of language; `w` is the PDF width in mm, and the one
 // column with w:0 soaks up whatever is left over.
 var TSCOLS=[
+  {k:"wk",    lab:"wk",   w:10, al:"center"},
   {k:"date",  lab:"date", w:16, al:"left"},
   {k:"day",   lab:"day",  w:9,  al:"center"},
   {k:"vi",    lab:"dep",  w:13, al:"center"},
@@ -15452,6 +15453,28 @@ var TSCOLS=[
   {k:"dest",  lab:"dest", w:0,  al:"left"}
 ];
 var TSCOL_ALL=TSCOLS.map(function(c){return c.k});
+// THE WEEK (2026-11-20, the user picked proposal B of three). A narrow first
+// column carries the ISO week number on the first day of each week, tinted all
+// the way down, and a heavier rule separates one week from the next. It costs
+// no rows, which is why it won over a band or a subtotal per week: a month
+// has to stay on one page with its signatures, and a month touches five or
+// six weeks. It is a column like the others — its chip turns the number AND
+// the rules off.
+// Its heading is not in TSL on purpose: a new key there would change the shape
+// of TSL.en, and every language Gemini translated earlier would be thrown out
+// and need translating again (sameShape) — with no signal at a plant, that is
+// a sheet that cannot be made. So the abbreviations are written here by hand,
+// and a language missing from the list prints "Wk".
+var TS_WK={ca:"Setm.",es:"Sem.",en:"Wk",fr:"Sem.",de:"KW",it:"Sett.",pt:"Sem.",nl:"Wk",gl:"Sem.",eu:"Astea",pl:"Tydz.",cs:"Týd.",sk:"Týž.",sl:"Ted.",
+  hr:"Tj.",ro:"Săpt.",hu:"Hét",tr:"Hafta",el:"Εβδ.",bg:"Седм.",ru:"Нед.",uk:"Тиж.",da:"Uge",sv:"V.",no:"Uke",nb:"Uke",fi:"Vko",et:"Näd.",lv:"Ned.",lt:"Sav."};
+function tsColLab(k,t,lang){return k==="wk"?(TS_WK[lang]||"Wk"):t[tsColMeta(k).lab]}
+function tsWeekNo(iso){var w=isoWeek(iso);return w?String(w.w):""}
+// The columns of a saved sheet. One saved before the week column existed (no
+// colsV) gets it: it is the date's own week, nothing anybody typed or signed.
+function tsColsOf(T){
+  if(!T||!T.cols||!T.cols.length)return null;
+  return TSCOL_ALL.filter(function(k){return k==="date"||T.cols.indexOf(k)>=0||(k==="wk"&&!T.colsV)});
+}
 var TSCOL_SUM={travel:1,work:1,total:1};
 var LS_TSCOLS=LSP+"tscols";
 // The date is not negotiable — a signed row has to say which day it is.
@@ -15459,13 +15482,15 @@ function tsColDef(){
   var v=null;
   try{v=JSON.parse(localStorage.getItem(LS_TSCOLS)||"null")}catch(e){}
   if(!Array.isArray(v)||!v.length)return TSCOL_ALL.slice();
-  var keep=TSCOL_ALL.filter(function(k){return k==="date"||v.indexOf(k)>=0});
+  var old=false;try{old=localStorage.getItem(LS_TSCOLS+"v")!=="2"}catch(e){}
+  var keep=TSCOL_ALL.filter(function(k){return k==="date"||v.indexOf(k)>=0||(k==="wk"&&old)});
   return keep.length?keep:TSCOL_ALL.slice();
 }
-function tsColSaveDef(cols){try{localStorage.setItem(LS_TSCOLS,JSON.stringify(cols))}catch(e){}}
+function tsColSaveDef(cols){try{localStorage.setItem(LS_TSCOLS,JSON.stringify(cols));localStorage.setItem(LS_TSCOLS+"v","2")}catch(e){}}
 function tsColMeta(k){return TSCOLS.filter(function(c){return c.k===k})[0]}
 // One row's cells, in the chosen order.
 function tsCell(r,k,t){
+  if(k==="wk")return tsWeekNo(r.date);
   if(k==="date")return tsDMY(r.date);
   if(k==="day")return tsWd(t,r.date);
   if(k==="p")return r.p?r.p.toFixed(2):"—";
@@ -16090,7 +16115,7 @@ function tsRenderColChips(){
   bar.innerHTML=TSCOLS.map(function(c){
     var on=tsCols.indexOf(c.k)>=0,lock=c.k==="date";
     return "<button class=\"ts-col"+(on?" on":"")+(lock?" lock":"")+"\" data-k=\""+c.k+"\""
-      +(lock?" title=\"Cada fila ha de dir quin dia és\"":"")+">"+esc(t[c.lab])+"</button>";
+      +(lock?" title=\"Cada fila ha de dir quin dia és\"":c.k==="wk"?" title=\"El número de setmana, i una ratlla entre setmana i setmana\"":"")+">"+esc(tsColLab(c.k,t,$$("tsLang").value))+"</button>";
   }).join("");
   Array.prototype.forEach.call(bar.querySelectorAll("button"),function(b){
     b.addEventListener("click",function(){
@@ -16180,7 +16205,7 @@ function openTimesheet(){
   tsLangNote();
   // A saved sheet keeps the columns it was signed with; a new one starts from
   // whatever was chosen last.
-  tsCols=(T.cols&&T.cols.length)?TSCOL_ALL.filter(function(k){return T.cols.indexOf(k)>=0}):tsColDef();
+  tsCols=tsColsOf(T)||tsColDef();
   if(tsCols.indexOf("date")<0)tsCols.unshift("date");
   $$("tsRem").value=T.remarks||"";
   $$("tsTechName").value=T.techName||active.tech||"";
@@ -16275,7 +16300,7 @@ function tsCommit(){
   rows.forEach(function(r){if(r.sug)tsH[r.date]=tsRec(r)});
   var T={
     from:$$("tsFrom").value,to:$$("tsTo").value,lang:$$("tsLang").value,
-    cols:tsCols.slice(),
+    cols:tsCols.slice(),colsV:2,
     remarks:$$("tsRem").value.trim(),
     techName:$$("tsTechName").value.trim(),cliName:$$("tsCliName").value.trim(),
     techSig:tsPads.tech?tsPads.tech.data():"",cliSig:tsPads.cli?tsPads.cli.data():"",
@@ -16312,12 +16337,12 @@ async function buildTimesheetBlob(s){
   var tsTexts=[s.client,s.project,s.machine,s.location,s.tech,T.techName,T.cliName,T.remarks]
     .concat(T.rows.map(function(r){return r.dest||r.note||""}));
   var ar=await pdfArabicFont(doc,tsTexts);
-  await pdfUniFont(doc,tsTexts.concat(labelTexts(t)));
+  await pdfUniFont(doc,tsTexts.concat(labelTexts(t),[tsColLab("wk",t,T.lang)]));
 
   // Only the columns this sheet was built with — the chips in the modal are
   // the same list.
-  var cols=(T.cols&&T.cols.length)?TSCOL_ALL.filter(function(k){return T.cols.indexOf(k)>=0}):TSCOL_ALL.slice();
-  if(cols.indexOf("date")<0)cols.unshift("date");
+  var cols=tsColsOf(T)||TSCOL_ALL.slice();
+  var wkCol=cols.indexOf("wk");
   var firstSum=-1;
   cols.forEach(function(k,i){if(firstSum<0&&TSCOL_SUM[k])firstSum=i});
   // Fixed widths for everything but Destination, which takes the remainder.
@@ -16405,10 +16430,14 @@ async function buildTimesheetBlob(s){
     y=pdfMetaBlock(doc,meta,M,CW,y,ar);
 
     var F=fit(rows,y,many&&last?6:0);
+    // the first day of each week on this sheet: it carries the number, and
+    // (but for the very first row) the rule above it
+    var wkNo=rows.map(function(r){return tsWeekNo(r.date)});
+    var wkFirst=wkNo.map(function(w,i){return !i||w!==wkNo[i-1]});
     doc.autoTable({
       startY:y,margin:{left:M,right:M},
-      head:[cols.map(function(k){return t[tsColMeta(k).lab]})],
-      body:rows.map(function(r){return cols.map(function(k){return tsCell(r,k,t)})}),foot:footOf(rows),
+      head:[cols.map(function(k){return tsColLab(k,t,T.lang)})],
+      body:rows.map(function(r,ri){return cols.map(function(k){return k==="wk"?(wkFirst[ri]?wkNo[ri]:""):tsCell(r,k,t)})}),foot:footOf(rows),
       styles:{fontSize:F.fs,cellPadding:{top:F.padV,bottom:F.padV,left:1.8,right:1.8},overflow:"linebreak",valign:"middle"},
       // Tight side padding on the head only: the widest headings ("H. trabajo",
       // "H. treball") otherwise wrap mid-word inside their column.
@@ -16418,10 +16447,20 @@ async function buildTimesheetBlob(s){
       alternateRowStyles:{fillColor:[247,249,252]},
       columnStyles:colStyles,
       didParseCell:function(d){
-        if(!ar||d.section!=="body")return;
+        if(d.section!=="body")return;
+        if(d.column.index===wkCol){d.cell.styles.fillColor=[227,234,244];d.cell.styles.textColor=[15,43,91];d.cell.styles.fontStyle="bold";return}
+        if(!ar)return;
         var x=[].concat(d.cell.text||[]).join("\n");
         if(!hasArabic(x))return;
         d.cell.styles.font=ar;d.cell.styles.fontStyle="normal";
+      },
+      // The rule between weeks, drawn once the row's last cell is painted so
+      // no cell's own fill lands on top of it.
+      didDrawCell:function(d){
+        if(wkCol<0||d.section!=="body"||d.column.index!==cols.length-1)return;
+        if(!d.row.index||!wkFirst[d.row.index])return;
+        doc.setDrawColor(15,43,91);doc.setLineWidth(0.45);
+        doc.line(M,d.cell.y,M+CW,d.cell.y);
       }
     });
     y=doc.lastAutoTable.finalY+8;
@@ -21239,6 +21278,7 @@ function nvDeskRender(a,isOpen){
     "Columnes del full":"Columnas de la hoja","el que surt imprès al PDF":"lo que sale impreso en el PDF",
     "Observacions":"Observaciones","s'imprimeixen al full":"se imprimen en la hoja",
     "amb el dit o amb un llapis tàctil; en blanc, s'imprimeixen línies buides":"con el dedo o con un lápiz táctil; en blanco, se imprimen líneas vacías",
+    "El número de setmana, i una ratlla entre setmana i setmana":"El número de semana, y una raya entre semana y semana",
     "Proposta":"Propuesta","Sense hores de rellotge":"Sin horas de reloj","Cap dia seleccionat":"Ningún día seleccionado",
     "Pausa":"Pausa","viatge":"viaje","treball":"trabajo","En aquest aparell":"En este aparato",
     "Un full porta {m} dies. Amb {n}, el PDF en tindrà {k}, cadascun amb el seu total i amb les mateixes signatures.":"Una hoja lleva {m} días. Con {n}, el PDF tendrá {k}, cada una con su total y con las mismas firmas."};
@@ -21246,6 +21286,7 @@ function nvDeskRender(a,isOpen){
     "Columnes del full":"The sheet's columns","el que surt imprès al PDF":"what is printed on the PDF",
     "Observacions":"Remarks","s'imprimeixen al full":"printed on the sheet",
     "amb el dit o amb un llapis tàctil; en blanc, s'imprimeixen línies buides":"with a finger or a stylus; left blank, empty lines are printed",
+    "El número de setmana, i una ratlla entre setmana i setmana":"The week number, and a rule between one week and the next",
     "Proposta":"Suggested","Sense hores de rellotge":"No clock times","Cap dia seleccionat":"No days selected",
     "Pausa":"Break","viatge":"travel","treball":"work","En aquest aparell":"On this device",
     "Un full porta {m} dies. Amb {n}, el PDF en tindrà {k}, cadascun amb el seu total i amb les mateixes signatures.":"A sheet holds {m} days. With {n}, the PDF will have {k}, each with its own total and the same signatures."};

@@ -3179,14 +3179,63 @@ function saveLocalLS(){
 // gets `modAt` = now. What arrives from Drive is marked as seen, so a sync
 // does not stamp it as a change of ours. The merges compare `sStamp`, the
 // later of the two.
-var seenObj=new Map();
-function markSeen(){sessions.forEach(function(x){if(x&&x.id)seenObj.set(x.id,x)})}
+//
+// TWO PEOPLE, ONE VISIT (2026-11-21). A company on one Google account puts
+// two technicians in the same visit, and "the later copy of the WHOLE visit
+// wins" then throws away whatever the other one wrote in between. So a change
+// is also noted down piece by piece, here, at the one place every local
+// change passes through — by comparing the visit with the object it replaced
+// (`seenObj` still holds it), which needs nothing from the forty places that
+// change a visit:
+//   · an entry that is a new object (added, or edited: entries are replaced
+//     too) gets `mAt`;
+//   · an entry the old object had and the new one has not leaves a tombstone
+//     in `entGone` ({id, at}), so the other copy cannot bring it back;
+//   · every other field whose value is not the one it was gets its time in
+//     `fAt` — the notes, the status, the counters, the hours, the tests…
+// The merges (visitMerge) then keep both people's entries and, field by
+// field, the later change. What arrives from Drive is marked as seen, entry
+// by entry, so a sync is not taken for a change of ours.
+var seenObj=new Map(),seenEnt=new WeakSet();
+var FLD_SKIP={id:1,entries:1,entGone:1,expenses:1,exGone:1,exSeq:1,fAt:1,modAt:1,updatedAt:1};
+function markSeen(){
+  sessions.forEach(function(x){
+    if(!x||!x.id)return;
+    seenObj.set(x.id,x);
+    (x.entries||[]).forEach(function(e){if(e&&typeof e==="object")seenEnt.add(e)});
+  });
+}
 function stampChanged(){
   var t=null;
   sessions.forEach(function(x){
-    if(!x||!x.id||seenObj.get(x.id)===x)return;
-    x.modAt=t||(t=now());seenObj.set(x.id,x);
+    if(!x||!x.id)return;
+    var prev=seenObj.get(x.id);
+    if(prev===x)return;
+    x.modAt=t||(t=now());
+    stampParts(x,prev,t);
+    seenObj.set(x.id,x);
   });
+}
+function stampParts(x,prev,t){
+  var ids={},gone=null,fa=null;
+  (x.entries||[]).forEach(function(e){
+    if(!e||typeof e!=="object")return;
+    if(e.id)ids[e.id]=1;
+    if(!seenEnt.has(e)){e.mAt=t;seenEnt.add(e)}
+  });
+  if(!prev)return;                       // a visit first seen now: nothing to compare it with
+  (prev.entries||[]).forEach(function(e){
+    if(e&&e.id&&!ids[e.id])(gone||(gone=(x.entGone||[]).slice())).push({id:e.id,at:t});
+  });
+  if(gone)x.entGone=gone.slice(-500);
+  var keys={},k;
+  for(k in x)keys[k]=1;
+  for(k in prev)keys[k]=1;
+  for(k in keys){
+    if(FLD_SKIP[k]||x[k]===prev[k])continue;
+    (fa||(fa=Object.assign({},x.fAt)))[k]=t;
+  }
+  if(fa)x.fAt=fa;
 }
 function sStamp(x){var a=(x&&x.modAt)||"",b=(x&&x.updatedAt)||"";return a>b?a:b}
 async function saveLocal(){
@@ -6110,6 +6159,66 @@ async function listDataFiles(token){
   return list;
 }
 async function findDataFile(token){var l=await listDataFiles(token);return l.length?l[0].id:null}
+// ── two copies of one visit, made one (2026-11-21) ──
+// `w` is the copy with the later stamp, `o` the other. The later copy still
+// decides whatever nobody noted a change to; on top of it:
+//   · ENTRIES. One the other copy has and this one has not is KEPT if it
+//     carries `mAt` (somebody added it since this was built) and no tombstone
+//     says it was deleted. Without `mAt` it is an entry from before, missing
+//     here because it was deleted here before tombstones existed — a phone
+//     opened after a week must not bring back what was deleted meanwhile.
+//     One both have: the copy with the later `mAt`. A deletion always wins.
+//   · FIELDS. For each field the other copy changed later than this one did
+//     (`fAt`), the other's value.
+//   · the expenses, one by one, as before (exMergeVisit).
+// A merge that took something from the other copy is a new state of the
+// visit: it gets a stamp of its own, so the screen redraws and every device
+// ends up with it. Two devices that merge the same two copies get the same
+// content, and the second merge then finds nothing to take: it settles.
+// The limits: inside ONE entry, or one field, the later change still wins
+// whole — two people rewording the same entry at once, or both editing the
+// general notes, leaves the later text. A change made by a copy of the app
+// from before this is not noted down, and counts as never made.
+function entAt(e){return String((e&&(e.mAt||e.editedAt))||"")}
+function entMergeVisit(w,o){
+  if(!o||!w||w===o)return w;
+  var we=w.entries||[],oe=o.entries||[],wg=w.entGone||[],og=o.entGone||[];
+  if(!oe.length&&!og.length)return w;
+  var gone={},goneL=[];
+  wg.concat(og).forEach(function(g){if(g&&g.id&&!(g.id in gone)){gone[g.id]=1;goneL.push(g)}});
+  var by={},list=we.slice(),ch=goneL.length!==wg.length;
+  we.forEach(function(e,i){if(e&&e.id)by[e.id]=i});
+  oe.forEach(function(e){
+    if(!e||!e.id||(e.id in gone))return;
+    if(!(e.id in by)){
+      if(!e.mAt)return;
+      by[e.id]=list.length;list.push(e);ch=true;
+    }else if(entAt(e)>entAt(list[by[e.id]])){list[by[e.id]]=e;ch=true}
+  });
+  var kept=list.filter(function(e){return !(e&&e.id&&(e.id in gone))});
+  if(kept.length!==list.length)ch=true;
+  if(!ch)return w;
+  return Object.assign({},w,{entries:sortEntries(kept),entGone:goneL.slice(-500)});
+}
+function fldMergeVisit(w,o){
+  if(!o||!w||w===o||!o.fAt)return w;
+  var wf=w.fAt||{},out=null;
+  Object.keys(o.fAt).forEach(function(k){
+    if(FLD_SKIP[k]||!(String(o.fAt[k])>String(wf[k]||"")))return;
+    if(!out){out=Object.assign({},w);out.fAt=Object.assign({},wf)}
+    if(k in o)out[k]=o[k];else delete out[k];
+    out.fAt[k]=o.fAt[k];
+  });
+  return out||w;
+}
+function visitMerge(w,o){
+  var m=exMergeVisit(w,o);
+  var m2=fldMergeVisit(entMergeVisit(m,o),o);
+  if(m2===m)return m;
+  if(String(o.updatedAt||"")>String(m2.updatedAt||""))m2.updatedAt=o.updatedAt;
+  m2.modAt=now();
+  return m2;
+}
 // Newest updatedAt wins per visit; visits only one side has are kept.
 function mergeSessionLists(a,b){
   var byId={};
@@ -6118,9 +6227,9 @@ function mergeSessionLists(a,b){
     var cur=byId[x.id];
     if(!cur){byId[x.id]=x;return}
     // later stamp wins; on a tie the later list (this device's) wins — and
-    // the expenses of both copies are kept, one by one (exMergeVisit)
+    // what the other copy holds that this one lacks is kept (visitMerge)
     var win=sStamp(x)>=sStamp(cur)?x:cur;
-    byId[x.id]=exMergeVisit(win,win===x?cur:x);
+    byId[x.id]=visitMerge(win,win===x?cur:x);
   });
   return Object.keys(byId).map(function(k){return byId[k]});
 }
@@ -6192,7 +6301,7 @@ async function loadFromDrive(){
     var ahead=false;
     var merged=data.map(function(rs){var ls=localById[rs.id];
       if(!ls)return rs;
-      var win=sStamp(ls)>sStamp(rs)?ls:rs,m=exMergeVisit(win,win===ls?rs:ls);
+      var win=sStamp(ls)>sStamp(rs)?ls:rs,m=visitMerge(win,win===ls?rs:ls);
       if(m!==rs)ahead=true;            // newer here, or expenses Drive lacks: put it back up
       return m});
     var remIds=new Set(data.map(function(s){return s.id}));
@@ -8740,7 +8849,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-21 · 2";
+var APP_VERSION="nou · 2026-11-21 · 3";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();

@@ -5481,8 +5481,59 @@ checker's baseline is **60** (was 59: `modifiedTime desc` is a Drive
 parameter, not interface text). **Not checked:** real Drive, two real devices, the real
 expense sheet travelling through it, a phone.
 
-Still not built: two people writing in the same visit at once; every device
-downloading every visit; one account's storage for everybody's photos.
+Still not built: every device downloading every visit; one account's storage
+for everybody's photos.
+
+**Two people, one visit (version `nou · 2026-11-21 · 3`).** A company on one
+account puts two technicians in the same visit, and every merge kept "the
+later copy of the WHOLE visit": what the other one wrote in between was
+thrown away, first on Drive and then on their own device. Only the expenses
+merged one by one (`exMergeVisit`). Now the rest does too.
+
+- **A change is noted down piece by piece, in one place.** `stampChanged`
+  already ran on every local save and compared each visit with the object it
+  replaced (`seenObj`); `stampParts(x, prev, t)` now does three more things
+  with that comparison, so none of the forty places that change a visit had
+  to be touched:
+  - an entry that is a new object (added or edited — entries are replaced,
+    like visits) gets **`mAt`** (`seenEnt`, a WeakSet, says which were seen);
+  - an entry the old object had and the new one lacks leaves a tombstone in
+    **`session.entGone`** (`{id, at}`, last 500);
+  - every other field whose value is not the one it was gets its time in
+    **`session.fAt`** (`FLD_SKIP` lists what is not a field of this kind).
+  `markSeen` marks the entries too, so what arrives from Drive is not taken
+  for a change of ours.
+- **`visitMerge(w, o)`** replaces `exMergeVisit` in `mergeSessionLists` and in
+  `loadFromDrive`: expenses as before, then `entMergeVisit`, then
+  `fldMergeVisit`. `w` is the copy with the later stamp and still decides
+  whatever nobody noted a change to.
+  - Entries: one only the other copy has is kept **if it carries `mAt`** and
+    no tombstone names it; one both have, the later `mAt` (`entAt`); a
+    deletion always wins.
+  - Fields: where the other copy's `fAt[k]` is later, its value.
+  - A merge that took something from the other copy sets `modAt` to now (and
+    `updatedAt` to the later of the two), so the screen redraws and the other
+    devices take it. Merging the result again with either copy finds nothing
+    to take — it settles.
+- **Why "only if it carries `mAt`".** An entry with no `mAt` missing from the
+  later copy is one deleted before tombstones existed. Keeping it would let a
+  phone opened after a week bring back what was deleted meanwhile.
+- **The limits, said to the user.** Inside ONE entry or one field the later
+  change wins whole: two people rewording the same entry, or both editing the
+  general notes, the hours or the production tests, leaves the later one. A
+  change made by a copy of the app from before this is not noted down. A
+  change made by mutating in place (none known at the top level of a visit)
+  would not be seen.
+
+Checked in the preview, on a temporary copy that exposed the app's scope
+(deleted afterwards): from one base, A adds an entry, deletes one and closes
+the visit while B adds another, rewords a third and rewrites the notes — the
+merge holds both new entries, B's wording and notes, A's deletion and the
+closed status, the same in either order, and settles; a stale copy with an
+unstamped entry does not bring it back; through `syncTick` with Drive
+replaced by a `fetch` stub, the file written holds it all and the open visit
+redraws with the other one's entry. **Not checked:** two real devices on a
+real account, media attached to entries merged this way, a long real visit.
 
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does

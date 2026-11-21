@@ -760,6 +760,8 @@ body.m2 .sidebar .s-list{order:3;flex:none;overflow:visible;padding:0;background
 .sitem-name{font-size:15px;font-weight:700;color:var(--tx1)}
 .sitem-sub{font-size:12.5px;color:var(--tx3);margin:0}
 .sitem-sub b{color:var(--red);font-weight:700}
+.sitem-tec{display:flex;align-items:center;gap:5px;color:var(--tx2);font-weight:600;margin-top:2px}
+.sitem-tec span{overflow:hidden;text-overflow:ellipsis}
 .nv-pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;border-radius:20px;padding:3px 10px;white-space:nowrap;background:var(--p-info-bg);color:var(--p-info-tx)}
 .nv-pill.g{background:var(--greenbg);color:var(--green)}.nv-pill.r{background:var(--redbg);color:var(--red)}.nv-pill.o{background:var(--orangebg);color:var(--orange)}
 .sitem-del{position:static;transform:none;opacity:0;width:32px;height:32px;padding:0;margin-left:6px;font-size:14px;border:0;border-radius:8px;background:none;color:var(--tx3);display:flex;align-items:center;justify-content:center}
@@ -6718,7 +6720,13 @@ function buildSitem(s,applyFilter){
     // machine comes back visit after visit), so it goes first
     +"<div class=\"sitem-sub\">"+highlightText([s.project,s.machine].filter(Boolean).join(" · "),sessFilterTxt)+((s.project||s.machine)?" · ":"")+esc(uiT(tm.label))+"</div>"
     +"<div class=\"sitem-sub\">"+esc(when)+" · "+pl(n,"entrada","entrades")+(issues?" · <b>■ "+issues+"</b>":"")
-      +(s.tech&&!isTec()&&techMany()?" · "+esc(s.tech):"")+"</div>"
+      +"</div>"
+    // Whose visit it is, for whoever sees everybody's (2026-11-21 · 11: "in the
+    // administrator's view the technicians' names must show on the visits, on
+    // the home page and in Visites"). It used to be the tail of the line above,
+    // and only when the visits carried more than one name: cut off on a phone,
+    // and missing altogether in a company whose visits were all one person's.
+    +(s.tech&&!isTec()?"<div class=\"sitem-sub sitem-tec\">"+nvI("user",14)+"<span>"+highlightText(s.tech,sessFilterTxt)+"</span></div>":"")
     +"</div>"
     +"<div class=\"end\">"+(ordS?"<span class=\"nv-pill b\">"+esc(nvT(ordS==="new"?"Nova":"Canviada"))+"</span>"
         :isOpen&&!n&&s.order?"<span class=\"nv-pill o\">"+esc(nvT("Per començar"))+"</span>"
@@ -8966,7 +8974,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-21 · 10";
+var APP_VERSION="nou · 2026-11-21 · 11";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -12902,13 +12910,6 @@ function sessMine(x){
 // What the lists show. The visit that is open is always among them: it can be
 // somebody else's, reached through the history of its machine.
 function sessShown(){return isTec()?sessions.filter(function(x){return sessMine(x)||x.id===aid}):sessions}
-// More than one technician's name among the visits: only then is it worth a
-// place on each row of the administrator's list.
-function techMany(){
-  var k="",i,t;
-  for(i=0;i<sessions.length;i++){t=keyNorm(sessions[i].tech);if(!t)continue;if(k&&t!==k)return true;k=t}
-  return false;
-}
 function roleApply(){
   var tec=isTec(),b;
   b=$$("btnBulkArx");if(b)b.style.display=tec?"none":"";
@@ -20379,6 +20380,7 @@ var nvSync={state:"",msg:""};
 var mhFor=null;             // the machine history is open for this visit (null: the active one)
 
 var NV_IC={
+  user:"<circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21a8 8 0 0116 0\"/>",
   home:"<path d=\"M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z\"/>",
   doc:"<rect x=\"4\" y=\"3\" width=\"16\" height=\"18\" rx=\"2\"/><path d=\"M8 8h8M8 12h8M8 16h5\"/>",
   hist:"<path d=\"M3 12a9 9 0 109-9\"/><path d=\"M3 4v5h5\"/><path d=\"M12 8v4l3 2\"/>",

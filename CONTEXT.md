@@ -5709,6 +5709,19 @@ English texts. **Not checked:** real Google, two real devices, a phone.
 The translation checker's baseline is 65 since this change (the platform
 names and the profile tag are data, not text).
 
+**The technician's name on every visit row (version `nou · 2026-11-21 ·
+11`).** The user: "in the administrator's view the technicians' names must
+show on the visits, on the home page and in Visites." They did, but only as
+the tail of the row's last line and only when the visits carried more than
+one name (`techMany`, now gone): cut off on a phone, and absent in a company
+whose visits were all one person's. Now `buildSitem` — the one row both the
+home page and Visites draw — gives the name a line of its own with a person
+icon (`.sitem-tec`) whenever the visit has one and the device is not a
+technician's. A technician's rows are unchanged: they are all their own.
+Checked in the preview: two visits under one name and one with none, on the
+home page and in Visites, wide and at phone width; none with a technician
+licence.
+
 **Two people, one visit (version `nou · 2026-11-21 · 3`).** A company on one
 account puts two technicians in the same visit, and every merge kept "the
 later copy of the WHOLE visit": what the other one wrote in between was

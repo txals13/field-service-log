@@ -5484,6 +5484,49 @@ expense sheet travelling through it, a phone.
 Still not built: every device downloading every visit; one account's storage
 for everybody's photos.
 
+**The technicians' licence travels with the company's settings (version `nou
+· 2026-11-21 · 6`).** The user: "with ten technicians, if the company buys a
+module, do I have to change every licence? Can I modify them in the
+generator?" A licence cannot be modified (it is signed): a new one is issued,
+and the old one keeps working until it expires. A company has two — the
+administrator's and the technicians' — so it is two to issue, not ten; what
+cost was pasting the technicians' one on every device. Now:
+
+- **The administrator pastes the technicians' licence in the same licence
+  window.** A `tec` licence pasted on a device that holds an administrator's
+  (or the owner's, or one from before roles) is not installed: after a
+  confirm it is **kept aside** (`…lictec`, `licTecGet`) and the device keeps
+  its own. The window's note says whether one is kept (`licTecNote`,
+  `licPeek` reads a licence without checking it, for showing only). To turn
+  such a device into a technician's, take its licence out first.
+- **"Configuració de l'empresa" publishes it** as `licTec` in the same file,
+  and the confirm lists it as a fourth line.
+- **`cfgLic(tok)`** runs on every device when the file is applied — and at
+  every read while the file is unchanged, in case the device's own licence
+  had not been read yet. On a technician's device, or one with **no licence
+  at all**, it is checked like any pasted licence (`licCheck`, role `tec`)
+  and installed; `licApply` shows the new modules at once. On an
+  administrator's device it is only kept aside, to be published again. It is
+  NOT installed over a licence that expires later: that one was pasted by
+  hand after the file was written.
+- Not asked for on arrival: the technician's name. A device that gets its
+  licence this way shows every visit until the name is set ("Tècnic d'aquest
+  aparell") or the first visit is created there.
+- **`tools/llicencies.html`: "Reemet" on each row of the register** fills
+  step 3 with that licence's holder, expiry, seats, role, modules and extras,
+  so adding a module is one tick and one button. The register keeps both.
+- A licence already out cannot be withdrawn: a device that never syncs keeps
+  the old one, with its old modules, until it expires. That matters when a
+  module is taken AWAY, not when one is added.
+
+Checked on a temporary copy with Drive stubbed (deleted): the administrator's
+device keeps the pasted `tec` licence aside and stays `adm`; the publish
+carries it; a technician's device with the older licence gets the new module
+with no reload; a device with no licence becomes a technician's; a second
+administrator device keeps it aside and keeps its own; a technician's licence
+that runs longer is left alone. The tool's "Reemet" with a throwaway key.
+**Not checked:** real licences, real Drive, real devices.
+
 **Two people, one visit (version `nou · 2026-11-21 · 3`).** A company on one
 account puts two technicians in the same visit, and every merge kept "the
 later copy of the WHOLE visit": what the other one wrote in between was

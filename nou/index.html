@@ -8884,7 +8884,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-21 · 5";
+var APP_VERSION="nou · 2026-11-21 · 6";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -12764,6 +12764,20 @@ function licRoleWord(){
   return uiT(LIC_ROLES[r])+(r!==licRoleReal()?" ("+uiT("vista de prova")+")":"");
 }
 function licRoleTail(){return lic&&LIC_ROLES[lic.r]?" \u00b7 "+licRoleWord():""}
+// The technicians' licence, held on an administrator's device to be handed on.
+var LS_LICTEC=LSP+"lictec";
+function licTecGet(){try{return localStorage.getItem(LS_LICTEC)||""}catch(e){return""}}
+// What a licence says, read without checking it: for showing only.
+function licPeek(tok){
+  try{var q=String(tok||"").trim().split(".");return q.length===3?JSON.parse(new TextDecoder().decode(licB64u(q[1]))):null}
+  catch(e){return null}
+}
+function licTecNote(){
+  if(licRoleReal()==="tec")return cfgHas("lic")?" "+uiT("L'ha repartida l'empresa amb la seva configuració."):"";
+  var k=licPeek(licTecGet());
+  return " "+(k?uiT("Llicència dels tècnics guardada per repartir: fins al {x}.").replace("{x}",esc(String(k.x||"")))
+              :uiT("Per repartir la llicència dels tècnics a tots els seus aparells, enganxa-la aquí."));
+}
 function meName(){try{return(localStorage.getItem(LS_ME)||"").trim()}catch(e){return""}}
 function meSet(n){n=String(n||"").trim();try{if(n)localStorage.setItem(LS_ME,n);else localStorage.removeItem(LS_ME)}catch(e){}}
 var mineIds=null;
@@ -12861,6 +12875,18 @@ function wireLic(){
     var d=await licCheck(t);
     if(!d){$$("licNote").innerHTML=uiT("Aquesta llicència no val: o està escrita a mitges, o no l'hem emesa nosaltres. Torna a copiar-la sencera del correu.")
       +(LIC_PUB?"":" <b>(Aquesta c\u00f2pia de l'aplicaci\u00f3 encara no t\u00e9 clau p\u00fablica: cap llic\u00e8ncia no hi pot valer.)</b>");return}
+    // The technicians' licence, pasted on a device that holds the
+    // administrator's: it is not for this device — it is kept to be handed to
+    // every technician's device with the company's settings (see cfgLic).
+    if(d.r==="tec"&&lic&&licRoleReal()!=="tec"){
+      if(!confirm(uiT("Aquesta és la llicència dels tècnics, i aquest aparell té la d'administrador.")+"\n\n"
+        +uiT("Accepta per guardar-la i repartir-la a tots els tècnics amb «Configuració de l'empresa». Aquest aparell conserva la seva.")))return;
+      try{localStorage.setItem(LS_LICTEC,t)}
+      catch(err){alert(uiT("No s'ha pogut desar la llic\u00e8ncia en aquest navegador: ")+((err&&err.message)||err));return}
+      close();
+      alert(uiT("Guardada. Ara desa-la a Drive des del Menú, a «Configuració de l'empresa»: cada aparell de tècnic la rebrà quan sincronitzi."));
+      return;
+    }
     try{localStorage.setItem(LS_LIC,t)}
     catch(err){alert(uiT("No s'ha pogut desar la llic\u00e8ncia en aquest navegador: ")+((err&&err.message)||err));return}
     lic=d;licApply();close();
@@ -12885,6 +12911,7 @@ function openLic(msg){
         +(d.s?uiT(", per a")+" "+esc(String(d.s))+" "+uiT("tècnic")+(d.s==1?"":"s"):"")+"."
         +" "+uiT("Mòduls:")+" <b>"+esc(licModWords())+"</b>."
         +(LIC_ROLES[d.r]?" "+uiT("Rol:")+" <b>"+esc(licRoleWord())+"</b>.":"")
+        +licTecNote()
         +(st.kind==="grace"?" <b>Ha caducat</b>"+uiT(", i segueix funcionant durant")+" "+LIC_GRACE+" "+uiT("dies de cortesia."):"")
        :(st.kind==="trial"?"Estem de prova: queden <b>"+st.days+"</b> dies. Enganxa la llic\u00e8ncia quan la tinguis."
                           :"Aquest aparell no t\u00e9 llic\u00e8ncia."));
@@ -21584,7 +21611,15 @@ function nvDeskRender(a,isOpen){
 // One JSON file in the app's root folder on Drive, beside the history file.
 // The company works on ONE Google account, so every device signed in to it
 // sees the file (drive.file: the app made it, under that account).
-//   {v:1, at, by, gem, tsCols:[…], tpl:{name,b64}}
+//   {v:1, at, by, gem, tsCols:[…], tpl:{name,b64}, licTec}
+// `licTec` (· 6) is the TECHNICIANS' LICENCE itself. A licence lives on each
+// device, so a module added to a company of ten meant pasting a new text on
+// ten phones. Now the administrator pastes it once — in the licence window,
+// which keeps it aside instead of installing it — and publishes; each
+// technician's device installs it at its next sync (cfgLic), a device with no
+// licence at all included. An administrator's device never installs it: it
+// keeps it, to publish again. It is the same text every technician already
+// holds, so nothing new is exposed by writing it in the file.
 // The administrator's row in the menu PUBLISHES what that device holds, after
 // a confirm that lists it. Every device reads the file when it reads the
 // history (at most every ten minutes) and applies it when its `at` is not the
@@ -21609,7 +21644,7 @@ function cfgLocal(){try{return JSON.parse(localStorage.getItem(LS_CFG)||"null")}
 function cfgHas(k){var c=cfgLocal();return !!(c&&c[k]&&(!Array.isArray(c[k])||c[k].length))}
 function cfgRemember(d){
   try{localStorage.setItem(LS_CFG,JSON.stringify({at:d.at||"",by:d.by||"",gem:!!d.gem,
-    tsCols:Array.isArray(d.tsCols)?d.tsCols:null,tpl:d.tpl?(d.tpl.name||"xlsx"):""}))}catch(e){}
+    tsCols:Array.isArray(d.tsCols)?d.tsCols:null,tpl:d.tpl?(d.tpl.name||"xlsx"):"",lic:!!d.licTec}))}catch(e){}
 }
 function cfgB64(buf){
   var a=new Uint8Array(buf),o="",i;
@@ -21627,14 +21662,16 @@ function cfgWords(){
 function cfgList(d){
   d=d||{};
   var tn=d.tpl?(typeof d.tpl==="string"?d.tpl:(d.tpl.name||"xlsx")):"";
-  var n=Array.isArray(d.tsCols)?d.tsCols.length:0;
+  var n=Array.isArray(d.tsCols)?d.tsCols.length:0,lk=licPeek(d.licTec);
   return "\u00b7 "+uiT("Clau de Gemini")+": "+uiT(d.gem?"sí":"no")
     +"\n\u00b7 "+uiT("Columnes del full d'hores")+": "+(n?pl(n,"columna","columnes"):uiT("les de cada aparell"))
-    +"\n\u00b7 "+uiT("Full de despeses de l'empresa")+": "+(tn||uiT("no n'hi ha"));
+    +"\n\u00b7 "+uiT("Full de despeses de l'empresa")+": "+(tn||uiT("no n'hi ha"))
+    +"\n\u00b7 "+uiT("Llicència dels tècnics")+": "+(lk?(lk.n||"")+", "+uiT("fins al {x}").replace("{x}",lk.x||""):uiT("no n'hi ha"));
 }
 async function cfgBuild(){
   var t=await exTplGet(),d={v:1,at:now(),by:meName(),gem:gemKey(),tsCols:tsColDef()};
   if(t&&t.buf)d.tpl={name:t.name||"",b64:cfgB64(t.buf)};
+  var lt=licTecGet();if(lt)d.licTec=lt;
   return d;
 }
 async function cfgFiles(token){
@@ -21652,8 +21689,25 @@ async function cfgApply(d){
     try{exTplMem={name:d.tpl.name||"",at:d.at||now(),buf:cfgUnB64(d.tpl.b64)};if(idb)await idbSet(idb,"extpl",exTplMem)}catch(e){}
   }
   cfgRemember(d);
+  if(d.licTec)await cfgLic(d.licTec);
   try{roleApply()}catch(e){}
   try{exTplLabel()}catch(e){}
+}
+// The technicians' licence from the company's file. On a device that holds an
+// administrator's (or the owner's, or one from before roles) it is only kept,
+// to be published again. Anywhere else — a technician's licence, or none yet —
+// it is checked like any pasted licence and installed, unless the one already
+// here runs LONGER: that one was pasted by hand after the file was written,
+// and the file must not undo it every ten minutes.
+async function cfgLic(tok){
+  if(!licReady||!tok)return;
+  if(lic&&licRoleReal()!=="tec"){try{localStorage.setItem(LS_LICTEC,tok)}catch(e){}return}
+  if(tok===licStored())return;
+  var nd=await licCheck(tok);
+  if(!nd||nd.r!=="tec")return;
+  if(lic&&String(lic.x||"")>String(nd.x||""))return;
+  try{localStorage.setItem(LS_LIC,tok)}catch(e){return}
+  lic=nd;licApply();
 }
 // The file's content (applied here if it was news), null when there is no
 // file, false when it could not be read or it was not the moment to ask.
@@ -21669,6 +21723,7 @@ async function cfgPull(force){
   var d=await rr.json();if(!d||!d.at)return false;
   var c=cfgLocal();
   if(!c||c.at!==d.at)await cfgApply(d);
+  else if(d.licTec)await cfgLic(d.licTec);   // the licence had not been read yet last time
   return d;
 }
 async function cfgPush(d){
@@ -21740,6 +21795,25 @@ $$("btnCfg").addEventListener("click",async function(){
     "Cada aparell ho rebrà quan sincronitzi. El que hi hagi desat ara se substitueix.":"Each device will get it when it syncs. What is saved there now is replaced.",
     "Configuració de l'empresa desada a Drive.":"Company settings saved to Drive.",
     "No s'ha pogut desar la configuració a Drive. Torna-ho a provar amb connexió.":"The settings could not be saved to Drive. Try again with a connection."};
+  Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
+  Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
+})();
+// The technicians' licence, handed on with the company's settings (2026-11-21).
+(function(){
+  var es={"Aquesta és la llicència dels tècnics, i aquest aparell té la d'administrador.":"Esta es la licencia de los técnicos, y este aparato tiene la de administrador.",
+    "Accepta per guardar-la i repartir-la a tots els tècnics amb «Configuració de l'empresa». Aquest aparell conserva la seva.":"Acepta para guardarla y repartirla a todos los técnicos con «Configuración de la empresa». Este aparato conserva la suya.",
+    "Guardada. Ara desa-la a Drive des del Menú, a «Configuració de l'empresa»: cada aparell de tècnic la rebrà quan sincronitzi.":"Guardada. Ahora guárdala en Drive desde el Menú, en «Configuración de la empresa»: cada aparato de técnico la recibirá cuando sincronice.",
+    "L'ha repartida l'empresa amb la seva configuració.":"La ha repartido la empresa con su configuración.",
+    "Llicència dels tècnics guardada per repartir: fins al {x}.":"Licencia de los técnicos guardada para repartir: hasta el {x}.",
+    "Per repartir la llicència dels tècnics a tots els seus aparells, enganxa-la aquí.":"Para repartir la licencia de los técnicos a todos sus aparatos, pégala aquí.",
+    "Llicència dels tècnics":"Licencia de los técnicos","fins al {x}":"hasta el {x}"};
+  var en={"Aquesta és la llicència dels tècnics, i aquest aparell té la d'administrador.":"This is the technicians' licence, and this device holds the administrator's.",
+    "Accepta per guardar-la i repartir-la a tots els tècnics amb «Configuració de l'empresa». Aquest aparell conserva la seva.":"Accept to keep it and hand it to every technician with “Company settings”. This device keeps its own.",
+    "Guardada. Ara desa-la a Drive des del Menú, a «Configuració de l'empresa»: cada aparell de tècnic la rebrà quan sincronitzi.":"Kept. Now save it to Drive from the Menu, under “Company settings”: each technician's device will get it when it syncs.",
+    "L'ha repartida l'empresa amb la seva configuració.":"The company handed it out with its settings.",
+    "Llicència dels tècnics guardada per repartir: fins al {x}.":"Technicians' licence kept to hand out: until {x}.",
+    "Per repartir la llicència dels tècnics a tots els seus aparells, enganxa-la aquí.":"To hand the technicians' licence to all their devices, paste it here.",
+    "Llicència dels tècnics":"Technicians' licence","fins al {x}":"until {x}"};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();

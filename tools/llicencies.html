@@ -174,7 +174,7 @@
       <button id="csv">&#8681; Baixa el CSV</button>
       <button id="wipe">Buida el registre</button>
     </div>
-    <table id="reg"><thead><tr><th>Emesa</th><th>Titular</th><th>Fins a</th><th>Tèc.</th><th>Rol</th><th>Mòduls</th><th>Id</th><th>Llicència</th></tr></thead><tbody></tbody></table>
+    <table id="reg"><thead><tr><th>Emesa</th><th>Titular</th><th>Fins a</th><th>Tèc.</th><th>Rol</th><th>Mòduls</th><th>Id</th><th>Llicència</th><th></th></tr></thead><tbody></tbody></table>
   </section>
 
 </div>
@@ -336,11 +336,28 @@ function regAdd(pay,tok){
 }
 function regDraw(){
   var b=$("reg").querySelector("tbody"),a=regGet();
-  b.innerHTML=a.length?a.map(function(r){
+  b.innerHTML=a.length?a.map(function(r,i){
     return "<tr><td>"+esc(r.d)+"</td><td>"+esc(r.n)+"</td><td>"+esc(r.x)+"</td><td>"+esc(r.s)
-      +"</td><td>"+esc(ROLES[r.r]||"—")+"</td><td>"+esc(r.f?modWords(r.f):"—")+"</td><td>"+esc(r.i)+"</td><td class=\"tok\">"+esc(r.t)+"</td></tr>"}).join("")
-    :"<tr><td colspan=\"8\" style=\"color:var(--tx3)\">Encara no n'has emesa cap.</td></tr>";
+      +"</td><td>"+esc(ROLES[r.r]||"—")+"</td><td>"+esc(r.f?modWords(r.f):"—")+"</td><td>"+esc(r.i)+"</td><td class=\"tok\">"+esc(r.t)+"</td><td><button data-re=\""+i+"\" title=\"Omple el pas 3 amb les dades d'aquesta llicència, per emetre-la de nou amb el que calgui canviat\">Reemet</button></td></tr>"}).join("")
+    :"<tr><td colspan=\"9\" style=\"color:var(--tx3)\">Encara no n'has emesa cap.</td></tr>";
 }
+// A licence cannot be changed, only issued again: this fills step 3 with what
+// a row says, so adding a module to a customer is one tick and one button.
+$("reg").addEventListener("click",function(e){
+  var b=e.target&&e.target.closest?e.target.closest("[data-re]"):null;if(!b)return;
+  var r=regGet()[+b.getAttribute("data-re")];if(!r)return;
+  var f=r.f||[],all=f.indexOf("*")>=0;
+  $("n").value=r.n||"";$("s").value=r.s||1;
+  $("dur").value="";$("x").value=r.x||"";
+  $("r").value=ROLES[r.r]?r.r:"adm";
+  allWas=null;$("mAll").disabled=false;$("mAll").checked=all;
+  MODS.forEach(function(m){$(m[1]).checked=!all&&f.indexOf(m[0])>=0});
+  $("r").dispatchEvent(new Event("change"));
+  if($("r").value!=="own")allSync();
+  $("f").value=f.filter(function(k){return k!=="*"&&!MODS.some(function(m){return m[0]===k})}).join(", ");
+  say("mkSt","Dades de la llicència de "+(r.n||"—")+" ("+roleWords(r.r)+") carregades: canvia el que calgui i genera-la. L'anterior segueix valent fins que caduqui.","good");
+  $("n").scrollIntoView({behavior:"smooth",block:"center"});
+});
 $("csv").addEventListener("click",function(){
   var a=regGet();
   var q=function(v){return "\""+String(v==null?"":v).replace(/"/g,"\"\"")+"\""};

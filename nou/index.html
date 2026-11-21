@@ -1601,11 +1601,13 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
         <button id="m2Theme" class="nm-row"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg></span><span class="nm-tx"><b>Tema</b></span><span class="nm-go"><span id="nmThemeVal"></span><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
         <button id="btnExOn" class="nm-row" aria-pressed="false" title="Mostra el mòdul de despeses: fotografia els tiquets de cada visita. Es recorda en aquest aparell; amagat, les despeses que ja hi ha no s'esborren."><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg></span><span class="nm-tx"><b>Despeses</b><small>Els tiquets de cada visita</small></span><span class="nm-go"><span class="nm-tog"><i></i></span></span></button>
         <button id="btnCamCopy" class="nm-row" style="display:none" aria-pressed="false" title="Cada foto feta amb 📷 també es desa a Baixades del telèfon, amb el client i el projecte al nom"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span class="nm-tx"><b>Còpia de les fotos al telèfon</b><small>Cada foto també es desa a Baixades</small></span><span class="nm-go"><span class="nm-tog"><i></i></span></span></button>
+        <button id="btnMe" class="nm-row" title="El nom que es posa a les visites noves. Amb la llicència de tècnic, les llistes ensenyen només les visites d'aquest nom."><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></span><span class="nm-tx"><b>Tècnic d'aquest aparell</b><small id="nmMeVal"></small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
         </div>
         <div class="nv-msec">Aplicació</div>
         <div class="nm-card">
         <button id="btnLic" class="nm-row" title="La llicència d'ús de l'aplicació: es desa només en aquest aparell i es comprova sense cobertura"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span><span class="nm-tx"><b>Llic&egrave;ncia</b><small>Es comprova sense cobertura</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
         <button id="btnGemKey" class="nm-row" title="La clau de Gemini que fa servir el corrector i la traducció dels informes; es desa només en aquest navegador"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/></svg></span><span class="nm-tx"><b>Clau de Gemini</b><small>Corrector i traducció dels informes</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+        <button id="btnViewAs" class="nm-row" style="display:none" title="Canvia entre propietari, administrador i tècnic per veure l'app com la veu cadascú"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="nm-tx"><b>Veure com a</b><small>Per provar què veu cada rol</small></span><span class="nm-go"><span id="nmViewVal"></span><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
         <button id="btnHelp" class="nm-row" title="Com fer servir l'aplicació"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 113.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg></span><span class="nm-tx"><b>Manual d'&uacute;s</b><small>Com fer servir l'aplicació</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
         </div>
         <div class="nm-foot">
@@ -6490,7 +6492,8 @@ function buildSitem(s,applyFilter){
     // the project number tells visits apart better than the machine (the same
     // machine comes back visit after visit), so it goes first
     +"<div class=\"sitem-sub\">"+highlightText([s.project,s.machine].filter(Boolean).join(" · "),sessFilterTxt)+((s.project||s.machine)?" · ":"")+esc(uiT(tm.label))+"</div>"
-    +"<div class=\"sitem-sub\">"+esc(when)+" · "+pl(n,"entrada","entrades")+(issues?" · <b>■ "+issues+"</b>":"")+"</div>"
+    +"<div class=\"sitem-sub\">"+esc(when)+" · "+pl(n,"entrada","entrades")+(issues?" · <b>■ "+issues+"</b>":"")
+      +(s.tech&&!isTec()&&techMany()?" · "+esc(s.tech):"")+"</div>"
     +"</div>"
     +"<div class=\"end\"><span class=\"nv-pill"+(isOpen?" g":"")+"\">"+esc(nvT(isOpen?"En curs":"Tancada"))+"</span>"
     +"<button class=\"sitem-del\" title=\"Elimina\">✕</button></div>";
@@ -6503,15 +6506,16 @@ function renderSidebar(){
   m2Side();
   $$("btnSideX").style.display=mob()?"block":"none";
   var list=$$("sList");list.innerHTML="";
-  if(!sessions.length){$$("sideCount").textContent=nvT("Visites")+" (0)";list.innerHTML="<div style=\"font-size:12px;color:var(--tx3);padding:20px 10px;text-align:center\">Encara no hi ha cap sessió.<br>Crea'n una de nova.</div>";return}
+  var S=sessShown();   // a technician's own visits; everybody else's, all of them
+  if(!S.length){$$("sideCount").textContent=nvT("Visites")+" (0)";list.innerHTML="<div style=\"font-size:12px;color:var(--tx3);padding:20px 10px;text-align:center\">Encara no hi ha cap sessió.<br>Crea'n una de nova.</div>";return}
 
   var q=sessFilterTxt.trim().toLowerCase();
   // Newest first, by the session's start date — the one the reports print as
   // "Inici". Only the list is sorted: the array keeps its own order. An import
   // used to land its sessions wherever the file had them.
-  var ordered=sessions.slice().sort(function(a,b){return String(b.createdAt||"").localeCompare(String(a.createdAt||""))});
+  var ordered=S.slice().sort(function(a,b){return String(b.createdAt||"").localeCompare(String(a.createdAt||""))});
   if(!q){
-    $$("sideCount").textContent=nvT("Visites")+" ("+sessions.length+")";
+    $$("sideCount").textContent=nvT("Visites")+" ("+S.length+")";
     ordered.forEach(function(s){list.appendChild(buildSitem(s))});
     return;
   }
@@ -6525,7 +6529,7 @@ function renderSidebar(){
     return{s:s,sessMatch:sessMatch,hits:hits};
   }).filter(function(r){return r.sessMatch||r.hits.length});
 
-  $$("sideCount").textContent=nvT("Visites")+" ("+results.length+"/"+sessions.length+")";
+  $$("sideCount").textContent=nvT("Visites")+" ("+results.length+"/"+S.length+")";
   if(!results.length){list.innerHTML="<div style=\"font-size:12px;color:var(--tx3);padding:20px 10px;text-align:center\">"+uiT("Cap coincidència per a \"")+esc(sessFilterTxt)+"\".</div>";return}
 
   results.forEach(function(r){
@@ -8425,6 +8429,7 @@ function renderDelModal(){
     : "No has iniciat la sessió, així que no es toca la carpeta de Drive d'aquesta sessió (si en té).";
 }
 function openDelModal(s){
+  if(isTec()&&!sessMine(s)){alert(uiT("Aquesta visita és d'un altre tècnic. Només l'administrador la pot eliminar."));return}
   pendingDel=s;
   renderDelModal();
   $$("delBack").style.display="flex";
@@ -8734,7 +8739,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-20 · 3";
+var APP_VERSION="nou · 2026-11-21 · 1";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -9462,6 +9467,8 @@ function wireBulk(){
 // asPage: the Arxiu page of the navigation (see openManuals). Says whether it
 // went ahead.
 function openBulkArchive(asPage){
+  // archiving takes a visit out of the app for EVERYBODY on the account
+  if(isTec()){alert(uiT("Arxivar visites és feina de l'administrador."));return false}
   if(!sessions.length){alert(uiT("No hi ha cap sessió per arxivar."));return false}
   if(!isLoggedIn){alert(uiT("Primer inicia la sessió amb Google: el ZIP del projecte es fa amb els fitxers de la carpeta de Drive de cada sessió."));return false}
   wireBulk();
@@ -9545,7 +9552,7 @@ function openNewModal(editSess){
   $$("nMachineNo").value=editSess?(editSess.machineNo||""):"";
   $$("nYear").value=editSess?(editSess.year||""):"";
   $$("nLoc").value=editSess?(editSess.location||""):"";
-  $$("nTech").value=editSess?(editSess.tech||""):"";
+  $$("nTech").value=editSess?(editSess.tech||""):meName();
   $$("nContact").value=editSess?(editSess.contact||""):"";
   $$("nContactRole").value=editSess?(editSess.contactRole||""):"";
   $$("nContactPhone").value=editSess?(editSess.contactPhone||""):"";
@@ -9603,6 +9610,9 @@ $$("nSave").addEventListener("click",function(){
   } else {
     var s={id:uid(),client:c,project:proj,machine:m,machineNo:mno,year:year,location:loc,tech:tech,type:type,contact:cont,contactRole:crole,contactPhone:cphone,contactEmail:cmail,startAt:startAt,status:"open",createdAt:now(),entries:[],notes:""};
     sessions=[s].concat(sessions);aid=s.id;nvSub="log";nvSubAid=s.id;nvTab="reg";
+    // made here, so it stays in this device's lists whatever name it carries;
+    // and the first name written is taken as this device's
+    mineAdd(s.id);if(tech&&!meName()){meSet(tech);try{roleApply()}catch(e){}}
     if(type==="production")setTimeout(function(){openProdList(true)},0);
     closeNewModal();["nClient","nProject","nMachine","nMachineNo","nYear","nLoc","nTech","nContact","nContactRole","nContactPhone","nContactEmail","nStart"].forEach(function(id){$$(id).value=""});
     scheduleSave();renderAll();
@@ -12550,6 +12560,7 @@ var LIC_MODS={exp:"Despeses",ts:"Full d'hores",cal:"Calendari laboral"};
 function licMods(){
   if(!LIC_ON)return["*"];
   if(!licReady||!lic||licDays(lic)<=-LIC_GRACE)return[];
+  if(lic.r==="own")return["*"];
   return Array.isArray(lic.f)?lic.f:[];
 }
 function modOn(k){var m=licMods();return m.indexOf("*")>=0||m.indexOf(k)>=0}
@@ -12559,10 +12570,100 @@ function licModWords(){
   var w=Object.keys(LIC_MODS).filter(function(k){return m.indexOf(k)>=0}).map(function(k){return uiT(LIC_MODS[k])});
   return w.length?w.join(", "):uiT("cap mòdul");
 }
+// ── ROLES · who the licence says is holding this device (2026-11-21) ─────
+// The user: "I want an administrator licence and a technician one, besides
+// mine, which opens everything" — and, of the two ways of sharing a Drive he
+// was offered, ONE GOOGLE ACCOUNT for the whole company. That is what makes a
+// role mean anything: the app already carries every visit of an account to
+// every device signed in to it, so on one account everybody has everything,
+// and the role decides what each device SHOWS and lets its holder do.
+//
+//   r:"tec"  a technician. The lists show the visits that carry the name this
+//            device was given (meName), no others; archiving is not offered,
+//            and somebody else's visit cannot be deleted from here.
+//   r:"adm"  the administrator: every visit, each with its technician's name,
+//            and the archive. It is also what one person working alone gets.
+//   r:"own"  the author's own: every module whatever `f` says, and a row in
+//            the menu to look at the app as either of the others.
+//   no `r`   a licence from before roles, the trial, or no licence: "adm", so
+//            nothing that was there yesterday goes missing.
+//
+// What it is NOT: a lock. It lives in the page, and the Drive behind it is one
+// account whose password every technician has — any of them can open Drive
+// itself and see or delete the lot. It keeps the app tidy for fifteen people;
+// it does not keep a secret from any of them. The role is signed with the rest
+// of the licence, so a technician cannot hand themselves the other one.
+//
+// A visit is "mine" by its technician field, compared loosely (accents, case
+// and spacing ignored; "Joan" matches "Joan Pérez", and a visit signed by two
+// matches both), or because it was created on this very device — so a visit
+// never disappears from under the person who has just made it. One with no
+// technician written is everybody's. The machine history and the Màquines
+// page are NOT filtered: what a colleague left open on a machine is exactly
+// what the next one to stand in front of it needs to see.
+var LS_VIEWAS=LSP+"viewas",LS_ME=LSP+"me",LS_MINE=LSP+"mine";
+var LIC_ROLES={tec:"Tècnic",adm:"Administrador",own:"Propietari"};
+function licRoleReal(){
+  if(!LIC_ON||!licReady||!lic)return"adm";
+  return LIC_ROLES[lic.r]?lic.r:"adm";
+}
+// The role in force: the owner may be looking at the app as one of the others.
+function licRole(){
+  var r=licRoleReal();
+  if(r==="own"){var v="";try{v=localStorage.getItem(LS_VIEWAS)||""}catch(e){}if(v==="adm"||v==="tec")return v}
+  return r;
+}
+function isTec(){return licRole()==="tec"}
+function licRoleWord(){
+  var r=licRole();
+  return uiT(LIC_ROLES[r])+(r!==licRoleReal()?" ("+uiT("vista de prova")+")":"");
+}
+function licRoleTail(){return lic&&LIC_ROLES[lic.r]?" \u00b7 "+licRoleWord():""}
+function meName(){try{return(localStorage.getItem(LS_ME)||"").trim()}catch(e){return""}}
+function meSet(n){n=String(n||"").trim();try{if(n)localStorage.setItem(LS_ME,n);else localStorage.removeItem(LS_ME)}catch(e){}}
+var mineIds=null;
+function mineGet(){if(!mineIds){try{mineIds=JSON.parse(localStorage.getItem(LS_MINE)||"{}")||{}}catch(e){mineIds={}}}return mineIds}
+function mineAdd(id){var m=mineGet();if(m[id])return;m[id]=1;try{localStorage.setItem(LS_MINE,JSON.stringify(m))}catch(e){}}
+function sessMine(x){
+  if(!x)return false;
+  var me=keyNorm(meName()),t=keyNorm(x.tech);
+  if(!me||!t)return true;
+  if(t.indexOf(me)>=0||me.indexOf(t)>=0)return true;
+  return !!mineGet()[x.id];
+}
+// What the lists show. The visit that is open is always among them: it can be
+// somebody else's, reached through the history of its machine.
+function sessShown(){return isTec()?sessions.filter(function(x){return sessMine(x)||x.id===aid}):sessions}
+// More than one technician's name among the visits: only then is it worth a
+// place on each row of the administrator's list.
+function techMany(){
+  var k="",i,t;
+  for(i=0;i<sessions.length;i++){t=keyNorm(sessions[i].tech);if(!t)continue;if(k&&t!==k)return true;k=t}
+  return false;
+}
+function roleApply(){
+  var tec=isTec(),b;
+  b=$$("btnBulkArx");if(b)b.style.display=tec?"none":"";
+  b=$$("btnViewAs");if(b)b.style.display=licRoleReal()==="own"?"":"none";
+  b=$$("nmViewVal");if(b)b.textContent=uiT(LIC_ROLES[licRole()]);
+  b=$$("nmMeVal");if(b)b.textContent=meName()||uiT(tec?"Sense nom: es veuen totes les visites":"Sense nom");
+}
+$$("btnMe").addEventListener("click",function(){
+  var n=prompt(uiT("El teu nom, tal com l'escrius a les visites:"),meName());
+  if(n===null)return;
+  meSet(n);roleApply();try{if(sessions)renderAll()}catch(e){}
+});
+$$("btnViewAs").addEventListener("click",function(){
+  if(licRoleReal()!=="own")return;
+  var next={own:"adm",adm:"tec",tec:"own"}[licRole()]||"own";
+  try{if(next==="own")localStorage.removeItem(LS_VIEWAS);else localStorage.setItem(LS_VIEWAS,next)}catch(e){}
+  licApply();
+});
 // The licence has just been read, pasted or taken out: what it grants shows
 // or goes at once, with no reload.
 function licApply(){
   verLine();
+  try{roleApply()}catch(e){}
   try{exLabel()}catch(e){}
   try{if(sessions)renderAll()}catch(e){}
 }
@@ -12576,7 +12677,7 @@ function licStamp(){
 }
 function licWords(){
   var st=licState();
-  if(st.kind==="ok")   return lic.n+(lic.s?" \u00b7 "+pl(lic.s,"t\u00e8cnic","t\u00e8cnics"):"")+(st.days<30?" \u00b7 "+uiT("caduca en {n} dies").replace("{n}",st.days):"");
+  if(st.kind==="ok")   return lic.n+licRoleTail()+(lic.s?" \u00b7 "+pl(lic.s,"t\u00e8cnic","t\u00e8cnics"):"")+(st.days<30?" \u00b7 "+uiT("caduca en {n} dies").replace("{n}",st.days):"");
   if(st.kind==="grace")return lic.n+" \u00b7 "+uiT("CADUCADA fa {n} dies").replace("{n}",-st.days);
   if(st.kind==="expired")return lic.n+" \u00b7 "+uiT("caducada");
   if(st.kind==="trial")return uiT("prova")+", "+pl(st.days,"dia","dies");
@@ -12615,7 +12716,11 @@ function wireLic(){
     try{localStorage.setItem(LS_LIC,t)}
     catch(err){alert(uiT("No s'ha pogut desar la llic\u00e8ncia en aquest navegador: ")+((err&&err.message)||err));return}
     lic=d;licApply();close();
-    alert(uiT("Llicència de {n}, fins al {x}.").replace("{n}",d.n).replace("{x}",d.x)+"\n"+uiT("Mòduls:")+" "+licModWords());
+    alert(uiT("Llicència de {n}, fins al {x}.").replace("{n}",d.n).replace("{x}",d.x)+"\n"+uiT("Mòduls:")+" "+licModWords()
+      +(LIC_ROLES[d.r]?"\n"+uiT("Rol:")+" "+licRoleWord():""));
+    // a technician's device has to know whose it is, or its lists cannot tell
+    // that person's visits from the rest
+    if(isTec()&&!meName()){var nm=prompt(uiT("El teu nom, tal com l'escrius a les visites:"),"");if(nm){meSet(nm);licApply()}}
   });
   $$("licClear").addEventListener("click",function(){
     if(!licStored()){close();return}
@@ -12631,6 +12736,7 @@ function openLic(msg){
     :(d?"Aquest aparell t\u00e9 la llic\u00e8ncia de <b>"+esc(d.n)+"</b>, fins al <b>"+esc(d.x)+"</b>"
         +(d.s?uiT(", per a")+" "+esc(String(d.s))+" "+uiT("tècnic")+(d.s==1?"":"s"):"")+"."
         +" "+uiT("Mòduls:")+" <b>"+esc(licModWords())+"</b>."
+        +(LIC_ROLES[d.r]?" "+uiT("Rol:")+" <b>"+esc(licRoleWord())+"</b>.":"")
         +(st.kind==="grace"?" <b>Ha caducat</b>"+uiT(", i segueix funcionant durant")+" "+LIC_GRACE+" "+uiT("dies de cortesia."):"")
        :(st.kind==="trial"?"Estem de prova: queden <b>"+st.days+"</b> dies. Enganxa la llic\u00e8ncia quan la tinguis."
                           :"Aquest aparell no t\u00e9 llic\u00e8ncia."));
@@ -20229,8 +20335,10 @@ function nvHeader(active){
   if(nvSumIsOpen()){if(active)nvSumPaint();else nvSumShut()}
 }
 function nvWho(){
-  var n="";
-  sessions.slice().sort(function(a,b){return String(b.createdAt||"").localeCompare(String(a.createdAt||""))})
+  // this device's own name first: on a shared account the newest visit is as
+  // likely somebody else's
+  var n=meName();
+  if(!n)sessShown().slice().sort(function(a,b){return String(b.createdAt||"").localeCompare(String(a.createdAt||""))})
     .some(function(s){if(s.tech&&String(s.tech).trim()){n=s.tech;return true}return false});
   if(!n){try{n=licState().name||""}catch(e){}}
   return String(n).trim().split(/\s+/)[0]||"";
@@ -20253,7 +20361,7 @@ function nvNavRender(){
     var who=nvWho(),lw="";try{lw=licWords()||""}catch(e){}
     h="<div class=\"brand\">"+NV_LOGO+"<span>Field Service<br>Log</span></div>"
       +bt("home","home","Inici",nvView==="home")+bt("visits","doc","Visites",nvView==="visits")+bt("mach","hist","Màquines",nvView==="mach")
-      +bt("manuals","book","Manuals",nvView==="manuals","","dk")+bt("arx","box","Arxiu",nvView==="arx","","dk")
+      +bt("manuals","book","Manuals",nvView==="manuals","","dk")+(isTec()?"":bt("arx","box","Arxiu",nvView==="arx","","dk"))
       +"<button type=\"button\" data-nv=\"menu\" class=\""+(nvView==="menu"?"on":"")+"\"><span class=\"ph\">"+nvI("menu",22)+"</span><span class=\"dki\">"+nvI("gear",22)+"</span>"
         +"<span class=\"ph\">"+esc(nvT("Menú"))+"</span><span class=\"dki\">"+esc(nvT("Configuració"))+"</span></button>"
       +"<div class=\"foot\">"+(q?"<div>"+esc(q)+"</div>":"")
@@ -20328,13 +20436,19 @@ function nvOpenVisitOf(s,sub){
 
 // ── the home page ──
 function nvHomeRender(mc){
-  var open=0,sign=0,exp=0,closed=0,exOnNow=exOn();
-  sessions.forEach(function(s){
+  var open=0,sign=0,exp=0,closed=0,exOnNow=exOn(),S=sessShown(),tec=isTec();
+  S.forEach(function(s){
     if(s.status==="open")open++;else closed++;
     if((s.entries||[]).length&&!revSign(s))sign++;
     if(exOnNow)exp+=exToCheck(s);
   });
   var probs=nvOpenProblems(),q=nvQueue().n,who=nvWho(),h=new Date().getHours();
+  // a technician: what is open in their own visits, and on the machines they
+  // have a visit on — not the whole company's list
+  if(tec){
+    var myM={};S.forEach(function(s){if(s.machine&&keyNorm(s.machine))myM[machineKey(s)]=1});
+    probs=probs.filter(function(p){return sessMine(p.s)||myM[machineKey(p.s)]});
+  }
   var hi=nvT(h<6||h>=21?uiT("Bona nit"):h<14?uiT("Bon dia"):uiT("Bona tarda"))+(who?", "+who:"")+"!";
   var loc=uiLang()==="ca"?"ca-ES":uiLang(),day="";
   try{day=new Date().toLocaleDateString(loc,{weekday:"long",day:"numeric",month:"long"})}catch(e){}
@@ -20353,11 +20467,11 @@ function nvHomeRender(mc){
         +"<button type=\"button\" class=\"btn-gold btn-sm\" id=\"nvLogin\">"+esc(nvT("Entra"))+"</button></div>":"")
     +"<div class=\"nv-cols\">"
     +"<section class=\"nv-card nv-sect\"><div class=\"hd\"><h2>"+esc(nvT("Les teves visites"))+"</h2>"
-        +(sessions.length?"<button type=\"button\" class=\"nv-link\" id=\"nvAll\">"+esc(nvT("Totes les visites →"))+"</button>":"")+"</div>"
-      +(sessions.length?"<div class=\"nv-list\" id=\"nvHomeList\"></div>"
+        +(S.length?"<button type=\"button\" class=\"nv-link\" id=\"nvAll\">"+esc(nvT("Totes les visites →"))+"</button>":"")+"</div>"
+      +(S.length?"<div class=\"nv-list\" id=\"nvHomeList\"></div>"
         :"<div class=\"nv-none\">"+esc(nvT("Encara no hi ha cap visita. Crea'n una de nova o importa'n una."))+"</div>")
       +"<button type=\"button\" class=\"btn-gold nv-big\" id=\"nvNewV\" style=\"margin:14px 0 6px\">"+nvI("plus",20,2.4)+"<span>"+esc(nvT("Nova visita"))+"</span></button>"
-      +(sessions.length?"":"<button type=\"button\" class=\"nv-big\" id=\"nvImp\" style=\"margin:0 0 6px\">"+esc(nvT("Importa JSON o ZIP"))+"</button>")
+      +(S.length?"":"<button type=\"button\" class=\"nv-big\" id=\"nvImp\" style=\"margin:0 0 6px\">"+esc(nvT("Importa JSON o ZIP"))+"</button>")
     +"</section>"
     +"<section class=\"nv-card nv-sect\" id=\"nvOpenSec\"><div class=\"hd\"><h2>"+esc(nvT("Què queda obert"))+"</h2></div>"
       +(probs.length?probs.slice(0,5).map(function(p,i){
@@ -20368,13 +20482,13 @@ function nvHomeRender(mc){
             +"<span class=\"nv-pill "+(old?"r":"o")+"\">"+esc(nvAgo(p.e.ts))+"</span></button>";
         }).join("")+(probs.length>5?"<div class=\"nv-foot\">+ "+(probs.length-5)+"</div>":"")
         :"<div class=\"nv-none\">"+esc(nvT("No queda res obert."))+"</div>")
-      +(closed?"<div class=\"nv-foot\">"+esc(nvPl(closed,"visita acabada","visites acabades")+" "+nvT("per arxivar"))+" · <button type=\"button\" class=\"nv-link\" id=\"nvArx\">"+esc(nvT("Arxiva…"))+"</button></div>":"")
+      +(closed&&!tec?"<div class=\"nv-foot\">"+esc(nvPl(closed,"visita acabada","visites acabades")+" "+nvT("per arxivar"))+" · <button type=\"button\" class=\"nv-link\" id=\"nvArx\">"+esc(nvT("Arxiva…"))+"</button></div>":"")
     +"</section>"
     +"</div></div>";
   mc.innerHTML="";mc.appendChild(page);
   var list=$$("nvHomeList");
   if(list){
-    sessions.slice().sort(function(a,b){
+    S.slice().sort(function(a,b){
       var oa=a.status==="open"?0:1,ob=b.status==="open"?0:1;
       return oa-ob||String(b.createdAt||"").localeCompare(String(a.createdAt||""));
     }).slice(0,4).forEach(function(s){list.appendChild(buildSitem(s))});
@@ -21290,6 +21404,27 @@ function nvDeskRender(a,isOpen){
     "Proposta":"Suggested","Sense hores de rellotge":"No clock times","Cap dia seleccionat":"No days selected",
     "Pausa":"Break","viatge":"travel","treball":"work","En aquest aparell":"On this device",
     "Un full porta {m} dies. Amb {n}, el PDF en tindrà {k}, cadascun amb el seu total i amb les mateixes signatures.":"A sheet holds {m} days. With {n}, the PDF will have {k}, each with its own total and the same signatures."};
+  Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
+  Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
+})();
+// Roles (2026-11-21).
+(function(){
+  var es={"Administrador":"Administrador","Propietari":"Propietario","Rol:":"Rol:","vista de prova":"vista de prueba",
+    "Tècnic d'aquest aparell":"Técnico de este aparato","Veure com a":"Ver como","Per provar què veu cada rol":"Para probar qué ve cada rol",
+    "El nom que es posa a les visites noves. Amb la llicència de tècnic, les llistes ensenyen només les visites d'aquest nom.":"El nombre que se pone en las visitas nuevas. Con la licencia de técnico, las listas muestran solo las visitas de este nombre.",
+    "Canvia entre propietari, administrador i tècnic per veure l'app com la veu cadascú":"Cambia entre propietario, administrador y técnico para ver la app como la ve cada uno",
+    "El teu nom, tal com l'escrius a les visites:":"Tu nombre, tal como lo escribes en las visitas:",
+    "Sense nom: es veuen totes les visites":"Sin nombre: se ven todas las visitas","Sense nom":"Sin nombre",
+    "Arxivar visites és feina de l'administrador.":"Archivar visitas es tarea del administrador.",
+    "Aquesta visita és d'un altre tècnic. Només l'administrador la pot eliminar.":"Esta visita es de otro técnico. Solo el administrador puede eliminarla."};
+  var en={"Administrador":"Administrator","Propietari":"Owner","Rol:":"Role:","vista de prova":"test view",
+    "Tècnic d'aquest aparell":"This device's technician","Veure com a":"View as","Per provar què veu cada rol":"To try what each role sees",
+    "El nom que es posa a les visites noves. Amb la llicència de tècnic, les llistes ensenyen només les visites d'aquest nom.":"The name put on new visits. With a technician licence, the lists show only the visits under this name.",
+    "Canvia entre propietari, administrador i tècnic per veure l'app com la veu cadascú":"Switches between owner, administrator and technician to see the app as each of them does",
+    "El teu nom, tal com l'escrius a les visites:":"Your name, as you write it on visits:",
+    "Sense nom: es veuen totes les visites":"No name: every visit is shown","Sense nom":"No name",
+    "Arxivar visites és feina de l'administrador.":"Archiving visits is the administrator's job.",
+    "Aquesta visita és d'un altre tècnic. Només l'administrador la pot eliminar.":"This visit is another technician's. Only the administrator can delete it."};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();

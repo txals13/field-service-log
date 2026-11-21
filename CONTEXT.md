@@ -2737,6 +2737,9 @@ whatever Android phone the technician carries. P-256 is everywhere.
 - **Modules (2026-11-18, `nou/` only):** `f` in the payload is the list of
   modules the licence grants — see "Modules granted by the licence" further
   down. A licence with no `f` opens the base app only.
+- **Roles (2026-11-21, `nou/` only):** `r` in the payload is who holds the
+  device — `tec`, `adm`, `own`; none counts as `adm`. See "Roles:
+  administrator, technician, owner" further down.
 
 ### On since 2026-11-03
 `LIC_ON = true`, `LIC_PUB` holds the real public key, and the first licence is
@@ -5352,6 +5355,80 @@ columns and no rules; the chip reads "Sem." with the sheet in Spanish.
 Gemini key and the remarks wanted translating), non-Latin headings, a sheet
 saved before today reopened on a real device. The window's list of days does
 not show the week; only the document does.
+
+**Roles: administrator, technician, owner (version `nou · 2026-11-21 · 1`).**
+The user: "I want an administrator licence and a technician one, besides
+mine, which opens everything." Asked whether an administrator could have more
+control if everybody worked from the same Drive, he was given two ways — one
+Google account for the whole company, or a shared folder with an account each
+— and chose **one account**. That is what the design rests on: the app
+already carries every visit of an account to every device signed in to it, so
+on one account everybody HAS everything, and the role decides what each
+device shows and lets its holder do.
+
+- **The role is `r` in the licence payload**, signed with the rest: `tec`,
+  `adm`, `own`. No `r` (a licence from before, the trial, no licence) counts
+  as `adm`, so nothing that was there goes missing. `licRoleReal()`,
+  `licRole()` (the one in force), `isTec()`, `LIC_ROLES`. `own` also returns
+  `["*"]` from `licMods()` whatever `f` says.
+- **A company gets two licences with the same holder**: the administrator's,
+  and the technician's, which all its technicians share (`s` = the seats
+  paid). One person working alone gets `adm`. `tools/llicencies.html` has the
+  role selector; the register, the CSV, the mail text and the check show it.
+- **Whose device this is**: `meName()`, kept in `…me`, set from the Menú row
+  "Tècnic d'aquest aparell", asked for when a technician licence is pasted on
+  a device with no name, and otherwise taken from the first technician name
+  written in a new visit. New visits start with it in the Tècnic field.
+- **A technician sees their own visits** (`sessShown()`, `sessMine()`): the
+  visits list, the home page (its four visits, its counters) and the name in
+  the greeting. "Mine" is the visit's `tech` compared loosely through
+  `keyNorm` — one name containing the other, so "Joan" matches "Joan Pérez"
+  and a visit signed by two matches both — or a visit created on this very
+  device (`…mine`, ids), so a visit never vanishes from under whoever just
+  made it. A visit with no technician is everybody's. With no name on the
+  device nothing can be told apart, and every visit shows; the Menú row says
+  so. The visit that is open is always listed, whoever it belongs to.
+- **Not filtered, on purpose:** the Màquines page and a machine's history —
+  what a colleague left open on a machine is what the next one in front of it
+  needs. On the home page, "Què queda obert" shows a technician their own
+  visits' open problems plus those on machines they have a visit on.
+- **What a technician cannot do:** archive (the Menú row, the Arxiu page of
+  the navigation and the link on the home page are gone; `openBulkArchive`
+  refuses) and delete somebody else's visit (`openDelModal` refuses). Their
+  own they can delete. Opening and writing in a colleague's visit reached
+  through the machine history is NOT blocked.
+- **The administrator** sees every visit, and each row of the list carries
+  the technician's name once more than one name exists (`techMany()`).
+- **The owner** has the Menú row "Veure com a" (`…viewas`): owner →
+  administrator → technician → owner, to see what a customer sees without
+  issuing test licences. The modules stay all on while doing so. The version
+  line and the licence window say the role, and "(vista de prova)" when it is
+  a borrowed one.
+
+**It is order, not a lock.** The check lives in the page, and the Drive
+behind it is one account whose password every technician holds: any of them
+can open Drive itself and see or delete everything. Said to the user in those
+words.
+
+**Not built, and said so:** (1) the company's settings kept on Drive and
+handed to every device (the expense template, the timesheet's columns, the
+Gemini key) — until then nothing in the Menú is hidden from a technician but
+the archive, because each device still has to be set up by hand; (2) two
+people writing in the SAME visit at once — the app was made for one person
+on several devices and nothing stops one save from overwriting the other;
+(3) every device still downloads every visit of the account, whoever it
+belongs to; (4) storage: all technicians' photos and videos go to one
+account's quota.
+
+Checked in the preview with made-up licences (signature check stubbed) and
+five demo visits by two made-up technicians: trial and a licence with no role
+show all five with names; `tec` shows three (own, no technician, signed by
+two), no Arxiu, the archive refused, a colleague's open visit listed but not
+deletable, new visits pre-filled; the name prompt on a nameless device;
+`own` with "Veure com a" round the three; the rows in Spanish; the issuing
+tool signing and checking with a throwaway key. Checker baseline still 59.
+**Not checked:** a licence signed with the real key, two devices on one real
+Google account, a phone, the 26 interface languages that are not ca/es/en.
 
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does

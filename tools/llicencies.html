@@ -26,6 +26,15 @@
     * = tots, també els que vinguin.
   Sense cap mòdul, la llicència obre l'app base. Afegir-ne un a algú és
   emetre-li una llicència nova i que la torni a enganxar a cada aparell.
+
+  El rol (2026-11-21) va al camp `r`, signat amb la resta:
+    adm = Administrador: veu totes les visites i les arxiva. També és la d'una
+          persona que treballa sola.
+    tec = Tècnic: veu les seves visites; no arxiva ni esborra les dels altres.
+    own = Propietari (la teva): tots els mòduls i «Veure com a».
+  Una empresa rep DUES llicències amb el mateix titular: la d'administrador i
+  la de tècnic, que comparteixen tots els seus tècnics (el nombre de places
+  va a «Tècnics»). Una llicència sense `r`, d'abans, compta com a adm.
 -->
 <style>
   :root{
@@ -121,6 +130,12 @@
           <option value="365" selected>1 any</option>
           <option value="730">2 anys</option>
         </select></div>
+      <div class="f"><label>Rol</label>
+        <select id="r">
+          <option value="adm" selected>Administrador (o una persona sola)</option>
+          <option value="tec">Tècnic</option>
+          <option value="own">Propietari (la teva)</option>
+        </select></div>
       <div class="f grow"><label>Altres extres (separats per comes; buit = res)</label>
         <input type="text" id="f" placeholder="ai"></div>
     </div>
@@ -159,7 +174,7 @@
       <button id="csv">&#8681; Baixa el CSV</button>
       <button id="wipe">Buida el registre</button>
     </div>
-    <table id="reg"><thead><tr><th>Emesa</th><th>Titular</th><th>Fins a</th><th>Tèc.</th><th>Mòduls</th><th>Id</th><th>Llicència</th></tr></thead><tbody></tbody></table>
+    <table id="reg"><thead><tr><th>Emesa</th><th>Titular</th><th>Fins a</th><th>Tèc.</th><th>Rol</th><th>Mòduls</th><th>Id</th><th>Llicència</th></tr></thead><tbody></tbody></table>
   </section>
 
 </div>
@@ -235,9 +250,22 @@ function modWords(f){
   var w=f.map(function(k){var m=MODS.filter(function(x){return x[0]===k})[0];return m?m[2]:k});
   return w.length?w.join(", "):"cap mòdul";
 }
-$("mAll").addEventListener("change",function(){
-  var all=this.checked;
+function allSync(){
+  var all=$("mAll").checked;
   MODS.forEach(function(m){$(m[1]).disabled=all;if(all)$(m[1]).checked=false});
+}
+$("mAll").addEventListener("change",allSync);
+var ROLES={adm:"administrador",tec:"tècnic",own:"propietari"};
+function roleWords(r){return ROLES[r]||"sense rol (compta com a administrador)"}
+// The owner's licence opens every module in the app whatever `f` says; the
+// tick follows so that what is written in the licence says the same.
+var allWas=null;   // what «Tots» said before the owner's role ticked it
+$("r").addEventListener("change",function(){
+  var own=this.value==="own";
+  if(own){if(allWas===null)allWas=$("mAll").checked;$("mAll").checked=true}
+  else if(allWas!==null){$("mAll").checked=allWas;allWas=null}
+  $("mAll").disabled=own;
+  allSync();
 });
 function addDays(n){var d=new Date();d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
 function setDur(){var v=$("dur").value;if(v)$("x").value=addDays(parseInt(v,10))}
@@ -253,13 +281,14 @@ $("mk").addEventListener("click",async function(){
   if(!priv){say("mkSt","Carrega la clau privada (pas 2).","bad");return}
   var pay={n:n,x:x,s:s,i:Math.random().toString(16).slice(2,8).toUpperCase()};
   if(f.length)pay.f=f;
+  pay.r=ROLES[$("r").value]?$("r").value:"adm";
   var p64=b64u(new TextEncoder().encode(JSON.stringify(pay)));
   var sig=await crypto.subtle.sign(SIG,priv,new TextEncoder().encode(p64));
   lastTok="FSL1."+p64+"."+b64u(new Uint8Array(sig));
   lastPay=pay;
   show("tokOut",lastTok);
   $("cp").style.display="";$("cpMail").style.display="";
-  say("mkSt","Emesa per a "+n+", fins al "+x+", amb "+modWords(pay.f)+". Comprova-la al pas 4 abans d'enviar-la.","good");
+  say("mkSt","Emesa per a "+n+" ("+roleWords(pay.r)+"), fins al "+x+", amb "+modWords(pay.f)+". Comprova-la al pas 4 abans d'enviar-la.","good");
   regAdd(pay,lastTok);
 });
 function copy(t,msg){
@@ -271,7 +300,9 @@ $("cpMail").addEventListener("click",function(){
   if(!lastTok)return;
   copy("Bon dia,\n\nAquí teniu la llicència del Field Service Log per a "+lastPay.n
     +", vàlida fins al "+lastPay.x+" per a "+lastPay.s+" tècnic"+(lastPay.s==1?"":"s")+"."
-    +(lastPay.f&&lastPay.f.length?" Inclou: "+modWords(lastPay.f)+".":"")+"\n\n"
+    +(lastPay.f&&lastPay.f.length?" Inclou: "+modWords(lastPay.f)+".":"")
+    +(lastPay.r==="tec"?" És la llicència de tècnic: la mateixa per a tots els vostres tècnics."
+      :lastPay.r==="adm"?" És la llicència d'administrador.":"")+"\n\n"
     +lastTok+"\n\nPer activar-la, a cada aparell: obriu l'aplicació, menú lateral → 🔒 Llicència,"
     +" enganxeu-la sencera i Desa. No cal cobertura, i es desa només en aquell aparell, de manera"
     +" que s'ha de fer un cop a cada telèfon o ordinador.\n\nEl vostre nom sortirà al peu de cada"
@@ -291,7 +322,7 @@ $("vGo").addEventListener("click",async function(){
   catch(e){say("vSt","La signatura val, però les dades no es llegeixen.","bad");return}
   var left=Math.ceil((Date.parse(d.x+"T23:59:59")-Date.now())/864e5);
   say("vSt","Bona. Titular: "+d.n+" · fins al "+d.x+" ("+(left>=0?"queden "+left+" dies":"caducada fa "+(-left)+" dies")
-    +") · "+(d.s||1)+" tècnic"+((d.s||1)==1?"":"s")+" · mòduls: "+modWords(d.f)+" · id "+(d.i||"—"),
+    +") · "+(d.s||1)+" tècnic"+((d.s||1)==1?"":"s")+" · rol: "+roleWords(d.r)+" · mòduls: "+modWords(d.f)+" · id "+(d.i||"—"),
     left>=0?"good":"bad");
 });
 
@@ -300,21 +331,21 @@ function regGet(){try{return JSON.parse(localStorage.getItem(LS_REG)||"[]")}catc
 function regSet(a){try{localStorage.setItem(LS_REG,JSON.stringify(a))}catch(e){}}
 function regAdd(pay,tok){
   var a=regGet();
-  a.unshift({d:new Date().toISOString().slice(0,16).replace("T"," "),n:pay.n,x:pay.x,s:pay.s,f:pay.f||[],i:pay.i,t:tok});
+  a.unshift({d:new Date().toISOString().slice(0,16).replace("T"," "),n:pay.n,x:pay.x,s:pay.s,f:pay.f||[],r:pay.r||"",i:pay.i,t:tok});
   regSet(a);regDraw();
 }
 function regDraw(){
   var b=$("reg").querySelector("tbody"),a=regGet();
   b.innerHTML=a.length?a.map(function(r){
     return "<tr><td>"+esc(r.d)+"</td><td>"+esc(r.n)+"</td><td>"+esc(r.x)+"</td><td>"+esc(r.s)
-      +"</td><td>"+esc(r.f?modWords(r.f):"—")+"</td><td>"+esc(r.i)+"</td><td class=\"tok\">"+esc(r.t)+"</td></tr>"}).join("")
-    :"<tr><td colspan=\"7\" style=\"color:var(--tx3)\">Encara no n'has emesa cap.</td></tr>";
+      +"</td><td>"+esc(ROLES[r.r]||"—")+"</td><td>"+esc(r.f?modWords(r.f):"—")+"</td><td>"+esc(r.i)+"</td><td class=\"tok\">"+esc(r.t)+"</td></tr>"}).join("")
+    :"<tr><td colspan=\"8\" style=\"color:var(--tx3)\">Encara no n'has emesa cap.</td></tr>";
 }
 $("csv").addEventListener("click",function(){
   var a=regGet();
   var q=function(v){return "\""+String(v==null?"":v).replace(/"/g,"\"\"")+"\""};
-  var txt="emesa,titular,caduca,tecnics,moduls,id,llicencia\n"
-    +a.map(function(r){return [r.d,r.n,r.x,r.s,(r.f||[]).join(" "),r.i,r.t].map(q).join(",")}).join("\n");
+  var txt="emesa,titular,caduca,tecnics,rol,moduls,id,llicencia\n"
+    +a.map(function(r){return [r.d,r.n,r.x,r.s,r.r||"",(r.f||[]).join(" "),r.i,r.t].map(q).join(",")}).join("\n");
   var bl=new Blob(["﻿"+txt],{type:"text/csv;charset=utf-8"});
   var el=document.createElement("a");
   el.href=URL.createObjectURL(bl);el.download="llicencies-fsl.csv";el.click();

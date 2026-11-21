@@ -5554,6 +5554,68 @@ coming back; `?perfil=a-b!` is the plain app; the plain app's keys and
 database are the usual ones. **Not checked:** signing in to Google from a
 profile, three tabs syncing against a real account, an installed app.
 
+**The company moves to another Google account (version `nou · 2026-11-21 ·
+8`).** The user: "as the administrator I want to change the Drive address,
+and all the technicians' apps to go there." Asked which — the folder inside
+the account (which already follows by id if it is moved in Drive) or the
+account — he said **the account**. That cannot be done FOR a device: signing
+in is somebody choosing the account in Google's own window. What was built
+is everything around that one tap.
+
+- **The administrator names the new account**: Menú → "Canvia el compte de
+  Google" (`#btnCfgMove`, hidden from technicians). After a confirm that says
+  what goes and what stays, it is written as **`moveTo`** in the company's
+  settings **on the account being left** — the one place every device still
+  looks — and that device moves at once. The settings also carry `acct`, the
+  account they were published in. Opening the row again while a move is
+  pending shows the address; **left blank, the move is called off** (the
+  notice is taken out; a device that has already gone stays where it went).
+- **Every other device** reads it at its next sync and shows a red bar that
+  stays (`#moveBar`, `moveCheck`, `movePending`): "the company has moved to
+  X — this device still saves to Y", with the button that does the move.
+- **The move, `acctSwitch(to)`**: `googleLogin(hint)` (it now takes the
+  account as `login_hint`); `acctEmail` asks Drive who answered, and if it is
+  not the named account **nothing changes** (token and ids put back). A
+  cancelled window: the same. Otherwise the device forgets the old Drive ids
+  (`driveFileId`, `rootFolderId`, `LS_ROOT`, `dataFileChecked`,
+  `outputsProbed`, `histFileId`), runs `finishLogin` — which reads the new
+  Drive and sends this device's visits up — and then **`acctCarry`**: the old
+  "Sincronitza" pass (`syncSessionToDrive`) over every visit, which makes its
+  folder again there and re-uploads the photos and voice notes from the copy
+  the device keeps. **Videos** — whose bytes are nowhere but on Drive — are
+  read from the old account with the token the device still holds for it
+  (`oldAcct`, in memory only, good for an hour at most) and written to the
+  new one (`acctCopy`, the new branch in `syncSessionToDrive`; counted as
+  `res.copied`). An administrator's device then publishes the settings in the
+  new account, without `moveTo`.
+- A device that arrives second finds its visits already there with the new
+  ids (the first device's copies are newer and win the merge) and uploads
+  nothing twice.
+- **The old account is only ever read.** Nothing is deleted or moved out of
+  it; the worst a failed move leaves is a new account with less in it and the
+  old one whole. Pressing "Sincronitza" again — within the hour, for the
+  videos — picks up what a first run did not finish.
+- **NOT carried, and the closing message says so:** reports already issued,
+  project ZIPs, the spare-parts manuals (and the visits' references to them)
+  and expense tickets that are only on the old Drive. A generic copy of
+  every file with the ids rewritten would be the complete answer; not built.
+- During the move `isLoggedIn` is false, so no background sync runs with one
+  account's token and the other's ids.
+
+Checked on a temporary copy (deleted), in address profiles, against a small
+Drive emulator with two accounts (`fetch` stub: listing by query, folders,
+multipart and resumable uploads, metadata, per-account ownership) and
+`googleLogin` replaced: the device signs in to the old account and the app
+builds its own tree there; the move publishes the notice, and the new account
+ends up with the visit's folder, the photo and the voice note re-uploaded,
+the video copied byte for byte, the data file, the history and the settings
+without `moveTo`, while the old account has the same files, none trashed; a
+technician's device shows the bar, moves, takes the new ids and uploads
+nothing; another account answering changes nothing; a cancelled window leaves
+the bar up; a blank address calls the move off. **Not checked:** anything
+against real Google — the sign-in window with a hint, a real video of real
+size, a token running out half-way, two real devices.
+
 **Two people, one visit (version `nou · 2026-11-21 · 3`).** A company on one
 account puts two technicians in the same visit, and every merge kept "the
 later copy of the WHOLE visit": what the other one wrote in between was

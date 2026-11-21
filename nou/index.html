@@ -1529,6 +1529,10 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
     <span style="flex:1">&#9888; La sessió de Drive ha caducat — els canvis només es desen en aquest dispositiu</span>
     <button class="btn-sm" id="btnReconnect" style="background:var(--red);color:#fff;border-color:var(--red)">Reconnecta</button>
   </div>
+  <div id="moveBar" class="auth-bar" style="display:none">
+    <span style="flex:1" id="moveMsg"></span>
+    <button class="btn-sm" id="btnMove" style="background:var(--red);color:#fff;border-color:var(--red)">Canvia de compte</button>
+  </div>
   <div id="storeBar" class="store-bar" style="display:none">
     <span style="flex:1" id="storeMsg">&#9888; L'emmagatzematge del dispositiu és gairebé ple</span>
     <button class="btn-sm" id="btnStoreBackup" style="background:var(--accs);color:#fff;border-color:var(--accs);font-weight:700">&#8681; Descarrega una còpia</button>
@@ -1607,6 +1611,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
         <div class="nm-card">
         <button id="btnLic" class="nm-row" title="La llicència d'ús de l'aplicació: es desa només en aquest aparell i es comprova sense cobertura"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span><span class="nm-tx"><b>Llic&egrave;ncia</b><small>Es comprova sense cobertura</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
         <button id="btnCfg" class="nm-row" title="La clau de Gemini, les columnes del full d'hores i el full de despeses de l'empresa, desats a Drive per a tots els aparells"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V5a2 2 0 012-2h8a2 2 0 012 2v16M16 10h2a2 2 0 012 2v9M3 21h18M8 8h4M8 12h4M8 16h4"/></svg></span><span class="nm-tx"><b>Configuració de l'empresa</b><small id="nmCfgVal"></small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+        <button id="btnCfgMove" class="nm-row" title="Passa l'empresa a un altre compte de Google: cada aparell rep l'avís, i les visites amb les fotos i els vídeos es copien al compte nou"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h14M13 6l6 6-6 6"/><path d="M4 5v14"/></svg></span><span class="nm-tx"><b>Canvia el compte de Google</b><small>Passa l'empresa a un altre compte</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
         <button id="btnGemKey" class="nm-row" title="La clau de Gemini que fa servir el corrector i la traducció dels informes; es desa només en aquest navegador"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/></svg></span><span class="nm-tx"><b>Clau de Gemini</b><small>Corrector i traducció dels informes</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
         <button id="btnViewAs" class="nm-row" style="display:none" title="Canvia entre propietari, administrador i tècnic per veure l'app com la veu cadascú"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="nm-tx"><b>Veure com a</b><small>Per provar què veu cada rol</small></span><span class="nm-go"><span id="nmViewVal"></span><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
         <button id="btnHelp" class="nm-row" title="Com fer servir l'aplicació"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 113.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg></span><span class="nm-tx"><b>Manual d'&uacute;s</b><small>Com fer servir l'aplicació</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
@@ -3391,7 +3396,7 @@ function makeLocalImageData(file){
 
 // ── GOOGLE AUTH ──────────────────────────────────────────────────────────────
 function loadGIS(){return new Promise(function(res){if(window.google&&window.google.accounts){res();return}var s=document.createElement("script");s.src="https://accounts.google.com/gsi/client";s.onload=res;s.onerror=res;document.head.appendChild(s)})}
-async function googleLogin(){
+async function googleLogin(hint){
   await loadGIS();
   if(!window.google||!window.google.accounts){alert(uiT("No s'ha pogut carregar l'inici de sessió de Google. Comprova la connexió."));return null}
   // If the browser blocks the Google popup, requestAccessToken's callback
@@ -3406,7 +3411,7 @@ async function googleLogin(){
     var c=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:"https://www.googleapis.com/auth/drive.file",
       callback:function(r){if(r.error){res(null);return}accessToken=r.access_token;tokenExp=Date.now()+(((r.expires_in||3600)-120)*1000);saveTok();res(accessToken)},
       error_callback:function(e){res(e&&e.type==="popup_closed"?null:"blocked")}});
-    c.requestAccessToken({prompt:"consent"});
+    c.requestAccessToken(Object.assign({prompt:"consent"},typeof hint==="string"&&hint?{login_hint:hint}:{}));
   });
   var timeout=new Promise(function(res){setTimeout(function(){res("blocked")},180000)});
   var result=await Promise.race([opened,timeout]);
@@ -3655,6 +3660,14 @@ async function syncSessionToDrive(token,sess){
           if(img.type!=="video"&&img.data){
             img=Object.assign({},img);delete img.driveId;
             imgs[k]=img;entryChanged=true;   // falls through to the upload below
+          } else if(oldAcct){
+            // Nowhere but on the Drive of the account this device has just
+            // left (a video, or anything whose bytes were never kept here):
+            // read there, written here. See acctSwitch.
+            var cp=await acctCopy(token,img,await kindFolder(img.type==="audio"?"audio":img.type==="video"?"videos":"photos"));
+            if(cp){imgs[k]=Object.assign({},img,{driveId:cp.id,name:cp.name||img.name,uploadStatus:"ok"});entryChanged=true;res.copied=(res.copied||0)+1}
+            else if(img.type==="video")res.missingVideos++;
+            continue;
           } else if(img.type==="video"){res.missingVideos++;continue}
           else continue;
         } else {
@@ -3720,6 +3733,7 @@ async function syncSessionToDrive(token,sess){
 function syncSummary(res,n){
   return res.uploaded+" "+uiT("fitxer(s) pujat(s) (fotos / notes de veu)")+(n?" a "+n+" "+uiT("sessió(ns)"):"")+"."
     +(res.moved?"\n"+res.moved+" "+uiT("fitxer(s) que havien quedat en una altra carpeta s'han tornat a la d'aquesta sessió."):"")
+    +(res.copied?"\n"+res.copied+" "+uiT("fitxer(s) copiat(s) del compte anterior."):"")
     +(res.missingVideos?"\n"+res.missingVideos+" "+uiT("vídeo(s) no s'han pogut recuperar (el fitxer original no es va guardar mai, només la miniatura)."):"");
 }
 async function syncActiveSessionToDrive(){
@@ -3746,9 +3760,10 @@ async function syncAllToDrive(){
     for(var i=0;i<sessions.length;i++){
       var res=await syncSessionToDrive(token,sessions[i]);
       total.uploaded+=res.uploaded;total.missingVideos+=res.missingVideos;total.moved+=res.moved||0;
+      total.copied=(total.copied||0)+(res.copied||0);
     }
     saveLocal();
-    if(total.uploaded>0){isDirty=true;await saveToDrive()}
+    if(total.uploaded>0||total.copied>0){isDirty=true;await saveToDrive()}
     renderAll();
     alert(uiT("Sincronització completa.\n")+syncSummary(total,sessions.length));
   }catch(e){alert(uiT("La sincronització ha fallat: ")+((e&&e.message)||e))}
@@ -8906,7 +8921,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-21 · 7";
+var APP_VERSION="nou · 2026-11-21 · 8";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -12831,6 +12846,7 @@ function roleApply(){
   // what the company has set is not a technician's to change (see cfgPull)
   b=$$("nmCfgVal");if(b)b.textContent=cfgWords();
   b=$$("btnGemKey");if(b)b.style.display=tec&&cfgHas("gem")?"none":"";
+  b=$$("btnCfgMove");if(b)b.style.display=tec?"none":"";
 }
 $$("btnMe").addEventListener("click",function(){
   var n=prompt(uiT("El teu nom, tal com l'escrius a les visites:"),meName());
@@ -21667,7 +21683,7 @@ function cfgLocal(){try{return JSON.parse(localStorage.getItem(LS_CFG)||"null")}
 function cfgHas(k){var c=cfgLocal();return !!(c&&c[k]&&(!Array.isArray(c[k])||c[k].length))}
 function cfgRemember(d){
   try{localStorage.setItem(LS_CFG,JSON.stringify({at:d.at||"",by:d.by||"",gem:!!d.gem,
-    tsCols:Array.isArray(d.tsCols)?d.tsCols:null,tpl:d.tpl?(d.tpl.name||"xlsx"):"",lic:!!d.licTec}))}catch(e){}
+    tsCols:Array.isArray(d.tsCols)?d.tsCols:null,tpl:d.tpl?(d.tpl.name||"xlsx"):"",lic:!!d.licTec,acct:d.acct||"",moveTo:d.moveTo||""}))}catch(e){}
 }
 function cfgB64(buf){
   var a=new Uint8Array(buf),o="",i;
@@ -21689,12 +21705,17 @@ function cfgList(d){
   return "\u00b7 "+uiT("Clau de Gemini")+": "+uiT(d.gem?"sí":"no")
     +"\n\u00b7 "+uiT("Columnes del full d'hores")+": "+(n?pl(n,"columna","columnes"):uiT("les de cada aparell"))
     +"\n\u00b7 "+uiT("Full de despeses de l'empresa")+": "+(tn||uiT("no n'hi ha"))
-    +"\n\u00b7 "+uiT("Llicència dels tècnics")+": "+(lk?(lk.n||"")+", "+uiT("fins al {x}").replace("{x}",lk.x||""):uiT("no n'hi ha"));
+    +"\n\u00b7 "+uiT("Llicència dels tècnics")+": "+(lk?(lk.n||"")+", "+uiT("fins al {x}").replace("{x}",lk.x||""):uiT("no n'hi ha"))
+    +(d.moveTo?"\n\u00b7 "+uiT("Compte nou de l'empresa")+": "+d.moveTo:"");
 }
 async function cfgBuild(){
   var t=await exTplGet(),d={v:1,at:now(),by:meName(),gem:gemKey(),tsCols:tsColDef()};
   if(t&&t.buf)d.tpl={name:t.name||"",b64:cfgB64(t.buf)};
   var lt=licTecGet();if(lt)d.licTec=lt;
+  // which account this was published in, and — while a move is under way and
+  // this is still the account being left — where the company has gone
+  d.acct=driveEmail||"";
+  var mv=movePending();if(mv)d.moveTo=mv;
   return d;
 }
 async function cfgFiles(token){
@@ -21712,6 +21733,7 @@ async function cfgApply(d){
     try{exTplMem={name:d.tpl.name||"",at:d.at||now(),buf:cfgUnB64(d.tpl.b64)};if(idb)await idbSet(idb,"extpl",exTplMem)}catch(e){}
   }
   cfgRemember(d);
+  try{moveCheck()}catch(e){}
   if(d.licTec)await cfgLic(d.licTec);
   try{roleApply()}catch(e){}
   try{exTplLabel()}catch(e){}
@@ -21747,6 +21769,7 @@ async function cfgPull(force){
   var c=cfgLocal();
   if(!c||c.at!==d.at)await cfgApply(d);
   else if(d.licTec)await cfgLic(d.licTec);   // the licence had not been read yet last time
+  try{moveCheck()}catch(e){}
   return d;
 }
 async function cfgPush(d){
@@ -21818,6 +21841,208 @@ $$("btnCfg").addEventListener("click",async function(){
     "Cada aparell ho rebrà quan sincronitzi. El que hi hagi desat ara se substitueix.":"Each device will get it when it syncs. What is saved there now is replaced.",
     "Configuració de l'empresa desada a Drive.":"Company settings saved to Drive.",
     "No s'ha pogut desar la configuració a Drive. Torna-ho a provar amb connexió.":"The settings could not be saved to Drive. Try again with a connection."};
+  Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
+  Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
+})();
+// ── THE COMPANY MOVES TO ANOTHER GOOGLE ACCOUNT (2026-11-21) ────────────────
+// The user: "as the administrator I want to change the Drive address, and all
+// the technicians' apps to go there." Asked which — the folder or the account
+// — he said the account. That cannot be done FOR a device: signing in to an
+// account is somebody choosing it in Google's own window. What can be done is
+// everything around that one tap.
+//
+//   · The administrator names the new account (Menú, "Canvia el compte de
+//     Google"). It is written as `moveTo` in the company's settings ON THE
+//     ACCOUNT BEING LEFT — the one place every device still looks — and the
+//     administrator's own device moves at once.
+//   · Every other device reads it at its next sync and shows a red bar that
+//     stays: "the company has moved to X — this device still saves to Y",
+//     with the button that does the move.
+//   · The move (acctSwitch): Google's window, asked for that account by name.
+//     If another account answers, nothing changes. Otherwise the device
+//     forgets the old Drive ids and signs in as usual, which sends its visits
+//     up; then every visit's folder is made again there and its attachments
+//     follow (acctCarry, which is the old "Sincronitza" pass): photos and
+//     voice notes from the copy this device keeps, and VIDEOS — whose bytes
+//     are nowhere but on Drive — read from the old account with the token
+//     this device still holds for it (`oldAcct`, in memory only, good for at
+//     most an hour) and written to the new one. An administrator's device
+//     then publishes the company's settings there too.
+//
+// THE OLD ACCOUNT IS ONLY EVER READ. Nothing is deleted or moved out of it, so
+// the worst a failed move can leave is a new account with less in it than the
+// old one, and the old one whole. A second run ("Sincronitza", within the
+// hour for the videos) picks up what the first did not finish.
+// NOT CARRIED: reports already issued, project ZIPs, the spare-parts manuals
+// and the expense tickets that are only on the old Drive. They stay where
+// they are; the message at the end says so.
+var oldAcct=null,acctBusy=false;
+function acctNorm(e){return String(e||"").trim().toLowerCase()}
+async function acctEmail(token){
+  try{
+    var r=await fetch("https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)",{headers:{Authorization:"Bearer "+token}});
+    if(!r.ok)return"";
+    var u=(await r.json()).user;return(u&&u.emailAddress)||"";
+  }catch(e){return""}
+}
+// Where the company has gone, if this device is still signed in elsewhere.
+function movePending(){
+  var c=cfgLocal();
+  return(c&&c.moveTo&&isLoggedIn&&driveEmail&&acctNorm(c.moveTo)!==acctNorm(driveEmail))?c.moveTo:"";
+}
+function moveCheck(){
+  var bar=$$("moveBar");if(!bar)return;
+  var to=movePending();
+  bar.style.display=to?"flex":"none";
+  if(to)$$("moveMsg").textContent="\u26a0 "+uiT("L'empresa ha passat al compte {a}. Aquest aparell encara desa a {b}.").replace("{a}",to).replace("{b}",driveEmail);
+}
+async function acctCopy(token,img,parentId){
+  if(!oldAcct||!oldAcct.token||!parentId||!img||!img.driveId)return null;
+  try{
+    var r=await fetch("https://www.googleapis.com/drive/v3/files/"+img.driveId+"?alt=media",{headers:{Authorization:"Bearer "+oldAcct.token}});
+    if(!r.ok)return null;
+    var blob=await r.blob();
+    return await driveUploadBlob(token,blob,img.name||("media_"+uid()),blob.type||"application/octet-stream",parentId);
+  }catch(e){return null}
+}
+// Every visit's folder and attachments, in the account this device is in now.
+async function acctCarry(){
+  var token=await ensureToken();if(!token)return null;
+  var total={uploaded:0,missingVideos:0,moved:0,copied:0};
+  for(var i=0;i<sessions.length;i++){
+    setSyncSt("loading",uiT("Copiant al compte nou")+" "+(i+1)+"/"+sessions.length+"\u2026");
+    try{
+      var res=await syncSessionToDrive(token,sessions[i]);
+      total.uploaded+=res.uploaded;total.missingVideos+=res.missingVideos;total.moved+=res.moved||0;total.copied+=res.copied||0;
+    }catch(e){}
+  }
+  await saveLocal();
+  isDirty=true;await saveToDrive();
+  return total;
+}
+async function acctSwitch(to){
+  if(acctBusy)return false;
+  acctBusy=true;
+  var old={token:accessToken,exp:tokenExp,email:driveEmail,file:driveFileId,root:rootFolderId};
+  function back(){accessToken=old.token;tokenExp=old.exp;driveFileId=old.file;rootFolderId=old.root;isLoggedIn=true;saveTok()}
+  try{
+    isLoggedIn=false;                     // no background sync while the token is being changed
+    var t=await googleLogin(to);
+    if(!t){back();return false}
+    var em=await acctEmail(t);
+    if(!em||acctNorm(em)!==acctNorm(to)){
+      back();
+      alert(uiT("Has entrat amb {a}, i el compte nou de l'empresa és {b}. No s'ha canviat res.").replace("{a}",em||"?").replace("{b}",to));
+      return false;
+    }
+    // from here on this device belongs to the new account
+    oldAcct=old;
+    driveEmail=em;driveFileId=null;rootFolderId=null;dataFileChecked=false;
+    outputsProbed={};lastOutputs=null;histFileId=null;cfgLast=0;
+    try{localStorage.removeItem(LS_ROOT)}catch(e){}
+    saveTok();
+    await finishLogin();
+    var res=await acctCarry();
+    if(!isTec()){try{var d=await cfgBuild();delete d.moveTo;await cfgPush(d)}catch(e){}}
+    try{moveCheck()}catch(e){}
+    try{roleApply()}catch(e){}
+    setSyncSt("ok","");renderAll();
+    alert(uiT("Aquest aparell ja treballa amb el compte {a}.").replace("{a}",em)
+      +(res?"\n\n"+syncSummary(res,sessions.length):"")
+      +"\n\n"+uiT("Els informes ja emesos, els ZIP, els manuals de recanvis i els tiquets de despeses que només eren a la Drive anterior no s'han mogut: segueixen al compte {b}, que no s'ha tocat.").replace("{b}",old.email||"?"));
+    return true;
+  }finally{acctBusy=false;try{moveCheck()}catch(e){}}   // not gone after all: the bar says so
+}
+$$("btnMove").addEventListener("click",async function(){
+  var to=movePending();if(!to||acctBusy)return;
+  if(!confirm(uiT("S'obrirà la finestra de Google: entra-hi amb {a}.").replace("{a}",to)+"\n\n"
+    +uiT("Les visites d'aquest aparell, amb les fotos, les notes de veu i els vídeos, es copiaran al compte nou. El compte d'ara no es toca.")))return;
+  await acctSwitch(to);
+});
+$$("btnCfgMove").addEventListener("click",async function(){
+  if(cfgBusy||acctBusy||isTec())return;
+  if(!isLoggedIn){alert(uiT("Primer inicia la sessió amb Google."));return}
+  if(!driveEmail)driveEmail=await acctEmail(await ensureToken());
+  var pend=movePending();
+  var to=prompt(uiT("Adreça del compte de Google NOU de l'empresa:")+(pend?"\n"+uiT("(Deixa-la en blanc per anul·lar el trasllat que hi ha en marxa.)"):""),pend||"");
+  if(to===null)return;
+  to=String(to).trim();
+  // A move that was announced and has to be called off: the notice is taken
+  // out of the settings. A device that has already gone stays where it went.
+  if(!to&&pend){
+    if(!confirm(uiT("Vols anul·lar el trasllat al compte {a}? Els aparells que ja hi hagin entrat s'hi queden.").replace("{a}",pend)))return;
+    cfgBusy=true;
+    try{
+      var d0=await cfgBuild();delete d0.moveTo;
+      var ok0=false;try{ok0=await cfgPush(d0)}catch(e){ok0=false}
+      alert(uiT(ok0?"Trasllat anul·lat.":"No s'ha pogut desar la configuració a Drive. Torna-ho a provar amb connexió."));
+    }finally{cfgBusy=false;try{moveCheck()}catch(e){}}
+    return;
+  }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)){alert(uiT("Això no és una adreça de correu."));return}
+  if(acctNorm(to)===acctNorm(driveEmail)){alert(uiT("Aquest aparell ja treballa amb aquest compte."));return}
+  if(!confirm(uiT("L'empresa passarà a desar al compte {a}.").replace("{a}",to)+"\n\n"
+    +"\u00b7 "+uiT("Tots els aparells rebran l'avís i hauran d'entrar amb el compte nou.")+"\n"
+    +"\u00b7 "+uiT("Les visites, amb les fotos, les notes de veu i els vídeos, es copien al compte nou.")+"\n"
+    +"\u00b7 "+uiT("Els informes ja emesos, els ZIP, els manuals de recanvis i els tiquets de despeses es queden al compte d'ara.")+"\n"
+    +"\u00b7 "+uiT("El compte d'ara no s'esborra ni es toca.")+"\n\n"
+    +uiT("S'obrirà la finestra de Google: entra-hi amb {a}.").replace("{a}",to)))return;
+  if(acctNorm(to)!==acctNorm(pend)){
+    cfgBusy=true;
+    try{
+      try{await cfgPull(true)}catch(e){}
+      var d=await cfgBuild();d.moveTo=to;
+      var ok=false;try{ok=await cfgPush(d)}catch(e){ok=false}
+      if(!ok){alert(uiT("No s'ha pogut desar la configuració a Drive. Torna-ho a provar amb connexió."));return}
+    }finally{cfgBusy=false}
+  }
+  await acctSwitch(to);
+});
+(function(){
+  var es={"Canvia de compte":"Cambia de cuenta","Canvia el compte de Google":"Cambia la cuenta de Google","Passa l'empresa a un altre compte":"Pasa la empresa a otra cuenta",
+    "Passa l'empresa a un altre compte de Google: cada aparell rep l'avís, i les visites amb les fotos i els vídeos es copien al compte nou":"Pasa la empresa a otra cuenta de Google: cada aparato recibe el aviso, y las visitas con las fotos y los vídeos se copian a la cuenta nueva",
+    "fitxer(s) copiat(s) del compte anterior.":"archivo(s) copiado(s) de la cuenta anterior.",
+    "Compte nou de l'empresa":"Cuenta nueva de la empresa",
+    "L'empresa ha passat al compte {a}. Aquest aparell encara desa a {b}.":"La empresa ha pasado a la cuenta {a}. Este aparato todavía guarda en {b}.",
+    "Copiant al compte nou":"Copiando a la cuenta nueva",
+    "Has entrat amb {a}, i el compte nou de l'empresa és {b}. No s'ha canviat res.":"Has entrado con {a}, y la cuenta nueva de la empresa es {b}. No se ha cambiado nada.",
+    "Aquest aparell ja treballa amb el compte {a}.":"Este aparato ya trabaja con la cuenta {a}.",
+    "Els informes ja emesos, els ZIP, els manuals de recanvis i els tiquets de despeses que només eren a la Drive anterior no s'han mogut: segueixen al compte {b}, que no s'ha tocat.":"Los informes ya emitidos, los ZIP, los manuales de recambios y los tiques de gastos que solo estaban en el Drive anterior no se han movido: siguen en la cuenta {b}, que no se ha tocado.",
+    "S'obrirà la finestra de Google: entra-hi amb {a}.":"Se abrirá la ventana de Google: entra con {a}.",
+    "Les visites d'aquest aparell, amb les fotos, les notes de veu i els vídeos, es copiaran al compte nou. El compte d'ara no es toca.":"Las visitas de este aparato, con las fotos, las notas de voz y los vídeos, se copiarán a la cuenta nueva. La cuenta de ahora no se toca.",
+    "Adreça del compte de Google NOU de l'empresa:":"Dirección de la cuenta de Google NUEVA de la empresa:",
+    "(Deixa-la en blanc per anul·lar el trasllat que hi ha en marxa.)":"(Déjala en blanco para anular el traslado que está en marcha.)",
+    "Vols anul·lar el trasllat al compte {a}? Els aparells que ja hi hagin entrat s'hi queden.":"¿Quieres anular el traslado a la cuenta {a}? Los aparatos que ya hayan entrado se quedan en ella.",
+    "Trasllat anul·lat.":"Traslado anulado.",
+    "Això no és una adreça de correu.":"Esto no es una dirección de correo.",
+    "Aquest aparell ja treballa amb aquest compte.":"Este aparato ya trabaja con esta cuenta.",
+    "L'empresa passarà a desar al compte {a}.":"La empresa pasará a guardar en la cuenta {a}.",
+    "Tots els aparells rebran l'avís i hauran d'entrar amb el compte nou.":"Todos los aparatos recibirán el aviso y tendrán que entrar con la cuenta nueva.",
+    "Les visites, amb les fotos, les notes de veu i els vídeos, es copien al compte nou.":"Las visitas, con las fotos, las notas de voz y los vídeos, se copian a la cuenta nueva.",
+    "Els informes ja emesos, els ZIP, els manuals de recanvis i els tiquets de despeses es queden al compte d'ara.":"Los informes ya emitidos, los ZIP, los manuales de recambios y los tiques de gastos se quedan en la cuenta de ahora.",
+    "El compte d'ara no s'esborra ni es toca.":"La cuenta de ahora no se borra ni se toca."};
+  var en={"Canvia de compte":"Switch account","Canvia el compte de Google":"Change the Google account","Passa l'empresa a un altre compte":"Move the company to another account",
+    "Passa l'empresa a un altre compte de Google: cada aparell rep l'avís, i les visites amb les fotos i els vídeos es copien al compte nou":"Moves the company to another Google account: every device gets the notice, and the visits with their photos and videos are copied to the new account",
+    "fitxer(s) copiat(s) del compte anterior.":"file(s) copied from the previous account.",
+    "Compte nou de l'empresa":"The company's new account",
+    "L'empresa ha passat al compte {a}. Aquest aparell encara desa a {b}.":"The company has moved to the account {a}. This device still saves to {b}.",
+    "Copiant al compte nou":"Copying to the new account",
+    "Has entrat amb {a}, i el compte nou de l'empresa és {b}. No s'ha canviat res.":"You signed in as {a}, and the company's new account is {b}. Nothing has been changed.",
+    "Aquest aparell ja treballa amb el compte {a}.":"This device now works with the account {a}.",
+    "Els informes ja emesos, els ZIP, els manuals de recanvis i els tiquets de despeses que només eren a la Drive anterior no s'han mogut: segueixen al compte {b}, que no s'ha tocat.":"Reports already issued, ZIPs, spare-parts manuals and expense tickets that were only on the previous Drive were not moved: they are still in the account {b}, which was not touched.",
+    "S'obrirà la finestra de Google: entra-hi amb {a}.":"Google's window will open: sign in as {a}.",
+    "Les visites d'aquest aparell, amb les fotos, les notes de veu i els vídeos, es copiaran al compte nou. El compte d'ara no es toca.":"This device's visits, with their photos, voice notes and videos, will be copied to the new account. The current account is not touched.",
+    "Adreça del compte de Google NOU de l'empresa:":"Address of the company's NEW Google account:",
+    "(Deixa-la en blanc per anul·lar el trasllat que hi ha en marxa.)":"(Leave it blank to call off the move that is under way.)",
+    "Vols anul·lar el trasllat al compte {a}? Els aparells que ja hi hagin entrat s'hi queden.":"Call off the move to the account {a}? Devices that have already signed in there stay there.",
+    "Trasllat anul·lat.":"Move called off.",
+    "Això no és una adreça de correu.":"That is not an e-mail address.",
+    "Aquest aparell ja treballa amb aquest compte.":"This device already works with that account.",
+    "L'empresa passarà a desar al compte {a}.":"The company will save to the account {a} from now on.",
+    "Tots els aparells rebran l'avís i hauran d'entrar amb el compte nou.":"Every device will get the notice and will have to sign in with the new account.",
+    "Les visites, amb les fotos, les notes de veu i els vídeos, es copien al compte nou.":"Visits, with their photos, voice notes and videos, are copied to the new account.",
+    "Els informes ja emesos, els ZIP, els manuals de recanvis i els tiquets de despeses es queden al compte d'ara.":"Reports already issued, ZIPs, spare-parts manuals and expense tickets stay in the current account.",
+    "El compte d'ara no s'esborra ni es toca.":"The current account is neither deleted nor touched."};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();

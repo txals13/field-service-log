@@ -827,6 +827,17 @@ body.m2 #sideTools{order:4;border:0;background:none;box-shadow:none;padding:0;di
 .nv-list{margin:0 -14px -8px}
 .nv-list .sitem:first-child{border-top:1px solid var(--br)}
 .nv-none{font-size:13px;color:var(--tx3);padding:10px 0 14px}
+/* the company's people (Menú, Usuaris) and a visit's assignment */
+.usr-p{border:1px solid var(--br);border-radius:12px;padding:10px 12px;margin-bottom:10px;background:var(--bg1)}
+.usr-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:15px;color:var(--tx1)}
+.usr-d{font-size:12.5px;color:var(--tx3);margin-top:3px}
+.usr-w{font-size:12.5px;color:var(--orange);margin-top:3px}
+.usr-v{display:block;width:100%;text-align:left;font-size:13px;padding:6px 0;margin-top:4px;background:none;border:0;border-top:1px solid var(--br);border-radius:0;color:var(--tx2);cursor:pointer;white-space:normal;font-weight:inherit}
+.usr-a{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+#usrBack .modal{background:var(--bg0)}
+.nv-ord{padding:12px 14px;background:var(--bg2);box-shadow:none}
+.nv-ord .hd{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:700;margin-bottom:4px}
+.nv-news{border-left:4px solid var(--gold)}
 .nv-big{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;border-radius:12px;font-size:15px}
 .nv-open{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--br);cursor:pointer;width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;border-radius:0;font-weight:inherit;white-space:normal}
 .nv-open:hover{background:var(--bg2)}
@@ -1611,6 +1622,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
         <div class="nm-card">
         <button id="btnLic" class="nm-row" title="La llicència d'ús de l'aplicació: es desa només en aquest aparell i es comprova sense cobertura"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span><span class="nm-tx"><b>Llic&egrave;ncia</b><small>Es comprova sense cobertura</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
         <button id="btnCfg" class="nm-row" title="La clau de Gemini, les columnes del full d'hores i el full de despeses de l'empresa, desats a Drive per a tots els aparells"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V5a2 2 0 012-2h8a2 2 0 012 2v16M16 10h2a2 2 0 012 2v9M3 21h18M8 8h4M8 12h4M8 16h4"/></svg></span><span class="nm-tx"><b>Configuració de l'empresa</b><small id="nmCfgVal"></small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+        <button id="btnUsers" class="nm-row" title="Qui fa servir l'app a l'empresa, amb quin aparell, i quines visites té cadascú"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2 20a7 7 0 0114 0M16 4.5a3.5 3.5 0 010 7M18 14a7 7 0 014 6"/></svg></span><span class="nm-tx"><b>Usuaris</b><small id="nmUsrVal"></small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
         <button id="btnCfgMove" class="nm-row" title="Passa l'empresa a un altre compte de Google: cada aparell rep l'avís, i les visites amb les fotos i els vídeos es copien al compte nou"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h14M13 6l6 6-6 6"/><path d="M4 5v14"/></svg></span><span class="nm-tx"><b>Canvia el compte de Google</b><small>Passa l'empresa a un altre compte</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
         <button id="btnGemKey" class="nm-row" title="La clau de Gemini que fa servir el corrector i la traducció dels informes; es desa només en aquest navegador"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/></svg></span><span class="nm-tx"><b>Clau de Gemini</b><small>Corrector i traducció dels informes</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
         <button id="btnViewAs" class="nm-row" style="display:none" title="Canvia entre propietari, administrador i tècnic per veure l'app com la veu cadascú"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="nm-tx"><b>Veure com a</b><small>Per provar què veu cada rol</small></span><span class="nm-go"><span id="nmViewVal"></span><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
@@ -1662,7 +1674,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
       </div>
       <div class="nv-sec">Visita</div>
       <div class="field"><label>Número de projecte</label><input type="text" id="nProject" placeholder="Núm. de projecte"></div>
-      <div class="field"><label>Tècnic</label><input type="text" id="nTech" placeholder="Nom del tècnic"></div>
+      <div class="field"><label>Tècnic</label><input type="text" id="nTech" placeholder="Nom del tècnic" list="nTechList" autocomplete="off"><datalist id="nTechList"></datalist></div>
       <div class="field"><label>Inici de la visita</label>
         <input type="datetime-local" id="nStart">
         <div style="font-size:11px;color:var(--tx3);margin-top:3px">Quan vas arribar. Si ho deixes en blanc, l'informe fa servir l'hora de la primera entrada.</div>
@@ -1678,9 +1690,34 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
           <option value="fat">Acceptació en fàbrica (FAT)</option>
         </select>
       </div>
+      <div id="nOrdBox" style="display:none">
+        <div class="nv-sec">Encàrrec</div>
+        <div class="field"><label>Dates previstes</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="date" id="nOrdFrom" style="flex:1"><span>&ndash;</span><input type="date" id="nOrdTo" style="flex:1">
+          </div>
+        </div>
+        <div class="field"><label>Instruccions per al tècnic</label>
+          <textarea id="nOrdNote" rows="4" style="width:100%;resize:vertical" placeholder="Feina a fer, viatge, hotel, a qui s'ha de presentar…"></textarea>
+          <div style="font-size:11px;color:var(--tx3);margin-top:3px">El tècnic ho rep al seu aparell quan sincronitza. No surt a l'informe.</div>
+        </div>
+      </div>
       <div class="modal-actions">
         <button id="nCancel">Cancel·la</button>
         <button class="btn-gold" id="nSave">&#10003; Crea la sessió</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- The company's people -->
+  <div class="modal-back" id="usrBack" style="display:none">
+    <div class="modal">
+      <div class="modal-title">Usuaris</div>
+      <div id="usrNote" style="font-size:12.5px;color:var(--tx3);margin-bottom:10px"></div>
+      <div id="usrList"></div>
+      <div class="modal-actions">
+        <button id="usrAdd">+ Afegeix un tècnic</button>
+        <button class="btn-gold" id="usrClose">Tanca</button>
       </div>
     </div>
   </div>
@@ -6269,7 +6306,7 @@ function fldMergeVisit(w,o){
 // It errs towards asking. An unneeded "this visit has changed" costs one tap
 // on "re-issue the same"; a missed one sends out, under the old number and
 // the client's signature, a report that is not the one they signed.
-var FLD_QUIET={reportLang:1,writeLang:1,baseName:1,folderId:1};
+var FLD_QUIET={reportLang:1,writeLang:1,baseName:1,folderId:1,order:1};
 function visitAhead(w,o){
   var oe={},of=o.fAt||{},wf=w.fAt||{},k;
   (o.entries||[]).forEach(function(e){if(e&&e.id)oe[e.id]=e});
@@ -6664,7 +6701,11 @@ function buildSitem(s,applyFilter){
   var tm=TM[s.type]||TM.commissioning,isOpen=s.status==="open";
   var issues=severityCounts(s.entries).issue,n=(s.entries||[]).length;
   var st=sessionStartTs(s),en=sessionEndDate(s),when=nvDM(st);
-  if(isOpen){
+  // a visit somebody was sent to and has not begun: the days it is planned
+  // for, not the day it was written down
+  var ordS=ordState(s),ordW=(!n&&!s.startAt&&s.order)?ordWhen(s.order):"";
+  if(ordW)when=nvT("prevista")+" "+ordW;
+  else if(isOpen){
     var dayN=Math.floor((new Date().setHours(0,0,0,0)-new Date(st).setHours(0,0,0,0))/86400000)+1;
     when+=" → · "+nvT("dia")+" "+(dayN>0?dayN:1);
   }else if(nvDM(en)&&nvDM(en)!==when)when+=" – "+nvDM(en);
@@ -6679,7 +6720,9 @@ function buildSitem(s,applyFilter){
     +"<div class=\"sitem-sub\">"+esc(when)+" · "+pl(n,"entrada","entrades")+(issues?" · <b>■ "+issues+"</b>":"")
       +(s.tech&&!isTec()&&techMany()?" · "+esc(s.tech):"")+"</div>"
     +"</div>"
-    +"<div class=\"end\"><span class=\"nv-pill"+(isOpen?" g":"")+"\">"+esc(nvT(isOpen?"En curs":"Tancada"))+"</span>"
+    +"<div class=\"end\">"+(ordS?"<span class=\"nv-pill b\">"+esc(nvT(ordS==="new"?"Nova":"Canviada"))+"</span>"
+        :isOpen&&!n&&s.order?"<span class=\"nv-pill o\">"+esc(nvT("Per començar"))+"</span>"
+        :"<span class=\"nv-pill"+(isOpen?" g":"")+"\">"+esc(nvT(isOpen?"En curs":"Tancada"))+"</span>")
     +"<button class=\"sitem-del\" title=\"Elimina\">✕</button></div>";
   // a visit opens on its card; one reached through a search hit, on its timeline
   div.addEventListener("click",function(){filterTxt=applyFilter||"";nvOpen(s.id,applyFilter?"log":"fitxa");filterTxt=applyFilter||"";if(applyFilter)renderAll()});
@@ -8923,7 +8966,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-21 · 9";
+var APP_VERSION="nou · 2026-11-21 · 10";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -9745,6 +9788,11 @@ function openNewModal(editSess){
   // What the field shows is the start in force: the typed one, or the earlier
   // entry that has overtaken it (2026-11-10). Blank stays blank.
   $$("nStart").value=(editSess&&editSess.startAt)?tsToInput(sessionStartTs(editSess)):"";
+  // the assignment: whoever is not a technician can send the visit to one
+  var ordOn=!isTec(),eo=(editSess&&editSess.order)||{};
+  $$("nOrdBox").style.display=ordOn?"":"none";
+  $$("nOrdFrom").value=eo.from||"";$$("nOrdTo").value=eo.to||"";$$("nOrdNote").value=eo.note||"";
+  $$("nTechList").innerHTML=ordOn?usrNames().map(function(x){return "<option value=\""+esc(x)+"\"></option>"}).join(""):"";
   uiApply($$("newBack"));
   $$("newBack").style.display="flex";setTimeout(function(){focusField($$("nClient"))},80);
 }
@@ -9784,23 +9832,45 @@ $$("nSave").addEventListener("click",function(){
   // means "work it out from the entries"; clearing the field goes back to that.
   var startV=$$("nStart").value,startAt=startV?inputToTs(startV):"";
   if(startV&&!startAt){alert(uiT("La data i hora d'inici no són vàlides."));return}
+  // The assignment (see "THE COMPANY'S PEOPLE"). A visit is somebody else's
+  // when its name is not this device's; on a device with no name yet, only a
+  // name from the people list counts as somebody else — otherwise the first
+  // name written is still taken as this device's, as before.
+  var ordSet=!isTec(),ord=null,other=false;
+  if(ordSet){
+    var oFrom=$$("nOrdFrom").value,oTo=$$("nOrdTo").value,oNote=$$("nOrdNote").value.trim();
+    if(oFrom&&oTo&&oTo<oFrom){alert(uiT("La data final de l'encàrrec és anterior a la inicial."));return}
+    other=!!tech&&!nameLoose(tech,meName())&&(!!meName()||usrKnown(tech));
+    var prevO=(editingSessId&&(sessions.find(function(x){return x.id===editingSessId})||{}).order)||null;
+    if(other||oFrom||oTo||oNote){
+      var prevT=editingSessId?((sessions.find(function(x){return x.id===editingSessId})||{}).tech||""):"";
+      if(prevO&&(prevO.from||"")===oFrom&&(prevO.to||"")===oTo&&(prevO.note||"")===oNote&&keyNorm(prevT)===keyNorm(tech))ord=prevO;
+      else ord={by:meName(),dev:usrDev(),at:now(),from:oFrom,to:oTo,note:oNote};
+    }
+  }
   if(editingSessId){
     var editId=editingSessId,old=sessions.find(function(s){return s.id===editId});
     var folderChanged=old&&(old.client!==c||old.machine!==m||(old.tech||"")!==tech);
-    sessions=sessions.map(function(s){return s.id===editId?Object.assign({},s,{client:c,project:proj,machine:m,machineNo:mno,year:year,location:loc,tech:tech,type:type,contact:cont,contactRole:crole,contactPhone:cphone,contactEmail:cmail,startAt:startAt}):s});
-    closeNewModal();["nClient","nProject","nMachine","nMachineNo","nYear","nLoc","nTech","nContact","nContactRole","nContactPhone","nContactEmail","nStart"].forEach(function(id){$$(id).value=""});
+    var upd={client:c,project:proj,machine:m,machineNo:mno,year:year,location:loc,tech:tech,type:type,contact:cont,contactRole:crole,contactPhone:cphone,contactEmail:cmail,startAt:startAt};
+    if(ordSet&&(ord||(old&&old.order))&&ord!==(old&&old.order))upd.order=ord;
+    sessions=sessions.map(function(s){return s.id===editId?Object.assign({},s,upd):s});
+    closeNewModal();["nClient","nProject","nMachine","nMachineNo","nYear","nLoc","nTech","nContact","nContactRole","nContactPhone","nContactEmail","nStart","nOrdFrom","nOrdTo","nOrdNote"].forEach(function(id){$$(id).value=""});
     scheduleSave();renderAll();
     if(isLoggedIn&&old&&folderChanged)renameSessionFolder(old,{client:c,machine:m,tech:tech});
+    if(other&&upd.order)ordSaid(tech);
   } else {
     var s={id:uid(),client:c,project:proj,machine:m,machineNo:mno,year:year,location:loc,tech:tech,type:type,contact:cont,contactRole:crole,contactPhone:cphone,contactEmail:cmail,startAt:startAt,status:"open",createdAt:now(),entries:[],notes:""};
-    sessions=[s].concat(sessions);aid=s.id;nvSub="log";nvSubAid=s.id;nvTab="reg";
+    if(ord)s.order=ord;
+    // sent to somebody else: it opens on its card, where the assignment shows
+    sessions=[s].concat(sessions);aid=s.id;nvSub=other?"fitxa":"log";nvSubAid=s.id;nvTab="reg";
     // made here, so it stays in this device's lists whatever name it carries;
     // and the first name written is taken as this device's
-    mineAdd(s.id);if(tech&&!meName()){meSet(tech);try{roleApply()}catch(e){}}
+    mineAdd(s.id);if(tech&&!meName()&&!other){meSet(tech);usrLast=0;try{roleApply()}catch(e){}}
     if(type==="production")setTimeout(function(){openProdList(true)},0);
-    closeNewModal();["nClient","nProject","nMachine","nMachineNo","nYear","nLoc","nTech","nContact","nContactRole","nContactPhone","nContactEmail","nStart"].forEach(function(id){$$(id).value=""});
+    closeNewModal();["nClient","nProject","nMachine","nMachineNo","nYear","nLoc","nTech","nContact","nContactRole","nContactPhone","nContactEmail","nStart","nOrdFrom","nOrdTo","nOrdNote"].forEach(function(id){$$(id).value=""});
     scheduleSave();renderAll();
     if(isLoggedIn)ensureSessionFolders(s.id); // create Drive folders up front, not on first upload
+    if(other)ordSaid(tech);
   }
 });
 
@@ -12849,11 +12919,13 @@ function roleApply(){
   b=$$("nmCfgVal");if(b)b.textContent=cfgWords();
   b=$$("btnGemKey");if(b)b.style.display=tec&&cfgHas("gem")?"none":"";
   b=$$("btnCfgMove");if(b)b.style.display=tec?"none":"";
+  b=$$("btnUsers");if(b)b.style.display=tec?"none":"";
+  b=$$("nmUsrVal");if(b)b.textContent=usrWords();
 }
 $$("btnMe").addEventListener("click",function(){
   var n=prompt(uiT("El teu nom, tal com l'escrius a les visites:"),meName());
   if(n===null)return;
-  meSet(n);roleApply();try{if(sessions)renderAll()}catch(e){}
+  meSet(n);usrLast=0;roleApply();try{if(sessions)renderAll()}catch(e){}
 });
 $$("btnViewAs").addEventListener("click",function(){
   if(licRoleReal()!=="own")return;
@@ -14904,7 +14976,7 @@ async function histSync(){
     }
     if(!histFilled())histBackfill(false);
   }catch(e){}
-  finally{histBusy=false;try{cfgPull().catch(function(){})}catch(e){}}
+  finally{histBusy=false;try{cfgPull().catch(function(){})}catch(e){}try{usrSync().catch(function(){})}catch(e){}}
 }
 // ── Reading session.json out of a ZIP without downloading the ZIP ────────────
 // The end of the file holds the directory: where each member starts and how
@@ -20688,10 +20760,19 @@ function nvHomeRender(mc){
   var loc=uiLang()==="ca"?"ca-ES":uiLang(),day="";
   try{day=new Date().toLocaleDateString(loc,{weekday:"long",day:"numeric",month:"long"})}catch(e){}
   function stat(k,n,one,many,cls){return "<button type=\"button\" class=\"nv-card nv-stat "+(n?cls:"")+"\" data-st=\""+k+"\"><b>"+n+"</b><span>"+esc(nvT(n===1?one:many))+"</span></button>"}
+  var news=S.filter(function(s){return ordState(s)});
   var page=document.createElement("div");page.className="nv-page";
   page.innerHTML="<div class=\"nv-hero\">"+NV_ART+"<div class=\"ov\"><div class=\"top\"><button type=\"button\" class=\"nv-chip\"></button></div>"
       +"<div class=\"hi\">"+esc(hi)+"</div><div class=\"sub\">"+esc(nvT("Les teves activitats d'avui")+(day?" · "+day:""))+"</div></div></div>"
     +"<div class=\"nv-home\">"
+    +(news.length?"<section class=\"nv-card nv-sect nv-news\"><div class=\"hd\"><h2>"+esc(nvT(news.length===1?"Tens una visita encarregada":"Tens visites encarregades"))+"</h2></div>"
+        +news.map(function(s,i){
+          var o=s.order,w=ordWhen(o);
+          return "<button type=\"button\" class=\"nv-open\" data-n=\""+i+"\"><span style=\"color:var(--gold)\">"+nvI("plus",22)+"</span>"
+            +"<span style=\"min-width:0\"><span class=\"t\" style=\"display:block\">"+esc([s.client,s.machine].filter(Boolean).join(" · "))+"</span>"
+            +"<span class=\"s\" style=\"display:block\">"+esc([w?nvT("prevista")+" "+w:"",s.location,o.by?nvT("encarregada per {x}").replace("{x}",o.by):""].filter(Boolean).join(" · "))+"</span></span>"
+            +"<span class=\"nv-pill b\">"+esc(nvT(ordState(s)==="new"?"Nova":"Canviada"))+"</span></button>";
+        }).join("")+"</section>":"")
     +"<div class=\"nv-stats\">"
       +stat("open",open,"Visita oberta","Visites obertes","")
       +stat("probs",probs.length,"Problema obert","Problemes oberts","r")
@@ -20743,6 +20824,8 @@ function nvHomeRender(mc){
       else nvGo("visits");
       return;
     }
+    var nw=e.target.closest?e.target.closest("[data-n]"):null;
+    if(nw){var ns=news[+nw.dataset.n];if(ns)nvOpen(ns.id,"fitxa");return}
     var pr=e.target.closest?e.target.closest("[data-p]"):null;
     if(pr){var p=probs[+pr.dataset.p];if(p)nvOpenVisitOf(p.s,"log")}
   });
@@ -20849,7 +20932,9 @@ function nvFitxaRender(a,isOpen){
       // "Inici" is two words here: the Home of the menu (NV_T) and the start of
       // the visit (UI). row() asks NV_T first and wrote "Home: 12/11/2026"; the
       // label is handed over already translated from the other table.
-      +row(uiT("Inici"),nvDT(sessionStartTs(a)));
+      // a visit somebody was sent to and has not begun has no start yet: the day
+      // it was written down is not one
+      +((!(a.entries||[]).length&&!a.startAt&&a.order)?"":row(uiT("Inici"),nvDT(sessionStartTs(a))));
     if(nvFxMore||nvWide()){   // with room to spare, the whole of it
       body+=row("Projecte",a.project)+row("Any de fabricació",a.year)+row("Contacte",contactLine(a))
         +(a.contactPhone?row("Telèfon","<a href=\"tel:"+esc(String(a.contactPhone).replace(/[^\d+]/g,""))+"\">"+esc(a.contactPhone)+"</a>",true):"")
@@ -20877,6 +20962,17 @@ function nvFitxaRender(a,isOpen){
     +"<div>"+body+"</div>"
     +(nvFx==="det"?"<button type=\"button\" class=\"nv-fx-more\" id=\"nvFxMore\">"+esc(nvT(nvFxMore?"Veure menys":"Veure més"))+nvI(nvFxMore?"up":"down",18)+"</button>":"")
     +"</div>";
+  // what the visit was sent with; seeing it here is what takes the "new" off
+  var ao=a.order;
+  if(ao&&(ao.from||ao.to||ao.note||ao.by)){
+    var aos=ordState(a);
+    h+="<div class=\"nv-card nv-ord\"><div class=\"hd\"><span>"+esc(nvT("Encàrrec"))+"</span>"
+      +(aos?"<span class=\"nv-pill b\">"+esc(nvT(aos==="new"?"Nova":"Canviada"))+"</span>":"")+"</div>"
+      +row(ao.by?"Encarregada per":"Encarregada el",[ao.by,nvDT(ao.at)].filter(Boolean).join(" · "))
+      +row("Dates previstes",ao.from?dmy(ao.from)+(ao.to&&ao.to!==ao.from?" – "+dmy(ao.to):""):(ao.to?dmy(ao.to):""))
+      +(ao.note?"<div class=\"nv-fx-notes\">"+esc(ao.note)+"</div>":"")+"</div>";
+    if(aos)ordMark(a);
+  }
   var all=machineSessions(a),prev=all.filter(function(x){return x.id!==a.id})[0];
   if(prev){
     var closed=closedRefs(all),opn=[];
@@ -21720,9 +21816,9 @@ async function cfgBuild(){
   var mv=movePending();if(mv)d.moveTo=mv;
   return d;
 }
-async function cfgFiles(token){
+async function cfgFiles(token,name){
   var rootId=await getRootId(token);
-  var q="name="+JSON.stringify(CFG_FILE)+" and trashed=false"+(rootId?" and "+JSON.stringify(rootId)+" in parents":"");
+  var q="name="+JSON.stringify(name||CFG_FILE)+" and trashed=false"+(rootId?" and "+JSON.stringify(rootId)+" in parents":"");
   var lr=await fetch("https://www.googleapis.com/drive/v3/files?q="+encodeURIComponent(q)+"&orderBy="+encodeURIComponent("modifiedTime desc")+"&fields=files(id)&pageSize=10",{headers:{Authorization:"Bearer "+token}});
   if(!lr.ok)return null;
   return{rootId:rootId,files:(await lr.json()).files||[]};
@@ -22223,6 +22319,343 @@ $$("btnCfgMove").addEventListener("click",async function(){
     "Sense nom: es veuen totes les visites":"No name: every visit is shown","Sense nom":"No name",
     "Arxivar visites és feina de l'administrador.":"Archiving visits is the administrator's job.",
     "Aquesta visita és d'un altre tècnic. Només l'administrador la pot eliminar.":"This visit is another technician's. Only the administrator can delete it."};
+  Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
+  Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
+})();
+// ── THE COMPANY'S PEOPLE, AND A VISIT SENT TO ONE OF THEM (2026-11-21) ──────
+// The user: "I want the administrator to see the users in a list, to create
+// and assign reports (to start one, fill in the contact and the rest and send
+// it with the information of the trip, as the start of the project), and the
+// technician to get it on the phone."
+//
+// There are no user accounts: the company works on ONE Google account. What
+// there is, is devices, each with a name ("Tècnic d'aquest aparell") and a
+// licence. So:
+//
+//   · THE LIST is a file in the app's Drive folder (USR_FILE) where every
+//     device writes its own row when it syncs: name, role, version, platform,
+//     when. It is merged row by row, the later one winning, so two devices
+//     writing at once cost nothing — the row lost is written again at the next
+//     sync. The administrator can add a name by hand (a technician who has
+//     not opened the app yet) and take a row out; a device taken out comes
+//     back by itself if it syncs again. Names found on open visits that no
+//     device carries are shown too, flagged: that is a visit nobody will see.
+//
+//   · ASSIGNING needs no channel of its own: the data file already holds every
+//     visit, and a technician's lists show the ones under the device's name
+//     (sessMine). The administrator creates the visit with the technician's
+//     name, picked from the list, and it is there at the technician's next
+//     sync. What is new is `session.order` = {by, dev, at, from, to, note}:
+//     who sent it and from which device, the days it is planned for and the
+//     instructions of the trip. It is NOT report content (FLD_QUIET): no
+//     report prints it, and an order that arrives in a merge does not by
+//     itself make the next export ask for a new revision. (Edited on the
+//     device where the visit is open, it still moves `updatedAt` like any
+//     other edit made in that window — that errs towards asking, as always.)
+//
+//   · ON THE TECHNICIAN'S DEVICE a visit with an `order` from another device
+//     is "new" until its card has been opened there (what was seen is kept per
+//     device, by the order's `at`: an order changed later shows as "changed").
+//     It heads the home page and carries a pill in the lists.
+//
+// Nothing rings: there is no server to push from. It appears when the app is
+// opened or comes back to the front (it syncs then, and every 30 s).
+var USR_FILE=SEPARAT?"field_service_log_usuaris_nou.json":"field_service_log_usuaris.json";
+var usrLast=0,usrBusy=false,usrShown=[],ordSeenMem=null;
+function usrDev(){
+  var k=LSP+"devid",d="";
+  try{d=localStorage.getItem(k)||"";if(!d){d="d"+uid();localStorage.setItem(k,d)}}catch(e){}
+  return d||"d0";
+}
+function usrLocal(){
+  try{var u=JSON.parse(localStorage.getItem(LSP+"usr")||"null");if(u&&u.dev)return{v:1,dev:u.dev||{},man:u.man||{},gone:u.gone||{}}}catch(e){}
+  return{v:1,dev:{},man:{},gone:{}};
+}
+function usrKeep(u){try{localStorage.setItem(LSP+"usr",JSON.stringify(u))}catch(e){}}
+function usrPlat(){
+  var a=navigator.userAgent||"";
+  return (/Android/i.test(a)?"Android":/iPhone|iPad|iPod/i.test(a)?"iOS":/Windows/i.test(a)?"Windows":/Mac/i.test(a)?"Mac":/Linux/i.test(a)?"Linux":"")
+    +(PERFIL?" · perfil "+PERFIL:"");
+}
+function usrMe(){return{name:meName(),role:lic?licRoleReal():"",at:now(),ver:APP_VERSION,plat:usrPlat()}}
+// Row by row, the later one; a row taken out stays out unless it was written
+// again after that.
+function usrMerge(a,b){
+  var o={v:1,dev:{},man:{},gone:{}};
+  [a,b].forEach(function(x){
+    if(!x)return;
+    ["dev","man","gone"].forEach(function(g){
+      var src=x[g]||{},k,cur;
+      for(k in src){
+        cur=o[g][k];
+        if(g==="gone"){if(!cur||String(src[k])>String(cur))o.gone[k]=src[k]}
+        else if(src[k]&&(!cur||String(src[k].at||"")>String(cur.at||"")))o[g][k]=src[k];
+      }
+    });
+  });
+  ["dev","man"].forEach(function(g){
+    Object.keys(o[g]).forEach(function(k){if(o.gone[k]&&String(o.gone[k])>=String(o[g][k].at||""))delete o[g][k]});
+  });
+  return o;
+}
+// Reads the file, merges, writes this device's row when it has something new
+// to say (another name, role or version, or half an hour gone by). `edit` is
+// the administrator's change to the list: it is applied to the merge and
+// always written.
+async function usrSync(force,edit){
+  if(usrBusy||!isLoggedIn||navigator.onLine===false)return false;
+  if(!force&&Date.now()-usrLast<600000)return false;
+  usrBusy=true;
+  try{
+    var token=await ensureToken();if(!token)return false;
+    usrLast=Date.now();
+    var f=await cfgFiles(token,USR_FILE);if(!f)return false;
+    var remote=null,i;
+    for(i=0;i<f.files.length;i++){
+      try{var rr=await fetch("https://www.googleapis.com/drive/v3/files/"+f.files[i].id+"?alt=media",{headers:{Authorization:"Bearer "+token}});
+        if(rr.ok){var d=await rr.json();if(d&&d.dev)remote=usrMerge(remote,d)}else return false}catch(e){return false}
+    }
+    var u=usrMerge(remote,usrLocal());
+    if(edit)edit(u);
+    var me=usrMe(),id=usrDev(),old=(remote&&remote.dev[id])||null;
+    var write=!!edit||!old||f.files.length>1||old.name!==me.name||old.role!==me.role||old.ver!==me.ver||old.plat!==me.plat
+      ||!(Date.now()-Date.parse(old.at||0)<1800000);
+    if(write||!u.dev[id])u.dev[id]=me;
+    usrKeep(u);
+    try{roleApply()}catch(e){}
+    if(!write)return u;
+    var body=JSON.stringify(u),ok=false;
+    if(f.files.length){
+      var pr=await fetch("https://www.googleapis.com/upload/drive/v3/files/"+f.files[0].id+"?uploadType=media",
+        {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:body});
+      ok=pr.ok;
+      for(var j=1;ok&&j<f.files.length;j++){
+        try{await fetch("https://www.googleapis.com/drive/v3/files/"+f.files[j].id,{method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({trashed:true})})}catch(e){}
+      }
+    }else{
+      var meta=JSON.stringify({name:USR_FILE,mimeType:"application/json",parents:f.rootId?[f.rootId]:[]});
+      var bnd="fsl_u_"+Date.now();
+      var mp="--"+bnd+"\r\nContent-Type: application/json\r\n\r\n"+meta+"\r\n--"+bnd+"\r\nContent-Type: application/json\r\n\r\n"+body+"\r\n--"+bnd+"--";
+      var cr=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"multipart/related; boundary="+bnd},body:mp});
+      ok=cr.ok;
+    }
+    return ok?u:false;
+  }catch(e){return false}
+  finally{usrBusy=false}
+}
+function nameLoose(a,b){a=keyNorm(a);b=keyNorm(b);return !!(a&&b&&(a.indexOf(b)>=0||b.indexOf(a)>=0))}
+// The names to offer for a new visit: every named device and every name added
+// by hand, once each.
+function usrNames(){
+  var u=usrLocal(),seen={},out=[];
+  function add(n){n=String(n||"").trim();var k=keyNorm(n);if(k&&!seen[k]){seen[k]=1;out.push(n)}}
+  Object.keys(u.dev).forEach(function(id){add(u.dev[id].name)});
+  Object.keys(u.man).forEach(function(k){add(u.man[k].name)});
+  return out.sort(function(a,b){return a.localeCompare(b)});
+}
+// Somebody of the list other than this device carries that name.
+function usrKnown(name){
+  var u=usrLocal(),me=usrDev();
+  return Object.keys(u.dev).some(function(id){return id!==me&&nameLoose(u.dev[id].name,name)})
+    ||Object.keys(u.man).some(function(k){return nameLoose(u.man[k].name,name)});
+}
+function usrWords(){
+  var n=Object.keys(usrLocal().dev).length;
+  return n?pl(n,"aparell","aparells"):uiT("Qui fa servir l'app i quines visites té");
+}
+// People, not devices: the rows of one name together, the open visits under
+// that name (matched as loosely as a technician's own lists do), and last the
+// names that are on open visits but on no device.
+function usrPeople(u){
+  var P=[],by={};
+  function person(name){
+    var k=keyNorm(name)||"";
+    if(!by[k]){by[k]={k:k,name:String(name||"").trim(),devs:[],man:"",open:[],orph:false};P.push(by[k])}
+    return by[k];
+  }
+  Object.keys(u.dev).forEach(function(id){var r=u.dev[id]||{};person(r.name).devs.push({id:id,role:r.role,at:r.at,ver:r.ver,plat:r.plat})});
+  Object.keys(u.man).forEach(function(k){person((u.man[k]||{}).name).man=k});
+  sessions.forEach(function(s){
+    if(s.status!=="open")return;
+    var t=keyNorm(s.tech),hit=false;
+    if(!t)return;
+    P.forEach(function(p){if(p.k&&!p.orph&&(t.indexOf(p.k)>=0||p.k.indexOf(t)>=0)){p.open.push(s);hit=true}});
+    if(hit)return;
+    var q=by[t];
+    if(!q){q=person(s.tech);q.orph=true}
+    q.open.push(s);
+  });
+  function rank(p){return p.orph?2:p.k?0:1}
+  return P.sort(function(a,b){return rank(a)-rank(b)||a.name.localeCompare(b.name)});
+}
+function usrSeenW(at){
+  var d=new Date(at),t=new Date();
+  if(isNaN(d.getTime()))return "";
+  if(d.toDateString()===t.toDateString())return uiT("avui")+" "+nvP2(d.getHours())+":"+nvP2(d.getMinutes());
+  return nvAgo(at);
+}
+function usrRender(){
+  var u=usrLocal(),P=usrPeople(u),h="",me=usrDev();
+  usrShown=P;
+  $$("usrNote").textContent=uiT(isLoggedIn?"Cada aparell s'apunta sol a la llista quan sincronitza amb Drive."
+    :"Entra amb Google per veure els aparells de l'empresa: la llista es desa a Drive.");
+  if(!P.length)h="<div class=\"nv-none\">"+esc(uiT("Encara no hi ha ningú a la llista."))+"</div>";
+  P.forEach(function(p,i){
+    var roles={};p.devs.forEach(function(d){if(d.role)roles[d.role]=1});
+    h+="<div class=\"usr-p\"><div class=\"usr-h\"><b>"+esc(p.name||uiT("(sense nom)"))+"</b>"
+      +Object.keys(roles).map(function(r){return "<span class=\"nv-pill"+(r==="tec"?"":" b")+"\">"+esc(uiT(LIC_ROLES[r]||r))+"</span>"}).join("")
+      +"<span style=\"margin-left:auto;font-size:12.5px;color:var(--tx3)\">"+esc(pl(p.open.length,"visita oberta","visites obertes"))+"</span></div>"
+      +p.devs.map(function(d){
+        return "<div class=\"usr-d\">"+esc([d.plat,d.ver,d.at?uiT("vist")+" "+usrSeenW(d.at):""].filter(Boolean).join(" · "))
+          +(d.id===me?" · <b>"+esc(uiT("aquest aparell"))+"</b>":"")+"</div>";
+      }).join("")
+      +(!p.devs.length?"<div class=\"usr-w\">"+esc(uiT(p.orph?"Surt a les visites, però cap aparell porta aquest nom: ningú les veurà com a seves."
+          :"Afegit a mà: encara no ha sincronitzat cap aparell amb aquest nom."))+"</div>":"")
+      +(!p.k&&p.devs.length?"<div class=\"usr-w\">"+esc(uiT("Sense nom a «Tècnic d'aquest aparell»: no se li poden encarregar visites."))+"</div>":"")
+      +p.open.slice(0,6).map(function(s){
+        var w=(!(s.entries||[]).length&&s.order)?ordWhen(s.order):"";
+        return "<button type=\"button\" class=\"usr-v\" data-v=\""+esc(s.id)+"\">"+esc([s.client,s.machine].filter(Boolean).join(" · ")
+          +(w?" · "+uiT("prevista")+" "+w:!(s.entries||[]).length?" · "+uiT("Per començar"):""))+"</button>";
+      }).join("")
+      +(p.open.length>6?"<div class=\"usr-d\">+ "+(p.open.length-6)+"</div>":"")
+      +"<div class=\"usr-a\">"
+      +(p.k?"<button type=\"button\" class=\"btn-sm\" data-o=\""+i+"\">"+esc(uiT("Encarrega-li una visita"))+"</button>":"")
+      +((p.devs.length||p.man)?"<button type=\"button\" class=\"btn-sm\" data-x=\""+i+"\">"+esc(uiT("Treu de la llista"))+"</button>":"")
+      +"</div></div>";
+  });
+  var free=sessions.filter(function(s){return s.status==="open"&&!keyNorm(s.tech)}).length;
+  if(free)h+="<div class=\"usr-d\">"+esc(uiT("Visites obertes sense tècnic (les veu tothom): {n}").replace("{n}",free))+"</div>";
+  $$("usrList").innerHTML=h;
+}
+function usrOpen(){
+  if(isTec())return;
+  uiApply($$("usrBack"));
+  $$("usrBack").style.display="flex";
+  usrRender();
+  usrSync(true).then(function(r){if(r&&$$("usrBack").style.display!=="none")usrRender()}).catch(function(){});
+}
+function usrClose(){$$("usrBack").style.display="none"}
+// A change to the list itself: it has to reach Drive, or it is not made.
+async function usrChange(edit){
+  if(!isLoggedIn){alert(uiT("Primer inicia la sessió amb Google: la llista d'usuaris es desa a Drive."));return}
+  // the window's own read of the list may still be on its way: wait for it,
+  // or this change would be turned away as "busy" and reported as a failure
+  for(var w=0;usrBusy&&w<80;w++)await new Promise(function(ok){setTimeout(ok,100)});
+  var r=false;try{r=await usrSync(true,edit)}catch(e){r=false}
+  if(!r)alert(uiT("No s'ha pogut desar la llista a Drive. Torna-ho a provar amb connexió."));
+  usrRender();
+}
+$$("btnUsers").addEventListener("click",usrOpen);
+$$("usrClose").addEventListener("click",usrClose);
+$$("usrBack").addEventListener("click",function(e){if(e.target===$$("usrBack"))usrClose()});
+$$("usrAdd").addEventListener("click",function(){
+  var n=prompt(uiT("Nom del tècnic, tal com el posarà al seu aparell:"),"");
+  if(n===null)return;
+  n=n.trim();var k=keyNorm(n);if(!k)return;
+  usrChange(function(u){u.man["m_"+k]={name:n,at:now()};delete u.gone["m_"+k]});
+});
+$$("usrList").addEventListener("click",function(e){
+  var b=e.target.closest?e.target.closest("[data-v],[data-o],[data-x]"):null;if(!b)return;
+  if(b.dataset.v){usrClose();if(nvLive(b.dataset.v))nvOpen(b.dataset.v,"fitxa");return}
+  var p=usrShown[+(b.dataset.o||b.dataset.x)];if(!p)return;
+  if(b.dataset.o){usrClose();openNewModal();$$("nTech").value=p.name;return}
+  if(!confirm(uiT("Vols treure {x} de la llista?").replace("{x}",p.name||uiT("(sense nom)"))+"\n\n"
+    +uiT("No s'esborra cap visita ni es treu cap llicència. Un aparell que torni a sincronitzar tornarà a sortir a la llista.")))return;
+  usrChange(function(u){
+    var t=now();
+    p.devs.forEach(function(d){delete u.dev[d.id];u.gone[d.id]=t});
+    if(p.man){delete u.man[p.man];u.gone[p.man]=t}
+  });
+});
+// ── the assignment, on the device it was sent to ──
+function ordSeenGet(){
+  if(!ordSeenMem){try{ordSeenMem=JSON.parse(localStorage.getItem(LSP+"ordseen")||"{}")||{}}catch(e){ordSeenMem={}}}
+  return ordSeenMem;
+}
+// "" · "new" · "chg". Only for a visit under this device's name that another
+// device sent: the one who wrote the order has nothing to be told.
+function ordState(s){
+  var o=s&&s.order;
+  if(!o||!o.at||o.dev===usrDev()||!nameLoose(s.tech,meName()))return "";
+  var v=ordSeenGet()[s.id];
+  return !v?"new":v!==o.at?"chg":"";
+}
+function ordMark(s){
+  if(!s||!s.order||!s.order.at)return;
+  var m=ordSeenGet();
+  if(m[s.id]===s.order.at)return;
+  m[s.id]=s.order.at;
+  try{localStorage.setItem(LSP+"ordseen",JSON.stringify(m))}catch(e){}
+}
+function ordWhen(o){
+  if(!o||!(o.from||o.to))return "";
+  var a=o.from||o.to,b=o.to||o.from;
+  return nvDM(a)+(b!==a?" – "+nvDM(b):"");
+}
+// Said once, to the one who sent it: where it has gone, and whether anybody is
+// there to get it.
+function ordSaid(tech){
+  setTimeout(function(){
+    alert(uiT("Visita encarregada a {x}.").replace("{x}",tech)+" "
+      +uiT(isLoggedIn?"La rebrà al seu aparell quan sincronitzi.":"S'enviarà quan aquest aparell entri amb Google.")
+      +(usrKnown(tech)?"":"\n\n"+uiT("Cap aparell de la llista d'usuaris porta aquest nom: ha de coincidir amb el «Tècnic d'aquest aparell» del seu.")));
+  },60);
+}
+(function(){
+  var es={"Usuaris":"Usuarios","Qui fa servir l'app i quines visites té":"Quién usa la app y qué visitas tiene",
+    "Qui fa servir l'app a l'empresa, amb quin aparell, i quines visites té cadascú":"Quién usa la app en la empresa, con qué aparato, y qué visitas tiene cada uno",
+    "aparell":"aparato","aparells":"aparatos","+ Afegeix un tècnic":"+ Añade un técnico",
+    "Cada aparell s'apunta sol a la llista quan sincronitza amb Drive.":"Cada aparato se apunta solo en la lista cuando sincroniza con Drive.",
+    "Entra amb Google per veure els aparells de l'empresa: la llista es desa a Drive.":"Entra con Google para ver los aparatos de la empresa: la lista se guarda en Drive.",
+    "Encara no hi ha ningú a la llista.":"Aún no hay nadie en la lista.","(sense nom)":"(sin nombre)",
+    "visita oberta":"visita abierta","visites obertes":"visitas abiertas","vist":"visto","aquest aparell":"este aparato",
+    "Surt a les visites, però cap aparell porta aquest nom: ningú les veurà com a seves.":"Sale en las visitas, pero ningún aparato lleva este nombre: nadie las verá como suyas.",
+    "Afegit a mà: encara no ha sincronitzat cap aparell amb aquest nom.":"Añadido a mano: aún no ha sincronizado ningún aparato con este nombre.",
+    "Sense nom a «Tècnic d'aquest aparell»: no se li poden encarregar visites.":"Sin nombre en «Técnico de este aparato»: no se le pueden encargar visitas.",
+    "Encarrega-li una visita":"Encárgale una visita","Treu de la llista":"Quita de la lista",
+    "Visites obertes sense tècnic (les veu tothom): {n}":"Visitas abiertas sin técnico (las ve todo el mundo): {n}",
+    "Primer inicia la sessió amb Google: la llista d'usuaris es desa a Drive.":"Primero inicia sesión con Google: la lista de usuarios se guarda en Drive.",
+    "No s'ha pogut desar la llista a Drive. Torna-ho a provar amb connexió.":"No se ha podido guardar la lista en Drive. Vuelve a probarlo con conexión.",
+    "Nom del tècnic, tal com el posarà al seu aparell:":"Nombre del técnico, tal como lo pondrá en su aparato:",
+    "Vols treure {x} de la llista?":"¿Quieres quitar a {x} de la lista?",
+    "No s'esborra cap visita ni es treu cap llicència. Un aparell que torni a sincronitzar tornarà a sortir a la llista.":"No se borra ninguna visita ni se quita ninguna licencia. Un aparato que vuelva a sincronizar volverá a salir en la lista.",
+    "Encàrrec":"Encargo","Dates previstes":"Fechas previstas","Instruccions per al tècnic":"Instrucciones para el técnico",
+    "Feina a fer, viatge, hotel, a qui s'ha de presentar…":"Trabajo a hacer, viaje, hotel, a quién debe presentarse…",
+    "El tècnic ho rep al seu aparell quan sincronitza. No surt a l'informe.":"El técnico lo recibe en su aparato cuando sincroniza. No sale en el informe.",
+    "La data final de l'encàrrec és anterior a la inicial.":"La fecha final del encargo es anterior a la inicial.",
+    "prevista":"prevista","Nova":"Nueva","Canviada":"Cambiada","Per començar":"Por empezar",
+    "Tens una visita encarregada":"Tienes una visita encargada","Tens visites encarregades":"Tienes visitas encargadas",
+    "encarregada per {x}":"encargada por {x}","Encarregada per":"Encargada por","Encarregada el":"Encargada el",
+    "Visita encarregada a {x}.":"Visita encargada a {x}.","La rebrà al seu aparell quan sincronitzi.":"La recibirá en su aparato cuando sincronice.",
+    "S'enviarà quan aquest aparell entri amb Google.":"Se enviará cuando este aparato entre con Google.",
+    "Cap aparell de la llista d'usuaris porta aquest nom: ha de coincidir amb el «Tècnic d'aquest aparell» del seu.":"Ningún aparato de la lista de usuarios lleva este nombre: debe coincidir con el «Técnico de este aparato» del suyo."};
+  var en={"Usuaris":"Users","Qui fa servir l'app i quines visites té":"Who uses the app and which visits they have",
+    "Qui fa servir l'app a l'empresa, amb quin aparell, i quines visites té cadascú":"Who uses the app in the company, on which device, and which visits each of them has",
+    "aparell":"device","aparells":"devices","+ Afegeix un tècnic":"+ Add a technician",
+    "Cada aparell s'apunta sol a la llista quan sincronitza amb Drive.":"Each device puts itself on the list when it syncs with Drive.",
+    "Entra amb Google per veure els aparells de l'empresa: la llista es desa a Drive.":"Sign in with Google to see the company's devices: the list is kept on Drive.",
+    "Encara no hi ha ningú a la llista.":"Nobody on the list yet.","(sense nom)":"(no name)",
+    "visita oberta":"open visit","visites obertes":"open visits","vist":"seen","aquest aparell":"this device",
+    "Surt a les visites, però cap aparell porta aquest nom: ningú les veurà com a seves.":"On visits, but no device carries this name: nobody will see them as their own.",
+    "Afegit a mà: encara no ha sincronitzat cap aparell amb aquest nom.":"Added by hand: no device with this name has synced yet.",
+    "Sense nom a «Tècnic d'aquest aparell»: no se li poden encarregar visites.":"No name under “This device's technician”: visits cannot be assigned to it.",
+    "Encarrega-li una visita":"Assign a visit","Treu de la llista":"Take off the list",
+    "Visites obertes sense tècnic (les veu tothom): {n}":"Open visits with no technician (everybody sees them): {n}",
+    "Primer inicia la sessió amb Google: la llista d'usuaris es desa a Drive.":"Sign in with Google first: the list of users is kept on Drive.",
+    "No s'ha pogut desar la llista a Drive. Torna-ho a provar amb connexió.":"The list could not be saved to Drive. Try again with a connection.",
+    "Nom del tècnic, tal com el posarà al seu aparell:":"The technician's name, as they will write it on their device:",
+    "Vols treure {x} de la llista?":"Take {x} off the list?",
+    "No s'esborra cap visita ni es treu cap llicència. Un aparell que torni a sincronitzar tornarà a sortir a la llista.":"No visit is deleted and no licence is taken away. A device that syncs again will be back on the list.",
+    "Encàrrec":"Assignment","Dates previstes":"Planned dates","Instruccions per al tècnic":"Instructions for the technician",
+    "Feina a fer, viatge, hotel, a qui s'ha de presentar…":"Work to do, travel, hotel, who to report to…",
+    "El tècnic ho rep al seu aparell quan sincronitza. No surt a l'informe.":"The technician gets it on their device when it syncs. It is not in the report.",
+    "La data final de l'encàrrec és anterior a la inicial.":"The assignment's end date is before its start date.",
+    "prevista":"planned","Nova":"New","Canviada":"Changed","Per començar":"Not started",
+    "Tens una visita encarregada":"You have a visit assigned","Tens visites encarregades":"You have visits assigned",
+    "encarregada per {x}":"assigned by {x}","Encarregada per":"Assigned by","Encarregada el":"Assigned on",
+    "Visita encarregada a {x}.":"Visit assigned to {x}.","La rebrà al seu aparell quan sincronitzi.":"They will get it on their device when it syncs.",
+    "S'enviarà quan aquest aparell entri amb Google.":"It will be sent when this device signs in with Google.",
+    "Cap aparell de la llista d'usuaris porta aquest nom: ha de coincidir amb el «Tècnic d'aquest aparell» del seu.":"No device on the list of users carries this name: it has to match “This device's technician” on theirs."};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();

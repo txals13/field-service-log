@@ -5658,6 +5658,57 @@ refused the message says not everything was copied and nothing breaks.
 **Not checked:** real Google, real sizes (a ZIP of hundreds of MB is read
 whole into memory), thousands of files against Drive's rate limits.
 
+**The company's people, and a visit sent to one of them (version
+`nou · 2026-11-21 · 10`).** The user: "I want the administrator to see the
+users in a list, to create and assign reports (start one, fill in the contact
+and the rest and send it with the information of the trip, as the start of
+the project), and the technician to get it on the phone." There are no user
+accounts — one Google account per company — so "users" are devices with a
+name and a licence:
+- **The list** is `field_service_log_usuaris_nou.json` in the app's Drive
+  folder: `{v, dev:{<device id>:{name, role, at, ver, plat}}, man:{m_<name
+  key>:{name, at}}, gone:{<key>:at}}`. Every device writes its own row
+  (`usrSync`, from `histSync`'s `finally`; at most every 10 min, written only
+  when name/role/version changed or half an hour went by). Merged row by row,
+  the later `at` wins (`usrMerge`); a row taken out stays out unless written
+  again later, so a live device comes back by itself. The device id is
+  `LSP+"devid"`, so each `?perfil=` is its own device. Menú row "Usuaris"
+  (`#btnUsers`, hidden for a technician) opens `#usrBack`: people grouped by
+  name (`usrPeople`), each with its devices, last seen, version and its OPEN
+  visits (matched as loosely as `sessMine`). The administrator can add a name
+  by hand, take a row out, and start a visit for somebody. A name that is on
+  open visits but on no device is listed with a warning: nobody will see
+  those visits as theirs.
+- **Assigning** uses the data file as it is: the visit is created with the
+  technician's name (the Tècnic field offers the list's names, `usrNames`)
+  and is on their device at its next sync. New is `session.order` = `{by,
+  dev, at, from, to, note}` — who sent it, from which device, the planned
+  days, the instructions of the trip — filled in the "Encàrrec" part of the
+  new-visit window (`#nOrdBox`, not shown to a technician). It is in
+  `FLD_QUIET` and no report prints it (the reports were not touched). A visit
+  counts as somebody else's when its name is not this device's; on a device
+  with no name yet only a name from the list does, otherwise the first name
+  typed is still adopted as the device's own.
+- **On the technician's device** `ordState(s)` is "new" until the visit's
+  card has been opened there, "chg" when the order was rewritten since
+  (`LSP+"ordseen"`, by the order's `at`). Such visits head the home page
+  ("Tens una visita encarregada") and carry a pill in the lists; the card
+  shows the order ("Encàrrec"). A visit with an order and no entries shows
+  its planned days instead of "day 1", "Per començar" instead of "En curs",
+  and no "Inici" on its card.
+- **Nothing rings.** There is no server to push from: it appears when the app
+  is opened or comes back to the front (it syncs then, and every 30 s).
+Checked in the preview with three profiles (adm, t1, t2) against a Drive
+stand-in shared by the three: the three rows appear; a visit sent to t1 is
+"new" on t1 and not listed on t2; opening its card takes the mark off; a
+changed note shows "changed"; reassigned to t2 it leaves t1's lists and is
+new on t2; a name nobody carries gets the warning; a row added by hand and a
+row taken out reach Drive, and the device taken out is back after its next
+sync; signed out, the list says so and the visit says it will be sent later;
+English texts. **Not checked:** real Google, two real devices, a phone.
+The translation checker's baseline is 65 since this change (the platform
+names and the profile tag are data, not text).
+
 **Two people, one visit (version `nou · 2026-11-21 · 3`).** A company on one
 account puts two technicians in the same visit, and every merge kept "the
 later copy of the WHOLE visit": what the other one wrote in between was

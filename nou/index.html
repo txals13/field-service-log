@@ -2462,13 +2462,35 @@ var PICKER_APP = "514772123815";
 // THE DAY THIS COPY REPLACES THE OLD ONE: set SEPARAT to false and it picks up
 // the real data where the old app left it. Nothing else has to change.
 var SEPARAT  = true;
-var LSP      = SEPARAT ? "fsln_v6_" : "fsl_v6_";
-var IDB_NAME = SEPARAT ? "fsl-nou" : "fsl";
+// ── A PROFILE IN THE ADDRESS (2026-11-21) ───────────────────────────────────
+// The user: "I would like to simulate an administrator and two technicians."
+// Roles, the company's settings and two people in one visit can only be tried
+// with several devices on one Google account — or with several browsers, each
+// keeping its own storage. `?perfil=t1` at the end of the address gives the
+// same thing in one browser: everything this page keeps IN THE BROWSER (the
+// localStorage prefix and the IndexedDB database, which is all of it) gets
+// the profile's name, so three tabs — ?perfil=adm, ?perfil=t1, ?perfil=t2 —
+// are three devices that know nothing of each other: each its own licence,
+// its own sign-in, its own name, its own copy of the visits.
+// DRIVE IS NOT SEPARATED, on purpose: three devices of one company share the
+// account, and that is the thing being tried. So a profile signed in to a
+// real account writes real data there — try it with a test account.
+// A profile starts empty: nothing is inherited from the app at the root, and
+// its trial begins the day it is first opened. Without the parameter nothing
+// changes at all. Letters and digits only, twelve at most; anything else is
+// taken as no profile.
+var PERFIL=(function(){
+  try{var m=/[?&]perfil=([A-Za-z0-9]{1,12})(?:&|$)/.exec(location.search||"");return m?m[1].toLowerCase():""}
+  catch(e){return""}
+})();
+var LSP      = (SEPARAT ? "fsln_v6_" : "fsl_v6_")+(PERFIL?"p_"+PERFIL+"_":"");
+var IDB_NAME = (SEPARAT ? "fsl-nou" : "fsl")+(PERFIL?"-p-"+PERFIL:"");
+if(PERFIL){try{document.title="["+PERFIL+"] "+document.title}catch(e){}}
 // What a device is given ONCE (the licence, the day its trial began, the Gemini
 // key, the interface language) is read from the old app's keys the
 // first time, so none of it has to be typed again here. Read only: nothing is
 // ever written back under the old names.
-if(SEPARAT){try{
+if(SEPARAT&&!PERFIL){try{
   ["lic","lic0","gem","uilang"].forEach(function(k){
     if(localStorage.getItem(LSP+k)!==null)return;
     var v=localStorage.getItem("fsl_v6_"+k);
@@ -8884,11 +8906,11 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-21 · 6";
+var APP_VERSION="nou · 2026-11-21 · 7";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
-  v.textContent=uiT("Versió")+" "+APP_VERSION+(w?" · "+w:"");
+  v.textContent=uiT("Versió")+" "+APP_VERSION+(w?" · "+w:"")+(PERFIL?" · "+uiT("perfil")+" "+PERFIL:"");
 }
 verLine();
 // ── PRODUCTION TESTS ─────────────────────────────────────────────────────────
@@ -20553,6 +20575,7 @@ function nvNavRender(){
       +(q?"<div class=\"foot\">"+esc(q)+"</div>":"");
   }else{
     var who=nvWho(),lw="";try{lw=licWords()||""}catch(e){}
+    if(PERFIL)lw=(lw?lw+" \u00b7 ":"")+uiT("perfil")+" "+PERFIL;   // which of the tabs this is
     h="<div class=\"brand\">"+NV_LOGO+"<span>Field Service<br>Log</span></div>"
       +bt("home","home","Inici",nvView==="home")+bt("visits","doc","Visites",nvView==="visits")+bt("mach","hist","Màquines",nvView==="mach")
       +bt("manuals","book","Manuals",nvView==="manuals","","dk")+(isTec()?"":bt("arx","box","Arxiu",nvView==="arx","","dk"))
@@ -21798,6 +21821,8 @@ $$("btnCfg").addEventListener("click",async function(){
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();
+// A profile in the address (2026-11-21).
+(function(){NV_T.es["perfil"]="perfil";NV_T.en["perfil"]="profile";UIC={}})();
 // The technicians' licence, handed on with the company's settings (2026-11-21).
 (function(){
   var es={"Aquesta és la llicència dels tècnics, i aquest aparell té la d'administrador.":"Esta es la licencia de los técnicos, y este aparato tiene la de administrador.",

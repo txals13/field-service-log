@@ -5527,6 +5527,33 @@ administrator device keeps it aside and keeps its own; a technician's licence
 that runs longer is left alone. The tool's "Reemet" with a throwaway key.
 **Not checked:** real licences, real Drive, real devices.
 
+**A profile in the address (version `nou · 2026-11-21 · 7`).** The user: "I
+would like to simulate an administrator and two technicians." Without any
+code that takes three browsers (or browser profiles) on one Google account;
+he asked for the three in tabs of one browser. `?perfil=t1` at the end of the
+address (`PERFIL`, read once beside `SEPARAT`: letters and digits, twelve at
+most, lower-cased; anything else is no profile) is added to the localStorage
+prefix (`fsln_v6_p_t1_…`) and to the IndexedDB name (`fsl-nou-p-t1`) — which
+is everything the page keeps in the browser. So `?perfil=adm`, `?perfil=t1`
+and `?perfil=t2` are three devices that know nothing of each other: own
+licence, own sign-in, own name, own copy of the visits.
+- **Drive is not separated, on purpose**: three devices of one company share
+  the account, and that is what is being tried. A profile signed in to a real
+  account writes real data — he was told to use a test account.
+- A profile starts empty: the one-time copy of licence/key/language from the
+  root app's keys is skipped, and its trial starts the day it is first
+  opened.
+- The tab's title starts with `[t1]`, and the version line and the foot of
+  the navigation say "perfil t1", so the tabs can be told apart.
+- Without the parameter nothing changes. `sw.js` is untouched: a profile's
+  address is cached as its own entry and falls back to the shell offline.
+- No way to delete a profile from the app: clear the site's data, or leave it.
+Checked in the preview: a visit created in `?perfil=t1` is not in
+`?perfil=T2` (read as `t2`) nor in the plain address, and is still in `t1` on
+coming back; `?perfil=a-b!` is the plain app; the plain app's keys and
+database are the usual ones. **Not checked:** signing in to Google from a
+profile, three tabs syncing against a real account, an installed app.
+
 **Two people, one visit (version `nou · 2026-11-21 · 3`).** A company on one
 account puts two technicians in the same visit, and every merge kept "the
 later copy of the WHOLE visit": what the other one wrote in between was

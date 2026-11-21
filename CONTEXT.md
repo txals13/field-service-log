@@ -5430,6 +5430,60 @@ tool signing and checking with a throwaway key. Checker baseline still 59.
 **Not checked:** a licence signed with the real key, two devices on one real
 Google account, a phone, the 26 interface languages that are not ca/es/en.
 
+**The company's settings, on Drive (version `nou · 2026-11-21 · 2`).** The
+first item of "not built" above, done when the user said to go on. What was
+set up by hand on every device is set once by the administrator and handed
+to all of them: **the Gemini key, the timesheet's default columns and the
+company's empty expense sheet.**
+
+- **One JSON file** in the app's root folder on Drive, beside the history
+  file: `field_service_log_empresa.json` (`…_nou.json` while `nou/` keeps its
+  data apart; `CFG_FILE`). `{v:1, at, by, gem, tsCols:[…], tpl:{name,b64}}`.
+  One Google account per company is what lets every device see it
+  (`drive.file`: the app made it, under that account).
+- **The Menú row "Configuració de l'empresa"** (`#btnCfg`, card "Aplicació").
+  For the administrator and the owner it **publishes what that device
+  holds**, after a confirm that lists the three things (`cfgBuild`,
+  `cfgList`, `cfgPush`); it reads the file first, so a second administrator
+  device has the current one before it replaces it. For a technician it
+  reads the file again and says what it holds. It needs the Google session.
+- **Every device reads it with the history** (`cfgPull`, called at the end of
+  `histSync`, at most every ten minutes) and applies it (`cfgApply`) when the
+  file's `at` is not the one applied last (`…cfg` remembers `{at, by,
+  gem:bool, tsCols, tpl:name}` — no secret). So a setting the administrator
+  changes locally stays until the next publish, and a publish reaches the
+  administrator's other devices like anybody's. Two administrators
+  publishing: the last wins. A file with no key or no sheet does not remove
+  the device's own.
+- **On a technician's device what came from the company cannot be changed
+  there:** the "Clau de Gemini" row goes (`roleApply`), the expense sheet's
+  note loses "Canvia'l / Treu-lo" (`exTplLabel`), and the timesheet's default
+  columns are no longer rewritten by the last sheet made (`tsColSaveDef`
+  returns; `tsColWrite` is the write itself). The chips still change the
+  sheet in hand. What the company did not set stays the device's own.
+- The sheet is applied without being opened to check it (that would load
+  JSZip on every device): the administrator's device checked it when it was
+  picked.
+- **The Gemini key is a secret written in a file.** The company's own key, in
+  the company's own Drive, read by this app under their account — and every
+  technician already holds that account's password. Said to the user. With
+  the Worker (`WK_URL`) no key is needed and it should be left out.
+
+Checked in the preview against a stand-in for Drive (a `fetch` stub answering
+for the one file, in a temporary copy of the page that exposed the app's
+scope — deleted afterwards): the first publish creates the file, the second
+replaces it; a device with nothing set up and a technician licence receives
+the key, the columns and the sheet byte for byte, loses the key row and the
+sheet's buttons, and keeps the company's columns after `tsColSaveDef`; the
+same file read again does not undo a local change; an unforced read inside
+ten minutes makes no request; no file and no session each say so. The
+checker's baseline is **60** (was 59: `modifiedTime desc` is a Drive
+parameter, not interface text). **Not checked:** real Drive, two real devices, the real
+expense sheet travelling through it, a phone.
+
+Still not built: two people writing in the same visit at once; every device
+downloading every visit; one account's storage for everybody's photos.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

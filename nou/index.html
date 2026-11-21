@@ -1606,6 +1606,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
         <div class="nv-msec">Aplicació</div>
         <div class="nm-card">
         <button id="btnLic" class="nm-row" title="La llicència d'ús de l'aplicació: es desa només en aquest aparell i es comprova sense cobertura"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span><span class="nm-tx"><b>Llic&egrave;ncia</b><small>Es comprova sense cobertura</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+        <button id="btnCfg" class="nm-row" title="La clau de Gemini, les columnes del full d'hores i el full de despeses de l'empresa, desats a Drive per a tots els aparells"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V5a2 2 0 012-2h8a2 2 0 012 2v16M16 10h2a2 2 0 012 2v9M3 21h18M8 8h4M8 12h4M8 16h4"/></svg></span><span class="nm-tx"><b>Configuració de l'empresa</b><small id="nmCfgVal"></small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
         <button id="btnGemKey" class="nm-row" title="La clau de Gemini que fa servir el corrector i la traducció dels informes; es desa només en aquest navegador"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/></svg></span><span class="nm-tx"><b>Clau de Gemini</b><small>Corrector i traducció dels informes</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
         <button id="btnViewAs" class="nm-row" style="display:none" title="Canvia entre propietari, administrador i tècnic per veure l'app com la veu cadascú"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="nm-tx"><b>Veure com a</b><small>Per provar què veu cada rol</small></span><span class="nm-go"><span id="nmViewVal"></span><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
         <button id="btnHelp" class="nm-row" title="Com fer servir l'aplicació"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 113.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg></span><span class="nm-tx"><b>Manual d'&uacute;s</b><small>Com fer servir l'aplicació</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
@@ -8739,7 +8740,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-21 · 1";
+var APP_VERSION="nou · 2026-11-21 · 2";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -12647,6 +12648,9 @@ function roleApply(){
   b=$$("btnViewAs");if(b)b.style.display=licRoleReal()==="own"?"":"none";
   b=$$("nmViewVal");if(b)b.textContent=uiT(LIC_ROLES[licRole()]);
   b=$$("nmMeVal");if(b)b.textContent=meName()||uiT(tec?"Sense nom: es veuen totes les visites":"Sense nom");
+  // what the company has set is not a technician's to change (see cfgPull)
+  b=$$("nmCfgVal");if(b)b.textContent=cfgWords();
+  b=$$("btnGemKey");if(b)b.style.display=tec&&cfgHas("gem")?"none":"";
 }
 $$("btnMe").addEventListener("click",function(){
   var n=prompt(uiT("El teu nom, tal com l'escrius a les visites:"),meName());
@@ -14674,7 +14678,7 @@ async function histSync(){
     }
     if(!histFilled())histBackfill(false);
   }catch(e){}
-  finally{histBusy=false}
+  finally{histBusy=false;try{cfgPull().catch(function(){})}catch(e){}}
 }
 // ── Reading session.json out of a ZIP without downloading the ZIP ────────────
 // The end of the file holds the directory: where each member starts and how
@@ -15592,7 +15596,10 @@ function tsColDef(){
   var keep=TSCOL_ALL.filter(function(k){return k==="date"||v.indexOf(k)>=0||(k==="wk"&&old)});
   return keep.length?keep:TSCOL_ALL.slice();
 }
-function tsColSaveDef(cols){try{localStorage.setItem(LS_TSCOLS,JSON.stringify(cols));localStorage.setItem(LS_TSCOLS+"v","2")}catch(e){}}
+function tsColWrite(cols){try{localStorage.setItem(LS_TSCOLS,JSON.stringify(cols));localStorage.setItem(LS_TSCOLS+"v","2")}catch(e){}}
+// On a technician's device the company's columns stay the default: the chips
+// still change the sheet in hand, but the next one starts from the company's.
+function tsColSaveDef(cols){if(isTec()&&cfgHas("tsCols"))return;tsColWrite(cols)}
 function tsColMeta(k){return TSCOLS.filter(function(c){return c.k===k})[0]}
 // One row's cells, in the chosen order.
 function tsCell(r,k,t){
@@ -19036,8 +19043,9 @@ async function exTplGet(){
 async function exTplLabel(){
   var el=$$("exTplNote");if(!el)return;
   var t=await exTplGet();
+  var lock=isTec()&&cfgHas("tpl");
   el.innerHTML=t?esc(uiT("Full buit de l'empresa:"))+" <b>"+esc(t.name||"")+"</b> "
-      +"<button class=\"btn-xs\" data-tpl=\"pick\">"+esc(uiT("Canvia'l"))+"</button> <button class=\"btn-xs\" data-tpl=\"drop\">"+esc(uiT("Treu-lo"))+"</button>"
+      +(lock?"":"<button class=\"btn-xs\" data-tpl=\"pick\">"+esc(uiT("Canvia'l"))+"</button> <button class=\"btn-xs\" data-tpl=\"drop\">"+esc(uiT("Treu-lo"))+"</button>")
     :"";
 }
 function xlSheetPath(wbXml,relsXml){
@@ -21404,6 +21412,175 @@ function nvDeskRender(a,isOpen){
     "Proposta":"Suggested","Sense hores de rellotge":"No clock times","Cap dia seleccionat":"No days selected",
     "Pausa":"Break","viatge":"travel","treball":"work","En aquest aparell":"On this device",
     "Un full porta {m} dies. Amb {n}, el PDF en tindrà {k}, cadascun amb el seu total i amb les mateixes signatures.":"A sheet holds {m} days. With {n}, the PDF will have {k}, each with its own total and the same signatures."};
+  Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
+  Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
+})();
+// ── THE COMPANY'S SETTINGS, ON DRIVE (2026-11-21) ───────────────────────────
+// What was set up by hand on every device, set once by the administrator and
+// handed to all of them: the Gemini key, the timesheet's default columns and
+// the company's empty expense sheet. It is the second half of the roles (see
+// ROLES): until this existed nothing could be hidden from a technician but
+// the archive, because their device still had to be set up like anybody's.
+//
+// One JSON file in the app's root folder on Drive, beside the history file.
+// The company works on ONE Google account, so every device signed in to it
+// sees the file (drive.file: the app made it, under that account).
+//   {v:1, at, by, gem, tsCols:[…], tpl:{name,b64}}
+// The administrator's row in the menu PUBLISHES what that device holds, after
+// a confirm that lists it. Every device reads the file when it reads the
+// history (at most every ten minutes) and applies it when its `at` is not the
+// one it applied last — so a setting the administrator changes locally stays
+// until the next one is published, and a publish reaches the administrator's
+// other devices like anybody's. Two administrators publishing: the last wins.
+//
+// On a technician's device, what came from the company cannot be changed
+// there: the Gemini key row goes, the expense sheet loses "Canvia'l / Treu-lo"
+// and the timesheet's default columns are no longer overwritten by the last
+// sheet made. What the company did not set stays the device's own.
+//
+// The Gemini key is a secret written in a file. It is the company's own key
+// in the company's own Drive, read only by this app under their account —
+// and every technician already has that account's password. With the Worker
+// (WK_URL) the key is not needed at all and should be left out.
+var CFG_FILE=SEPARAT?"field_service_log_empresa_nou.json":"field_service_log_empresa.json",LS_CFG=LSP+"cfg";
+var cfgLast=0,cfgBusy=false;
+// What this device applied last: {at, by, gem:bool, tsCols, tpl:name}. No
+// secret in it — the key itself lives where it always did.
+function cfgLocal(){try{return JSON.parse(localStorage.getItem(LS_CFG)||"null")}catch(e){return null}}
+function cfgHas(k){var c=cfgLocal();return !!(c&&c[k]&&(!Array.isArray(c[k])||c[k].length))}
+function cfgRemember(d){
+  try{localStorage.setItem(LS_CFG,JSON.stringify({at:d.at||"",by:d.by||"",gem:!!d.gem,
+    tsCols:Array.isArray(d.tsCols)?d.tsCols:null,tpl:d.tpl?(d.tpl.name||"xlsx"):""}))}catch(e){}
+}
+function cfgB64(buf){
+  var a=new Uint8Array(buf),o="",i;
+  for(i=0;i<a.length;i+=0x8000)o+=String.fromCharCode.apply(null,a.subarray(i,i+0x8000));
+  return btoa(o);
+}
+function cfgUnB64(t){var b=atob(t),a=new Uint8Array(b.length),i;for(i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a.buffer}
+function cfgWords(){
+  var c=cfgLocal();
+  if(c&&c.at)return uiT("Desada el {d}").replace("{d}",dmy(c.at))+(c.by?" \u00b7 "+c.by:"");
+  return uiT(isTec()?"L'administrador encara no n'ha desat cap":"Desa-la a Drive per a tots els aparells");
+}
+// The three things, in words. `d` is either the file's content or what
+// cfgLocal remembers of it.
+function cfgList(d){
+  d=d||{};
+  var tn=d.tpl?(typeof d.tpl==="string"?d.tpl:(d.tpl.name||"xlsx")):"";
+  var n=Array.isArray(d.tsCols)?d.tsCols.length:0;
+  return "\u00b7 "+uiT("Clau de Gemini")+": "+uiT(d.gem?"sí":"no")
+    +"\n\u00b7 "+uiT("Columnes del full d'hores")+": "+(n?pl(n,"columna","columnes"):uiT("les de cada aparell"))
+    +"\n\u00b7 "+uiT("Full de despeses de l'empresa")+": "+(tn||uiT("no n'hi ha"));
+}
+async function cfgBuild(){
+  var t=await exTplGet(),d={v:1,at:now(),by:meName(),gem:gemKey(),tsCols:tsColDef()};
+  if(t&&t.buf)d.tpl={name:t.name||"",b64:cfgB64(t.buf)};
+  return d;
+}
+async function cfgFiles(token){
+  var rootId=await getRootId(token);
+  var q="name="+JSON.stringify(CFG_FILE)+" and trashed=false"+(rootId?" and "+JSON.stringify(rootId)+" in parents":"");
+  var lr=await fetch("https://www.googleapis.com/drive/v3/files?q="+encodeURIComponent(q)+"&orderBy="+encodeURIComponent("modifiedTime desc")+"&fields=files(id)&pageSize=10",{headers:{Authorization:"Bearer "+token}});
+  if(!lr.ok)return null;
+  return{rootId:rootId,files:(await lr.json()).files||[]};
+}
+async function cfgApply(d){
+  if(d.gem){try{localStorage.setItem(LS_GEM,d.gem)}catch(e){}}
+  if(Array.isArray(d.tsCols)&&d.tsCols.length)tsColWrite(TSCOL_ALL.filter(function(k){return k==="date"||d.tsCols.indexOf(k)>=0}));
+  if(d.tpl&&d.tpl.b64){
+    // not opened to check it: the administrator's device did when it was picked
+    try{exTplMem={name:d.tpl.name||"",at:d.at||now(),buf:cfgUnB64(d.tpl.b64)};if(idb)await idbSet(idb,"extpl",exTplMem)}catch(e){}
+  }
+  cfgRemember(d);
+  try{roleApply()}catch(e){}
+  try{exTplLabel()}catch(e){}
+}
+// The file's content (applied here if it was news), null when there is no
+// file, false when it could not be read or it was not the moment to ask.
+async function cfgPull(force){
+  if(!isLoggedIn||navigator.onLine===false)return false;
+  if(!force&&Date.now()-cfgLast<600000)return false;
+  var token=await ensureToken();if(!token)return false;
+  cfgLast=Date.now();
+  var f=await cfgFiles(token);if(!f)return false;
+  if(!f.files.length)return null;
+  var rr=await fetch("https://www.googleapis.com/drive/v3/files/"+f.files[0].id+"?alt=media",{headers:{Authorization:"Bearer "+token}});
+  if(!rr.ok)return false;
+  var d=await rr.json();if(!d||!d.at)return false;
+  var c=cfgLocal();
+  if(!c||c.at!==d.at)await cfgApply(d);
+  return d;
+}
+async function cfgPush(d){
+  var token=await ensureToken();if(!token)return false;
+  var f=await cfgFiles(token);if(!f)return false;
+  var body=JSON.stringify(d),ok=false;
+  if(f.files.length){
+    var pr=await fetch("https://www.googleapis.com/upload/drive/v3/files/"+f.files[0].id+"?uploadType=media",
+      {method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:body});
+    ok=pr.ok;
+    for(var j=1;ok&&j<f.files.length;j++){
+      try{await fetch("https://www.googleapis.com/drive/v3/files/"+f.files[j].id,{method:"PATCH",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({trashed:true})})}catch(e){}
+    }
+  }else{
+    var meta=JSON.stringify({name:CFG_FILE,mimeType:"application/json",parents:f.rootId?[f.rootId]:[]});
+    var bnd="fsl_c_"+Date.now();
+    var mp="--"+bnd+"\r\nContent-Type: application/json\r\n\r\n"+meta+"\r\n--"+bnd+"\r\nContent-Type: application/json\r\n\r\n"+body+"\r\n--"+bnd+"--";
+    var cr=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"multipart/related; boundary="+bnd},body:mp});
+    ok=cr.ok;
+  }
+  if(ok){cfgRemember(d);cfgLast=Date.now()}
+  return ok;
+}
+$$("btnCfg").addEventListener("click",async function(){
+  if(cfgBusy)return;
+  if(!isLoggedIn){alert(uiT("Primer inicia la sessió amb Google: la configuració de l'empresa es desa a Drive."));return}
+  cfgBusy=true;
+  try{
+    var r=false;try{r=await cfgPull(true)}catch(e){r=false}
+    if(isTec()){
+      alert(r?uiT("Configuració de l'empresa, del {d}:").replace("{d}",dmy(r.at))+"\n\n"+cfgList(r)
+        :r===null?uiT("L'administrador encara no ha desat cap configuració a Drive.")
+        :uiT("No s'ha pogut llegir la configuració de Drive. Torna-ho a provar amb connexió."));
+      return;
+    }
+    var d=await cfgBuild();
+    if(!confirm(uiT("Es desarà a Drive, per a tots els aparells de l'empresa, el que té aquest aparell:")+"\n\n"+cfgList(d)
+      +"\n\n"+uiT("Cada aparell ho rebrà quan sincronitzi. El que hi hagi desat ara se substitueix.")))return;
+    var ok=false;try{ok=await cfgPush(d)}catch(e){ok=false}
+    alert(uiT(ok?"Configuració de l'empresa desada a Drive.":"No s'ha pogut desar la configuració a Drive. Torna-ho a provar amb connexió."));
+  }finally{cfgBusy=false;try{roleApply()}catch(e){}}
+});
+(function(){
+  var es={"Configuració de l'empresa":"Configuración de la empresa",
+    "La clau de Gemini, les columnes del full d'hores i el full de despeses de l'empresa, desats a Drive per a tots els aparells":"La clave de Gemini, las columnas de la hoja de horas y la hoja de gastos de la empresa, guardadas en Drive para todos los aparatos",
+    "Desada el {d}":"Guardada el {d}","L'administrador encara no n'ha desat cap":"El administrador aún no ha guardado ninguna",
+    "Desa-la a Drive per a tots els aparells":"Guárdala en Drive para todos los aparatos",
+    "Columnes del full d'hores":"Columnas de la hoja de horas","columna":"columna","columnes":"columnas","les de cada aparell":"las de cada aparato",
+    "Full de despeses de l'empresa":"Hoja de gastos de la empresa","no n'hi ha":"no hay",
+    "Primer inicia la sessió amb Google: la configuració de l'empresa es desa a Drive.":"Primero inicia sesión con Google: la configuración de la empresa se guarda en Drive.",
+    "Configuració de l'empresa, del {d}:":"Configuración de la empresa, del {d}:",
+    "L'administrador encara no ha desat cap configuració a Drive.":"El administrador aún no ha guardado ninguna configuración en Drive.",
+    "No s'ha pogut llegir la configuració de Drive. Torna-ho a provar amb connexió.":"No se ha podido leer la configuración de Drive. Vuelve a probarlo con conexión.",
+    "Es desarà a Drive, per a tots els aparells de l'empresa, el que té aquest aparell:":"Se guardará en Drive, para todos los aparatos de la empresa, lo que tiene este aparato:",
+    "Cada aparell ho rebrà quan sincronitzi. El que hi hagi desat ara se substitueix.":"Cada aparato lo recibirá cuando sincronice. Lo que haya guardado ahora se sustituye.",
+    "Configuració de l'empresa desada a Drive.":"Configuración de la empresa guardada en Drive.",
+    "No s'ha pogut desar la configuració a Drive. Torna-ho a provar amb connexió.":"No se ha podido guardar la configuración en Drive. Vuelve a probarlo con conexión."};
+  var en={"Configuració de l'empresa":"Company settings",
+    "La clau de Gemini, les columnes del full d'hores i el full de despeses de l'empresa, desats a Drive per a tots els aparells":"The Gemini key, the timesheet's columns and the company's expense sheet, kept on Drive for every device",
+    "Desada el {d}":"Saved on {d}","L'administrador encara no n'ha desat cap":"The administrator has not saved any yet",
+    "Desa-la a Drive per a tots els aparells":"Save them to Drive for every device",
+    "Columnes del full d'hores":"Timesheet columns","columna":"column","columnes":"columns","les de cada aparell":"each device's own",
+    "Full de despeses de l'empresa":"Company expense sheet","no n'hi ha":"none",
+    "Primer inicia la sessió amb Google: la configuració de l'empresa es desa a Drive.":"Sign in with Google first: the company settings are kept on Drive.",
+    "Configuració de l'empresa, del {d}:":"Company settings, from {d}:",
+    "L'administrador encara no ha desat cap configuració a Drive.":"The administrator has not saved any settings to Drive yet.",
+    "No s'ha pogut llegir la configuració de Drive. Torna-ho a provar amb connexió.":"The settings could not be read from Drive. Try again with a connection.",
+    "Es desarà a Drive, per a tots els aparells de l'empresa, el que té aquest aparell:":"What this device holds will be saved to Drive, for every device of the company:",
+    "Cada aparell ho rebrà quan sincronitzi. El que hi hagi desat ara se substitueix.":"Each device will get it when it syncs. What is saved there now is replaced.",
+    "Configuració de l'empresa desada a Drive.":"Company settings saved to Drive.",
+    "No s'ha pogut desar la configuració a Drive. Torna-ho a provar amb connexió.":"The settings could not be saved to Drive. Try again with a connection."};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();

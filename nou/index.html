@@ -3762,10 +3762,12 @@ async function syncAllToDrive(){
       total.uploaded+=res.uploaded;total.missingVideos+=res.missingVideos;total.moved+=res.moved||0;
       total.copied=(total.copied||0)+(res.copied||0);
     }
+    // just after a move to another account: the rest of the old Drive too
+    var rest=oldAcct?await acctRest(token):null;
     saveLocal();
-    if(total.uploaded>0||total.copied>0){isDirty=true;await saveToDrive()}
+    if(total.uploaded>0||total.copied>0||(rest&&(rest.copied||rest.remapped))){isDirty=true;await saveToDrive()}
     renderAll();
-    alert(uiT("Sincronització completa.\n")+syncSummary(total,sessions.length));
+    alert(uiT("Sincronització completa.\n")+syncSummary(total,sessions.length)+acctRestWords(rest));
   }catch(e){alert(uiT("La sincronització ha fallat: ")+((e&&e.message)||e))}
   finally{var b2=$$("btnFullSync");if(b2){b2.disabled=false;b2.innerHTML="&#9729; Sincronitza"}}
 }
@@ -8921,7 +8923,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-21 · 8";
+var APP_VERSION="nou · 2026-11-21 · 9";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -21873,9 +21875,8 @@ $$("btnCfg").addEventListener("click",async function(){
 // the worst a failed move can leave is a new account with less in it than the
 // old one, and the old one whole. A second run ("Sincronitza", within the
 // hour for the videos) picks up what the first did not finish.
-// NOT CARRIED: reports already issued, project ZIPs, the spare-parts manuals
-// and the expense tickets that are only on the old Drive. They stay where
-// they are; the message at the end says so.
+// Everything else the app keeps on Drive — reports, ZIPs, manuals, tickets —
+// follows in a second pass: see THE REST OF THE OLD DRIVE, below.
 var oldAcct=null,acctBusy=false;
 function acctNorm(e){return String(e||"").trim().toLowerCase()}
 async function acctEmail(token){
@@ -21896,14 +21897,133 @@ function moveCheck(){
   bar.style.display=to?"flex":"none";
   if(to)$$("moveMsg").textContent="\u26a0 "+uiT("L'empresa ha passat al compte {a}. Aquest aparell encara desa a {b}.").replace("{a}",to).replace("{b}",driveEmail);
 }
-async function acctCopy(token,img,parentId){
+async function acctCopy(token,img,parentId,mime){
   if(!oldAcct||!oldAcct.token||!parentId||!img||!img.driveId)return null;
   try{
     var r=await fetch("https://www.googleapis.com/drive/v3/files/"+img.driveId+"?alt=media",{headers:{Authorization:"Bearer "+oldAcct.token}});
     if(!r.ok)return null;
     var blob=await r.blob();
-    return await driveUploadBlob(token,blob,img.name||("media_"+uid()),blob.type||"application/octet-stream",parentId);
+    return await driveUploadBlob(token,blob,img.name||("media_"+uid()),mime||blob.type||"application/octet-stream",parentId);
   }catch(e){return null}
+}
+// ── THE REST OF THE OLD DRIVE (· 9; he said yes to "the reports, ZIPs, manuals
+// and tickets too") ──
+// acctCarry moves what a visit's ENTRIES point at. Everything else the app
+// ever wrote sits in its folder as plain files: the reports of every revision,
+// the company's expense sheets and the tickets' pictures in each visit's
+// folder, the spare-parts manuals (a PDF and a catalogue each, listed in
+// manuals_index.json), the project ZIPs of the archive. So the whole tree of
+// the app's folder is walked in the old account (drive.file shows the app
+// exactly its own files) and rebuilt in the new one:
+//   · a folder is matched by NAME under its parent, and made if it is not
+//     there — except a visit's folder, which is matched to that visit's new
+//     folder whatever either is called (`oldAcct.folders`, taken before the
+//     move, since the first sync in the new account forgets the old ids);
+//   · a file whose name is already there is taken as the same file (the
+//     photos and videos acctCarry has just put there; anything a first run or
+//     another device copied) — which is what makes a second run cheap and
+//     safe; otherwise it is read with the old token and written with the new;
+//   · the three files the app keeps itself (data, history, settings) are
+//     left to the code that owns them, and Google's own document types, which
+//     cannot be read as bytes, are skipped and counted.
+// An archive folder kept OUTSIDE the app's folder (pointed at by hand, per
+// device) is copied into "Arxiu" in the new one. The ZIPs keep the property
+// that says which visit they hold.
+// Every old id → new id found on the way goes into one map, and at the end
+// every id in the visits, the history and the manuals' index is rewritten
+// through it in one pass (acctRemap): expense pictures, manual references,
+// archived visits' ZIPs — whatever holds a Drive id, known here or not.
+// Still true: the old account is only read, and the old token lasts an hour.
+// What did not get across is counted, and "Sincronitza" tries again while the
+// token lives.
+var ACCT_SKIP={};
+async function acctKids(tok,folderId){
+  var q="trashed=false and "+JSON.stringify(folderId)+" in parents",out=[],pt=null;
+  do{
+    var r=await fetch("https://www.googleapis.com/drive/v3/files?q="+encodeURIComponent(q)
+      +"&fields="+encodeURIComponent("nextPageToken,files(id,name,mimeType,appProperties)")+"&pageSize=1000"
+      +(pt?"&pageToken="+encodeURIComponent(pt):""),{headers:{Authorization:"Bearer "+tok}});
+    if(!r.ok)throw new Error("Drive "+r.status);
+    var d=await r.json();
+    out=out.concat(d.files||[]);pt=d.nextPageToken||null;
+  }while(pt);
+  return out;
+}
+async function acctTree(token,oldId,newId,map,st,top){
+  var kids=await acctKids(oldAcct.token,oldId),have=await acctKids(token,newId),byName={};
+  have.forEach(function(f){byName[(f.mimeType===FOLDER_MIME?"d:":"f:")+f.name]=f.id});
+  for(var i=0;i<kids.length;i++){
+    var c=kids[i];
+    if(c.mimeType===FOLDER_MIME){
+      var to=map[c.id]||byName["d:"+c.name]||await driveCreateFolder(token,c.name,newId);
+      if(!to){st.failed++;continue}
+      map[c.id]=to;byName["d:"+c.name]=to;
+      try{await acctTree(token,c.id,to,map,st,false)}catch(e){st.failed++}
+      continue;
+    }
+    if(top&&ACCT_SKIP[c.name])continue;
+    if(byName["f:"+c.name]){map[c.id]=byName["f:"+c.name];st.had++;continue}
+    if(/^application\/vnd\.google-apps\./.test(c.mimeType||"")){st.skipped++;continue}
+    setSyncSt("loading",uiT("Copiant al compte nou")+": "+c.name);
+    var cp=await acctCopy(token,{driveId:c.id,name:c.name},newId,c.mimeType);
+    if(!cp){st.failed++;continue}
+    map[c.id]=cp.id;byName["f:"+c.name]=cp.id;st.copied++;
+    if(c.appProperties){try{await drivePatch(token,cp.id,{appProperties:c.appProperties})}catch(e){}}
+  }
+}
+// Every Drive id in a text, through the map. An id is a long run of letters,
+// digits, - and _; a run that is not in the map (a word, a slice of a
+// picture's base64) is left as it is.
+function acctRe(txt,map){return String(txt).replace(/[A-Za-z0-9_-]{20,}/g,function(k){return map[k]||k})}
+function acctRemap(map){
+  var n=0;
+  function fix(o){var t=JSON.stringify(o),t2=acctRe(t,map);if(t2===t)return o;n++;return JSON.parse(t2)}
+  sessions=sessions.map(fix);
+  try{hist=fix(hist)}catch(e){}
+  var a=arxDriveGet();
+  if(a&&a.id&&map[a.id])arxDriveSet({id:map[a.id],name:a.name});
+  return n;
+}
+async function acctRest(token){
+  var st={copied:0,had:0,failed:0,skipped:0,remapped:0,ok:false};
+  if(!oldAcct||!oldAcct.token||!token)return st;
+  try{
+    var oldRoot=oldAcct.root||await driveFind(oldAcct.token,ROOT_NAME,null,FOLDER_MIME);
+    var newRoot=await getRootId(token);
+    if(!oldRoot||!newRoot)return st;
+    var map=oldAcct.map||(oldAcct.map={}),of=oldAcct.folders||{};
+    sessions.forEach(function(x){if(x.folderId&&of[x.id]&&of[x.id]!==x.folderId)map[of[x.id]]=x.folderId});
+    ACCT_SKIP={};ACCT_SKIP[DATA_FILE]=1;ACCT_SKIP[HIST_FILE]=1;ACCT_SKIP[CFG_FILE]=1;ACCT_SKIP["manuals_index.json"]=1;
+    await acctTree(token,oldRoot,newRoot,map,st,true);
+    // the archive folder, when it is not inside the app's own
+    var a=oldAcct.arx;
+    if(a&&a.id&&!map[a.id]){
+      var info=await driveFileInfo(oldAcct.token,a.id);
+      if(info&&!info.trashed){
+        var na=await driveFolder(token,"Arxiu",newRoot);
+        if(na){map[a.id]=na;await acctTree(token,a.id,na,map,st,false)}
+      }
+    }
+    // the manuals' list: the same list, pointing at the copies
+    if(!await driveFind(token,"manuals_index.json",newRoot,"application/json")){
+      var oi=await driveFind(oldAcct.token,"manuals_index.json",oldRoot,"application/json");
+      if(oi){
+        var r=await fetch("https://www.googleapis.com/drive/v3/files/"+oi+"?alt=media",{headers:{Authorization:"Bearer "+oldAcct.token}});
+        if(r.ok)await uploadTextFile(token,"manuals_index.json",acctRe(await r.text(),map),"application/json",newRoot);
+      }
+    }
+    st.remapped=acctRemap(map);
+    if(st.remapped){await saveLocal();try{await histSaveLocal()}catch(e){}histSchedule()}
+    try{await loadManualsIndex()}catch(e){}
+    st.ok=true;
+  }catch(e){st.failed++}
+  return st;
+}
+function acctRestWords(st){
+  if(!st)return"";
+  return "\n"+uiT("{n} fitxer(s) més copiat(s) del compte anterior: informes, ZIP, manuals i tiquets.").replace("{n}",st.copied)
+    +(st.skipped?"\n"+uiT("{n} document(s) de Google no es poden copiar i s'han quedat al compte anterior.").replace("{n}",st.skipped):"")
+    +(st.failed||!st.ok?"\n"+uiT("NO s'ha pogut copiar tot (fitxers o carpetes sense copiar: {n}). Prem «Sincronitza» abans d'una hora per tornar-ho a provar.").replace("{n}",st.failed):"");
 }
 // Every visit's folder and attachments, in the account this device is in now.
 async function acctCarry(){
@@ -21923,7 +22043,8 @@ async function acctCarry(){
 async function acctSwitch(to){
   if(acctBusy)return false;
   acctBusy=true;
-  var old={token:accessToken,exp:tokenExp,email:driveEmail,file:driveFileId,root:rootFolderId};
+  var old={token:accessToken,exp:tokenExp,email:driveEmail,file:driveFileId,root:rootFolderId,arx:arxDriveGet(),folders:{}};
+  sessions.forEach(function(x){if(x.folderId)old.folders[x.id]=x.folderId});   // the first sync over there forgets them
   function back(){accessToken=old.token;tokenExp=old.exp;driveFileId=old.file;rootFolderId=old.root;isLoggedIn=true;saveTok()}
   try{
     isLoggedIn=false;                     // no background sync while the token is being changed
@@ -21943,20 +22064,22 @@ async function acctSwitch(to){
     saveTok();
     await finishLogin();
     var res=await acctCarry();
+    var rest=await acctRest(await ensureToken());
+    if(rest.copied||rest.remapped){isDirty=true;await saveToDrive()}
     if(!isTec()){try{var d=await cfgBuild();delete d.moveTo;await cfgPush(d)}catch(e){}}
     try{moveCheck()}catch(e){}
     try{roleApply()}catch(e){}
     setSyncSt("ok","");renderAll();
     alert(uiT("Aquest aparell ja treballa amb el compte {a}.").replace("{a}",em)
-      +(res?"\n\n"+syncSummary(res,sessions.length):"")
-      +"\n\n"+uiT("Els informes ja emesos, els ZIP, els manuals de recanvis i els tiquets de despeses que només eren a la Drive anterior no s'han mogut: segueixen al compte {b}, que no s'ha tocat.").replace("{b}",old.email||"?"));
+      +(res?"\n\n"+syncSummary(res,sessions.length):"")+acctRestWords(rest)
+      +"\n\n"+uiT("El compte {b} no s'ha tocat: tot hi segueix.").replace("{b}",old.email||"?"));
     return true;
   }finally{acctBusy=false;try{moveCheck()}catch(e){}}   // not gone after all: the bar says so
 }
 $$("btnMove").addEventListener("click",async function(){
   var to=movePending();if(!to||acctBusy)return;
   if(!confirm(uiT("S'obrirà la finestra de Google: entra-hi amb {a}.").replace("{a}",to)+"\n\n"
-    +uiT("Les visites d'aquest aparell, amb les fotos, les notes de veu i els vídeos, es copiaran al compte nou. El compte d'ara no es toca.")))return;
+    +uiT("Les visites d'aquest aparell, amb tot el que tenen a Drive, es copiaran al compte nou. El compte d'ara no es toca.")))return;
   await acctSwitch(to);
 });
 $$("btnCfgMove").addEventListener("click",async function(){
@@ -21984,7 +22107,7 @@ $$("btnCfgMove").addEventListener("click",async function(){
   if(!confirm(uiT("L'empresa passarà a desar al compte {a}.").replace("{a}",to)+"\n\n"
     +"\u00b7 "+uiT("Tots els aparells rebran l'avís i hauran d'entrar amb el compte nou.")+"\n"
     +"\u00b7 "+uiT("Les visites, amb les fotos, les notes de veu i els vídeos, es copien al compte nou.")+"\n"
-    +"\u00b7 "+uiT("Els informes ja emesos, els ZIP, els manuals de recanvis i els tiquets de despeses es queden al compte d'ara.")+"\n"
+    +"\u00b7 "+uiT("Els informes ja emesos, els ZIP, els manuals de recanvis i els tiquets de despeses també.")+"\n"
     +"\u00b7 "+uiT("El compte d'ara no s'esborra ni es toca.")+"\n\n"
     +uiT("S'obrirà la finestra de Google: entra-hi amb {a}.").replace("{a}",to)))return;
   if(acctNorm(to)!==acctNorm(pend)){
@@ -22007,9 +22130,12 @@ $$("btnCfgMove").addEventListener("click",async function(){
     "Copiant al compte nou":"Copiando a la cuenta nueva",
     "Has entrat amb {a}, i el compte nou de l'empresa és {b}. No s'ha canviat res.":"Has entrado con {a}, y la cuenta nueva de la empresa es {b}. No se ha cambiado nada.",
     "Aquest aparell ja treballa amb el compte {a}.":"Este aparato ya trabaja con la cuenta {a}.",
-    "Els informes ja emesos, els ZIP, els manuals de recanvis i els tiquets de despeses que només eren a la Drive anterior no s'han mogut: segueixen al compte {b}, que no s'ha tocat.":"Los informes ya emitidos, los ZIP, los manuales de recambios y los tiques de gastos que solo estaban en el Drive anterior no se han movido: siguen en la cuenta {b}, que no se ha tocado.",
+    "El compte {b} no s'ha tocat: tot hi segueix.":"La cuenta {b} no se ha tocado: todo sigue ahí.",
+    "{n} fitxer(s) més copiat(s) del compte anterior: informes, ZIP, manuals i tiquets.":"{n} archivo(s) más copiado(s) de la cuenta anterior: informes, ZIP, manuales y tiques.",
+    "{n} document(s) de Google no es poden copiar i s'han quedat al compte anterior.":"{n} documento(s) de Google no se pueden copiar y se han quedado en la cuenta anterior.",
+    "NO s'ha pogut copiar tot (fitxers o carpetes sense copiar: {n}). Prem «Sincronitza» abans d'una hora per tornar-ho a provar.":"NO se ha podido copiar todo (archivos o carpetas sin copiar: {n}). Pulsa «Sincroniza» antes de una hora para volver a probarlo.",
     "S'obrirà la finestra de Google: entra-hi amb {a}.":"Se abrirá la ventana de Google: entra con {a}.",
-    "Les visites d'aquest aparell, amb les fotos, les notes de veu i els vídeos, es copiaran al compte nou. El compte d'ara no es toca.":"Las visitas de este aparato, con las fotos, las notas de voz y los vídeos, se copiarán a la cuenta nueva. La cuenta de ahora no se toca.",
+    "Les visites d'aquest aparell, amb tot el que tenen a Drive, es copiaran al compte nou. El compte d'ara no es toca.":"Las visitas de este aparato, con todo lo que tienen en Drive, se copiarán a la cuenta nueva. La cuenta de ahora no se toca.",
     "Adreça del compte de Google NOU de l'empresa:":"Dirección de la cuenta de Google NUEVA de la empresa:",
     "(Deixa-la en blanc per anul·lar el trasllat que hi ha en marxa.)":"(Déjala en blanco para anular el traslado que está en marcha.)",
     "Vols anul·lar el trasllat al compte {a}? Els aparells que ja hi hagin entrat s'hi queden.":"¿Quieres anular el traslado a la cuenta {a}? Los aparatos que ya hayan entrado se quedan en ella.",
@@ -22019,7 +22145,7 @@ $$("btnCfgMove").addEventListener("click",async function(){
     "L'empresa passarà a desar al compte {a}.":"La empresa pasará a guardar en la cuenta {a}.",
     "Tots els aparells rebran l'avís i hauran d'entrar amb el compte nou.":"Todos los aparatos recibirán el aviso y tendrán que entrar con la cuenta nueva.",
     "Les visites, amb les fotos, les notes de veu i els vídeos, es copien al compte nou.":"Las visitas, con las fotos, las notas de voz y los vídeos, se copian a la cuenta nueva.",
-    "Els informes ja emesos, els ZIP, els manuals de recanvis i els tiquets de despeses es queden al compte d'ara.":"Los informes ya emitidos, los ZIP, los manuales de recambios y los tiques de gastos se quedan en la cuenta de ahora.",
+    "Els informes ja emesos, els ZIP, els manuals de recanvis i els tiquets de despeses també.":"Los informes ya emitidos, los ZIP, los manuales de recambios y los tiques de gastos también.",
     "El compte d'ara no s'esborra ni es toca.":"La cuenta de ahora no se borra ni se toca."};
   var en={"Canvia de compte":"Switch account","Canvia el compte de Google":"Change the Google account","Passa l'empresa a un altre compte":"Move the company to another account",
     "Passa l'empresa a un altre compte de Google: cada aparell rep l'avís, i les visites amb les fotos i els vídeos es copien al compte nou":"Moves the company to another Google account: every device gets the notice, and the visits with their photos and videos are copied to the new account",
@@ -22029,9 +22155,12 @@ $$("btnCfgMove").addEventListener("click",async function(){
     "Copiant al compte nou":"Copying to the new account",
     "Has entrat amb {a}, i el compte nou de l'empresa és {b}. No s'ha canviat res.":"You signed in as {a}, and the company's new account is {b}. Nothing has been changed.",
     "Aquest aparell ja treballa amb el compte {a}.":"This device now works with the account {a}.",
-    "Els informes ja emesos, els ZIP, els manuals de recanvis i els tiquets de despeses que només eren a la Drive anterior no s'han mogut: segueixen al compte {b}, que no s'ha tocat.":"Reports already issued, ZIPs, spare-parts manuals and expense tickets that were only on the previous Drive were not moved: they are still in the account {b}, which was not touched.",
+    "El compte {b} no s'ha tocat: tot hi segueix.":"The account {b} was not touched: everything is still there.",
+    "{n} fitxer(s) més copiat(s) del compte anterior: informes, ZIP, manuals i tiquets.":"{n} more file(s) copied from the previous account: reports, ZIPs, manuals and tickets.",
+    "{n} document(s) de Google no es poden copiar i s'han quedat al compte anterior.":"{n} Google document(s) cannot be copied and stayed in the previous account.",
+    "NO s'ha pogut copiar tot (fitxers o carpetes sense copiar: {n}). Prem «Sincronitza» abans d'una hora per tornar-ho a provar.":"NOT everything could be copied (files or folders not copied: {n}). Press “Sync” within the hour to try again.",
     "S'obrirà la finestra de Google: entra-hi amb {a}.":"Google's window will open: sign in as {a}.",
-    "Les visites d'aquest aparell, amb les fotos, les notes de veu i els vídeos, es copiaran al compte nou. El compte d'ara no es toca.":"This device's visits, with their photos, voice notes and videos, will be copied to the new account. The current account is not touched.",
+    "Les visites d'aquest aparell, amb tot el que tenen a Drive, es copiaran al compte nou. El compte d'ara no es toca.":"This device's visits, with everything they have on Drive, will be copied to the new account. The current account is not touched.",
     "Adreça del compte de Google NOU de l'empresa:":"Address of the company's NEW Google account:",
     "(Deixa-la en blanc per anul·lar el trasllat que hi ha en marxa.)":"(Leave it blank to call off the move that is under way.)",
     "Vols anul·lar el trasllat al compte {a}? Els aparells que ja hi hagin entrat s'hi queden.":"Call off the move to the account {a}? Devices that have already signed in there stay there.",
@@ -22041,7 +22170,7 @@ $$("btnCfgMove").addEventListener("click",async function(){
     "L'empresa passarà a desar al compte {a}.":"The company will save to the account {a} from now on.",
     "Tots els aparells rebran l'avís i hauran d'entrar amb el compte nou.":"Every device will get the notice and will have to sign in with the new account.",
     "Les visites, amb les fotos, les notes de veu i els vídeos, es copien al compte nou.":"Visits, with their photos, voice notes and videos, are copied to the new account.",
-    "Els informes ja emesos, els ZIP, els manuals de recanvis i els tiquets de despeses es queden al compte d'ara.":"Reports already issued, ZIPs, spare-parts manuals and expense tickets stay in the current account.",
+    "Els informes ja emesos, els ZIP, els manuals de recanvis i els tiquets de despeses també.":"Reports already issued, ZIPs, spare-parts manuals and expense tickets too.",
     "El compte d'ara no s'esborra ni es toca.":"The current account is neither deleted nor touched."};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};

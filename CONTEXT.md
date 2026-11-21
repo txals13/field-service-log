@@ -5595,10 +5595,9 @@ is everything around that one tap.
   it; the worst a failed move leaves is a new account with less in it and the
   old one whole. Pressing "Sincronitza" again — within the hour, for the
   videos — picks up what a first run did not finish.
-- **NOT carried, and the closing message says so:** reports already issued,
-  project ZIPs, the spare-parts manuals (and the visits' references to them)
-  and expense tickets that are only on the old Drive. A generic copy of
-  every file with the ids rewritten would be the complete answer; not built.
+- Reports already issued, project ZIPs, the spare-parts manuals and the
+  expense tickets were NOT carried in · 8; they are since · 9 — next
+  paragraph.
 - During the move `isLoggedIn` is false, so no background sync runs with one
   account's token and the other's ids.
 
@@ -5615,6 +5614,49 @@ nothing; another account answering changes nothing; a cancelled window leaves
 the bar up; a blank address calls the move off. **Not checked:** anything
 against real Google — the sign-in window with a hint, a real video of real
 size, a token running out half-way, two real devices.
+
+**The rest of the old Drive follows too (version `nou · 2026-11-21 · 9`).**
+Offered at the end of · 8 and accepted. `acctCarry` moves what a visit's
+entries point at; everything else the app ever wrote is plain files in its
+folder — every revision's reports, the company expense sheets and the
+tickets' pictures in each visit's folder, the manuals (a PDF and a catalogue
+each, listed in `manuals_index.json`), the archive's ZIPs.
+- **`acctRest(token)`**, run by `acctSwitch` after `acctCarry` and by
+  "Sincronitza" (`syncAllToDrive`) for as long as `oldAcct` lives: walks the
+  app's root folder in the old account (`acctTree`, `acctKids`) and rebuilds
+  it in the new one. A folder is matched by name under its parent and made
+  if missing — except a visit's folder, matched to that visit's NEW folder
+  whatever either is called (`oldAcct.folders`, taken before the move: the
+  first sync in the new account forgets the old ids). A file whose name is
+  already there counts as the same file — which makes a second run, or a
+  second device, cheap and safe; otherwise it is read with the old token and
+  written with the new (`acctCopy`, now for any file). The three files the
+  app keeps itself (data, history, settings) are left to their own code;
+  Google's own document types cannot be read as bytes and are skipped and
+  counted.
+- An **archive folder outside the app's folder** (pointed at by hand, per
+  device: `oldAcct.arx`) is copied into "Arxiu" in the new root. ZIPs keep
+  `appProperties.fslSession`.
+- **One map old id → new id**, filled on the way, and at the end every Drive
+  id in the visits, the history and the manuals' index is rewritten through
+  it in one pass (`acctRemap`, `acctRe`: an id is a run of 20+ letters,
+  digits, `-`, `_`; a run not in the map — a word, a slice of base64 — is
+  left alone). So expense pictures, manual references and archived visits'
+  ZIPs follow without this code knowing each field. A visit rewritten this
+  way is a new object, so its entries and fields are stamped as changed now.
+- The closing message counts what was copied, what Google would not let be
+  copied, and what failed (`acctRestWords`); the old account is still only
+  read, the old token still lasts an hour, "Sincronitza" still retries.
+Checked against the emulator (ids lengthened to look like Drive's): a visit
+whose old folder had drifted to another name, with a report, an expense
+sheet, a tickets folder, a Google Docs copy; a manual and its index; a ZIP
+in an archive folder outside the root — all arrive, in the visit's own new
+folder, the ZIP with its property, the index and every reference pointing at
+the copies, the Docs file counted as left behind, the old account with the
+same files and none trashed; a second run adds nothing; with the old token
+refused the message says not everything was copied and nothing breaks.
+**Not checked:** real Google, real sizes (a ZIP of hundreds of MB is read
+whole into memory), thousands of files against Drive's rate limits.
 
 **Two people, one visit (version `nou · 2026-11-21 · 3`).** A company on one
 account puts two technicians in the same visit, and every merge kept "the

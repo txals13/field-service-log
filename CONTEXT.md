@@ -5535,6 +5535,58 @@ replaced by a `fetch` stub, the file written holds it all and the open visit
 redraws with the other one's entry. **Not checked:** two real devices on a
 real account, media attached to entries merged this way, a long real visit.
 
+**The report's revision after a merge (version `nou · 2026-11-21 · 4`).** The
+user: "but if the administrator changes or adds data to the report, does it
+make a new revision?" The answer as the app stands: **an edit never makes a
+revision.** The next export asks (`ensureRevision` → `askRevision`: "+ Rev.
+02", with a note that is compulsory, or "↻ Reemet la Rev. 01") whenever
+`updatedAt` is later than the current revision's `issuedAt`
+(`changedSinceRev`). Whoever changed the visit, on whichever device: the
+change travels with the sync, and the question is asked wherever the report
+is exported next.
+
+That made `updatedAt` after a merge the thing to get right, and · 3 had it
+wrong in one case: it took the later of the two copies' `updatedAt`, so an
+entry the other person wrote BEFORE this copy issued Rev. 01 — but which
+only arrives now — came in with a date earlier than the revision's, and the
+report would have been re-issued under the old number with content it never
+had. `visitMerge` now:
+- sets `updatedAt` to **now** when content was taken from the other copy (an
+  entry, a deletion, any field not in `FLD_QUIET` — the two languages, the
+  base name, the folder);
+- does the same when the current **revision** was taken from the other copy
+  while this one holds content that copy lacks (`visitAhead`): that revision
+  was issued without it;
+- otherwise keeps the later `updatedAt` of the two, as before.
+It errs towards asking: an unneeded question costs one tap on "re-issue the
+same"; a missed one sends out, under the old number and the client's
+signature, a report that is not the one they signed.
+
+Known and left as it is (said to the user): the question says "hi has tocat
+alguna cosa" and not who or what; a revision does not record who issued it.
+
+**A signed revision is not re-issued with other content (version `nou ·
+2026-11-21 · 5`).** "↻ Reemet la Rev. 01" kept the number and, with it, the
+signature: the client's name under text they never read — and on a shared
+account the change may not be the signer's own. Offered to the user, who
+said yes. In `askRevision`, when the current revision carries a signature
+actually drawn (`revSigned(r)`: `sign.techSig` or `sign.cliSig`; names typed
+alone do not count) the "Reemet" button is hidden and the note says why:
+only "+ Rev. NN" is left, with its compulsory note, and the new revision
+comes up unsigned. Every export goes through `ensureRevision`, so there is
+no way round it. The way out for a signature made too soon is the old one:
+clear it in "Revisa i signa" — and the report then goes out unsigned, which
+is what it is. The window opened from the menu ("Revisions de l'informe") is
+as it was. Checked on a temporary copy (deleted): signed by the client or by
+the technician alone → one button, and Rev. 02 unsigned beside a Rev. 01 that
+keeps its signature; names only → both buttons; the menu's window unchanged.
+
+Checked on a temporary copy (deleted): the administrator adds an entry after
+Rev. 01 → asked; adds it before Rev. 01 was issued elsewhere, merged after →
+asked, in either order and also when the administrator's copy has the later
+stamp; a language picked on the other device, or a stale identical copy → not
+asked; a merge merged again does not move the date.
+
 Verified 2026-11-13 in the preview: `/nou/` opens under its own worker with no
 console errors, a visit created there lands in `fsl-nou` and the root app does
 not show it, and the root's keys are untouched. NOT verified: anything on

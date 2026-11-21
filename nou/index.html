@@ -6211,11 +6211,46 @@ function fldMergeVisit(w,o){
   });
   return out||w;
 }
+// THE REPORT'S REVISION AFTER A MERGE (· 4; the user: "but if the
+// administrator changes or adds data to the report, does it make a new
+// revision?"). A revision is never made by an edit: the next export asks,
+// when `updatedAt` is later than the moment the current one was issued
+// (changedSinceRev). So what a merge does to `updatedAt` decides whether that
+// question is asked, and "the later of the two" was not enough: an entry the
+// other person wrote BEFORE this copy issued Rev. 01, but that only arrives
+// now, is content the issued report does not have — with a date that is
+// earlier than the revision's. Hence:
+//   · content taken from the other copy (an entry, a deletion, any field not
+//     in FLD_QUIET) makes `updatedAt` NOW: this copy's content changed now;
+//   · the current revision taken from the other copy, while this one holds
+//     content that copy lacks (visitAhead), does the same: that revision was
+//     issued without it;
+//   · only quiet things taken (a language, the folder, a revision of the very
+//     same content): the later `updatedAt` of the two, as before.
+// It errs towards asking. An unneeded "this visit has changed" costs one tap
+// on "re-issue the same"; a missed one sends out, under the old number and
+// the client's signature, a report that is not the one they signed.
+var FLD_QUIET={reportLang:1,writeLang:1,baseName:1,folderId:1};
+function visitAhead(w,o){
+  var oe={},of=o.fAt||{},wf=w.fAt||{},k;
+  (o.entries||[]).forEach(function(e){if(e&&e.id)oe[e.id]=e});
+  if((w.entries||[]).some(function(e){return e&&e.id&&(!oe[e.id]||entAt(e)>entAt(oe[e.id]))}))return true;
+  for(k in wf){if(k!=="revisions"&&!FLD_SKIP[k]&&!FLD_QUIET[k]&&String(wf[k])>String(of[k]||""))return true}
+  return false;
+}
 function visitMerge(w,o){
   var m=exMergeVisit(w,o);
-  var m2=fldMergeVisit(entMergeVisit(m,o),o);
+  var m1=entMergeVisit(m,o),m2=fldMergeVisit(m1,o);
   if(m2===m)return m;
-  if(String(o.updatedAt||"")>String(m2.updatedAt||""))m2.updatedAt=o.updatedAt;
+  var wf=m.fAt||{},content=m1!==m,tookRev=false,k;
+  for(k in (m2.fAt||{})){
+    if(m2.fAt[k]===wf[k])continue;        // not one taken from the other copy
+    if(k==="revisions")tookRev=true;
+    else if(!FLD_QUIET[k])content=true;
+  }
+  if(!content&&tookRev)content=visitAhead(m,o);
+  if(content)m2.updatedAt=now();
+  else if(String(o.updatedAt||"")>String(m2.updatedAt||""))m2.updatedAt=o.updatedAt;
   m2.modAt=now();
   return m2;
 }
@@ -8849,7 +8884,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-21 · 3";
+var APP_VERSION="nou · 2026-11-21 · 5";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -13157,6 +13192,9 @@ async function nextRevNumber(s){
 // Has the visit moved on since the current revision was written out? Picking a
 // report language or caching a translation deliberately leaves updatedAt alone,
 // so neither of those counts as a change — and neither should they.
+// A signature actually drawn on it — the review window also saves the names
+// alone, and a name typed is not a signature.
+function revSigned(r){return !!(r&&r.sign&&(r.sign.techSig||r.sign.cliSig))}
 function changedSinceRev(s){
   var r=curRev(s);
   if(!r)return true;
@@ -14193,14 +14231,26 @@ function askRevision(s,next){
   return new Promise(function(res){
     wireRev();
     var cur=curRev(s);
+    // A SIGNED revision is not re-issued with other content (2026-11-21 · 5,
+    // the user said yes to it). "Reemet" kept the number and, with it, the
+    // signature: the client's name under text they never read — and on a
+    // shared account the change may not even be the signer's own. So with a
+    // signature drawn on the current revision the only way on is a new one,
+    // which comes up with the pads blank. Not a trap: a signature made too
+    // soon can still be cleared in "Revisa i signa" — but then the report
+    // goes out unsigned, which is what it is.
+    var locked=revSigned(cur);
     $$("revTitle").textContent="Aquesta sessió ha canviat";
-    $$("revNote2").innerHTML="Des de la <strong>"+revNo(cur.n)+"</strong> ("+dmy(cur.date)+uiT(") hi has tocat alguna cosa. Vols emetre la")+" <strong>"+revNo(next.n)+"</strong>"+uiT(", o tornar a emetre la mateixa?")
+    $$("revNote2").innerHTML=(locked
+        ?uiT("La {r} ({d}) està signada, i des de llavors la visita ha canviat: el que es va signar ja no és el que hi ha ara.").replace("{r}","<strong>"+revNo(cur.n)+"</strong>").replace("{d}",dmy(cur.date))
+          +" "+uiT("Cal emetre la {r}, que sortirà sense signar.").replace("{r}","<strong>"+revNo(next.n)+"</strong>")
+        :"Des de la <strong>"+revNo(cur.n)+"</strong> ("+dmy(cur.date)+uiT(") hi has tocat alguna cosa. Vols emetre la")+" <strong>"+revNo(next.n)+"</strong>"+uiT(", o tornar a emetre la mateixa?"))
       +(next.checked?"":"<br>"+uiT("No s'ha pogut mirar la carpeta de Drive: el número surt del compte d'aquest dispositiu."));
     $$("revLog").innerHTML=revLogHTML(s);
     $$("revDate").value=todayISO();
     $$("revTxt").value="";
     $$("revKeep").innerHTML=uiT("↻ Reemet la")+" "+revNo(cur.n);
-    $$("revKeep").style.display="";
+    $$("revKeep").style.display=locked?"none":"";
     $$("revNew").innerHTML="&#43; "+revNo(next.n);
     revResolve=res;
     $$("revBack").style.display="flex";
@@ -21690,6 +21740,15 @@ $$("btnCfg").addEventListener("click",async function(){
     "Cada aparell ho rebrà quan sincronitzi. El que hi hagi desat ara se substitueix.":"Each device will get it when it syncs. What is saved there now is replaced.",
     "Configuració de l'empresa desada a Drive.":"Company settings saved to Drive.",
     "No s'ha pogut desar la configuració a Drive. Torna-ho a provar amb connexió.":"The settings could not be saved to Drive. Try again with a connection."};
+  Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
+  Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
+})();
+// A signed revision is not re-issued (2026-11-21).
+(function(){
+  var es={"La {r} ({d}) està signada, i des de llavors la visita ha canviat: el que es va signar ja no és el que hi ha ara.":"La {r} ({d}) está firmada, y desde entonces la visita ha cambiado: lo que se firmó ya no es lo que hay ahora.",
+    "Cal emetre la {r}, que sortirà sense signar.":"Hay que emitir la {r}, que saldrá sin firmar."};
+  var en={"La {r} ({d}) està signada, i des de llavors la visita ha canviat: el que es va signar ja no és el que hi ha ara.":"{r} ({d}) is signed, and the visit has changed since: what was signed is no longer what is there now.",
+    "Cal emetre la {r}, que sortirà sense signar.":"{r} has to be issued, and it will come out unsigned."};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();

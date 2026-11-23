@@ -5722,6 +5722,36 @@ Checked in the preview: two visits under one name and one with none, on the
 home page and in Visites, wide and at phone width; none with a technician
 licence.
 
+**Prepared now, sent later (version `nou · 2026-11-23 · 1`).** The user: "I
+want to load old visits, or at least the administrator to be able to have it
+prepared and then send it to the technician when the time comes." Read as:
+keep a visit ready without the technician seeing it, and be able to send a
+visit that already exists. (Whether "load old visits" also meant copying an
+old visit's data into a new one was asked back, not built.)
+- `order.hold` — the tick "Guarda-la preparada" in the window's "Encàrrec"
+  part (`#nOrdHold`). The visit is written and synced like any other, with or
+  without a technician's name, but `sessShown` leaves it out of every
+  technician's lists (`ordHeld`: held AND still without entries — work
+  already written is never hidden) and `ordState` is "" for it.
+- Sending: the card's "Envia al tècnic" (`ordSend`: asks for a technician if
+  there is none, then rewrites the order without `hold`, `at` = now), or the
+  tick taken off in the window. That moment is when it becomes "new" on the
+  technician's device.
+- The administrator's side: pill "Preparada" on the rows, a "Preparades, per
+  enviar" card on the home page, and the visit's "Encàrrec" card with "Envia
+  al tècnic" / "Edita l'encàrrec".
+- A visit with no order at all — an old one, or one the administrator began —
+  shows an "Encàrrec" card with "Envia-la a un tècnic" (`ordEdit`: the edit
+  window, scrolled to its assignment part) once the people list holds
+  somebody else (`usrOthers`). Open visits only.
+- Order, not a lock: every device still downloads the whole data file, and a
+  prepared visit can still be reached through its machine's history.
+Checked in the preview (adm + t1 on the Drive stand-in): a prepared visit is
+absent from t1 and listed on the administrator's home page; sent, it is "new"
+on t1; prepared without a technician, "Envia" asks for one first and no
+technician sees it; an old visit sent from its card arrives as new.
+**Not checked:** real Google, two real devices.
+
 **Two people, one visit (version `nou · 2026-11-21 · 3`).** A company on one
 account puts two technicians in the same visit, and every merge kept "the
 later copy of the WHOLE visit": what the other one wrote in between was

@@ -1703,6 +1703,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
           <textarea id="nOrdNote" rows="4" style="width:100%;resize:vertical" placeholder="Feina a fer, viatge, hotel, a qui s'ha de presentar…"></textarea>
           <div style="font-size:11px;color:var(--tx3);margin-top:3px">El tècnic ho rep al seu aparell quan sincronitza. No surt a l'informe.</div>
         </div>
+        <label style="display:flex;gap:8px;align-items:flex-start;font-size:13.5px;color:var(--tx1);margin:0 0 12px;cursor:pointer"><input type="checkbox" id="nOrdHold" style="width:18px;height:18px;flex:none;margin-top:1px"><span>Guarda-la preparada: el tècnic no la veurà fins que l'enviïs</span></label>
       </div>
       <div class="modal-actions">
         <button id="nCancel">Cancel·la</button>
@@ -6728,7 +6729,8 @@ function buildSitem(s,applyFilter){
     // and missing altogether in a company whose visits were all one person's.
     +(s.tech&&!isTec()?"<div class=\"sitem-sub sitem-tec\">"+nvI("user",14)+"<span>"+highlightText(s.tech,sessFilterTxt)+"</span></div>":"")
     +"</div>"
-    +"<div class=\"end\">"+(ordS?"<span class=\"nv-pill b\">"+esc(nvT(ordS==="new"?"Nova":"Canviada"))+"</span>"
+    +"<div class=\"end\">"+(isOpen&&s.order&&s.order.hold&&!isTec()?"<span class=\"nv-pill o\">"+esc(nvT("Preparada"))+"</span>"
+        :ordS?"<span class=\"nv-pill b\">"+esc(nvT(ordS==="new"?"Nova":"Canviada"))+"</span>"
         :isOpen&&!n&&s.order?"<span class=\"nv-pill o\">"+esc(nvT("Per començar"))+"</span>"
         :"<span class=\"nv-pill"+(isOpen?" g":"")+"\">"+esc(nvT(isOpen?"En curs":"Tancada"))+"</span>")
     +"<button class=\"sitem-del\" title=\"Elimina\">✕</button></div>";
@@ -8974,7 +8976,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-21 · 11";
+var APP_VERSION="nou · 2026-11-23 · 1";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -9799,7 +9801,7 @@ function openNewModal(editSess){
   // the assignment: whoever is not a technician can send the visit to one
   var ordOn=!isTec(),eo=(editSess&&editSess.order)||{};
   $$("nOrdBox").style.display=ordOn?"":"none";
-  $$("nOrdFrom").value=eo.from||"";$$("nOrdTo").value=eo.to||"";$$("nOrdNote").value=eo.note||"";
+  $$("nOrdFrom").value=eo.from||"";$$("nOrdTo").value=eo.to||"";$$("nOrdNote").value=eo.note||"";$$("nOrdHold").checked=!!eo.hold;
   $$("nTechList").innerHTML=ordOn?usrNames().map(function(x){return "<option value=\""+esc(x)+"\"></option>"}).join(""):"";
   uiApply($$("newBack"));
   $$("newBack").style.display="flex";setTimeout(function(){focusField($$("nClient"))},80);
@@ -9846,14 +9848,14 @@ $$("nSave").addEventListener("click",function(){
   // name written is still taken as this device's, as before.
   var ordSet=!isTec(),ord=null,other=false;
   if(ordSet){
-    var oFrom=$$("nOrdFrom").value,oTo=$$("nOrdTo").value,oNote=$$("nOrdNote").value.trim();
+    var oFrom=$$("nOrdFrom").value,oTo=$$("nOrdTo").value,oNote=$$("nOrdNote").value.trim(),oHold=$$("nOrdHold").checked;
     if(oFrom&&oTo&&oTo<oFrom){alert(uiT("La data final de l'encàrrec és anterior a la inicial."));return}
     other=!!tech&&!nameLoose(tech,meName())&&(!!meName()||usrKnown(tech));
     var prevO=(editingSessId&&(sessions.find(function(x){return x.id===editingSessId})||{}).order)||null;
-    if(other||oFrom||oTo||oNote){
+    if(other||oFrom||oTo||oNote||oHold){
       var prevT=editingSessId?((sessions.find(function(x){return x.id===editingSessId})||{}).tech||""):"";
-      if(prevO&&(prevO.from||"")===oFrom&&(prevO.to||"")===oTo&&(prevO.note||"")===oNote&&keyNorm(prevT)===keyNorm(tech))ord=prevO;
-      else ord={by:meName(),dev:usrDev(),at:now(),from:oFrom,to:oTo,note:oNote};
+      if(prevO&&(prevO.from||"")===oFrom&&(prevO.to||"")===oTo&&(prevO.note||"")===oNote&&!!prevO.hold===oHold&&keyNorm(prevT)===keyNorm(tech))ord=prevO;
+      else{ord={by:meName(),dev:usrDev(),at:now(),from:oFrom,to:oTo,note:oNote};if(oHold)ord.hold=true}
     }
   }
   if(editingSessId){
@@ -9865,20 +9867,21 @@ $$("nSave").addEventListener("click",function(){
     closeNewModal();["nClient","nProject","nMachine","nMachineNo","nYear","nLoc","nTech","nContact","nContactRole","nContactPhone","nContactEmail","nStart","nOrdFrom","nOrdTo","nOrdNote"].forEach(function(id){$$(id).value=""});
     scheduleSave();renderAll();
     if(isLoggedIn&&old&&folderChanged)renameSessionFolder(old,{client:c,machine:m,tech:tech});
-    if(other&&upd.order)ordSaid(tech);
+    if(upd.order&&upd.order.hold){if(!(old&&old.order&&old.order.hold))ordHeldSaid()}
+    else if(other&&upd.order)ordSaid(tech);
   } else {
     var s={id:uid(),client:c,project:proj,machine:m,machineNo:mno,year:year,location:loc,tech:tech,type:type,contact:cont,contactRole:crole,contactPhone:cphone,contactEmail:cmail,startAt:startAt,status:"open",createdAt:now(),entries:[],notes:""};
     if(ord)s.order=ord;
     // sent to somebody else: it opens on its card, where the assignment shows
-    sessions=[s].concat(sessions);aid=s.id;nvSub=other?"fitxa":"log";nvSubAid=s.id;nvTab="reg";
+    sessions=[s].concat(sessions);aid=s.id;nvSub=(other||(ord&&ord.hold))?"fitxa":"log";nvSubAid=s.id;nvTab="reg";
     // made here, so it stays in this device's lists whatever name it carries;
     // and the first name written is taken as this device's
-    mineAdd(s.id);if(tech&&!meName()&&!other){meSet(tech);usrLast=0;try{roleApply()}catch(e){}}
+    mineAdd(s.id);if(tech&&!meName()&&!other&&!(ord&&ord.hold)){meSet(tech);usrLast=0;try{roleApply()}catch(e){}}
     if(type==="production")setTimeout(function(){openProdList(true)},0);
     closeNewModal();["nClient","nProject","nMachine","nMachineNo","nYear","nLoc","nTech","nContact","nContactRole","nContactPhone","nContactEmail","nStart","nOrdFrom","nOrdTo","nOrdNote"].forEach(function(id){$$(id).value=""});
     scheduleSave();renderAll();
     if(isLoggedIn)ensureSessionFolders(s.id); // create Drive folders up front, not on first upload
-    if(other)ordSaid(tech);
+    if(ord&&ord.hold)ordHeldSaid();else if(other)ordSaid(tech);
   }
 });
 
@@ -12909,7 +12912,11 @@ function sessMine(x){
 }
 // What the lists show. The visit that is open is always among them: it can be
 // somebody else's, reached through the history of its machine.
-function sessShown(){return isTec()?sessions.filter(function(x){return sessMine(x)||x.id===aid}):sessions}
+// A visit the administrator keeps prepared (order.hold) is not in a
+// technician's lists until it is sent — unless work has already been written
+// in it: nobody's entries are hidden from them by a tick in a box.
+function ordHeld(x){return !!(x&&x.order&&x.order.hold&&!(x.entries||[]).length)}
+function sessShown(){return isTec()?sessions.filter(function(x){return (sessMine(x)&&!ordHeld(x))||x.id===aid}):sessions}
 function roleApply(){
   var tec=isTec(),b;
   b=$$("btnBulkArx");if(b)b.style.display=tec?"none":"";
@@ -20763,6 +20770,7 @@ function nvHomeRender(mc){
   try{day=new Date().toLocaleDateString(loc,{weekday:"long",day:"numeric",month:"long"})}catch(e){}
   function stat(k,n,one,many,cls){return "<button type=\"button\" class=\"nv-card nv-stat "+(n?cls:"")+"\" data-st=\""+k+"\"><b>"+n+"</b><span>"+esc(nvT(n===1?one:many))+"</span></button>"}
   var news=S.filter(function(s){return ordState(s)});
+  var held=tec?[]:S.filter(function(s){return s.status==="open"&&s.order&&s.order.hold});
   var page=document.createElement("div");page.className="nv-page";
   page.innerHTML="<div class=\"nv-hero\">"+NV_ART+"<div class=\"ov\"><div class=\"top\"><button type=\"button\" class=\"nv-chip\"></button></div>"
       +"<div class=\"hi\">"+esc(hi)+"</div><div class=\"sub\">"+esc(nvT("Les teves activitats d'avui")+(day?" · "+day:""))+"</div></div></div>"
@@ -20774,6 +20782,14 @@ function nvHomeRender(mc){
             +"<span style=\"min-width:0\"><span class=\"t\" style=\"display:block\">"+esc([s.client,s.machine].filter(Boolean).join(" · "))+"</span>"
             +"<span class=\"s\" style=\"display:block\">"+esc([w?nvT("prevista")+" "+w:"",s.location,o.by?nvT("encarregada per {x}").replace("{x}",o.by):""].filter(Boolean).join(" · "))+"</span></span>"
             +"<span class=\"nv-pill b\">"+esc(nvT(ordState(s)==="new"?"Nova":"Canviada"))+"</span></button>";
+        }).join("")+"</section>":"")
+    +(held.length?"<section class=\"nv-card nv-sect\"><div class=\"hd\"><h2>"+esc(nvT("Preparades, per enviar"))+"</h2></div>"
+        +held.map(function(s,i){
+          var w=ordWhen(s.order);
+          return "<button type=\"button\" class=\"nv-open\" data-h=\""+i+"\"><span style=\"color:var(--orange)\">"+nvI("clock",22)+"</span>"
+            +"<span style=\"min-width:0\"><span class=\"t\" style=\"display:block\">"+esc([s.client,s.machine].filter(Boolean).join(" · "))+"</span>"
+            +"<span class=\"s\" style=\"display:block\">"+esc([s.tech||nvT("sense tècnic encara"),w?nvT("prevista")+" "+w:""].filter(Boolean).join(" · "))+"</span></span>"
+            +"<span class=\"nv-pill o\">"+esc(nvT("Preparada"))+"</span></button>";
         }).join("")+"</section>":"")
     +"<div class=\"nv-stats\">"
       +stat("open",open,"Visita oberta","Visites obertes","")
@@ -20828,6 +20844,8 @@ function nvHomeRender(mc){
     }
     var nw=e.target.closest?e.target.closest("[data-n]"):null;
     if(nw){var ns=news[+nw.dataset.n];if(ns)nvOpen(ns.id,"fitxa");return}
+    var hw=e.target.closest?e.target.closest("[data-h]"):null;
+    if(hw){var hs=held[+hw.dataset.h];if(hs)nvOpen(hs.id,"fitxa");return}
     var pr=e.target.closest?e.target.closest("[data-p]"):null;
     if(pr){var p=probs[+pr.dataset.p];if(p)nvOpenVisitOf(p.s,"log")}
   });
@@ -20965,15 +20983,29 @@ function nvFitxaRender(a,isOpen){
     +(nvFx==="det"?"<button type=\"button\" class=\"nv-fx-more\" id=\"nvFxMore\">"+esc(nvT(nvFxMore?"Veure menys":"Veure més"))+nvI(nvFxMore?"up":"down",18)+"</button>":"")
     +"</div>";
   // what the visit was sent with; seeing it here is what takes the "new" off
-  var ao=a.order;
-  if(ao&&(ao.from||ao.to||ao.note||ao.by)){
-    var aos=ordState(a);
+  // Whoever is not a technician also gets the way to send it from here: a
+  // prepared visit has "Envia al tècnic", and a visit that was never sent to
+  // anybody — an old one, or one the administrator began — has "Envia-la a
+  // un tècnic" once the company's list holds somebody to send it to.
+  var ao=a.order,aAdm=!isTec();
+  if(ao&&(ao.from||ao.to||ao.note||ao.by||ao.hold)){
+    var aos=ordState(a),aHold=!!ao.hold;
     h+="<div class=\"nv-card nv-ord\"><div class=\"hd\"><span>"+esc(nvT("Encàrrec"))+"</span>"
-      +(aos?"<span class=\"nv-pill b\">"+esc(nvT(aos==="new"?"Nova":"Canviada"))+"</span>":"")+"</div>"
-      +row(ao.by?"Encarregada per":"Encarregada el",[ao.by,nvDT(ao.at)].filter(Boolean).join(" · "))
+      +(aHold?"<span class=\"nv-pill o\">"+esc(nvT("Preparada"))+"</span>"
+        :aos?"<span class=\"nv-pill b\">"+esc(nvT(aos==="new"?"Nova":"Canviada"))+"</span>":"")+"</div>"
+      +row(aHold?(ao.by?"Preparada per":"Preparada el"):(ao.by?"Encarregada per":"Encarregada el"),[ao.by,nvDT(ao.at)].filter(Boolean).join(" · "))
       +row("Dates previstes",ao.from?dmy(ao.from)+(ao.to&&ao.to!==ao.from?" – "+dmy(ao.to):""):(ao.to?dmy(ao.to):""))
-      +(ao.note?"<div class=\"nv-fx-notes\">"+esc(ao.note)+"</div>":"")+"</div>";
+      +(ao.note?"<div class=\"nv-fx-notes\">"+esc(ao.note)+"</div>":"")
+      +(aHold?"<div class=\"usr-w\">"+esc(nvT(keyNorm(a.tech)?"Encara no s'ha enviat: el tècnic no la veu.":"Encara no s'ha enviat, i no té tècnic."))+"</div>":"")
+      +(aAdm&&isOpen?"<div class=\"usr-a\">"
+          +(aHold?"<button type=\"button\" class=\"btn-gold btn-sm\" id=\"nvOrdSend\">"+esc(nvT("Envia al tècnic"))+"</button>":"")
+          +"<button type=\"button\" class=\"btn-sm\" id=\"nvOrdEdit\">"+esc(nvT("Edita l'encàrrec"))+"</button></div>":"")
+      +"</div>";
     if(aos)ordMark(a);
+  }else if(aAdm&&isOpen&&usrOthers()){
+    h+="<div class=\"nv-card nv-ord\"><div class=\"hd\"><span>"+esc(nvT("Encàrrec"))+"</span></div>"
+      +"<div class=\"usr-d\">"+esc(nvT("Aquesta visita no s'ha encarregat a ningú."))+"</div>"
+      +"<div class=\"usr-a\"><button type=\"button\" class=\"btn-sm\" id=\"nvOrdEdit\">"+esc(nvT("Envia-la a un tècnic"))+"</button></div></div>";
   }
   var all=machineSessions(a),prev=all.filter(function(x){return x.id!==a.id})[0];
   if(prev){
@@ -20988,6 +21020,8 @@ function nvFitxaRender(a,isOpen){
   el.innerHTML=h;
   function on(id,fn){var x=$$(id);if(x)x.addEventListener("click",fn)}
   on("nvFxEdit",function(){openNewModal(a)});
+  on("nvOrdSend",function(){ordSend(a)});
+  on("nvOrdEdit",function(){ordEdit(a)});
   on("nvFxMore",function(){nvFxMore=!nvFxMore;nvFitxaRender(a,isOpen)});
   on("nvFxLast",function(){openMachineHistory()});
   on("nvFxPh",function(){openMedia(ph.data,"image",ph.name)});
@@ -22517,7 +22551,8 @@ function usrRender(){
       +p.open.slice(0,6).map(function(s){
         var w=(!(s.entries||[]).length&&s.order)?ordWhen(s.order):"";
         return "<button type=\"button\" class=\"usr-v\" data-v=\""+esc(s.id)+"\">"+esc([s.client,s.machine].filter(Boolean).join(" · ")
-          +(w?" · "+uiT("prevista")+" "+w:!(s.entries||[]).length?" · "+uiT("Per començar"):""))+"</button>";
+          +(w?" · "+uiT("prevista")+" "+w:!(s.entries||[]).length?" · "+uiT("Per començar"):"")
+          +(s.order&&s.order.hold?" · "+uiT("Preparada"):""))+"</button>";
       }).join("")
       +(p.open.length>6?"<div class=\"usr-d\">+ "+(p.open.length-6)+"</div>":"")
       +"<div class=\"usr-a\">"
@@ -22525,7 +22560,7 @@ function usrRender(){
       +((p.devs.length||p.man)?"<button type=\"button\" class=\"btn-sm\" data-x=\""+i+"\">"+esc(uiT("Treu de la llista"))+"</button>":"")
       +"</div></div>";
   });
-  var free=sessions.filter(function(s){return s.status==="open"&&!keyNorm(s.tech)}).length;
+  var free=sessions.filter(function(s){return s.status==="open"&&!keyNorm(s.tech)&&!ordHeld(s)}).length;
   if(free)h+="<div class=\"usr-d\">"+esc(uiT("Visites obertes sense tècnic (les veu tothom): {n}").replace("{n}",free))+"</div>";
   $$("usrList").innerHTML=h;
 }
@@ -22578,7 +22613,7 @@ function ordSeenGet(){
 // device sent: the one who wrote the order has nothing to be told.
 function ordState(s){
   var o=s&&s.order;
-  if(!o||!o.at||o.dev===usrDev()||!nameLoose(s.tech,meName()))return "";
+  if(!o||!o.at||o.hold||o.dev===usrDev()||!nameLoose(s.tech,meName()))return "";
   var v=ordSeenGet()[s.id];
   return !v?"new":v!==o.at?"chg":"";
 }
@@ -22594,6 +22629,67 @@ function ordWhen(o){
   var a=o.from||o.to,b=o.to||o.from;
   return nvDM(a)+(b!==a?" – "+nvDM(b):"");
 }
+// PREPARED, SENT LATER (2026-11-23). The user: "I want to load old visits,
+// or at least the administrator to be able to have it prepared and then send
+// it to the technician when the time comes." `order.hold` is the tick
+// "Guarda-la preparada" in the new-visit window: the visit is written like
+// any other and travels in the data file, but no technician's lists show it
+// (ordHeld, in sessShown) and it is "new" for nobody (ordState). Sending it
+// (the card's "Envia al tècnic", or the tick taken off) writes the order
+// again, without `hold` and with `at` = now: that is when it becomes new on
+// the technician's device. A visit that never had an order — an old one —
+// is sent from its card too ("Envia-la a un tècnic"): it opens the same
+// window on its assignment part.
+// Like the roles, this is order and not a lock: every device still holds the
+// whole data file.
+function usrOthers(){
+  var u=usrLocal(),me=usrDev();
+  return Object.keys(u.dev).some(function(id){return id!==me})||Object.keys(u.man).length>0;
+}
+function ordEdit(a){
+  openNewModal(a);
+  setTimeout(function(){try{$$("nOrdBox").scrollIntoView({block:"center"})}catch(e){}},150);
+}
+function ordSend(a){
+  a=a&&sessions.find(function(x){return x.id===a.id});
+  if(!a||!a.order||!a.order.hold||isTec())return;
+  if(!keyNorm(a.tech)){alert(uiT("Primer tria el tècnic a qui s'ha d'enviar."));ordEdit(a);return}
+  if(!confirm(uiT("Vols enviar aquesta visita a {x}?").replace("{x}",a.tech)+"\n\n"+uiT("La veurà al seu aparell quan sincronitzi.")))return;
+  var o=Object.assign({},a.order,{by:meName()||a.order.by||"",dev:usrDev(),at:now()});
+  delete o.hold;
+  sessions=sessions.map(function(x){return x.id===a.id?Object.assign({},x,{order:o}):x});
+  scheduleSave();renderAll();
+  ordSaid(a.tech);
+}
+function ordHeldSaid(){
+  setTimeout(function(){alert(uiT("Visita preparada. El tècnic no la veurà fins que premis «Envia al tècnic» a la targeta de la visita."))},60);
+}
+(function(){
+  var es={"Guarda-la preparada: el tècnic no la veurà fins que l'enviïs":"Guárdala preparada: el técnico no la verá hasta que la envíes",
+    "Preparada":"Preparada","Preparada per":"Preparada por","Preparada el":"Preparada el",
+    "Encara no s'ha enviat: el tècnic no la veu.":"Aún no se ha enviado: el técnico no la ve.",
+    "Encara no s'ha enviat, i no té tècnic.":"Aún no se ha enviado, y no tiene técnico.",
+    "Envia al tècnic":"Envía al técnico","Edita l'encàrrec":"Edita el encargo",
+    "Aquesta visita no s'ha encarregat a ningú.":"Esta visita no se ha encargado a nadie.",
+    "Envia-la a un tècnic":"Envíala a un técnico","Preparades, per enviar":"Preparadas, por enviar","sense tècnic encara":"sin técnico todavía",
+    "Primer tria el tècnic a qui s'ha d'enviar.":"Primero elige el técnico al que hay que enviarla.",
+    "Vols enviar aquesta visita a {x}?":"¿Quieres enviar esta visita a {x}?",
+    "La veurà al seu aparell quan sincronitzi.":"La verá en su aparato cuando sincronice.",
+    "Visita preparada. El tècnic no la veurà fins que premis «Envia al tècnic» a la targeta de la visita.":"Visita preparada. El técnico no la verá hasta que pulses «Envía al técnico» en la tarjeta de la visita."};
+  var en={"Guarda-la preparada: el tècnic no la veurà fins que l'enviïs":"Keep it prepared: the technician will not see it until you send it",
+    "Preparada":"Prepared","Preparada per":"Prepared by","Preparada el":"Prepared on",
+    "Encara no s'ha enviat: el tècnic no la veu.":"Not sent yet: the technician does not see it.",
+    "Encara no s'ha enviat, i no té tècnic.":"Not sent yet, and it has no technician.",
+    "Envia al tècnic":"Send to the technician","Edita l'encàrrec":"Edit the assignment",
+    "Aquesta visita no s'ha encarregat a ningú.":"This visit has not been assigned to anybody.",
+    "Envia-la a un tècnic":"Send it to a technician","Preparades, per enviar":"Prepared, to be sent","sense tècnic encara":"no technician yet",
+    "Primer tria el tècnic a qui s'ha d'enviar.":"First choose the technician to send it to.",
+    "Vols enviar aquesta visita a {x}?":"Send this visit to {x}?",
+    "La veurà al seu aparell quan sincronitzi.":"They will see it on their device when it syncs.",
+    "Visita preparada. El tècnic no la veurà fins que premis «Envia al tècnic» a la targeta de la visita.":"Visit prepared. The technician will not see it until you press “Send to the technician” on the visit's card."};
+  Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
+  Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
+})();
 // Said once, to the one who sent it: where it has gone, and whether anybody is
 // there to get it.
 function ordSaid(tech){

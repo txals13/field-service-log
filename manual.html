@@ -21,7 +21,7 @@
   body{margin:0;background:var(--bg);color:var(--tx);font:15.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
   .wrap{max-width:820px;margin:0 auto;padding:28px 16px 80px}
   header{border-bottom:2px solid var(--br);padding-bottom:16px;margin-bottom:22px}
-  .logo{font-family:monospace;font-weight:700;color:var(--gold);font-size:13px;letter-spacing:.3px}
+  .logo{font-family:monospace;font-weight:700;color:var(--blue);font-size:13px;letter-spacing:.3px}
   h1{font-size:28px;line-height:1.2;margin:6px 0 4px}
   .sub{color:var(--tx3);margin:0;font-size:14px}
   h2{font-size:21px;margin:42px 0 10px;padding-top:6px;border-top:1px solid var(--br)}
@@ -59,9 +59,9 @@
 <div class="wrap">
 
 <header>
-  <div class="logo">⚙ Field Service Log</div>
+  <div class="logo">Field Service Log</div>
   <h1>Manual d'ús</h1>
-  <p class="sub">Com fer servir l'aplicació, de la primera entrada fins a l'arxiu. Actualitzat el 8 de novembre de 2026.</p>
+  <p class="sub">Com fer servir l'aplicació, de la primera entrada fins a l'arxiu. Actualitzat el 23 de novembre de 2026.</p>
 </header>
 
 <nav class="toc">
@@ -82,8 +82,9 @@
     <li><a href="#historial">Historial de la màquina</a></li>
     <li><a href="#tancar">Tancar, reobrir i esborrar</a></li>
     <li><a href="#arxiu">Arxivar i tornar a carregar</a></li>
-    <li><a href="#ordinador">Carpetes de l'ordinador</a></li>
+    <li><a href="#ordinador">Carpetes</a></li>
     <li><a href="#drive">Drive i sincronització</a></li>
+    <li><a href="#equip">Treballar en equip: rols, usuaris i encàrrecs</a></li>
     <li><a href="#dispositius">Mòbil, tauleta i ordinador</a></li>
     <li><a href="#problemes">Problemes freqüents</a></li>
   </ol>
@@ -94,78 +95,124 @@
 <p>L'aplicació és una pàgina web que funciona al navegador del mòbil, de la tauleta i de l'ordinador:
 <a href="https://txals13.github.io/field-service-log/">txals13.github.io/field-service-log</a>.</p>
 
+<h3>Com és l'aplicació</h3>
+<p>Al <strong>mòbil</strong>, a baix hi ha quatre botons: <strong>Inici</strong>, <strong>Visites</strong>, <strong>Màquines</strong> i <strong>Menú</strong>. A l'<strong>ordinador</strong> i a la tauleta ampla són a l'esquerra, amb dos més, <strong>Manuals</strong> i <strong>Arxiu</strong>, i el Menú s'hi diu <strong>Configuració</strong>. En aquest manual, «Menú» vol dir totes dues coses.</p>
+<ul>
+  <li><strong>Inici</strong>: quantes visites tens obertes, quants problemes queden oberts, quants informes falten per signar, les teves últimes visites i <strong>què queda obert</strong> a les màquines. D'aquí es crea una visita nova.</li>
+  <li><strong>Visites</strong>: la llista de totes les visites, amb el seu cercador.</li>
+  <li><strong>Màquines</strong>: una fila per màquina, amb quantes visites té i quantes incidències hi queden obertes. Tocant-la s'obre el seu <a href="#historial">historial</a>.</li>
+  <li><strong>Menú</strong>: el compte de Google i la sincronització, i tot el que no és d'una visita: manuals de recanvis, arxiu, importar, carpetes, idioma, tema, llicència, clau de Gemini i aquest manual.</li>
+</ul>
+<figure>
+  <picture>
+    <source srcset="manual-img/inici-fosc.webp" media="(prefers-color-scheme:dark)">
+    <img src="manual-img/inici-clar.webp" width="780" height="1980" loading="lazy" alt="La pàgina d'Inici: la salutació, els quatre comptadors, les teves visites, el botó Nova visita i la llista del que queda obert">
+  </picture>
+  <figcaption>La pàgina d'<strong>Inici</strong>, al mòbil. A baix, els quatre botons per moure's per l'aplicació.</figcaption>
+</figure>
+
 <h3>Instal·lar-la</h3>
-<p>Quan el navegador ho permet surt una barra amb <span class="btn">Instal·la</span>. Instal·lada, s'obre com una app des de la pantalla d'inici i <strong>funciona sense connexió</strong>: el que escriguis es desa al dispositiu i es puja a Drive quan torni la cobertura. Els informes (PDF, Word, Excel i ZIP) també es poden generar sense connexió, sempre que l'app s'hagi obert almenys un cop amb connexió: aquell cop es guarda tot el que cal per fer-los. A la barra lateral, sota el compte, una línia diu si aquest aparell ja ho té tot (<strong>📦 Informes sense connexió: tot a punt en aquest aparell</strong>) o què hi falta (<strong>⚠ Per fer informes sense connexió falta baixar: Word</strong>), amb <span class="btn">Baixa-ho ara</span> per demanar-ho quan tinguis cobertura. Mira-la abans de marxar. L'app es posa al dia sola quan l'obres amb connexió; sense cobertura fa servir la versió que ja tenia, i la barra lateral diu quina és.</p>
+<p>Quan el navegador ho permet surt una barra amb <span class="btn">Instal·la</span>. Instal·lada, s'obre com una app des de la pantalla d'inici i <strong>funciona sense connexió</strong>: el que escriguis es desa al dispositiu i es puja a Drive quan torni la cobertura. Els informes (PDF, Word, Excel i ZIP) també es poden generar sense connexió, sempre que l'app s'hagi obert almenys un cop amb connexió: aquell cop es guarda tot el que cal per fer-los. Al Menú, a la targeta del compte, una línia diu si aquest aparell ja ho té tot (<strong>Informes sense connexió: tot a punt en aquest aparell</strong>) o què hi falta, amb el botó per baixar-ho quan tinguis cobertura. Mira-la abans de marxar. L'app es posa al dia sola quan l'obres amb connexió; sense cobertura fa servir la versió que ja tenia, i al peu del Menú hi diu quina és.</p>
 
 <h3>Iniciar la sessió amb Google</h3>
-<p>Prem <span class="btn">Entra</span> (a dalt) o «Inicia la sessió amb Google». Amb la sessió iniciada, les visites es sincronitzen entre tots els teus dispositius i les fotos, els vídeos i els informes es guarden al teu Google Drive, a la carpeta <code>Field Service Log</code>.</p>
-<p>També pots triar «Continua sense Drive». Llavors tot queda només en aquest dispositiu, i hi ha coses que no funcionen: els vídeos, els ZIP i la sincronització.</p>
+<p>A Inici, <span class="btn">Entra</span>; o al Menú, <span class="btn">Entra amb Google</span>. Amb la sessió iniciada, les visites es sincronitzen entre tots els dispositius que hi entren i les fotos, els vídeos i els informes es guarden a Google Drive, a la carpeta <code>Field Service Log</code>.</p>
+<p>Sense entrar-hi, l'app funciona igual i tot queda només en aquest dispositiu (Inici t'ho recorda). Hi ha coses que llavors no funcionen: els vídeos, els ZIP complets i la sincronització.</p>
 <div class="warn"><p>L'aplicació només veu els fitxers que ha creat ella mateixa a Drive. Una foto que posis a mà a la carpeta des de la web de Drive no la veu, si no l'hi dones tu (vegeu <a href="#carpeta">la carpeta de la sessió</a>).</p></div>
 
 <figure>
   <picture>
-    <source srcset="manual-img/barra-lateral-fosc.webp" media="(prefers-color-scheme:dark)">
-    <img src="manual-img/barra-lateral-clar.webp" width="600" height="1142" loading="lazy" alt="La barra lateral de l'aplicació, amb el filtre de sessions, les opcions i la llista de visites">
+    <source srcset="manual-img/menu-fosc.webp" media="(prefers-color-scheme:dark)">
+    <img src="manual-img/menu-clar.webp" width="780" height="2720" loading="lazy" alt="La pàgina del Menú: el compte de Google, i els apartats Feina, Preferències i Aplicació">
   </picture>
-  <figcaption>La barra lateral (<span class="btn">☰</span>): d'aquí surt gairebé tot el que no és una visita &mdash; l'idioma, la clau de Gemini, la llicència, els manuals de recanvis, les carpetes i l'arxiu. A sota hi ha la llista de visites.</figcaption>
+  <figcaption>El <strong>Menú</strong> (a l'ordinador, <strong>Configuració</strong>). A dalt, el compte i la sincronització; després el que es fa més sovint (<em>Feina</em>), el que es tria un cop a cada aparell (<em>Preferències</em>) i el que és de l'aplicació (<em>Aplicació</em>).</figcaption>
 </figure>
 
 <h3>La clau de Gemini</h3>
-<p>El corrector (<span class="btn">✓</span>) i la traducció dels informes funcionen amb Gemini, i necessiten una clau. A la barra lateral (<span class="btn">☰</span>), <span class="btn">🔑 Clau de Gemini</span>: l'escrius un cop a cada dispositiu i es queda només en aquell navegador. No viatja amb les dades, ni a Drive ni als ZIP.</p>
+<p>El corrector (<span class="btn">✓</span>) i la traducció dels informes funcionen amb Gemini, i necessiten una clau. Al Menú, <span class="btn">Clau de Gemini</span>: l'escrius un cop a cada dispositiu i es queda només en aquell navegador. No viatja amb les visites, ni als ZIP. Si l'empresa l'ha repartida amb la seva configuració (vegeu <a href="#equip">treballar en equip</a>), no cal escriure-la.</p>
 <p>Sense clau tot funciona igual, excepte corregir i traduir. Si un informe s'ha de traduir i no hi ha clau, l'app t'ho pregunta i el pots fer amb els textos tal com els vas escriure.</p>
 
 <h3>L'idioma de l'aplicació</h3>
-<p>A la barra lateral (<span class="btn">☰</span>), al costat del 🌐, tries l'idioma en què vols veure l'aplicació: català, castellà o anglès. Es recorda en aquell aparell i prou, i en canviar-lo la pàgina es torna a carregar.</p>
-<p>No té res a veure amb l'idioma dels informes, que es tria a cada visita des del menú <span class="btn">↓ Informe</span> i pot ser qualsevol dels 29. L'un és per a tu; l'altre, per al client.</p>
+<p>Al Menú, <span class="btn">Idioma de l'app</span>: tries l'idioma en què vols veure l'aplicació, català, castellà o anglès. Es recorda en aquell aparell i prou, i en canviar-lo la pàgina es torna a carregar. A sota hi ha <span class="btn">Tema</span>, per triar-la clara o fosca.</p>
+<p>No té res a veure amb l'idioma dels informes, que es tria a cada visita des del menú d'informes (<span class="btn">⬇</span>) i pot ser qualsevol dels 29. L'un és per a tu; l'altre, per al client.</p>
 
 <h3>La llicència</h3>
-<p>A la barra lateral (<span class="btn">☰</span>), <span class="btn">🔒 Llicència</span>: hi enganxes la llicència que has rebut, sencera, i prems <span class="btn">Desa</span>. Es fa un cop a cada aparell i es queda només en aquell navegador — no va a Drive, ni als ZIP, ni a les còpies de seguretat. No li cal cobertura: es comprova dins de la mateixa aplicació, i per tant va igual en una planta sense senyal. El nom del titular surt al peu de cada informe.</p>
+<p>Al Menú, <span class="btn">Llicència</span>: hi enganxes la llicència que has rebut, sencera, i prems <span class="btn">Desa</span>. Es fa un cop a cada aparell i es queda només en aquell navegador — no va als ZIP ni a les còpies de seguretat. No li cal cobertura: es comprova dins de la mateixa aplicació, i per tant va igual en una planta sense senyal. El nom del titular surt al peu de cada informe.</p>
+<p><strong>La llicència diu també què inclou.</strong> Les <a href="#despeses">Despeses</a> i el <a href="#hores">Full d'hores</a> són mòduls: si la teva llicència no els porta, aquelles parts de l'app no surten (el que ja hi hagués en una visita no es perd). I diu el <strong>rol</strong> de l'aparell, administrador o tècnic: vegeu <a href="#equip">treballar en equip</a>.</p>
 <p>Al peu de cada full hi ha, a l'esquerra, <strong>el número de projecte i la revisió</strong> («P-2614 · Rev. 01»); al mig, el titular de la llicència; i a la dreta, la pàgina. Val per a l'informe, l'informe de validació, l'informe intern i el Word i l'HTML. Al full d'hores, que no té revisions, només hi surt el projecte.</p>
 <p><strong>Tot el que es pot descarregar diu de qui és.</strong> Els dos Excel i l'historial de la màquina no tenen peu de pàgina, però porten el mateix: l'Excel de recanvis acaba el full «Sessió» amb el titular de la llicència (el projecte i la revisió ja hi eren); el de despeses el porta a dalt del «Resum», sota la data d'exportació; i l'historial, a l'última línia, al costat del dia i del tècnic.</p>
-<p>Quan caduca, les visites que ja tens segueixen obertes i es poden acabar, exportar i arxivar; només no en pots estrenar de noves fins que escriguis la renovada. A la barra lateral, sota la versió, hi surt sempre de qui és la llicència i quan caduca.</p>
+<p>Quan caduca, les visites que ja tens segueixen obertes i es poden acabar, exportar i arxivar; només no en pots estrenar de noves fins que escriguis la renovada. Al peu del Menú, al costat de la versió, hi surt sempre de qui és la llicència i amb quin rol; quan falta menys d'un mes, també quan caduca.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="visita">2. Crear una visita</h2>
-<p><span class="btn">+ Nova</span> obre el formulari. Els camps amb asterisc són obligatoris. Està dividit en tres apartats, <strong>Client</strong>, <strong>Equip</strong> i <strong>Visita</strong>, igual que la capçalera dels informes.</p>
+<p><span class="btn">Nova visita</span>, a Inici o a Visites, obre el formulari. Els camps amb asterisc són obligatoris. Està dividit en tres apartats, <strong>Client</strong>, <strong>Equip</strong> i <strong>Visita</strong>, igual que la capçalera dels informes. Amb llicència d'administrador n'hi ha un quart, <strong>Encàrrec</strong>, per enviar la visita a un tècnic (vegeu <a href="#equip">treballar en equip</a>).</p>
+<p><strong>Parteix d'una visita anterior.</strong> Si ja has anat a aquell client, no cal tornar-ho a escriure: a dalt del formulari, la llista «Parteix d'una visita anterior» té una línia per client i màquina, amb la data de l'última visita (també les arxivades). En triar-ne una s'omplen el client, la persona de contacte, la ubicació i l'equip; el projecte, el tècnic, les dates i el tipus queden per a la visita nova. De les visites arxivades abans del 23 de novembre de 2026 no es pot copiar el contacte, perquè l'arxiu no el guardava.</p>
 <div class="scroll"><table>
   <tr><th>Camp</th><th>Per a què serveix</th></tr>
   <tr><td><strong>Client / Empresa *</strong></td><td>Encapçala els informes. Juntament amb la màquina, identifica la màquina a l'historial.</td></tr>
   <tr><td><strong>Persona de contacte</strong> i <strong>càrrec</strong></td><td>Surten a la capçalera de tots els informes i del full d'hores, i són el nom proposat a les signatures del client (es pot canviar si signa una altra persona).</td></tr>
-  <tr><td><strong>Telèfon</strong> i <strong>correu</strong> de contacte</td><td>Surten a la capçalera de la visita (📞 i ✉: tocant-los, truques o escrius un correu), a l'apartat Client dels informes i a l'Excel. A l'informe HTML també es poden tocar.</td></tr>
+  <tr><td><strong>Telèfon</strong> i <strong>correu</strong> de contacte</td><td>Surten a la fitxa de la visita, a «Veure més» (tocant-los, truques o escrius un correu), a l'apartat Client dels informes i a l'Excel. A l'informe HTML també es poden tocar.</td></tr>
   <tr><td><strong>Número de projecte</strong></td><td>Forma part del nom de la carpeta de Drive i de tots els fitxers exportats.</td></tr>
   <tr><td><strong>Màquina / Equip *</strong></td><td>El nom de l'equip (model). Amb el client, decideix quines visites són de la mateixa màquina.</td></tr>
-  <tr><td><strong>Núm. de màquina / equip</strong></td><td>El número de sèrie o de màquina d'aquest equip en concret. Surt a la capçalera de la visita (🔧 … · Nº …), als informes i a l'historial de la màquina (N/S).</td></tr>
-  <tr><td><strong>Any de fabricació</strong></td><td>Surt a la capçalera de la visita i als informes.</td></tr>
+  <tr><td><strong>Núm. de màquina / equip</strong></td><td>El número de sèrie o de màquina d'aquest equip en concret. Surt a la fitxa de la visita («Sèrie»), als informes i a l'historial de la màquina (N/S).</td></tr>
+  <tr><td><strong>Any de fabricació</strong></td><td>Surt a la fitxa de la visita i als informes.</td></tr>
   <tr><td><strong>Ubicació</strong>, <strong>Tècnic</strong></td><td>Informatius; surten als informes.</td></tr>
   <tr><td><strong>Inici de la visita</strong></td><td>Quan vas arribar. Deixa'l en blanc i l'app fa servir l'hora de la primera entrada; omple'l quan creïs la visita un cop ja ets al client o quan ja has tornat. Surt a la capçalera dels informes i marca el començament del full d'hores.</td></tr>
-  <tr><td><strong>Tipus</strong></td><td>Posada en marxa (COM), Manteniment (MNT) o Millora / Retrofit (RET).</td></tr>
+  <tr><td><strong>Tipus</strong></td><td>Posada en marxa (COM), Manteniment (MNT), Millora / Retrofit (RET), Prova de producció (PRD), Muntatge (MUN), Posada a punt i proves de format (PAP) o Acceptació en fàbrica (FAT).</td></tr>
 </table></div>
-<p>Les dades es poden canviar més tard amb <span class="btn">✎</span>, al costat del nom del client.</p>
+<p>Les dades es poden canviar més tard amb el llapis de la fitxa, al costat del nom del client, o amb <span class="btn">⋮</span> › <span class="btn">Dades de la visita</span>.</p>
 <p>A la capçalera dels informes (PDF, Word i HTML) les dades surten en <strong>tres columnes</strong>: Client (client, persona de contacte, telèfon, correu, ubicació), Equip (màquina / equip, número, any de fabricació) i Visita (projecte, tècnic, inici, estat). El telèfon, el correu, el número i l'any només hi surten si n'hi ha. L'Excel de recanvis també els porta.</p>
 <p>El <strong>manual de recanvis</strong> no surt a la capçalera: el nom del fitxer és llarg i li robava una línia a la columna de l'equip. Va al final de l'apartat de recanvis, al recordatori que diu sobre quin manual s'han demanat i que convé revisar-ne les últimes actualitzacions.</p>
-<p>L'<strong>inici</strong> no és mai l'hora en què vas crear la visita a l'app. Si has omplert <strong>Inici de la visita</strong> al formulari, és aquella, llevat que una entrada sigui anterior (una foto antiga afegida després): llavors l'inici és el d'aquella entrada; si no, és l'hora de la <strong>primera entrada</strong>, i si afegeixes una entrada més antiga que les que hi havia, l'inici la segueix, perquè una visita no pot començar després de la seva primera línia. Només quan no hi ha ni una cosa ni l'altra surt l'hora en què la vas crear. El rellotge 🕐 de la capçalera de la visita diu el mateix, i es pot canviar en qualsevol moment amb <span class="btn">✎</span>.</p>
+<p>L'<strong>inici</strong> no és mai l'hora en què vas crear la visita a l'app. Si has omplert <strong>Inici de la visita</strong> al formulari, és aquella, llevat que una entrada sigui anterior (una foto antiga afegida després): llavors l'inici és el d'aquella entrada; si no, és l'hora de la <strong>primera entrada</strong>, i si afegeixes una entrada més antiga que les que hi havia, l'inici la segueix, perquè una visita no pot començar després de la seva primera línia. Només quan no hi ha ni una cosa ni l'altra surt l'hora en què la vas crear. La fitxa de la visita («Inici») diu el mateix, i es pot canviar en qualsevol moment amb el llapis.</p>
 <div class="tip"><p>Escriu el client i la màquina sempre igual. Les majúscules, els accents, els espais i els guions no compten (<code>VLP-320-R</code> i <code>vlp 320 r</code> són la mateixa màquina), però la forma jurídica sí: «X, S.L.» i «X, S.A.» són clients diferents.</p></div>
 
 <figure>
   <picture>
     <source srcset="manual-img/visita-nova-fosc.webp" media="(prefers-color-scheme:dark)">
-    <img src="manual-img/visita-nova-clar.webp" width="780" height="1790" loading="lazy" alt="El formulari d'una visita nova, amb els apartats Client, Equip i Visita">
+    <img src="manual-img/visita-nova-clar.webp" width="780" height="2900" loading="lazy" alt="El formulari d'una visita nova, amb els apartats Client, Equip i Visita">
   </picture>
-  <figcaption>El formulari de <span class="btn">+ Nova</span>. Els tres apartats són els mateixos que encapçalen els informes, i només hi ha dos camps obligatoris: el client i la màquina.</figcaption>
+  <figcaption>El formulari de <span class="btn">Nova visita</span>. Els apartats són els mateixos que encapçalen els informes, i només hi ha dos camps obligatoris: el client i la màquina.</figcaption>
 </figure>
 
 <h3>La llista de visites</h3>
-<p>A la barra lateral hi ha totes les visites, <strong>de la més nova a la més antiga</strong>. Cada una mostra el client, el número de projecte (o la màquina, si encara no té projecte), si està oberta i quantes entrades té. El quadre «Filtra les sessions…» busca pel client, la màquina, el projecte, el tècnic i la ubicació, i també dins del text de totes les entrades: les entrades que coincideixen surten a sota de la seva visita i s'hi pot anar directament.</p>
+<p>A <strong>Visites</strong> hi ha totes les visites, <strong>de la més nova a la més antiga</strong>. Cada una mostra el client, el projecte, la màquina i el tipus, les dates, quantes entrades té, quants problemes i si està en curs o tancada; amb llicència d'administrador, també el nom del tècnic. El quadre «Filtra les sessions…» busca pel client, la màquina, el projecte, el tècnic i la ubicació, i també dins del text de totes les entrades: les entrades que coincideixen surten a sota de la seva visita i s'hi pot anar directament.</p>
+
+<h3>La fitxa de la visita</h3>
+<p>Una visita s'obre per la seva <strong>fitxa</strong>: el client i la ubicació, la foto de la visita i les dades. Té tres pestanyes: <strong>Detalls</strong>, <strong>Equip</strong> (la màquina, amb els botons del manual de recanvis, els dibuixos i els comptadors) i <strong>Historial</strong>, que obre l'<a href="#historial">historial de la màquina</a>. «Veure més» ensenya la resta de dades i les notes generals. Si la màquina ja s'havia visitat, a sota surt l'<strong>última intervenció</strong> i si hi va quedar res obert.</p>
+<p>La foto és l'última que has fet a la visita, o la que triïs tu amb el botó de la imatge.</p>
+<p>A dalt de la visita hi ha sempre quatre coses: la fletxa per tornar enrere, l'indicador de <strong>Drive</strong> (tocant-lo, sincronitza), <span class="btn">⬇</span>, que obre el menú d'<a href="#informes">informes</a>, i <span class="btn">⋮</span>, que obre el menú de la visita. En aquest manual, <span class="btn">⋮</span> és sempre aquest botó.</p>
+<figure>
+  <picture>
+    <source srcset="manual-img/visita-fosc.webp" media="(prefers-color-scheme:dark)">
+    <img src="manual-img/visita-clar.webp" width="780" height="1688" loading="lazy" alt="La fitxa d'una visita al mòbil: el client, les pestanyes Detalls, Equip i Historial, la foto, les dades i el botó Registrar activitat">
+  </picture>
+  <figcaption>La fitxa d'una visita, al mòbil. <span class="btn">Registrar activitat</span> obre el registre.</figcaption>
+</figure>
+<p>El menú <span class="btn">⋮</span> està ordenat pel moment de la visita:</p>
+<ul>
+  <li><strong>Durant la visita</strong>: Comptadors de la màquina, Proves de producció, Despeses, Notes generals i Cerca al registre.</li>
+  <li><strong>Consulta</strong>: Manual de recanvis, Dibuixos (si n'hi ha de vinculat), Historial de la màquina i Carpeta de Drive.</li>
+  <li><strong>Informe</strong>: Resum de la visita, Revisa i signa, Informe i exportació, i Full d'hores.</li>
+  <li><strong>Visita</strong>: Dades de la visita, Desa a Drive, Sincronitza ara i Tanca la visita (o Reobre la visita).</li>
+  <li>A baix de tot, sola i en vermell, <strong>Elimina la visita</strong>.</li>
+</ul>
+<figure>
+  <picture>
+    <source srcset="manual-img/menu-visita-fosc.webp" media="(prefers-color-scheme:dark)">
+    <img src="manual-img/menu-visita-clar.webp" width="780" height="2370" loading="lazy" alt="El menú de la visita, amb els grups Durant la visita, Consulta, Informe i Visita">
+  </picture>
+  <figcaption>El menú <span class="btn">⋮</span> d'una visita. Cada fila diu, a sota, com està allò ara: «sense lectures», «sense vincular», «cap tiquet»…</figcaption>
+</figure>
+<p>A l'<strong>ordinador</strong> la fitxa i el registre es veuen de costat, i a sota hi ha la resta de la visita en targetes: les incidències, les proves, els recanvis, les fotos i el resum. La barra de l'esquerra hi porta directament: Visita, Cronologia, Incidències, Proves, Recanvis, Evidències, Comptadors, Full d'hores i Resum.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="registre">3. Escriure el registre</h2>
-<p>A baix de la pantalla de la visita hi ha el quadre per afegir entrades.</p>
+<p>Al mòbil, des de la fitxa, <span class="btn">Registrar activitat</span> obre el registre; a l'ordinador el tens al costat de la fitxa. <span class="btn">Afegir entrada</span> obre el quadre <strong>Nova entrada</strong>, i els dos botons del seu costat fan directament una foto o una nota de veu.</p>
 <figure>
   <picture>
     <source srcset="manual-img/registre-fosc.webp" media="(prefers-color-scheme:dark)">
-    <img src="manual-img/registre-clar.webp" width="780" height="1688" loading="lazy" alt="La pantalla d'una visita oberta: la capçalera amb les dades, el registre d'entrades i el quadre per escriure'n una de nova">
+    <img src="manual-img/registre-clar.webp" width="780" height="1688" loading="lazy" alt="El registre d'una visita: les pestanyes, les entrades del dia amb la seva gravetat i el botó Afegir entrada">
   </picture>
-  <figcaption>La pantalla d'una visita. A dalt, les dades i els botons; al mig, el registre, una entrada per fila i amb el color de la gravetat; a baix, el quadre per escriure la següent.</figcaption>
+  <figcaption>El registre d'una visita, al mòbil. A dalt, les pestanyes <strong>Registre</strong>, <strong>Incidències</strong>, <strong>Recanvis</strong> i <strong>Historial</strong>; al mig, les entrades per dies, amb el color de la gravetat; a baix, <span class="btn">Afegir entrada</span>, la càmera i el micròfon.</figcaption>
 </figure>
 <ol>
   <li><strong>Gravetat</strong>:
@@ -175,54 +222,55 @@
     <span class="sev-p">■ Problema</span>.</li>
   <li><strong>Etiqueta</strong>: de què va l'entrada. <strong>El camp és lliure</strong> &mdash; escriu-hi el que vulguis, la part de la màquina («Grup de buit», «Cinta d'entrada»…). En tocar-lo et suggereix les <strong>genèriques</strong>: Mecànica, Elèctrica, Automatització / PLC, Hidràulica, Pneumàtica i Seguretat. Si en tries una, al camp hi queda el codi curt (<code>MEC</code>, <code>ELEC</code>, <code>PLC</code>, <code>HID</code>, <code>NEU</code>, <code>SEG</code>), que és el que surt a l'informe i el que lliga les visites a l'historial de la màquina: els noms els llegeixes en l'idioma de l'aplicació, però el codi és sempre el mateix, perquè si no dos tècnics escriurien etiquetes diferents per a la mateixa cosa. Si la visita té un <a href="#recanvis">manual vinculat</a>, al costat hi surt a més el desplegable dels seus conjunts.</li>
   <li><strong>Descripció</strong>. Opcional si hi ha una foto: pots afegir la foto ara i escriure més tard.</li>
-  <li><span class="btn">↵ Afegeix</span>, o <code>Ctrl+Retorn</code> a l'ordinador.</li>
+  <li><span class="btn">Afegeix</span>, o <code>Ctrl+Retorn</code> a l'ordinador.</li>
 </ol>
 
 <figure>
   <picture>
     <source srcset="manual-img/entrada-nova-fosc.webp" media="(prefers-color-scheme:dark)">
-    <img src="manual-img/entrada-nova-clar.webp" width="780" height="680" loading="lazy" alt="El quadre d'una entrada nova: gravetat, etiqueta, descripció i els botons de foto, vídeo, galeria, veu, corrector i entrada interna">
+    <img src="manual-img/entrada-nova-clar.webp" width="780" height="948" loading="lazy" alt="El quadre d'una entrada nova: gravetat, etiqueta, descripció i els botons de foto, vídeo, galeria, veu, corrector i entrada interna">
   </picture>
-  <figcaption>El quadre de l'entrada. Els botons de la dreta de <span class="btn">↵ Afegeix</span> són, per ordre: fer una foto, triar un vídeo, triar una imatge de la galeria, gravar una nota de veu, passar el corrector i marcar l'entrada com a interna.</figcaption>
+  <figcaption>El quadre <strong>Nova entrada</strong>. Els botons de sota són, per ordre: fer una foto, triar un vídeo, triar una imatge de la galeria, gravar una nota de veu, passar el corrector i marcar l'entrada com a interna.</figcaption>
 </figure>
 
 <h3>Fotos, vídeos i notes de veu</h3>
 <p>Si una foto no és del dia —la vas fer fa tres dies i l'afegeixes ara—, la miniatura porta la seva data i, sota les miniatures, una línia groga t'ho diu: <em>📷 Foto del 07/11/2026 (fa 3 dies) — no és d'avui: l'entrada prendrà la data de la foto.</em> És el recordatori per a les fotos que s'afegeixen més tard: l'entrada anirà al dia de la foto, que és on toca. En editar una entrada, la data que es compara és la de l'entrada, no la d'avui.</p>
 <ul>
-  <li><strong>Al mòbil i a la tauleta</strong>: <span class="btn">📷</span> obre la càmera, <span class="btn">🎥</span> tria vídeos de la galeria i <span class="btn">🖼</span> tria fotos o vídeos que ja tens a la galeria.</li>
-  <li><strong>Els vídeos es graven amb la càmera del mòbil</strong>, no des de l'app: així tens la càmera lenta i totes les opcions de la càmera, i el vídeo queda guardat a la galeria, que en fa de còpia si la pujada falla. Després l'afegeixes amb <span class="btn">🎥</span>. Els vídeos grans es pugen a trossos, i si la cobertura cau un moment la pujada continua des d'on s'havia quedat.</li>
-  <li><strong>Vídeos sense connexió: la cua.</strong> Pots afegir un vídeo encara que no tinguis cobertura o no hagis entrat a Google. Es guarda a l'aparell i surt amb <strong>⏳</strong> (taronja). A la barra lateral es veu quants n'hi ha a la cua. Es pugen sols quan torna la connexió, a cada sincronització i quan obres l'app, fins i tot si l'has tancat. Mentrestant, tocant la miniatura el veus des de l'aparell. En un altre aparell, un vídeo que encara és a la cua surt amb ⏳ i avisa que es pujarà des de l'aparell on el vas afegir. Si treus el vídeo abans de desar l'entrada, també surt de la cua.</li>
+  <li><strong>Al mòbil i a la tauleta</strong>: el botó de la <strong>càmera</strong> obre la càmera, el del <strong>vídeo</strong> tria vídeos de la galeria i el de la <strong>imatge</strong> tria fotos o vídeos que ja tens a la galeria.</li>
+  <li><strong>Els vídeos es graven amb la càmera del mòbil</strong>, no des de l'app: així tens la càmera lenta i totes les opcions de la càmera, i el vídeo queda guardat a la galeria, que en fa de còpia si la pujada falla. Després l'afegeixes amb el botó del vídeo. Els vídeos grans es pugen a trossos, i si la cobertura cau un moment la pujada continua des d'on s'havia quedat.</li>
+  <li><strong>Vídeos sense connexió: la cua.</strong> Pots afegir un vídeo encara que no tinguis cobertura o no hagis entrat a Google. Es guarda a l'aparell i surt amb <strong>⏳</strong> (taronja). Al Menú, a la targeta del compte, es veu quants n'hi ha a la cua. Es pugen sols quan torna la connexió, a cada sincronització i quan obres l'app, fins i tot si l'has tancat. Mentrestant, tocant la miniatura el veus des de l'aparell. En un altre aparell, un vídeo que encara és a la cua surt amb ⏳ i avisa que es pujarà des de l'aparell on el vas afegir. Si treus el vídeo abans de desar l'entrada, també surt de la cua.</li>
   <li><strong>Veure un vídeo</strong>: toca'n la miniatura. L'app el baixa de Drive (en veus el percentatge) i el reprodueix; mentre l'app està oberta, la segona vegada ja no el torna a baixar. A sota sempre hi ha <span class="btn">↗ Obre'l a Drive</span>: el reproductor de Drive mostra qualsevol format. Si el navegador no pot reproduir aquell vídeo (passa sovint amb el format HEVC de la càmera lenta), ho diu i t'hi porta.</li>
-  <li><strong>A l'ordinador</strong>: <span class="btn">📷</span> obre el diàleg de fitxers. Si has triat la <a href="#ordinador">carpeta del projecte</a>, s'obre directament a la carpeta de la visita.</li>
-  <li><span class="btn">📐</span> obre els dibuixos del manual sense sortir del quadre: toques una posició, el recanvi entra a l'entrada i el full marcat s'hi adjunta com una foto més (vegeu <a href="#recanvis">recanvis</a>). Només surt si la visita té un manual vinculat.</li>
-  <li><span class="btn">🎙</span> grava una nota de veu, a qualsevol dispositiu. Es desa en <code>.m4a</code>, que s'obre amb doble clic a qualsevol ordinador o mòbil (només si el navegador no ho permet, en <code>.webm</code>).</li>
+  <li><strong>A l'ordinador</strong>: el botó de la càmera obre el diàleg de fitxers. Si has triat la <a href="#ordinador">carpeta del projecte</a>, s'obre directament a la carpeta de la visita.</li>
+  <li><strong>En una tauleta amb Windows</strong> (una Surface, per exemple) l'app obre la seva pròpia càmera, perquè allà el navegador només sap obrir fitxers: fa fotos i vídeos, comença per la càmera del darrere i es tanca sola després de cada foto.</li>
+  <li>El botó dels <strong>dibuixos</strong> obre els dibuixos del manual sense sortir del quadre: toques una posició, el recanvi entra a l'entrada i el full marcat s'hi adjunta com una foto més (vegeu <a href="#recanvis">recanvis</a>). Només surt si la visita té un manual vinculat.</li>
+  <li>El botó del <strong>micròfon</strong> grava una nota de veu, a qualsevol dispositiu. Es desa en <code>.m4a</code>, que s'obre amb doble clic a qualsevol ordinador o mòbil (només si el navegador no ho permet, en <code>.webm</code>).</li>
 </ul>
 <p>L'entrada agafa l'hora de la foto, no la de quan l'escrius: una foto feta a les 08:03 i descrita a les 11:00 queda a les 08:03. Les entrades sempre estan per ordre d'hora.</p>
 <p>Les fotos i els vídeos es pugen a la carpeta de Drive de la visita. Al dispositiu es queda una còpia reduïda de cada foto per veure-la sense connexió; a Drive hi ha l'original.</p>
 <p><strong>Els noms surten de la descripció.</strong> Quan afegeixes l'entrada, les fotos, els vídeos i les notes de veu que encara tenen el nom de la càmera (<code>IMG_20261014_091200.jpg</code>) passen a dir-se com una descripció molt curta de l'entrada: les primeres paraules que compten, numerades si n'hi ha més d'una. Per exemple, «Rodament del motor principal amb joc i soroll» dona <code>Rodament motor principal joc 1.jpg</code>. Les de <strong>«Com ha quedat» es diuen igual que les de l'entrada amb <code>_resolt</code> al final</strong>, de manera que a la carpeta de Drive les dues fotos d'un mateix problema queden juntes i es llegeixen com una parella: <code>Rodament motor principal joc.jpg</code> i <code>Rodament motor principal joc_resolt.jpg</code>. El text que escriguis a la resolució no canvia el nom, i la marca va en l'idioma en què tens l'aplicació. A Drive es reanomenen igual. Aquestes <strong>es reanomenen sempre</strong>, es digui com es digui el fitxer que ve del telèfon: una foto penjada al requadre de la resolució és la foto de com ha quedat i no hi ha res a endevinar. Si després canvies la descripció, els noms la segueixen. L'únic que es respecta és un nom que hagis escrit tu al requadre de sota la miniatura.</p>
-<p><strong>El nom es veu de seguida.</strong> A la finestra d'editar l'entrada, el requadre de sota la miniatura ja ensenya el nom definitiu en el moment d'afegir la foto, sense haver de desar. I si corregeixes la descripció o l'etiqueta, en sortir del camp els noms la segueixen tot sol. Al quadre d'entrada nova, en canvi, el nom es posa en prémer <span class="btn">↵ Afegeix</span>: allà encara estàs escrivint la descripció mentre poses la foto.</p>
+<p><strong>El nom es veu de seguida.</strong> A la finestra d'editar l'entrada, el requadre de sota la miniatura ja ensenya el nom definitiu en el moment d'afegir la foto, sense haver de desar. I si corregeixes la descripció o l'etiqueta, en sortir del camp els noms la segueixen tot sol. Al quadre d'entrada nova, en canvi, el nom es posa en prémer <span class="btn">Afegeix</span>: allà encara estàs escrivint la descripció mentre poses la foto.</p>
 <p>També compten com a noms de càmera els números llargs que posa el selector de fotos d'Android (<code>1792319410611143361690826977666.jpg</code>). I cada cop que obres l'app i sincronitza amb Drive, els fitxers de les <strong>visites obertes</strong> que encara tenen nom de càmera (afegits abans d'aquesta funció o des d'un aparell amb una versió antiga) es reanomenen sols. Les visites tancades no es toquen, perquè els seus informes ja s'han lliurat amb aquells noms.</p>
-<p><strong>Una còpia de les fotos al telèfon.</strong> Les fotos fetes amb <span class="btn">📷</span> no queden a la galeria del mòbil. Si les hi vols, activa ☰ › <span class="btn">📷 Còpia de les fotos al telèfon</span>: cada foto també es desarà a <strong>Baixades</strong>, amb el client i el projecte al principi del nom (<code>CAVES_MAS_DEL_PLA_P-2026-163_20261012_101530.jpg</code>), i a la galeria sortirà a l'àlbum «Download». Un navegador no pot crear carpetes a Baixades ni escriure a la carpeta de la càmera; per això l'agrupació va al nom. Els vídeos no es copien.</p>
+<p><strong>Una còpia de les fotos al telèfon.</strong> Les fotos fetes amb el botó de la càmera no queden a la galeria del mòbil. Si les hi vols, activa Menú › <span class="btn">Còpia de les fotos al telèfon</span>: cada foto també es desarà a <strong>Baixades</strong>, amb el client i el projecte al principi del nom (<code>CAVES_MAS_DEL_PLA_P-2026-163_20261012_101530.jpg</code>), i a la galeria sortirà a l'àlbum «Download». Un navegador no pot crear carpetes a Baixades ni escriure a la carpeta de la càmera; per això l'agrupació va al nom. Els vídeos no es copien.</p>
 
 <h3>Corregir el text</h3>
 <p><span class="btn">✓</span> corregeix l'ortografia i la gramàtica de la descripció; tornar-lo a prémer desfà la correcció. No toca el que va entre cometes ni les referències. Mai es fa sol: només quan el prems.</p>
 
 <h3>Entrades internes</h3>
-<p>El botó <span class="btn">🔒</span> de la fila de botons marca l'entrada que estàs escrivint com a <strong>interna</strong>: es queda a l'app, al ZIP del projecte i a l'historial de la màquina, però <strong>no surt enlloc de l'informe del client</strong> &mdash; ni la seva fila, ni els seus recanvis, ni les seves fotos, i no compta als comptadors de problemes, avisos, resolts i OK de dalt.</p>
+<p>El botó del <strong>cadenat</strong>, a la fila de botons del quadre, marca l'entrada que estàs escrivint com a <strong>interna</strong>: es queda a l'app, al ZIP del projecte i a l'historial de la màquina, però <strong>no surt enlloc de l'informe del client</strong> &mdash; ni la seva fila, ni els seus recanvis, ni les seves fotos, i no compta als comptadors de problemes, avisos, resolts i OK de dalt.</p>
 <p>És per al que no es pot dir al client i la propera visita ha de saber: que la peça la va muntar malament un altre, que el client no vol pagar la reparació de fons, que la màquina treballa fora d'especificació des de fa mesos.</p>
-<p>Mentre està armat, el botó queda marcat i a sobre del quadre surt un avís en groc, <strong>«🔒 Aquesta entrada no sortirà a l'informe del client»</strong>. S'arma <strong>només per a l'entrada següent</strong>: en afegir-la es desarma tot sol. És a propòsit &mdash; un interruptor oblidat deixaria entrades fora de l'informe sense que te n'adonessis. A la llista, una entrada interna porta l'etiqueta <strong>🔒 INTERN</strong> i una ratlla discontínua a l'esquerra.</p>
+<p>Mentre està armat, el botó queda marcat i a sobre del quadre surt un avís en groc, <strong>«🔒 Aquesta entrada no sortirà a l'informe del client»</strong>. S'arma <strong>només per a l'entrada següent</strong>: en afegir-la es desarma tot sol. És a propòsit &mdash; un interruptor oblidat deixaria entrades fora de l'informe sense que te n'adonessis. Al registre, una entrada interna porta l'etiqueta <strong>🔒 No surt a l'informe</strong>.</p>
 <h3>Notes generals</h3>
-<p>Sota el quadre hi ha «Notes generals d'aquesta sessió», amb el seu propi <span class="btn">✓ Corregeix</span>. Surten a l'informe.</p>
+<p><span class="btn">⋮</span> › <span class="btn">Notes generals</span> (o <span class="btn">Edita</span>, al costat de «Notes generals» a la fitxa) obre les notes generals de la visita, amb el seu propi <span class="btn">✓ Corregeix</span>. Surten a l'informe.</p>
 <p>A sota hi ha les <strong>«🔒 Notes internes &mdash; no surten a l'informe»</strong>, un camp a part que cap informe del client no llegeix. Hi va el que abans o no s'escrivia, o s'escrivia suau a les notes generals, que les llegeix el client.</p>
 <p><span class="btn">✨ Resum per dies</span> proposa un resum de la visita amb una línia per a cada dia, feta a partir de les entrades d'aquell dia (i de les proves de producció). Cada línia comença amb la data, per exemple <code>12/10/2026: Canvi del rodament del motor, provat i correcte.</code> Les línies van a dalt de tot de les notes i el que ja hi havies escrit es queda a sota. Pots retocar el text com vulguis. Tornar-lo a prémer just després desfà el resum. Si el tornes a fer més endavant, substitueix les línies dels mateixos dies i no toca la resta. Fa servir la mateixa clau de Gemini que el corrector.</p>
 
 <h3>Buscar dins la visita</h3>
-<p>El quadre <span class="btn">🔍 Filtra el registre…</span> mostra només les entrades que contenen el text: a la descripció i a la resolució, a l'etiqueta, la gravetat i l'hora, als <strong>recanvis</strong> de l'entrada (posició, referència, nom, conjunt i si és canviat o recomanat) i als noms dels fitxers. Busca per paraules —«motor 5332» troba l'entrada que parla d'un motor i porta la referència 5332-0183— i no fa cas de majúscules ni d'accents. El botó <span class="btn">⚙</span> del costat obre la resta de filtres: un <strong>rang de dates</strong>, els <strong>dies de la setmana</strong> i la <strong>gravetat</strong> (problema, avís, OK, info). Es combinen entre ells i amb el text, el botó mostra quants n'hi ha d'actius, i <span class="btn">✕ Neteja els filtres</span> ho treu tot. A baix de tot, la barra d'estat compta problemes, avisos, resolts i OK.</p>
-<p>El mateix filtre serveix per treure un <strong>informe parcial</strong>: amb el filtre posat (text, dates, dies o gravetat), obre <span class="btn">↓ Informe</span> i marca <span class="btn">🔍 Només les entrades del filtre</span>, que diu el filtre sencer i quantes entrades deixa. El PDF, el Word, l'HTML i l'Excel surten només amb aquelles entrades, amb els comptadors i els resums que els corresponen, i amb una franja groga sota el títol que diu que és parcial i quin filtre s'ha fet servir; el fitxer porta FILTRAT al nom. No demana cap revisió nova ni toca la signatura: l'informe que es revisa i se signa és sempre el sencer.</p>
+<p><span class="btn">⋮</span> › <span class="btn">Cerca al registre</span> (a l'ordinador, la lupa de dalt del registre) obre el quadre «Filtra el registre…», que mostra només les entrades que contenen el text: a la descripció i a la resolució, a l'etiqueta, la gravetat i l'hora, als <strong>recanvis</strong> de l'entrada (posició, referència, nom, conjunt i si és canviat o recomanat) i als noms dels fitxers. Busca per paraules —«motor 5332» troba l'entrada que parla d'un motor i porta la referència 5332-0183— i no fa cas de majúscules ni d'accents. El botó <span class="btn">⚙</span> del costat obre la resta de filtres: un <strong>rang de dates</strong>, els <strong>dies de la setmana</strong> i la <strong>gravetat</strong> (problema, avís, OK, info). Es combinen entre ells i amb el text, el botó mostra quants n'hi ha d'actius, i <span class="btn">✕ Neteja els filtres</span> ho treu tot.</p>
+<p>El mateix filtre serveix per treure un <strong>informe parcial</strong>: amb el filtre posat (text, dates, dies o gravetat), obre el menú d'informes (<span class="btn">⬇</span>) i marca <span class="btn">🔍 Només les entrades del filtre</span>, que diu el filtre sencer i quantes entrades deixa. El PDF, el Word, l'HTML i l'Excel surten només amb aquelles entrades, amb els comptadors i els resums que els corresponen, i amb una franja groga sota el títol que diu que és parcial i quin filtre s'ha fet servir; el fitxer porta FILTRAT al nom. No demana cap revisió nova ni toca la signatura: l'informe que es revisa i se signa és sempre el sencer.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="editar">4. Editar una entrada i tancar problemes</h2>
-<p>Cada entrada té botons per editar-la i esborrar-la (només mentre la visita és oberta). A l'editor pots:</p>
+<p>Cada entrada té el <span class="btn">✎</span> per editar-la i la <span class="btn">✕</span> per esborrar-la (només mentre la visita és oberta). A l'editor pots:</p>
 <ul>
   <li>Canviar la descripció, la gravetat i l'etiqueta.</li>
   <li><strong>Canviar la data i l'hora</strong>, i arrodonir-les amb <span class="btn">:05</span>, <span class="btn">:15</span> o <span class="btn">:00</span> (als 5 minuts, al quart o a l'hora en punt més propers). Mai s'arrodoneix sol. Una hora posada a mà mana sobre la de la foto.</li>
@@ -234,7 +282,7 @@
 <figure>
   <picture>
     <source srcset="manual-img/entrada-editar-fosc.webp" media="(prefers-color-scheme:dark)">
-    <img src="manual-img/entrada-editar-clar.webp" width="780" height="1502" loading="lazy" alt="La finestra d'editar una entrada, amb la data i l'hora, els botons d'arrodonir, la gravetat, l'etiqueta i la descripció">
+    <img src="manual-img/entrada-editar-clar.webp" width="780" height="1800" loading="lazy" alt="La finestra d'editar una entrada, amb la data i l'hora, els botons d'arrodonir, la gravetat, l'etiqueta i la descripció">
   </picture>
   <figcaption>L'editor d'una entrada. Els botons <span class="btn">:05</span>, <span class="btn">:15</span> i <span class="btn">:00</span> arrodoneixen l'hora; mai no s'arrodoneix sola.</figcaption>
 </figure>
@@ -242,6 +290,7 @@
 <h3>Com ha quedat: tancar un problema</h3>
 <p>Un <span class="sev-p">■ Problema</span> o un <span class="sev-w">▲ Avís</span> té el botó <span class="btn">✔ Afegeix com ha quedat</span>. Obre una resolució amb la seva pròpia gravetat, el seu text i els seus fitxers. L'entrada original no es toca: a l'informe surten totes dues coses a la mateixa fila, el problema i com va acabar.</p>
 <p>Una resolució en <span class="sev-ok">OK</span> o <span class="sev-i">Info</span> compta com a <strong>resolt</strong>. Una resolució que encara diu Avís o Problema no tanca res.</p>
+<p>La pestanya <strong>Incidències</strong> de la visita té tots els problemes i avisos amb el seu estat («Pendent» o resolt), i el mateix botó, <span class="btn">✔ Com ha quedat</span>, al costat de cada un.</p>
 
 <h3>Tancar un problema d'una visita anterior</h3>
 <p>Si la màquina té visites anteriors amb problemes oberts, l'editor mostra <strong>«Tanca un problema d'una visita anterior»</strong>. Tries el problema de la llista i l'entrada nova el tanca. El problema antic es tanca des de la visita nova i no es modifica l'antic, perquè aquell informe ja es va lliurar dient que estava obert.</p>
@@ -249,11 +298,11 @@
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="recanvis">5. Manuals, dibuixos i recanvis</h2>
 <h3>Pujar un manual</h3>
-<p>Barra lateral › <span class="btn">📚 Manuals de recanvis</span>. Un manual són dos fitxers: el PDF amb els dibuixos i el catàleg JSON amb les posicions. Es guarden a Drive i serveixen per a totes les visites.</p>
+<p>A l'ordinador, <strong>Manuals</strong>, a la barra de l'esquerra; al mòbil, Menú › <span class="btn">Manuals de recanvis</span>. Un manual són dos fitxers: el PDF amb els dibuixos i el catàleg JSON amb les posicions. Es guarden a Drive i serveixen per a totes les visites.</p>
 <h3>Vincular-lo a una visita</h3>
-<p>A la capçalera de la visita, <span class="btn">📚 Vincula manual</span>. Un cop vinculat apareix <span class="btn">📐 Dibuixos</span>, i al costat del camp <strong>Etiqueta</strong> hi surt un desplegable amb els conjunts del manual: triar-ne un deixa el seu número al camp.</p>
+<p><span class="btn">⋮</span> › <span class="btn">Manual de recanvis</span> (mentre no en té, a sota hi diu «sense vincular»). Un cop vinculat, <span class="btn">Dibuixos</span> surt al menú <span class="btn">⋮</span> i a la pestanya <strong>Equip</strong> de la fitxa, i al costat del camp <strong>Etiqueta</strong> hi ha un desplegable amb els conjunts del manual: triar-ne un deixa el seu número al camp.</p>
 <h3>Afegir un recanvi a una entrada</h3>
-<p>Es pot fer de dues bandes: <strong>mentre escrius l'entrada</strong>, amb el botó <span class="btn">📐</span> del costat del micròfon, o <strong>editant-la després</strong>, amb els botons de sota. Al quadre d'entrada nova el botó només surt si la visita té un manual vinculat, i el recanvi triat apareix a sobre de la descripció, com hi apareixen les fotos.</p>
+<p>Es pot fer de dues bandes: <strong>mentre escrius l'entrada</strong>, amb el botó dels dibuixos del quadre «Nova entrada», o <strong>editant-la després</strong>, amb els botons de sota. Al quadre d'entrada nova el botó només surt si la visita té un manual vinculat, i el recanvi triat apareix a sobre de la descripció, com hi apareixen les fotos.</p>
 <ul>
   <li><span class="btn">🔧 Afegeix un recanvi</span>: escrius quantitat, referència i nom, i tries si és canviat o recomanat.</li>
   <li><span class="btn">📐 Tria des del dibuix</span>: toques el número de posició al dibuix, poses la quantitat i tries què és (vegeu a sota).</li>
@@ -266,7 +315,7 @@
 <p>Si escrius l'etiqueta exacta i prems Retorn, s'afegeix directament. El cercador només surt quan el manual vinculat porta la llista de materials elèctrica; els manuals llegits amb el splitter la porten.</p>
 <h3>Els dispositius elèctrics porten el seu propi avís</h3>
 <p>Un dispositiu afegit amb <span class="btn">⚡</span> és un recanvi com qualsevol altre a l'informe, però <strong>no surt del manual: surt de l'esquema elèctric</strong>, que és un altre document amb la seva pròpia versió. Demanar un contactor sobre un esquema una versió endarrerit respecte del quadre és com es demana el contactor equivocat, i per això, quan la visita porta cap dispositiu, al final de l'apartat de recanvis hi surt un recordatori a part que diu de quin esquema han sortit i que en comprovis la versió.</p>
-<p>El nom i la versió de l'esquema vénen del catàleg del manual, i es veuen al gestor de <span class="btn">📚 Manuals de recanvis</span> al costat dels dispositius. Si el catàleg no en porta, l'avís surt igualment, sense el nom: val la pena fer la comprovació tant si sabem com es diu l'esquema com si no.</p>
+<p>El nom i la versió de l'esquema vénen del catàleg del manual, i es veuen a la pàgina de <strong>Manuals</strong>, al costat dels dispositius. Si el catàleg no en porta, l'avís surt igualment, sense el nom: val la pena fer la comprovació tant si sabem com es diu l'esquema com si no.</p>
 
 <h3>Un conjunt sencer</h3>
 <p>Cada dibuix del manual és un conjunt amb nom i referència pròpia (per exemple <em>Motorización · ZO-266-00</em>). Quan tries des del dibuix, a sota de l'avís groc hi ha <span class="btn">📦 Conjunt sencer: …</span> amb el conjunt de la pàgina que tens a la pantalla, i, si en té, també el conjunt gran al qual pertany. En tocar-lo, s'afegeix <strong>com una sola línia</strong>: quantitat 1, la referència i el nom, sense la llista de peces. Tries si és canviat o recomanat com amb qualsevol recanvi, i surt igual a l'informe, a l'Excel i a l'historial. A l'app el reconeixes per la icona 📦.</p>
@@ -308,7 +357,7 @@
 
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="carpeta">6. La carpeta de la sessió</h2>
-<p><span class="btn">🗃 Carpeta</span>, a la capçalera de la visita, mostra què hi ha a la seva carpeta de Drive: primer el que surt a l'informe, i després el que no està vinculat a cap entrada.</p>
+<p><span class="btn">⋮</span> › <span class="btn">Carpeta de Drive</span> mostra què hi ha a la seva carpeta de Drive: primer el que surt a l'informe, i després el que no està vinculat a cap entrada.</p>
 <ul>
   <li>Qualsevol fitxer es pot <strong>reanomenar</strong> o enviar a la paperera de Drive.</li>
   <li><span class="btn">↗</span> obre el fitxer. Els informes <code>.html</code> s'obren en una pestanya nova com a pàgina, amb les fotos; la resta (PDF, Word, fotos, vídeos), al visor de Drive. No obris l'HTML des de Drive amb «Obre amb Google Docs»: només en veuries el codi i deixaria una còpia <code>.gdoc</code> a la carpeta.</li>
@@ -320,30 +369,30 @@
 
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="informes">7. Informes</h2>
-<p><span class="btn">↓ Informe ▾</span>, a la capçalera de la visita, té tots els formats:</p>
+<p>El botó <span class="btn">⬇</span> de dalt de la visita (o <span class="btn">⋮</span> › <span class="btn">Informe i exportació</span>) obre el menú <strong>Informe</strong>, amb tots els formats:</p>
 <div class="scroll"><table>
   <tr><th>Opció</th><th>Què fa</th></tr>
-  <tr><td>📄 PDF</td><td>L'informe complet. A la columna Adjunts de cada entrada hi ha els noms dels fitxers; les fotos surten en gran en un annex al final.</td></tr>
-  <tr><td>📄 Word (DOCX)</td><td>El mateix informe, editable. Té la mateixa forma que el PDF.</td></tr>
-  <tr><td>📄 HTML</td><td>Es pot obrir a qualsevol navegador. Com el PDF: els noms dels fitxers a cada entrada i les fotos en gran al final.</td></tr>
-  <tr><td>📊 Recanvis (Excel)</td><td>Els recanvis de la visita: un full de recomanats per cotitzar, un de canviats, el detall i les dades de la sessió.</td></tr>
-  <tr><td>🧾 Full d'hores…</td><td>Obre el full d'hores per signar (vegeu <a href="#hores">full d'hores</a>).</td></tr>
-  <tr><td>🔒 Informe intern (PDF)</td><td>Les entrades internes i les notes internes, en un PDF a part. <strong>No és per al client.</strong> Només surt al menú si la visita té alguna cosa interna.</td></tr>
-  <tr><td>🗄 ZIP del projecte (arxiu)</td><td>Tot: tots els informes, totes les revisions anteriors, les fotos, els vídeos, les notes de veu i les dades de la visita. <strong>És l'única còpia que es pot tornar a importar.</strong> Cada foto, vídeo o nota de veu de la visita hi entra encara que ja no sigui a la carpeta (l'app el busca a Drive, també a la paperera). Si en falta algun que ja no es pot trobar, l'app avisa amb el nom del fitxer: no esborris la visita fins que el tinguis.</td></tr>
-  <tr><td>📦 ZIP Word + multimèdia</td><td>L'informe Word amb tots els fitxers, per lliurar. No es pot tornar a importar.</td></tr>
+  <tr><td>PDF</td><td>L'informe complet. A la columna Adjunts de cada entrada hi ha els noms dels fitxers; les fotos surten en gran en un annex al final.</td></tr>
+  <tr><td>Word (DOCX)</td><td>El mateix informe, editable. Té la mateixa forma que el PDF.</td></tr>
+  <tr><td>HTML</td><td>Es pot obrir a qualsevol navegador. Com el PDF: els noms dels fitxers a cada entrada i les fotos en gran al final.</td></tr>
+  <tr><td>Recanvis (Excel)</td><td>Els recanvis de la visita: un full de recomanats per cotitzar, un de canviats, el detall i les dades de la sessió.</td></tr>
+  <tr><td>Full d'hores…</td><td>Obre el full d'hores per signar (vegeu <a href="#hores">full d'hores</a>). Només amb el mòdul a la llicència.</td></tr>
+  <tr><td>Informe intern (PDF)</td><td>Les entrades internes i les notes internes, en un PDF a part. <strong>No és per al client.</strong> Només surt al menú si la visita té alguna cosa interna.</td></tr>
+  <tr><td>ZIP del projecte</td><td>Tot: tots els informes, totes les revisions anteriors, les fotos, els vídeos, les notes de veu i les dades de la visita. <strong>És l'única còpia que es pot tornar a importar.</strong> Cada foto, vídeo o nota de veu de la visita hi entra encara que ja no sigui a la carpeta (l'app el busca a Drive, també a la paperera). Si en falta algun que ja no es pot trobar, l'app avisa amb el nom del fitxer: no esborris la visita fins que el tinguis.</td></tr>
+  <tr><td>ZIP Word + multimèdia</td><td>L'informe Word amb tots els fitxers, per lliurar. No es pot tornar a importar.</td></tr>
 </table></div>
 <figure>
   <picture>
     <source srcset="manual-img/menu-informe-fosc.webp" media="(prefers-color-scheme:dark)">
-    <img src="manual-img/menu-informe-clar.webp" width="600" height="852" loading="lazy" alt="El menú de l'informe, amb l'estat de signatura i de revisió, l'idioma de l'informe, l'idioma en què s'ha escrit i la llista de formats">
+    <img src="manual-img/menu-informe-clar.webp" width="780" height="1560" loading="lazy" alt="El menú de l'informe, amb l'estat de signatura i de revisió, l'idioma de l'informe, l'idioma en què s'ha escrit i la llista de formats">
   </picture>
-  <figcaption>El menú de <span class="btn">↓ Informe</span>. A dalt, si l'informe està signat i per quina revisió va; després els dos idiomes; i a sota els formats. <span class="btn">🔒 Informe intern</span> només hi surt si la visita té alguna cosa interna.</figcaption>
+  <figcaption>El menú <strong>Informe</strong>. A dalt, si l'informe està signat i per quina revisió va; després l'idioma de l'informe; i a sota els formats. «Informe intern» només hi surt si la visita té alguna cosa interna.</figcaption>
 </figure>
 <p><strong>Triar què va al ZIP del projecte.</strong> Quan l'exportes des del menú, primer surt una llista per marcar què hi vols: informe PDF, Word, HTML, Excel de recanvis, informe de validació, informe intern, historial de la màquina, full d'hores, fotos, vídeos i notes de veu, tiquets de les despeses, revisions anteriors i manual de recanvis. Les <strong>dades de la visita</strong> (<code>session.json</code>) també es poden treure: és el que permet tornar a importar la visita, però a qui li envies el ZIP (l'empresa, el client) no li cal. Surten marcades per defecte, menys l'<strong>historial de la màquina</strong>, que és opcional (vegeu <a href="#historial">Historial de la màquina</a>). El que la visita no té surt en gris. L'app recorda l'última tria. Si treus les dades de la visita, la multimèdia, els tiquets de les despeses o les revisions anteriors, el ZIP no compta com a còpia completa per esborrar la visita, perquè això no es pot refer (i sense les dades, a més, no es pot tornar a importar). Quan arxives visites o fas el ZIP des de la finestra d'esborrar, no pregunta: el ZIP va sencer.</p>
 <p><strong>L'ordre de l'informe</strong>, igual al PDF, al Word i a l'HTML: les dades de la visita, els comptadors de la màquina, les <strong>notes generals</strong> (el resum de la visita, amb una línia per dia si fas servir ✨ Resum per dies), les incidències, el registre per dies, els recanvis canviats i recomanats, les proves de producció i les signatures. Les fotos grans van al final, com a annex, en una pàgina a part.</p>
 <p><strong>Incidències d'aquesta visita.</strong> Sota els comptadors, una taula petita amb tots els problemes i avisos de la visita: la gravetat, quan, què era i com ha quedat («Resolt» amb la data i l'hora, o «Pendent», amb «recanvi recomanat» si n'hi ha). També hi surten els problemes de visites anteriors que s'han tancat en aquesta. Si la visita no té ni problemes ni avisos, la taula no hi surt.</p>
 <p><strong>Al registre</strong>, el bloc «Com ha quedat» d'una incidència resolta diu també quant va trigar a resoldre's («resolt en 2 h 28 min»). Una entrada que tanca un problema d'una visita anterior porta un requadre gris amb aquell problema: la data i el projecte de la visita, la gravetat i el text com es va escriure (traduït, si l'informe va en un altre idioma).</p>
-<p>Les entrades surten en <strong>una sola taula</strong>, amb la capçalera (Hora, Gravetat, Etiqueta, Descripció, Adjunts) a dalt i repetida només quan la taula passa a una pàgina nova. Cada dia va en una <strong>caixa pròpia</strong>, separada de les altres per una mica d'aire, amb una franja que diu el dia de la setmana, la data, quantes entrades hi ha i els problemes, avisos, resolts i OK d'aquell dia. Cada entrada porta només l'hora. Si la visita dura <strong>més d'una setmana</strong>, cada setmana comença amb una franja taronja («Setmana 39 · 21/09/2026 – 27/09/2026 · 4 dies · 4 entrades»); en una visita d'una sola setmana, aquesta franja no hi surt. Una franja de dia (o de setmana) mai queda sola a peu de pàgina.</p>
+<p>Les entrades surten en <strong>una sola taula</strong>, amb la capçalera (Hora, Gravetat, Etiqueta, Descripció, Adjunts) a dalt i repetida només quan la taula passa a una pàgina nova. Cada dia va en una <strong>caixa pròpia</strong>, separada de les altres per una mica d'aire, amb una franja que diu el dia de la setmana, la data, quantes entrades hi ha i els problemes, avisos, resolts i OK d'aquell dia. Cada entrada porta només l'hora. Si la visita dura <strong>més d'una setmana</strong>, cada setmana comença amb una franja de color («Setmana 39 · 21/09/2026 – 27/09/2026 · 4 dies · 4 entrades»); en una visita d'una sola setmana, aquesta franja no hi surt. Una franja de dia (o de setmana) mai queda sola a peu de pàgina.</p>
 <p><strong>L'aspecte</strong>: les capçaleres de les taules són gris clar amb el text en majúscules petites, i cada títol d'apartat porta una ratlla de color a l'esquerra. Les signatures van just després de l'últim apartat, i les fotos grans surten en una pàgina nova, com a <strong>Annex · Fotos</strong>, amb el projecte, la revisió i quantes fotos hi ha.</p>
 <p>A la columna <strong>Adjunts</strong> (PDF, Word i HTML) hi ha <strong>només els noms</strong> dels fitxers, un per línia, sense miniatures: les fotos pel nom, els vídeos amb <code>»</code> davant i les notes de veu amb <code>•</code>. Les fotos de la resolució («com ha quedat») també hi són. Dels vídeos, només hi surten els que són a la carpeta de la visita (un vídeo que no s'ha pogut pujar no hi surt). L'apartat «Fotos» del final té totes les fotos en gran, senceres i sense deformar, amb l'hora i el nom a sota.</p>
 <h3>Obrir les fotos i els vídeos des de l'informe</h3>
@@ -359,7 +408,7 @@
 </ul>
 
 <h3>L'informe intern</h3>
-<p><span class="btn">↓ Informe › 🔒 Informe intern (PDF)</span> és un sol PDF amb <strong>totes les entrades marcades d'internes i les notes internes</strong>, per passar-ho a algú: al company que hi anirà la propera vegada, al cap. El fa el mateix constructor que l'informe del client, amb les entrades internes a dins i les notes internes fent de notes generals. No hi van les proves de producció, que són cosa del client, ni les signatures, perquè no és un document que ningú signi. Només surt al menú quan la visita té alguna entrada interna o alguna nota interna.</p>
+<p>Informe › <span class="btn">Informe intern (PDF)</span> és un sol PDF amb <strong>totes les entrades marcades d'internes i les notes internes</strong>, per passar-ho a algú: al company que hi anirà la propera vegada, al cap. El fa el mateix constructor que l'informe del client, amb les entrades internes a dins i les notes internes fent de notes generals. No hi van les proves de producció, que són cosa del client, ni les signatures, perquè no és un document que ningú signi. Només surt al menú quan la visita té alguna entrada interna o alguna nota interna.</p>
 <p><strong>No es tradueix mai</strong>: va en l'idioma de l'app. No el llegeix ningú de fora, i així tampoc no viatja cap text cap al model de traducció.</p>
 <p>L'única manera que té aquest document de sortir malament és arribar al client, i per això ho diu tres vegades: el fitxer es diu <code>INTERN_…</code>, la primera pàgina porta una franja vermella <strong>«ÚS INTERN &mdash; NO ENVIAR AL CLIENT»</strong> i la mateixa línia vermella es repeteix al peu de cada full.</p>
 <p>Al <strong>ZIP del projecte</strong> hi va marcat de sèrie, perquè el ZIP del projecte és documentació interna. Al <strong>ZIP Word + multimèdia</strong>, que és el que es lliura, no hi entra.</p>
@@ -372,7 +421,7 @@
 
 <h3>On va el fitxer</h3>
 <p><strong>Els informes no es descarreguen.</strong> Van directament a la carpeta de la visita a Drive (<code>Outputs</code>), un sol fitxer per format, que se substitueix cada vegada. A baix de la pantalla surt una nota amb el nom del fitxer i <strong>Obre a Drive</strong>; des de Drive el pots enviar per correu, WhatsApp o l'app que vulguis. Val per al PDF, el Word, l'HTML, l'Excel, el full d'hores, l'informe de validació i el ZIP Word + multimèdia. El ZIP del projecte va a la <a href="#arxiu">carpeta d'arxiu</a>, com sempre.</p>
-<p><strong>Sense connexió o sense haver entrat a Google</strong>, l'informe es genera igual i passen dues coses: <strong>es descarrega a l'aparell</strong> (a Baixades, com qualsevol fitxer), perquè el puguis enviar o ensenyar des d'allà mateix, i a més queda guardat a l'app per pujar-lo. La nota t'ho diu («⬇ … descarregat en aquest aparell; es pujarà també a la carpeta del projecte»), i a la barra lateral surt «⏳ N informes pendents de pujar». Es puja sol a la carpeta de la visita quan tornes a tenir connexió. Si mentrestant el tornes a generar, només es puja l'últim. Val per a tot el que l'app desa a la carpeta del projecte: els informes en qualsevol format, els tres documents de <strong>Revisa i signa</strong> (l'informe, el full d'hores i l'informe de validació, ja signats), l'informe intern, l'Excel de recanvis i el de despeses i el ZIP Word + multimèdia; el ZIP del projecte té el seu apartat a <a href="#arxiu">Arxivar</a>.</p>
+<p><strong>Sense connexió o sense haver entrat a Google</strong>, l'informe es genera igual i passen dues coses: <strong>es descarrega a l'aparell</strong> (a Baixades, com qualsevol fitxer), perquè el puguis enviar o ensenyar des d'allà mateix, i a més queda guardat a l'app per pujar-lo. La nota t'ho diu («⬇ … descarregat en aquest aparell; es pujarà també a la carpeta del projecte»), i al Menú, a la targeta del compte, surt quants informes hi ha pendents de pujar. Es puja sol a la carpeta de la visita quan tornes a tenir connexió. Si mentrestant el tornes a generar, només es puja l'últim. Val per a tot el que l'app desa a la carpeta del projecte: els informes en qualsevol format, els tres documents de <strong>Revisa i signa</strong> (l'informe, el full d'hores i l'informe de validació, ja signats), l'informe intern, l'Excel de recanvis i el de despeses i el ZIP Word + multimèdia; el ZIP del projecte té el seu apartat a <a href="#arxiu">Arxivar</a>.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="revisions">8. Revisions i signatura</h2>
@@ -381,12 +430,13 @@
 <ul>
   <li><strong>Revisió nova</strong>: número següent, data (avui per defecte) i una nota obligatòria de què ha canviat.</li>
   <li><strong>Torna a emetre la vigent</strong>: mateix número; els fitxers d'aquella revisió se substitueixen.</li>
+  <li>Si la revisió vigent <strong>ja està signada</strong>, no es pot tornar a emetre amb un contingut diferent: només s'ofereix la revisió nova, que surt sense signar. El que el client va signar no és el que hi ha ara.</li>
 </ul>
 <p>Les revisions anteriors no es poden refer, perquè l'app només té les dades d'ara. Per això els seus fitxers es guarden a Drive i viatgen dins del ZIP del projecte. Els altres ZIP que hi hagi a la carpeta de la visita (per exemple, el «Word + multimèdia») no s'hi posen: duplicarien les fotos i els vídeos.</p>
-<p>A <span class="btn">↓ Informe › Revisions…</span> hi ha la llista, i s'hi pot corregir la data i la nota de la revisió vigent.</p>
+<p>Al menú Informe, <span class="btn">Revisions…</span> té la llista, i s'hi pot corregir la data i la nota de la revisió vigent.</p>
 
 <h3>Revisar i signar l'informe o el full d'hores</h3>
-<p><span class="btn">Revisa i signa</span> és la primera opció de <span class="btn">↓ Informe</span> (i, al disseny nou, la primera de la llista). Si la visita té full d'hores, primer tries quin document vols: <strong>📄 Informe</strong> o <strong>🕒 Full d'hores</strong> (al costat de cada un diu si ja està signat). Si no en té, s'obre directament l'informe.</p>
+<p><span class="btn">Revisa i signa</span> és la primera opció del menú Informe, i també és al menú <span class="btn">⋮</span>. Si la visita té full d'hores, primer tries quin document vols: <strong>📄 Informe</strong> o <strong>🕒 Full d'hores</strong> (al costat de cada un diu si ja està signat). Si no en té, s'obre directament l'informe.</p>
 <ul>
   <li><strong>Informe:</strong> surt sencer a pantalla, en l'idioma del client, tal com el rebrà, per ensenyar-l'hi i explicar-l'hi. Els noms de les fotos et porten a la foto gran del final. Si la visita té <a href="#registre">entrades internes</a>, a dalt diu quantes queden fora d'aquest informe i si alguna porta recanvis, que marxen amb ella: abans de signar has de saber què no hi ha.</li>
   <li><strong>Informe de validació:</strong> si la visita té proves de producció, surt tal com sortirà en PDF, amb el full complet de cada prova i les fotos de la pantalla del comptador. <strong>La seva signatura és independent</strong> de la de l'informe: signar-lo no toca l'informe, i emetre una revisió nova de l'informe no el torna a deixar sense signar.</li>
@@ -404,40 +454,39 @@
 
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="idiomes">9. Idiomes i traducció</h2>
-<p>L'app va en català, castellà o anglès, i es dóna per fet que escrius les entrades en l'idioma en què tens l'app. Els informes poden sortir en 29 idiomes. A <span class="btn">↓ Informe</span>:</p>
+<p>L'app va en català, castellà o anglès, i es dóna per fet que escrius les entrades en l'idioma en què tens l'app. Els informes poden sortir en 29 idiomes. Al menú Informe:</p>
 <ul>
   <li><strong>Idioma de l'informe</strong>: CA, ES, EN, o un altre del desplegable. Mentre no en triïs cap, és el de l'app; el que triïs es queda a la visita. <strong>Si coincideix amb l'idioma de l'app, no s'envia res a traduir</strong>: el text surt exactament com l'has escrit.</li>
 </ul>
 <p>Es tradueixen les descripcions, les resolucions i les notes generals. No es tradueixen el client, la màquina, la ubicació, les etiquetes, els noms de recanvi ni el que va entre cometes. Cada traducció es guarda: exportar una altra vegada no costa res i funciona sense connexió.</p>
-<p>La primera vegada que tries un idioma que no sigui català, castellà o anglès, Gemini en tradueix les etiquetes fixes (títols, columnes…). Convé mirar-les un cop a <span class="btn">↓ Informe › Revisa-les…</span>: s'hi poden corregir a mà.</p>
+<p>La primera vegada que tries un idioma que no sigui català, castellà o anglès, Gemini en tradueix les etiquetes fixes (títols, columnes…). Convé mirar-les un cop a Informe › <span class="btn">Revisa-les…</span>: s'hi poden corregir a mà.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="hores">10. Full d'hores</h2>
-<p>Les hores no s'escriuen aquí: venen de l'app <strong>Calendari laboral</strong>, on ja les fitxes. El full s'obre amb <span class="btn">🧾 Full d'hores</span> a la capçalera o des de <span class="btn">↓ Informe</span>.</p>
+<p>El full d'hores és un <strong>mòdul de la llicència</strong>: si la teva no l'inclou, no surt. Les hores <strong>es desen amb la visita</strong>, com tota la resta. S'obre amb <span class="btn">⋮</span> › <span class="btn">Full d'hores</span>, des del menú Informe o, a l'ordinador, amb «Full d'hores» a la barra de la visita.</p>
 <figure class="ample">
   <picture>
     <source srcset="manual-img/full-hores-fosc.webp" media="(prefers-color-scheme:dark)">
-    <img src="manual-img/full-hores-clar.webp" width="748" height="934" loading="lazy" alt="El full d'hores, amb les dates Des de i Fins a, els botons de les columnes i la taula dels dies fitxats">
+    <img src="manual-img/full-hores-clar.webp" width="780" height="980" loading="lazy" alt="El full d'hores: el període i l'idioma, i la llista de dies amb les hores de cada un">
   </picture>
-  <figcaption>El full d'hores d'una visita: s'obre amb els dies de la intervenció. La taula ensenya els dies fitxats al Calendari laboral; marca els que el client ha de signar.</figcaption>
+  <figcaption>El full d'hores d'una visita. Els dies marcats <strong>Proposta</strong> surten de les entrades d'aquell dia: revisa'ls.</figcaption>
 </figure>
 <ol>
-  <li>Surten els dies fitxats del <strong>«Des de»</strong> al <strong>«Fins a»</strong>, que s'obren amb <strong>la data d'inici de la intervenció i la de l'última entrada</strong>. Si vols que hi entrin els dies de viatge, amplia les dates a mà; un cop desat el full, es queda amb les que hi hagis posat, llevat que la intervenció hagi crescut (una entrada més antiga o més nova que les dates desades): llavors s'obre fins on arriba la feina. Marca els dies que el client ha de signar. Vacances i festius no hi surten.</li>
-  <li>Tria les columnes amb els botons de sobre la taula. La data sempre hi és. La tria es recorda per al full següent; <span class="btn">Restableix</span> les torna totes.</li>
-  <li>Tria l'idioma del full; pot ser diferent del de l'informe.</li>
-  <li>Escriu les observacions, si cal.</li>
-  <li>Signeu tots dos als requadres. La <strong>Data de signatura</strong> es posa sola amb el dia que es signa, i és la que surt al full sota cada signatura. La pots canviar a mà; si la canvies, signar després ja no la toca. Si el full es signa en paper, pots escriure-hi la data i sortirà sota totes dues línies.</li>
-  <li><span class="btn">📄 Desa i PDF</span>.</li>
+  <li><strong>Període i idioma.</strong> «Des de» i «Fins a» s'obren amb la data d'inici de la intervenció i la de l'última entrada; amplia'ls a mà si hi vols dies de viatge. L'idioma del full pot ser diferent del de l'informe.</li>
+  <li><strong>Dies.</strong> Cada dia que té entrades surt proposat, amb l'etiqueta <strong>Proposta</strong>: l'arribada és l'hora de la primera entrada d'aquell dia i el final, la de l'última. Toca un dia per corregir-lo: s'obre «Hores del dia», amb la <strong>sortida</strong> (de casa o de l'hotel), l'<strong>arribada</strong> a la planta, el <strong>fi</strong> en sortir-ne, la <strong>tornada</strong>, la <strong>pausa</strong> en minuts i la destinació o una nota, i a sota les hores de viatge, de treball i el total que en surten. <span class="btn">+ Afegeix un dia</span> n'afegeix un que no té entrades, com un dia de viatge. La casella de cada dia diu si surt al full; <span class="btn">Tots</span> i <span class="btn">Cap</span> les marquen de cop. A sota de la llista hi ha els totals.</li>
+  <li><strong>Columnes del full.</strong> Tria què surt imprès. La data hi és sempre. «Setm.» hi afegeix el número de la setmana i una ratlla més gruixuda entre setmanes. La tria es recorda per al full següent; <span class="btn">Restableix</span> les torna totes. Amb llicència de tècnic, si l'empresa ha fixat les columnes, cada full nou comença amb les de l'empresa.</li>
+  <li><strong>Observacions</strong>, si cal: s'imprimeixen al full.</li>
+  <li><strong>Signatures.</strong> Signeu tots dos als requadres, amb el dit o amb un llapis tàctil. La <strong>Data de signatura</strong> es posa sola amb el dia que es signa, i és la que surt al full sota cada signatura. La pots canviar a mà; si la canvies, signar després ja no la toca. Si el full es signa en paper, deixa els requadres en blanc: s'imprimeixen les línies buides.</li>
+  <li><span class="btn">✓ Desa</span> desa el full; <span class="btn">📄 Desa i PDF</span>, a més, en fa el PDF.</li>
 </ol>
 <p>El full també es pot ensenyar i signar a pantalla, tal com sortirà en PDF: vegeu <a href="#revisions">Revisar i signar l'informe o el full d'hores</a>.</p>
-<p>Un cop desat, el full queda fixat: encara que després canviïs un dia al calendari, el full signat no canvia.</p>
-<p><strong>Un mes sencer cap en una pàgina</strong>, amb la capçalera, les observacions i les signatures. Quan hi ha molts dies, les files s'estrenyen una mica per fer-hi lloc; un full de pocs dies surt com sempre.</p>
+<p><strong>Un full porta fins a 31 dies</strong>, amb la capçalera, les observacions i les signatures. Una visita més llarga comença un full nou dins del mateix PDF, amb la mateixa signatura a tots dos. Quan hi ha molts dies, les files s'estrenyen una mica per fer-hi lloc; un full de pocs dies surt com sempre.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="proves">11. Proves de producció</h2>
 <p>Una prova de producció registra com treballa la línia durant un període, per validar-la: què s'ha fet, què s'ha rebutjat i cada aturada amb la seva causa. A partir d'això l'app calcula l'OEE i diu si la prova supera els criteris acordats.</p>
 <ul>
-  <li><strong>Dins d'una visita:</strong> a la capçalera, <span class="btn">📈 Prova de producció</span> (o <span class="btn">⋮ Més › Proves de producció</span> amb el disseny nou). Una visita en pot tenir tantes com calgui.</li>
+  <li><strong>Dins d'una visita:</strong> <span class="btn">⋮</span> › <span class="btn">Proves de producció</span>; a l'ordinador, també «Proves» a la barra de la visita, amb <span class="btn">Nova prova</span>. Una visita en pot tenir tantes com calgui.</li>
   <li><strong>Tota sola:</strong> crea una visita de tipus <strong>Prova de producció (PRD)</strong>. S'obre directament amb la primera prova.</li>
 </ul>
 <h3>Registrar-la en directe</h3>
@@ -472,27 +521,27 @@
 <h3>Als documents</h3>
 <ul>
   <li><strong>Dins de l'informe</strong> de la visita (PDF, Word i HTML), un <strong>resum compacte</strong>: una fila per prova amb el producte, el període, les unitats, el rebuig, la disponibilitat, el rendiment, la qualitat, l'OEE i el resultat. A l'Excel hi ha un full amb una fila per prova i un altre amb les aturades.</li>
-  <li><strong>Informe de validació</strong> (PDF): <span class="btn">↓ Informe › 📈 Informe de validació</span>, o el botó de la llista de proves. Porta les dades de la visita, el full complet de cada prova (dades, indicadors amb objectius, aturades i observacions) i les signatures; no hi surt el registre d'incidències. També va dins del ZIP del projecte.</li>
+  <li><strong>Informe de validació</strong> (PDF): Informe › <span class="btn">Informe de validació</span>, o el botó de la llista de proves. Porta les dades de la visita, el full complet de cada prova (dades, indicadors amb objectius, aturades i observacions) i les signatures; no hi surt el registre d'incidències. També va dins del ZIP del projecte.</li>
 </ul>
 <p>El nom de les proves, les causes i les observacions surten tal com les escrius: no es tradueixen.</p>
 <p><strong>L'informe de validació se signa a part.</strong> Té la seva pròpia signatura, que no és la de l'informe de la visita: el pot signar una altra persona, un altre dia, o no signar-se. Emetre una revisió nova de l'informe no la toca, i signar la validació no posa tinta a l'informe. Es fa des de <span class="btn">Revisa i signa</span> (vegeu <a href="#revisions">revisions i signatura</a>).</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="despeses">12. Despeses</h2>
-<p>Els tiquets i les factures de les despeses de cada visita: els fotografies el mateix dia (el paper tèrmic s'esborra) i en queden la imatge i les dades per al full de despeses.</p>
-<div class="warn"><p>Encara està en proves i va amagat. Per veure'l: a la barra lateral (<span class="btn">☰</span>), <span class="btn">💶 Despeses: no</span> i passa a <span class="btn">💶 Despeses: sí</span>. Es recorda a cada aparell. Si l'amagues, les despeses que ja hi ha no s'esborren.</p></div>
+<p>Els tiquets i les factures de les despeses de cada visita: els fotografies el mateix dia (el paper tèrmic s'esborra) i en queden la imatge i les dades per omplir el full de despeses de l'empresa. <strong>No substitueixen els tiquets</strong>: el paper s'ha de guardar igualment.</p>
+<div class="warn"><p>Les despeses són un <strong>mòdul de la llicència</strong>: si la teva no l'inclou, no surten. Si l'inclou, s'activen a cada aparell amb Menú › <span class="btn">Despeses</span>. Si les amagues, les despeses que ja hi ha no s'esborren.</p></div>
 <ul>
-  <li><strong>On és:</strong> a la capçalera de la visita, <span class="btn">💶 Despeses</span> (o <span class="btn">⋮ Més › Despeses</span> amb el disseny nou).</li>
+  <li><strong>On és:</strong> <span class="btn">⋮</span> › <span class="btn">Despeses</span>. A Inici, «Despeses per revisar» diu quantes en tens de pendents.</li>
   <li><span class="btn">📷 Fotografia el tiquet</span> (al mòbil i la tauleta) obre la càmera. <span class="btn">＋ Imatge o PDF</span> agafa una foto que ja tens o un PDF, per exemple la factura de l'hotel o del vol que t'arriba per correu.</li>
   <li>Amb un sol tiquet, s'obre de seguida per revisar-lo. Si en tries diversos de cop, van a la llista i els obres d'un en un.</li>
 </ul>
 <h3>L'app llegeix el tiquet</h3>
-<p>Cada tiquet nou el llegeix Gemini, amb la mateixa clau que el corrector (<span class="btn">🔑 Clau de Gemini</span>): data, hora, establiment, raó social, NIF o RFC, adreça, número de tiquet, concepte, categoria, imports, moneda i les xifres de la targeta. Mentre llegeix, a la llista surt <strong>LLEGINT…</strong>. Sense connexió o sense clau, el tiquet espera i es llegeix sol més tard.</p>
+<p>Cada tiquet nou el llegeix Gemini, amb la mateixa clau que el corrector (Menú › <span class="btn">Clau de Gemini</span>): data, hora, establiment, raó social, NIF o RFC, adreça, número de tiquet, concepte, categoria, imports, moneda i les xifres de la targeta. Mentre llegeix, a la llista surt <strong>LLEGINT…</strong>. Sense connexió o sense clau, el tiquet espera i es llegeix sol més tard.</p>
 <ul>
   <li>El que llegeix queda <strong>PER REVISAR</strong>. Els camps dels quals no està segur surten en <strong>taronja</strong>. Revisa'ls i prem <span class="btn">✓ Desa</span>.</li>
   <li>La data és la que hi ha impresa, no la de la foto: un tiquet antic fotografiat avui conserva la seva data.</li>
   <li><strong>Les quantitats surten del comprovant de la targeta</strong>: el total és el que es va cobrar, i és el que va al full de despeses. La propina no es separa.</li>
-  <li>Del rebut, l'app guarda tot el que hi afegeix: raó social, NIF o RFC, adreça, número de tiquet o folio, el desglossament de l'IVA, el <strong>concepte</strong> (què es va comprar) i <strong>Altres dades del rebut</strong> (comensals, nits, matrícula, vol…). Es guarda tot fins que se sàpiga el format final del full de despeses.</li>
+  <li>Del rebut, l'app guarda tot el que hi afegeix: raó social, NIF o RFC, adreça, número de tiquet o folio, el desglossament de l'IVA, el <strong>concepte</strong> (què es va comprar) i <strong>Altres dades del rebut</strong> (comensals, nits, matrícula, vol…).</li>
   <li>Un símbol «$» no vol dir per força dòlars: la moneda surt del país del tiquet (a Mèxic, pesos).</li>
   <li><span class="btn">✨ Torna a llegir</span> el torna a llegir. El que has canviat a mà es queda com està, si no és que li dius que també ho torni a llegir.</li>
 </ul>
@@ -542,7 +591,16 @@
   <li>Full <strong>Despeses</strong>: una fila per despesa, amb totes les dades (número, data, hora, categoria, establiment, raó social, NIF, adreça, número de tiquet, concepte, base, IVA, total, moneda, pagat amb, targeta, altres dades, notes, els noms dels documents i si està revisada). Les dates i els imports són dates i números d'Excel: es poden ordenar i sumar.</li>
   <li>Full <strong>Resum</strong>: el mateix resum de la pantalla, per categoria, total i forma de pagament, amb una columna per moneda.</li>
 </ul>
-<p>És provisional, fins que tinguem la plantilla de l'empresa.</p>
+<p>Aquest Excel és l'índex numerat de les despeses: una fila per tiquet. El que es lliura a l'empresa és el seu propi full, que ve ara.</p>
+<h3>El full de despeses de l'empresa</h3>
+<p><span class="btn">📄 Full de l'empresa</span>, al costat de <span class="btn">📊 Excel</span>, omple <strong>el full de despeses de la teva empresa</strong> amb les despeses de la visita i el desa a la carpeta del projecte. La primera vegada et demana el full buit, en <code>.xlsx</code>, tal com te'l van donar: es tria un cop a cada aparell i s'hi queda (a sota de la llista diu quin és, amb <span class="btn">Canvia'l</span> i <span class="btn">Treu-lo</span>). Si l'administrador l'ha repartit amb la configuració de l'empresa, ja el tens i no es pot canviar des d'un aparell de tècnic.</p>
+<ul>
+  <li>El full s'omple <strong>sobre el fitxer de l'empresa</strong>, sense refer-lo: el logotip, els formats i les fórmules es queden com eren.</li>
+  <li>Hi van <strong>totes</strong> les despeses de la visita, les hagi pagat qui les hagi pagat, una fila per dia.</li>
+  <li>Els <strong>àpats</strong> van a esmorzar, dinar o sopar segons l'hora del tiquet; a la fitxa de la despesa ho pots canviar.</li>
+  <li><strong>Un fitxer per moneda</strong>, i un segon fitxer si la visita passa dels dies que hi caben en un full.</li>
+  <li>A qui s'imputa cada despesa es deixa en blanc: ho marques tu a mà.</li>
+</ul>
 <h3>Si l'app es tanca mentre afegeixes un tiquet</h3>
 <p>Si l'app es tanca just mentre prepara la foto d'un tiquet (una trucada, la bateria), la propera vegada que l'obris aquella despesa a mig fer s'esborra sola, perquè no té res. Torna a fotografiar el tiquet. Si ja hi havies escrit alguna dada, la despesa es queda i surt amb <strong>FALTA UN DOCUMENT</strong>.</p>
 <p>L'app no converteix monedes: si la visita té despeses en euros i en pesos, cada moneda té la seva columna i la seva suma. Les despeses que encara no tenen import no hi compten, i el resum diu quantes n'hi ha.</p>
@@ -557,15 +615,15 @@ P-2026-171 Taxi - VTC (2) comprovant.jpg</pre>
 <h3>On es guarden</h3>
 <p><strong>Les fotos senceres no viatgen amb les dades.</strong> La visita només porta una miniatura de cada tiquet, perquè la sincronització sigui ràpida encara que hi hagi moltes despeses. La foto sencera es queda a l'aparell on l'has feta i a la carpeta <code>tiquets/</code> de Drive. En un altre aparell, la fitxa mostra primer la miniatura i, en un moment, la foto sencera, que baixa de Drive. Mentre un tiquet no s'ha pujat, des d'un altre aparell només se'n veu la miniatura, i no es pot llegir, girar ni retallar fins que es pugi.</p>
 <p><strong>Dos aparells alhora.</strong> Si fotografies un tiquet al mòbil mentre en revises un altre a l'ordinador, en sincronitzar es conserven tots dos. Cada despesa es combina per separat: el canvi més recent de cada una es queda, i una despesa esborrada en un aparell no torna des de l'altre. Si tots dos aparells havien donat el mateix número a despeses diferents, la que el va rebre més tard passa al número següent i els seus fitxers canvien de nom.</p>
-<p>Les despeses van amb la visita: es sincronitzen entre els aparells i van a Drive dins de les dades de la visita. Cada tiquet es puja a la carpeta <code>tiquets/</code> de la visita, i el ZIP del projecte porta aquesta carpeta sencera: els comprovants, els rebuts, els PDF i les fotos de documentació, amb el seu nom. Si un tiquet encara no és a Drive, el ZIP l'agafa de l'aparell. Sense connexió o sense haver entrat a Google, es queda a l'aparell (<strong>⏳</strong>) i es puja sol quan es pot; la barra lateral diu quants tiquets hi ha a la cua. Afegir o canviar una despesa no fa que l'informe de servei es vegi com a modificat: les despeses no hi surten.</p>
+<p>Les despeses van amb la visita: es sincronitzen entre els aparells i van a Drive dins de les dades de la visita. Cada tiquet es puja a la carpeta <code>tiquets/</code> de la visita, i el ZIP del projecte porta aquesta carpeta sencera: els comprovants, els rebuts, els PDF i les fotos de documentació, amb el seu nom. Si un tiquet encara no és a Drive, el ZIP l'agafa de l'aparell. Sense connexió o sense haver entrat a Google, es queda a l'aparell (<strong>⏳</strong>) i es puja sol quan es pot; el Menú diu quants tiquets hi ha a la cua. Afegir o canviar una despesa no fa que l'informe de servei es vegi com a modificat: les despeses no hi surten.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="historial">13. Historial de la màquina</h2>
-<p>És on es veuen <strong>totes les incidències de la màquina</strong>, de totes les visites. A la capçalera de la visita hi ha <span class="btn">📜 Historial</span> (al disseny nou, <em>⋮ Més › Historial de la màquina</em>), sempre que la visita tingui posat el nom de la màquina, encara que sigui la primera visita. Si n'hi ha més d'una, diu quantes, i si n'hi ha de pendents d'altres visites, també ho diu en taronja. Obre l'historial:</p>
+<p>És on es veuen <strong>totes les incidències de la màquina</strong>, de totes les visites. S'hi arriba des de la visita, amb la pestanya <strong>Historial</strong> de la fitxa o amb <span class="btn">⋮</span> › <span class="btn">Historial de la màquina</span>, i des de la pàgina <strong>Màquines</strong>, sempre que la visita tingui posat el nom de la màquina, encara que sigui la primera. A <strong>Inici</strong>, «Què queda obert» en dona l'avançament: els problemes i avisos que encara no s'han resolt, amb quant fa que estan oberts. Amb llicència de tècnic hi ha els de les teves visites i els de les màquines on tens una visita, encara que els hagi escrit un company; amb la d'administrador, els de totes, amb el nom del tècnic a cada un. L'historial té:</p>
 <ul>
   <li><strong>El resum de dalt</strong>: quantes visites hi ha hagut, quantes incidències queden obertes, quantes s'han resolt i quants recanvis urgents falten per canviar.</li>
   <li><strong>⚠ Què queda obert</strong>: els problemes i avisos de totes les visites (també l'actual) que encara no s'han resolt, del més antic al més nou, amb la data, el projecte i quant fa que estan oberts. Si fa més de tres mesos, surt en vermell.</li>
-  <li><strong>Visites</strong>: una línia de temps, de la més nova a la més antiga. El punt és daurat per a la visita actual, taronja si la visita encara té alguna cosa oberta i gris si no. Cada fitxa té les dates, el tipus, el projecte i la revisió i, a sota, les incidències d'aquella visita amb el seu estat: <span class="sev-ok">✓ Resolt</span>, <span class="sev-ok">✓ Tancat el…</span> (amb el projecte de la visita que el va tancar) o <span class="sev-w">⚠ Pendent</span>. També hi surten els problemes de visites anteriors que s'hi van tancar. Una visita sense incidències diu «✓ tot OK». Tocar una fitxa obre aquella visita.</li>
+  <li><strong>Visites</strong>: una línia de temps, de la més nova a la més antiga. El punt de la visita actual va destacat; el de les altres és taronja si encara tenen alguna cosa oberta i gris si no. Cada fitxa té les dates, el tipus, el projecte i la revisió i, a sota, les incidències d'aquella visita amb el seu estat: <span class="sev-ok">✓ Resolt</span>, <span class="sev-ok">✓ Tancat el…</span> (amb el projecte de la visita que el va tancar) o <span class="sev-w">⚠ Pendent</span>. També hi surten els problemes de visites anteriors que s'hi van tancar. Una visita sense incidències diu «✓ tot OK». Tocar una fitxa obre aquella visita.</li>
   <li><strong>Recanvis muntats</strong>: tots els recanvis canviats a la màquina, del més recent al més antic. Els recomanats no hi surten. Tampoc els de cotització ni els informatius: l'historial recull el que s'ha canviat i el que s'ha recomanat, i aquells dos no són ni una cosa ni l'altra.</li>
   <li><strong>Recanvis recomanats</strong>: el que s'ha recomanat en qualsevol visita, primer els urgents pendents i després els preventius. Quan en una visita posterior canvies aquella referència, surt amb ✓ i «canviat el…». El número del títol diu quants en queden de pendents sobre el total.</li>
 </ul>
@@ -574,10 +632,10 @@ P-2026-171 Taxi - VTC (2) comprovant.jpg</pre>
 <h3>Les visites arxivades hi continuen</h3>
 <p>No cal tornar a importar els informes antics. Cada visita deixa un registre petit a l'historial: les dades de la visita, els problemes i avisos amb com van quedar, els recanvis i els comptadors. No hi van fotos ni vídeos. Quan l'arxives i l'esborres de l'app, el registre es queda, i la visita surt a l'historial amb <strong>🗄 arxivada</strong>. Tocar-la obre el seu ZIP a Drive. Els seus problemes oberts es poden tancar des d'una visita nova, i l'informe en mostra el text com sempre.</p>
 <p>Si esborres una visita que <em>no</em> s'ha arxivat (una de prova, per exemple), també desapareix de l'historial.</p>
-<p>Les visites que ja eren a la carpeta d'arxiu abans d'aquesta versió s'hi afegeixen soles el primer cop que obres l'app amb connexió. L'app llegeix només les dades de dins de cada ZIP, sense baixar-ne les fotos ni els vídeos. Per tornar-ho a fer: <span class="btn">📁 Carpetes › ↻ Reconstrueix l'historial des de l'arxiu</span>.</p>
+<p>Les visites que ja eren a la carpeta d'arxiu abans d'aquesta versió s'hi afegeixen soles el primer cop que obres l'app amb connexió. L'app llegeix només les dades de dins de cada ZIP, sense baixar-ne les fotos ni els vídeos. Per tornar-ho a fer: Menú › <span class="btn">Carpetes</span> › <span class="btn">↻ Reconstrueix l'historial des de l'arxiu</span>.</p>
 
 <h3>Comptadors de la màquina</h3>
-<p>A la capçalera de la visita, <span class="btn">⏱ Comptadors</span> (al mòbil, ⋮ Més › Comptadors de la màquina) apunta les <strong>hores de màquina</strong> i el <strong>producte total</strong> que marquen els comptadors, a l'<strong>arribada</strong> i a la <strong>sortida</strong>. La data i l'hora de cada lectura surten proposades com al full d'hores: l'arribada amb l'inici de la intervenció i la sortida amb l'última entrada; les pots canviar, o tornar-hi amb <span class="btn">Inici</span> / <span class="btn">Final</span>, o posar-hi el moment actual amb <span class="btn">Ara</span>. Una data que ja tenies desada es queda.</p>
+<p><span class="btn">⋮</span> › <span class="btn">Comptadors de la màquina</span> (o <span class="btn">Comptadors</span>, a la pestanya Equip de la fitxa) apunta les <strong>hores de màquina</strong> i el <strong>producte total</strong> que marquen els comptadors, a l'<strong>arribada</strong> i a la <strong>sortida</strong>. La data i l'hora de cada lectura surten proposades com al full d'hores: l'arribada amb l'inici de la intervenció i la sortida amb l'última entrada; les pots canviar, o tornar-hi amb <span class="btn">Inici</span> / <span class="btn">Final</span>, o posar-hi el moment actual amb <span class="btn">Ara</span>. Una data que ja tenies desada es queda. Cada lectura pot portar una <strong>foto de la pantalla</strong> del comptador, feta al moment o triada de la galeria.</p>
 <p>Amb la lectura de la visita anterior de la mateixa màquina (també si és arxivada), l'app calcula al moment quant ha treballat entremig: hores i unitats, en quants dies, les hores per dia i el ritme de producció per hora de màquina, en unitats/h o en unitats/min segons triïs a «Ritme de producció en». També calcula el que s'ha fet durant la visita. Si un comptador ha baixat, avisa que potser s'ha canviat o reiniciat.</p>
 <p>A l'historial, cada visita mostra les seves lectures i, a sota, el que ha treballat la màquina des de la visita anterior. A l'informe (PDF, Word i HTML) surt l'apartat «Comptadors de la màquina», i a l'Excel, al full de la sessió.</p>
 
@@ -589,9 +647,9 @@ P-2026-171 Taxi - VTC (2) comprovant.jpg</pre>
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="tancar">14. Tancar, reobrir i esborrar</h2>
 <ul>
-  <li><span class="btn">■ Tanca</span>: la visita queda tancada i ja no s'hi poden afegir ni editar entrades. Es pot exportar igual.</li>
-  <li><span class="btn">↺ Reobre</span>: la torna a obrir.</li>
-  <li><strong>Esborrar</strong>: la <span class="btn">✕</span> de la visita a la llista. El diàleg diu si hi ha un ZIP del projecte fet després de l'últim canvi. Si no n'hi ha, ofereix <span class="btn">🗄 Primer exporta el ZIP</span>.</li>
+  <li><span class="btn">⋮</span> › <span class="btn">Tanca la visita</span> obre el <strong>Resum de la visita</strong>: què porta (les incidències i quantes en queden de pendents, les proves, els recanvis, les fotos, els comptadors, el full d'hores, les notes internes que queden fora) i si el client ha signat, amb l'enllaç per revisar l'informe tal com el rebrà. <span class="btn">Tancar visita</span> la tanca: ja no s'hi poden afegir ni editar entrades. Es pot exportar igual.</li>
+  <li><span class="btn">⋮</span> › <span class="btn">Reobre la visita</span>: la torna a obrir.</li>
+  <li><strong>Esborrar</strong>: la <span class="btn">✕</span> de la visita a la llista, o <span class="btn">⋮</span> › <span class="btn">Elimina la visita</span>. La finestra diu si hi ha un ZIP del projecte fet després de l'últim canvi. Si no n'hi ha, ofereix <span class="btn">Primer exporta el ZIP</span>. Amb llicència de tècnic no es pot esborrar la visita d'un company.</li>
 </ul>
 <p>En esborrar una visita, la seva carpeta de Drive va a la paperera de Drive, d'on es pot recuperar durant 30 dies. Si una altra visita fa servir la mateixa carpeta, no s'hi envia.</p>
 
@@ -600,7 +658,7 @@ P-2026-171 Taxi - VTC (2) comprovant.jpg</pre>
 <p>El <strong>ZIP del projecte</strong> és la còpia completa d'una visita. Amb ell, una visita esborrada es pot tornar a carregar sencera, amb fotos i vídeos, en aquest compte o en un altre.</p>
 
 <h3>Arxivar diverses visites de cop</h3>
-<p>Barra lateral › <span class="btn">🗄 Arxiva sessions…</span></p>
+<p>A l'ordinador, <strong>Arxiu</strong>, a la barra de l'esquerra; al mòbil, Menú › <span class="btn">Arxiva visites…</span>. Arxivar és feina de l'administrador: amb llicència de tècnic no hi surt.</p>
 <ol>
   <li>Surten totes les visites, de la més nova a la més antiga, amb el projecte, les dates, la revisió, si està oberta o tancada, i si ja té el ZIP al dia.</li>
   <li>Marca les acabades (o <span class="btn">Totes</span> / <span class="btn">Cap</span>).</li>
@@ -608,22 +666,22 @@ P-2026-171 Taxi - VTC (2) comprovant.jpg</pre>
   <li><span class="btn">🗄 Arxiva i esborra N sessions</span>.</li>
 </ol>
 <p>Cada visita es desa com el seu ZIP del projecte, en l'idioma del seu informe. <strong>Només s'esborra una visita si el seu ZIP ha sortit bé.</strong> Si una visita ha canviat des de l'última revisió, pregunta per la revisió com quan l'exportes sola. Al final surt un resum amb el client i el projecte de cada una.</p>
-<p>Els ZIP van on diu <a href="#ordinador">📁 Carpetes</a>: per defecte, a la carpeta d'arxiu del teu <strong>Google Drive</strong>; o, si ho tries, a una carpeta de l'ordinador.</p>
+<p>Els ZIP van on diu Menú › <a href="#ordinador">Carpetes</a>: per defecte, a la carpeta d'arxiu del teu <strong>Google Drive</strong>; o, si ho tries, a una carpeta de l'ordinador.</p>
 <p><strong>Sense connexió</strong>, el ZIP del projecte es fa igualment amb el que hi ha a l'aparell: els informes, les dades de la visita, les fotos i les notes de veu, i els vídeos i tiquets que encara són a la cua. No hi entra el que només és a Drive (els vídeos ja pujats, les revisions anteriors, el manual): l'avís del final t'ho diu, fitxer per fitxer. Es descarrega a l'aparell (o va a la carpeta de l'ordinador, si l'has triada) i <strong>no compta com a còpia completa</strong>: torna'l a fer amb connexió abans d'esborrar la visita.</p>
-<div class="warn"><p><strong>Una visita només s'esborra si l'app ha vist arribar el seu ZIP sencer</strong> a Drive o a la carpeta de l'ordinador. Si el ZIP va a Baixades (sense haver entrat amb Google, o si la pujada falla), el resum diu «Descarregades, però NO esborrades»: obre el ZIP o mira'n la mida, i després esborra la visita des de <span class="btn">⋮ Més</span>.</p></div>
+<div class="warn"><p><strong>Una visita només s'esborra si l'app ha vist arribar el seu ZIP sencer</strong> a Drive o a la carpeta de l'ordinador. Si el ZIP va a Baixades (sense haver entrat amb Google, o si la pujada falla), el resum diu «Descarregades, però NO esborrades»: obre el ZIP o mira'n la mida, i després esborra la visita des de <span class="btn">⋮</span>.</p></div>
 <div class="tip"><p>Tornar a arxivar la mateixa visita amb la mateixa revisió <strong>substitueix</strong> el seu ZIP, no en crea un <code>_2</code>. Només s'afegeix <code>_2</code> si el nom coincideix amb el ZIP d'una altra visita (mateix client, projecte i màquina).</p></div>
 
 <h3>Tornar a carregar</h3>
 <ul>
-  <li><span class="btn">📁 Carpetes</span> › <span class="btn">⬇ Tria què carregar…</span>, a qualsevol aparell: llista els ZIP de la carpeta d'arxiu, amb mida i data. No n'hi ha cap marcat per defecte; marca els que vulguis i <span class="btn">⬇ Carrega'n N</span>. A Drive només hi surten els ZIP que hi ha desat l'app; els d'abans, amb <span class="btn">＋ Altres ZIP de Drive…</span>, que obre el selector de Google.</li>
-  <li><span class="btn">⇧ Importa</span> (a dalt): tria un o diversos ZIP o JSON alhora des del selector de fitxers de l'aparell. Al mòbil i a la tauleta, al selector, obre el menú ☰ i tria <strong>Drive</strong>, i mantén premut el primer fitxer per marcar-ne més.</li>
+  <li>Menú › <span class="btn">Carpetes</span> › <span class="btn">⇩ Tria què carregar…</span>, a qualsevol aparell: llista els ZIP de la carpeta d'arxiu, amb mida i data. No n'hi ha cap marcat per defecte; marca els que vulguis i <span class="btn">⬇ Carrega'n N</span>. A Drive només hi surten els ZIP que hi ha desat l'app; els d'abans, amb <span class="btn">＋ Altres ZIP de Drive…</span>, que obre el selector de Google.</li>
+  <li>Menú › <span class="btn">Importa JSON o ZIP</span>: tria un o diversos ZIP o JSON alhora des del selector de fitxers de l'aparell. Al mòbil i a la tauleta, al selector, obre el menú ☰ i tria <strong>Drive</strong>, i mantén premut el primer fitxer per marcar-ne més.</li>
 </ul>
 <p>Les visites que ja hi són se salten soles, o sigui que no passa res si en marques alguna de repetida. Les fotos i els vídeos del ZIP es tornen a pujar a Drive. Cal tenir la sessió de Google iniciada; si no, els vídeos no es recuperen.</p>
 <p>Si el ZIP no porta algun vídeo, l'app el busca al teu Drive, <strong>també a la paperera</strong>, i si el troba el torna a pujar a la carpeta de la visita. Si una visita importada té vídeos que no es poden reproduir («Aquest vídeo no és a Drive…»), torna a importar el mateix ZIP: la visita no es duplica, només es busquen de nou els vídeos que hi falten.</p>
 
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="ordinador">16. Carpetes</h2>
-<p>Barra lateral › <span class="btn">📁 Carpetes</span>. Hi ha dues coses:</p>
+<p>Menú › <span class="btn">Carpetes</span>. Hi ha dues coses:</p>
 <h3>On es desa el ZIP del projecte</h3>
 <ul>
   <li><strong>Google Drive</strong> (per defecte): el ZIP es puja directament al Drive del compte amb què has entrat, a qualsevol aparell. Si entres amb un altre compte, va al Drive d'aquell compte. La primera vegada et demana que assenyalis la carpeta amb el selector de Google (per exemple <code>Field Service Log › Arxiu</code>), o en pots crear una de nova amb <span class="btn">＋ Crea'n una</span>. L'app comprova que el ZIP ha arribat sencer; si no, el descarrega perquè no es perdi.</li>
@@ -635,18 +693,20 @@ P-2026-171 Taxi - VTC (2) comprovant.jpg</pre>
 
 <!-- ───────────────────────────────────────────────────────────── -->
 <h2 id="drive">17. Drive i sincronització</h2>
-<p>A dalt, l'indicador diu si estàs sincronitzat amb Drive o treballes en local. L'app sincronitza sola cada 30 segons, i no ho fa mentre estàs escrivint.</p>
+<p>A dalt, l'indicador de <strong>Drive</strong> diu si estàs al dia («Drive · al dia») o treballes només en aquest aparell («Sense Drive»). L'app sincronitza sola cada 30 segons, i en tornar a l'app després de tenir-la tancada o en segon pla.</p>
 <p>La sincronització automàtica <strong>no mou la pantalla</strong>: no mostra cap barra mentre treballa, i si de Drive no arriba res de nou, la pantalla no es toca. Si arriben canvis, el registre es queda a la mateixa altura on el tenies (o al final, si ja hi eres). Els avisos de les tasques que tu engegues (arxivar, importar…) surten en una etiqueta flotant a dalt que no empeny res i que deixa passar els tocs.</p>
 <ul>
-  <li><span class="btn">⟳</span>: sincronitza ara.</li>
-  <li><span class="btn">☁ Desa</span> (a la visita): torna a crear les carpetes de Drive d'aquesta visita i hi puja les fotos que hi faltin. També hi torna a posar fitxers que s'hagin mogut d'ubicació.</li>
-  <li><span class="btn">☁ Sincronitza</span> (a dalt): el mateix per a totes les visites.</li>
-  <li><span class="btn">Surt</span>: tanca la sessió de Google; les dades del dispositiu es conserven.</li>
+  <li>Tocar l'indicador de Drive, o <span class="btn">⋮</span> › <span class="btn">Sincronitza ara</span>: sincronitza ara.</li>
+  <li><span class="btn">⋮</span> › <span class="btn">Desa a Drive</span> (a la visita): torna a crear les carpetes de Drive d'aquesta visita i hi puja les fotos que hi faltin. També hi torna a posar fitxers que s'hagin mogut d'ubicació.</li>
+  <li>Menú › <span class="btn">Sincronitza</span>: el mateix per a totes les visites.</li>
+  <li>Menú › <span class="btn">Surt de Google</span>, a baix de tot: tanca la sessió de Google; les dades del dispositiu es conserven.</li>
 </ul>
 <h3>Com queda Drive</h3>
 <pre style="background:var(--bg2);border:1px solid var(--br);border-radius:8px;padding:12px;overflow-x:auto;font-size:13px;color:var(--tx)">Field Service Log/
   field_service_log_data.json      ← les dades de totes les visites
   field_service_log_history.json   ← l'historial de les màquines (també les visites arxivades)
+  field_service_log_empresa.json   ← la configuració de l'empresa
+  field_service_log_usuaris.json   ← la llista d'usuaris
   Manuals/                         ← els manuals de recanvis
   Outputs/
     CLIENT_PROJECTE_MÀQUINA/       ← una carpeta per visita
@@ -658,37 +718,102 @@ P-2026-171 Taxi - VTC (2) comprovant.jpg</pre>
 <p>Cada cop que l'app sincronitza, mira quines carpetes hi ha a <code>Outputs</code>:</p>
 <ul>
   <li><strong>Si esborres una visita en un aparell</strong>, la seva carpeta va a la paperera de Drive, i la visita desapareix també dels altres aparells en la propera sincronització (mig minut, o en obrir l'app).</li>
-  <li><strong>Si restaures una carpeta de la paperera de Drive</strong>, la visita torna a aparèixer, amb les dades de l'última vegada que es va prémer <span class="btn">☁ Desa</span> en aquella visita.</li>
+  <li><strong>Si restaures una carpeta de la paperera de Drive</strong>, la visita torna a aparèixer, amb les dades de l'última vegada que es va prémer <span class="btn">Desa a Drive</span> en aquella visita.</li>
   <li>Una visita esborrada sense connexió no torna a sortir: quan hi torna a haver connexió, se n'envia la carpeta a la paperera.</li>
   <li>Les visites que encara no tenen carpeta (fetes sense connexió o sense haver entrat amb Google) no es toquen.</li>
 </ul>
 
 <!-- ───────────────────────────────────────────────────────────── -->
-<h2 id="dispositius">18. Mòbil, tauleta i ordinador</h2>
+<h2 id="equip">18. Treballar en equip: rols, usuaris i encàrrecs</h2>
+<p>Una empresa treballa amb <strong>un sol compte de Google</strong>: tots els aparells hi entren amb el mateix compte i comparteixen les visites. Qui és qui ho diuen dues coses de cada aparell: la <strong>llicència</strong>, que porta el rol, i el <strong>nom</strong> que hi ha posat a Menú › <span class="btn">Tècnic d'aquest aparell</span>, que ha de ser el mateix que surt a les visites.</p>
+<h3>Administrador i tècnic</h3>
+<div class="scroll"><table>
+  <tr><th></th><th>Tècnic</th><th>Administrador</th></tr>
+  <tr><td>Quines visites veu</td><td>Les que porten el seu nom, i les que no tenen tècnic</td><td>Totes, amb el nom del tècnic a cada fila</td></tr>
+  <tr><td>«Què queda obert», a Inici</td><td>El de les seves visites i el de les màquines on té una visita</td><td>El de totes, amb el nom del tècnic</td></tr>
+  <tr><td>Tancar un punt des de l'oficina</td><td>No</td><td>Sí</td></tr>
+  <tr><td>Arxivar visites</td><td>No</td><td>Sí</td></tr>
+  <tr><td>Esborrar una visita</td><td>Només les seves</td><td>Qualsevol</td></tr>
+  <tr><td>Usuaris, encàrrecs i configuració de l'empresa</td><td>Només hi veu la configuració desada</td><td>Sí</td></tr>
+</table></div>
+<p>Una llicència sense rol compta com la d'un administrador. Un aparell de tècnic sense nom posat veu totes les visites.</p>
+<div class="warn"><p><strong>És ordre, no un pany.</strong> Tots els aparells baixen totes les visites del compte, i l'historial d'una màquina ensenya les de tothom. El rol decideix què es veu a les llistes i què es pot fer des de cada aparell; no amaga res a qui té la contrasenya del compte.</p></div>
+<h3>La configuració de l'empresa</h3>
+<p>Menú › <span class="btn">Configuració de l'empresa</span>. Des de l'aparell de l'administrador, desa a Drive el que té aquell aparell perquè el tinguin tots: la <strong>clau de Gemini</strong>, les <strong>columnes del full d'hores</strong>, el <strong>full de despeses buit</strong> de l'empresa i la <strong>llicència dels tècnics</strong>. Cada aparell ho rep quan sincronitza, i en un aparell de tècnic aquestes coses ja no es poden canviar. Des d'un aparell de tècnic, la mateixa fila ensenya què ha desat l'empresa i quan.</p>
+<p><strong>La llicència dels tècnics es reparteix sola.</strong> Una empresa té dues llicències: la de l'administrador i una per a tots els tècnics. L'administrador enganxa la dels tècnics a la finestra de la Llicència del seu aparell —es queda guardada per repartir, no s'hi instal·la— i desa la configuració. Els aparells dels tècnics, i els que encara no tenen cap llicència, la reben en sincronitzar. Quan l'empresa compra un mòdul, n'hi ha prou de repetir-ho amb la llicència nova: no cal tocar cada aparell.</p>
+<h3>Usuaris</h3>
+<p>Menú › <span class="btn">Usuaris</span>, només per a l'administrador. No hi ha comptes d'usuari: <strong>cada aparell s'apunta sol a la llista</strong> quan sincronitza, amb el seu nom, el rol, la versió de l'app i quan s'ha vist per última vegada. Les files d'un mateix nom van juntes, amb les seves visites obertes a sota.</p>
+<figure>
+  <picture>
+    <source srcset="manual-img/usuaris-fosc.webp" media="(prefers-color-scheme:dark)">
+    <img src="manual-img/usuaris-clar.webp" width="780" height="1280" loading="lazy" alt="La finestra d'Usuaris: cada persona amb el seu rol, els seus aparells i les seves visites obertes">
+  </picture>
+  <figcaption>La llista d'<strong>Usuaris</strong>. De cada persona, el rol, l'aparell, quan s'ha vist i les visites obertes que té.</figcaption>
+</figure>
+<ul>
+  <li><span class="btn">+ Afegeix un tècnic</span> hi apunta el nom d'algú que encara no ha obert l'app, per poder-li encarregar visites.</li>
+  <li><span class="btn">Treu de la llista</span> treu una fila. No esborra cap visita ni retira cap llicència, i un aparell que torni a sincronitzar hi torna a sortir.</li>
+  <li>Un nom que surt a les visites obertes però que no porta cap aparell hi surt amb un avís: aquelles visites no les veurà ningú com a seves. Comprova que el nom de la visita i el de l'aparell del tècnic siguin el mateix.</li>
+</ul>
+<h3>Encarregar una visita</h3>
+<p>L'administrador crea la visita i l'envia a un tècnic: des de la llista d'usuaris, amb <span class="btn">Encarrega-li una visita</span>, o des de <span class="btn">Nova visita</span>, triant el nom al camp <strong>Tècnic</strong>, que ofereix els de la llista. A l'apartat <strong>Encàrrec</strong> del formulari hi ha les <strong>dates previstes</strong> i les <strong>instruccions per al tècnic</strong>: la feina a fer, el viatge, l'hotel, a qui s'ha de presentar. L'encàrrec no surt a cap informe.</p>
+<ul>
+  <li><strong>Al mòbil del tècnic</strong>, la visita surt a Inici, a dalt de tot, a «Tens una visita encarregada», amb la marca <strong>Nova</strong>. En obrir-la, la targeta <strong>Encàrrec</strong> de la fitxa diu qui l'envia, les dates i les instruccions, i la marca desapareix.</li>
+  <li>Si l'administrador canvia les instruccions o les dates, al tècnic li surt <strong>Canviada</strong>. Si li canvia el tècnic, la visita passa a l'altre aparell.</li>
+  <li>Mentre no s'hi ha escrit res, la visita surt amb les dates previstes i «Per començar».</li>
+  <li><strong>No sona res.</strong> El tècnic la veu quan obre l'app o hi torna; no hi ha notificacions.</li>
+</ul>
+<h3>Preparar-la i enviar-la més tard</h3>
+<p>A l'apartat Encàrrec, la casella <strong>«Guarda-la preparada»</strong> desa la visita sense que cap tècnic la vegi, amb el tècnic ja posat o sense. L'administrador les té a Inici, a «Preparades, per enviar», i a les llistes porten la marca <strong>Preparada</strong>. Quan toca, <span class="btn">Envia al tècnic</span>, a la targeta Encàrrec de la visita, la fa arribar; si encara no té tècnic, primer el demana.</p>
+<p>Una visita que ja existia i no s'havia encarregat a ningú s'envia igual: a la seva fitxa, <span class="btn">Envia-la a un tècnic</span>. Una visita on ja hi ha entrades escrites no s'amaga mai, encara que es marqui com a preparada.</p>
+<h3>Tancar un punt des de l'oficina</h3>
+<p>Un problema o un avís que s'ha resolt sense tornar a la màquina —el client confirma per telèfon que ha canviat la peça, s'ha arreglat a distància— el tanca l'administrador amb una <strong>nota d'oficina</strong>. A Inici, a «Què queda obert», cada punt té el botó <span class="btn">✔ Tanca'l</span>; també hi és a l'historial de la màquina, a dalt de tot, a «Des de l'oficina», que els té tots.</p>
+<ul>
+  <li>Hi escrius <strong>com ha quedat</strong>, la data i qui el tanca.</li>
+  <li><strong>L'informe que es va lliurar no es toca</strong>: no demana cap revisió nova ni cap signatura, i val igual per a una visita oberta, tancada o arxivada.</li>
+  <li>El punt deixa de sortir com a obert a tots els aparells, i a l'historial de la màquina hi diu «Tancat el… · des de l'oficina», amb el nom i la nota. A la pestanya Incidències de la visita surt com a «Tancada des de l'oficina».</li>
+  <li><span class="btn">Desfés</span>, a l'historial de la màquina, torna a obrir el punt.</li>
+</ul>
+<p>Per enviar al client un informe corregit, el camí és l'altre: reobrir la visita, afegir com ha quedat i emetre la revisió nova.</p>
+<h3>Dues persones a la mateixa visita</h3>
+<p>Si dos aparells escriuen a la mateixa visita, en sincronitzar <strong>es conserven les entrades de tots dos</strong>, i de cada dada de la visita es queda el canvi més recent. Dins d'una mateixa entrada, o d'un mateix camp, guanya sencer l'últim que l'ha tocat. Si arriba contingut d'un altre aparell després d'haver emès una revisió, la propera exportació demana revisió nova, com amb qualsevol altre canvi.</p>
+<h3>Passar l'empresa a un altre compte de Google</h3>
+<p>Menú › <span class="btn">Canvia el compte de Google</span>, només per a l'administrador. Hi escrius el compte nou i l'aparell s'hi passa de seguida; a tots els altres els surt una barra vermella amb el botó per fer el mateix pas. Es copien al compte nou les visites amb les fotos, les notes de veu i els vídeos, i després la resta de la carpeta: informes, fulls de despeses, tiquets, manuals de recanvis i els ZIP de l'arxiu.</p>
+<ul>
+  <li><strong>El compte antic només es llegeix</strong>: no se n'esborra ni se'n mou res.</li>
+  <li>El permís sobre el compte antic dura <strong>una hora</strong>. Si no s'ha copiat tot, el missatge ho diu, i <span class="btn">Sincronitza</span> ho reprèn mentre el permís duri.</li>
+  <li>Cada fitxer es llegeix sencer abans de pujar-lo: val més fer-ho des d'un ordinador que des d'un mòbil.</li>
+  <li>Els documents propis de Google (una còpia oberta amb Google Docs) no es poden copiar: es queden al compte antic i el missatge en diu quants.</li>
+  <li>Deixar l'adreça en blanc anul·la un canvi que encara no s'ha fet.</li>
+</ul>
+
+<!-- ───────────────────────────────────────────────────────────── -->
+<h2 id="dispositius">19. Mòbil, tauleta i ordinador</h2>
 <div class="scroll"><table>
   <tr><th></th><th>Mòbil / tauleta</th><th>Ordinador</th></tr>
-  <tr><td>Fotos i vídeos</td><td>📷 càmera, 🎥 vídeo, 🖼 galeria</td><td>📷 obre una carpeta</td></tr>
-  <tr><td>Notes de veu</td><td>🎙</td><td>🎙</td></tr>
+  <tr><td>Per moure's per l'app</td><td>Quatre botons a baix</td><td>Barra a l'esquerra, amb Manuals i Arxiu</td></tr>
+  <tr><td>Fotos i vídeos</td><td>Càmera, vídeo i galeria</td><td>El botó de la càmera obre una carpeta (en una tauleta amb Windows, la càmera de l'app)</td></tr>
+  <tr><td>Notes de veu</td><td>Micròfon</td><td>Micròfon</td></tr>
   <tr><td>Signar</td><td>Amb el dit</td><td>Amb el ratolí o un llapis</td></tr>
   <tr><td>ZIP del projecte</td><td>A Google Drive</td><td>A Google Drive, o a una carpeta de l'ordinador</td></tr>
   <tr><td>Carpeta del projecte (fotos)</td><td>No</td><td>Chrome i Edge</td></tr>
-  <tr><td>Carregar ZIP</td><td>📁 Carpetes › Tria què carregar…, o ⇧ Importa</td><td>📁 Carpetes › Tria què carregar…, o ⇧ Importa</td></tr>
+  <tr><td>Carregar ZIP</td><td>Menú › Carpetes › Tria què carregar…, o Menú › Importa JSON o ZIP</td><td>El mateix, a Configuració</td></tr>
 </table></div>
 <h3>El botó enrere del mòbil</h3>
 <p>El botó (o el gest) enrere d'Android desfà el camí, un pas cada vegada:</p>
 <ul>
-  <li><strong>Una finestra oberta</strong> (editar una entrada, nova visita, comptadors, despeses, historial, Revisa i signa, visor de dibuixos, el menú ↓ Informe, ⋮ Més, el menú ☰…): la tanca, com si toquessis ✕ o Cancel·la. Si n'hi ha una a sobre d'una altra, primer tanca la de dalt.</li>
+  <li><strong>Una finestra oberta</strong> (editar una entrada, nova visita, comptadors, despeses, historial, Revisa i signa, visor de dibuixos, el menú Informe, el menú ⋮…): la tanca, com si toquessis ✕ o Cancel·la. Si n'hi ha una a sobre d'una altra, primer tanca la de dalt.</li>
   <li><strong>Hi has escrit o signat alguna cosa sense desar-la</strong> (entrada, nova visita, despesa, comptadors, full d'hores, Revisa i signa, etiquetes): primer pregunta si la vols tancar i perdre els canvis. Si dius que no, es queda oberta.</li>
-  <li><strong>Dins d'una visita, sense res obert</strong>: torna a la llista de visites.</li>
-  <li><strong>A la llista de visites</strong>: surt l'avís «Prem enrere un altre cop per sortir». Si tornes a prémer enrere abans de 2 segons, l'app es tanca; si no, no passa res.</li>
+  <li><strong>Dins d'una visita, sense res obert</strong>: del registre torna a la fitxa, i de la fitxa, a la pàgina d'on venies.</li>
+  <li><strong>A Visites, Màquines o Menú</strong>: torna a Inici. <strong>A Inici</strong>: surt l'avís «Prem enrere un altre cop per sortir». Si tornes a prémer enrere abans de 2 segons, l'app es tanca; si no, no passa res.</li>
 </ul>
 
 <!-- ───────────────────────────────────────────────────────────── -->
-<h2 id="problemes">19. Problemes freqüents</h2>
+<h2 id="problemes">20. Problemes freqüents</h2>
 <h3>No veig els canvis d'una versió nova</h3>
 <p>A l'ordinador, <code>Ctrl+Shift+R</code>. Al mòbil, tanca l'app del tot i torna-la a obrir. Si l'app instal·lada tarda a agafar la versió nova, desinstal·la-la i torna-la a instal·lar.</p>
 <h3>La connexió amb Google es manté sola</h3>
-<p>El permís de Google dura una hora. Quan caduca, l'app <strong>no es desconnecta</strong>: el punt <strong>● Drive</strong> es posa taronja, i al proper toc a la pantalla el renova sol (potser veuràs una finestreta de Google que s'obre i es tanca). Si ja queden menys de cinc minuts, també el renova al primer toc, de manera que mentre fas servir l'app no arriba a caducar. Si obres l'app i el permís ja havia caducat, també continua connectada i el renova al primer toc. Només <span class="btn">Tanca la sessió</span> la desconnecta.</p>
+<p>El permís de Google dura una hora. Quan caduca, l'app <strong>no es desconnecta</strong>: el punt <strong>● Drive</strong> es posa taronja, i al proper toc a la pantalla el renova sol (potser veuràs una finestreta de Google que s'obre i es tanca). Si ja queden menys de cinc minuts, també el renova al primer toc, de manera que mentre fas servir l'app no arriba a caducar. Si obres l'app i el permís ja havia caducat, també continua connectada i el renova al primer toc. Només <span class="btn">Surt de Google</span>, al Menú, la desconnecta.</p>
 <h3>«Reconnecta» en vermell</h3>
 <p>Només surt si no s'ha pogut renovar el permís (per exemple, si has tancat la sessió de Google al navegador). Prem <span class="btn">Reconnecta</span>; no es perd res, perquè tot està desat al dispositiu.</p>
 <h3>L'emmagatzematge és gairebé ple</h3>
@@ -698,7 +823,7 @@ P-2026-171 Taxi - VTC (2) comprovant.jpg</pre>
 <h3>Al selector de la tauleta els ZIP surten grisos</h3>
 <p>Assegura't que tens la versió més nova de l'app (vegeu el primer punt). Si continua passant, cal revisar-ho a l'app.</p>
 <h3>Una carpeta queda a Outputs després d'esborrar la visita</h3>
-<p>Passa quan dins la carpeta hi ha un fitxer que no ha fet l'app, sobretot la còpia en Google Docs (<code>.gdoc</code>) que es crea quan obres l'informe de Word amb Google Docs. L'app només pot tocar els fitxers que ha fet ella, i Drive no la deixa enviar la carpeta sencera a la paperera. Llavors l'app hi llença tot el que és seu (les dades de la visita, els informes, les fotos, els vídeos i les notes de veu), perquè la visita no torni, i a la barra lateral surt <strong>«⚠ Esborra a mà a Drive (Outputs): …»</strong> amb el nom de la carpeta. Esborra-la a Drive; l'avís desapareix sol a la sincronització següent.</p>
+<p>Passa quan dins la carpeta hi ha un fitxer que no ha fet l'app, sobretot la còpia en Google Docs (<code>.gdoc</code>) que es crea quan obres l'informe de Word amb Google Docs. L'app només pot tocar els fitxers que ha fet ella, i Drive no la deixa enviar la carpeta sencera a la paperera. Llavors l'app hi llença tot el que és seu (les dades de la visita, els informes, les fotos, els vídeos i les notes de veu), perquè la visita no torni, i al Menú surt <strong>«⚠ Esborra a mà a Drive (Outputs): …»</strong> amb el nom de la carpeta. Esborra-la a Drive; l'avís desapareix sol a la sincronització següent.</p>
 <p>Per evitar-ho: si obres un informe de Word a Drive per mirar-lo, fes-ho amb la vista prèvia, no amb «Obre amb Google Docs», o esborra la còpia <code>.gdoc</code> quan ja no la necessitis.</p>
 <h3>Una visita esborrada en un aparell desapareix de tots</h3>
 <p>Quan esborres una visita, l'esborrat s'apunta al fitxer d'historial de Drive (<code>field_service_log_history.json</code>), que comparteixen tots els aparells. Cada aparell, en sincronitzar, treu les visites que s'hi han esborrat, <strong>també les que no tenen carpeta a <code>Outputs</code></strong> (per exemple, les visites importades). Abans, un aparell que encara tenia la visita guardada la tornava a pujar. Una visita arxivada i esborrada continua sortint a l'historial de la màquina.</p>
@@ -708,7 +833,10 @@ P-2026-171 Taxi - VTC (2) comprovant.jpg</pre>
 <p>Si esborres (o arxives i esborres) una visita en un aparell però després la continues modificant en un altre, <strong>guanya el canvi més nou</strong>: la visita torna a tots els aparells, i si l'app n'havia enviat el contingut de la carpeta a la paperera de Drive, el torna a treure. Una còpia que no s'ha tocat des d'abans d'esborrar-la continua esborrada.</p>
 
 <h3>Una foto de Drive no surt a la carpeta de la visita</h3>
-<p>L'app només veu els fitxers que ha pujat ella. Afegeix-la des de l'app, o amb <span class="btn">＋ Agafa'n de Drive</span> a <span class="btn">🗃 Carpeta</span>.</p>
+<p>L'app només veu els fitxers que ha pujat ella. Afegeix-la des de l'app, o amb <span class="btn">＋ Agafa'n de Drive</span> a <span class="btn">⋮</span> › <span class="btn">Carpeta de Drive</span>.</p>
+
+<h3>Tenia instal·lada la versió de proves</h3>
+<p>Fins al 23 de novembre de 2026 el disseny nou es provava en una adreça a part, acabada en <code>/nou/</code>. Si la tenies instal·lada, ara en obrir-la salta a l'aplicació de sempre: desinstal·la-la i instal·la la de l'adreça principal. La llicència, el nom de l'aparell, la clau de Gemini, l'idioma i el tema que hi havies posat passen sols.</p>
 
 <footer>
   Field Service Log · Manual d'ús · <a href="./">Torna a l'aplicació</a>

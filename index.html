@@ -847,6 +847,19 @@ body.m2 #sideTools{order:4;border:0;background:none;box-shadow:none;padding:0;di
 .nv-ord{padding:12px 14px;background:var(--bg2);box-shadow:none}
 .nv-ord .hd{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:700;margin-bottom:4px}
 .nv-news{border-left:4px solid var(--gold)}
+/* an open point with the administrator's button beside it, and the office's
+   block on top of a machine's history */
+.nv-oprow{display:flex;align-items:center;gap:8px;border-top:1px solid var(--br)}
+.hd + .nv-oprow{border-top:0}
+.nv-oprow .nv-open{border-top:0;flex:1;min-width:0;width:auto}
+.nv-oprow .btn-sm{flex:none;color:var(--green);white-space:nowrap}
+@media(max-width:700px){.nv-oprow .wd{display:none}}
+#offBack{z-index:110}
+.mh-off{border:1px solid var(--br);border-radius:12px;padding:10px 12px;margin:0 0 14px;background:var(--bg1);color:var(--tx1)}
+.mh-off .hd{font-weight:700;margin-bottom:4px}
+.mh-off .rw{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--br)}
+.mh-off .tx{flex:1;min-width:0;font-size:13.5px}
+.mh-off .tx span{display:block;font-size:12px;color:var(--tx3)}
 .nv-big{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;border-radius:12px;font-size:15px}
 .nv-open{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--br);cursor:pointer;width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;border-radius:0;font-weight:inherit;white-space:normal}
 .nv-open:hover{background:var(--bg2)}
@@ -1719,6 +1732,24 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
       <div class="modal-actions">
         <button id="nCancel">Cancel·la</button>
         <button class="btn-gold" id="nSave">&#10003; Crea la sessió</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- A point closed from the office -->
+  <div class="modal-back" id="offBack" style="display:none">
+    <div class="modal">
+      <div class="modal-title">Tanca el punt des de l'oficina</div>
+      <div id="offWhat" class="nv-fx-notes" style="margin:0 0 12px"></div>
+      <div class="field"><label>Com ha quedat *</label><textarea id="offTxt" rows="4" style="width:100%;resize:vertical" placeholder="Què s'ha fet i qui ho ha confirmat…"></textarea></div>
+      <div style="display:flex;gap:8px">
+        <div class="field" style="flex:1"><label>Data</label><input type="date" id="offDate"></div>
+        <div class="field" style="flex:1.4"><label>Qui el tanca</label><input type="text" id="offBy"></div>
+      </div>
+      <div style="font-size:12px;color:var(--tx3);margin-bottom:12px">L'informe que es va lliurar no es toca. La nota queda a l'historial de la màquina, i el punt deixa de sortir com a obert.</div>
+      <div class="modal-actions">
+        <button id="offCancel">Cancel·la</button>
+        <button class="btn-gold" id="offSave">&#10004; Tanca el punt</button>
       </div>
     </div>
   </div>
@@ -9036,7 +9067,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-11-23 · 4";
+var APP_VERSION="2026-11-23 · 6";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -13905,12 +13936,18 @@ function machineSessions(s){
 // Built once per question and passed down, because the alternative is walking
 // every session's entries once per entry.
 function closedRefs(list){
-  var out={};
+  var out={},ids={};
   (list||[]).forEach(function(x){
+    if(x&&x.id)ids[x.id]=1;
     (x.entries||[]).forEach(function(e){
       if(e&&e.closes&&e.closes.s&&e.closes.e)out[e.closes.s+"|"+e.closes.e]=e;
     });
   });
+  // ... or by a note from the office (see "CLOSED FROM THE OFFICE"): it stands
+  // in as the closing entry, so every list that asks "is this still open?"
+  // gets the same answer without knowing there are two ways of closing.
+  var om=offMap(),k,o;
+  for(k in om){o=om[k];if(o&&!o.del&&ids[o.s]&&!out[k])out[k]=offEntry(o)}
   return out;
 }
 // Open: a problem or a warning with no outcome, or one whose outcome still says
@@ -14083,6 +14120,7 @@ function mhCardIssues(x,closed,all,L){
       var on=all.find(function(v){return (v.entries||[]).indexOf(by)>=0});
       st="<b style=\"color:"+MH_GREEN+"\">✓ "+esc(H.closedOn)+" "+mhDate(by.ts)+"</b>"
         +(on&&on.id!==x.id&&on.project?" ("+esc(on.project)+")":"")
+        +(by.office?" · "+esc(offWord(mhLangOf(L)))+(by.by?" ("+esc(by.by)+")":""):"")
         +(end?" · "+end:"");
     }else{
       col=MH_ORANGE;
@@ -14284,7 +14322,7 @@ function openMachineHistory(sess){
   $$("mhTitle").textContent=v.title;
   // the count and the serial number are in the document's own header now
   $$("mhNote").textContent=uiT("S'agrupen per client i màquina tal com els escrius.");
-  $$("mhBody").innerHTML=v.body;
+  $$("mhBody").innerHTML=offBlock(cur)+v.body;
   var lang=reportLang(cur);
   $$("mhPrint").innerHTML=uiT("🖨 Imprimeix")+(lang!=="ca"?" · "+esc(langNative(lang)):"");
   $$("mhPrint").title=uiT("L'imprimeix o el desa com a PDF per enviar-lo, {l}, com l'informe d'aquesta sessió").replace("{l}",langIntoUI(lang));
@@ -14895,7 +14933,7 @@ function fixWhen(e){
 var HIST_FILE=SEPARAT?"field_service_log_history_nou.json":"field_service_log_history.json",HIST_KEY="history";
 var hist={v:1,visits:{},seen:{}},histFileId=null,histBusy=false,histTimer=null,histLoaded=false;
 async function histLoad(){
-  try{var v=idb?await idbGet(idb,HIST_KEY):null;if(v&&v.visits)hist={v:1,visits:v.visits||{},seen:v.seen||{}}}catch(e){}
+  try{var v=idb?await idbGet(idb,HIST_KEY):null;if(v&&v.visits)hist={v:1,visits:v.visits||{},seen:v.seen||{},office:v.office||{}}}catch(e){}
   histLoaded=true;
 }
 async function histSaveLocal(){try{if(idb)await idbSet(idb,HIST_KEY,hist)}catch(e){}}
@@ -14918,12 +14956,13 @@ function histRecord(s,arch){
     // who to ask for at the client's (2026-11-23): a new visit can be started
     // from an old one, and an archived one is only this record
     contact:s.contact||"",contactRole:s.contactRole||"",contactPhone:s.contactPhone||"",contactEmail:s.contactEmail||"",
+    tech:s.tech||"",   // whose visit it was: a technician's "what is left open" goes by it
     arch:arch||(s.zipAt?{at:s.zipAt,name:s.zipName||"",to:s.zipTo||""}:null)};
 }
 // A record dressed as a visit, for the code that reads visits.
 function histSession(rec){
   if(!rec||rec.del)return null;
-  return {id:rec.id,client:rec.client,machine:rec.machine,machineNo:rec.machineNo||"",year:rec.year||"",project:rec.project,location:rec.location,type:rec.type,status:rec.status,
+  return {id:rec.id,tech:rec.tech||"",client:rec.client,machine:rec.machine,machineNo:rec.machineNo||"",year:rec.year||"",project:rec.project,location:rec.location,type:rec.type,status:rec.status,
     createdAt:rec.createdAt,closedAt:rec.closedAt,writeLang:rec.writeLang,manualRef:rec.serial?{serial:rec.serial}:null,
     revisions:rec.rev?[rec.rev]:[],entries:rec.entries||[],counters:rec.counters||null,_hist:true,_counts:rec.counts,_n:rec.n,_range:rec.range,_arch:rec.arch};
 }
@@ -14962,7 +15001,12 @@ function histForget(s){
 }
 function histGoneStamp(r){return r?String(r.del?(r.at||""):(r.gone||"")):""}
 function histMerge(a,b){
-  var out={v:1,visits:{},seen:Object.assign({},(a&&a.seen)||{},(b&&b.seen)||{})};
+  var out={v:1,visits:{},seen:Object.assign({},(a&&a.seen)||{},(b&&b.seen)||{}),office:{}};
+  // the office's notes: one per point, the one written last
+  [a,b].forEach(function(h){
+    var om=(h&&h.office)||{};
+    Object.keys(om).forEach(function(k){var r=om[k],c=out.office[k];if(r&&(!c||String(r.mod||"")>String(c.mod||"")))out.office[k]=r});
+  });
   [a,b].forEach(function(h){
     Object.keys((h&&h.visits)||{}).forEach(function(id){
       var r=h.visits[id],c=out.visits[id];
@@ -14977,7 +15021,8 @@ function histMerge(a,b){
 }
 function histSig(h){
   return Object.keys(h.visits||{}).sort().map(function(id){var r=h.visits[id];return id+":"+(r.at||"")+(r.del?"x":"")+(r.arch?"a":"")+(r.gone?"g"+r.gone:"")}).join(",")
-    +"|"+Object.keys(h.seen||{}).sort().join(",");
+    +"|"+Object.keys(h.seen||{}).sort().join(",")
+    +"|"+Object.keys(h.office||{}).sort().map(function(k){return k+":"+((h.office[k]||{}).mod||"")}).join(",");
 }
 // Deletions noted on this device that the file does not know yet.
 function histGoneNotes(){
@@ -20791,7 +20836,7 @@ function nvMachines(){
 function nvOpenProblems(){
   var out=[];
   nvMachines().forEach(function(g){out=out.concat(g.open)});
-  sessions.forEach(function(s){if(!(s.machine&&keyNorm(s.machine)))openEntries(s,{}).forEach(function(e){out.push({s:s,e:e})})});
+  sessions.forEach(function(s){if(!(s.machine&&keyNorm(s.machine)))openEntries(s,closedRefs([s])).forEach(function(e){out.push({s:s,e:e})})});
   return out.sort(function(a,b){return String(b.e.ts||"").localeCompare(String(a.e.ts||""))});
 }
 function nvAgo(ts){
@@ -20824,8 +20869,15 @@ function nvHomeRender(mc){
     if(exOnNow)exp+=exToCheck(s);
   });
   var probs=nvOpenProblems(),q=nvQueue().n,who=nvWho(),h=new Date().getHours();
-  // a technician: what is open in their own visits, and on the machines they
-  // have a visit on — not the whole company's list
+  // A technician: what is open in their own visits, AND on the machines they
+  // have a visit on — a colleague's included. For one day (2026-11-23 · 5) it
+  // was their own visits only; the user took it back the same day: "I was
+  // wrong: I do want a colleague's to show when they are the same machine's,
+  // when the administrator attaches the file and assigns it." So the rule is
+  // the first one again: the moment a visit on a machine is theirs — made by
+  // them or sent to them — what is open on that machine is theirs to know,
+  // whoever wrote it, archived visits too. What is on no machine of theirs
+  // stays out. The administrator sees all of it.
   if(tec){
     var myM={};S.forEach(function(s){if(s.machine&&keyNorm(s.machine))myM[machineKey(s)]=1});
     probs=probs.filter(function(p){return sessMine(p.s)||myM[machineKey(p.s)]});
@@ -20875,10 +20927,12 @@ function nvHomeRender(mc){
     +"<section class=\"nv-card nv-sect\" id=\"nvOpenSec\"><div class=\"hd\"><h2>"+esc(nvT("Què queda obert"))+"</h2></div>"
       +(probs.length?probs.slice(0,5).map(function(p,i){
           var old=(Date.now()-Date.parse(p.e.ts||0))>30*86400000;
-          return "<button type=\"button\" class=\"nv-open\" data-p=\""+i+"\">"+nvSevIcon(p.e.severity)
+          return (tec?"":"<div class=\"nv-oprow\">")+"<button type=\"button\" class=\"nv-open\" data-p=\""+i+"\">"+nvSevIcon(p.e.severity)
             +"<span style=\"min-width:0\"><span class=\"t\" style=\"display:block\">"+esc(String(p.e.text||p.e.tag||"—").split("\n")[0])+"</span>"
-            +"<span class=\"s\" style=\"display:block\">"+esc([p.s.machine||p.s.client,nvT("des del")+" "+nvDM(p.e.ts)].filter(Boolean).join(" · "))+"</span></span>"
-            +"<span class=\"nv-pill "+(old?"r":"o")+"\">"+esc(nvAgo(p.e.ts))+"</span></button>";
+            +"<span class=\"s\" style=\"display:block\">"+esc([p.s.machine||p.s.client,((!tec||!nameLoose(p.s.tech,meName()))&&p.s.tech)||"",nvT("des del")+" "+nvDM(p.e.ts)].filter(Boolean).join(" · "))+"</span></span>"
+            +"<span class=\"nv-pill "+(old?"r":"o")+"\">"+esc(nvAgo(p.e.ts))+"</span></button>"
+            // whoever is not a technician can close it from here, with a note
+            +(tec?"":"<button type=\"button\" class=\"btn-sm\" data-po=\""+i+"\" title=\""+esc(nvT("Tanca aquest punt des de l'oficina, amb una nota"))+"\" aria-label=\""+esc(nvT("Tanca aquest punt des de l'oficina, amb una nota"))+"\">✔<span class=\"wd\"> "+esc(nvT("Tanca'l"))+"</span></button></div>");
         }).join("")+(probs.length>5?"<div class=\"nv-foot\">+ "+(probs.length-5)+"</div>":"")
         :"<div class=\"nv-none\">"+esc(nvT("No queda res obert."))+"</div>")
       +(closed&&!tec?"<div class=\"nv-foot\">"+esc(nvPl(closed,"visita acabada","visites acabades")+" "+nvT("per arxivar"))+" · <button type=\"button\" class=\"nv-link\" id=\"nvArx\">"+esc(nvT("Arxiva…"))+"</button></div>":"")
@@ -20911,6 +20965,8 @@ function nvHomeRender(mc){
     if(nw){var ns=news[+nw.dataset.n];if(ns)nvOpen(ns.id,"fitxa");return}
     var hw=e.target.closest?e.target.closest("[data-h]"):null;
     if(hw){var hs=held[+hw.dataset.h];if(hs)nvOpen(hs.id,"fitxa");return}
+    var po=e.target.closest?e.target.closest("[data-po]"):null;
+    if(po){var pq=probs[+po.dataset.po];if(pq)offOpen(pq.s,pq.e);return}
     var pr=e.target.closest?e.target.closest("[data-p]"):null;
     if(pr){var p=probs[+pr.dataset.p];if(p)nvOpenVisitOf(p.s,"log")}
   });
@@ -21230,7 +21286,9 @@ function nvIncRender(a,box,isOpen,list){
       +"<div class=\"bd\"><div class=\"tx\">"
         +"<div class=\"ln\"><span class=\"tm\">"+(multi?nvDM(e.ts)+" · ":"")+nvHM(e.ts)+"</span> · "+st+extra+"</div>"
         +(fx&&fx.text?"<div class=\"lb\">"+esc(nvT("Solució"))+"</div><div class=\"so\">"+highlightText(fx.text,filterTxt)+"</div>":"")
-        +(!isResolved(e)&&later(e)?"<div class=\"lb\">"+esc(nvT("Tancada per una visita posterior"))+"</div>":"")
+        +(!isResolved(e)&&later(e)?(later(e).office
+            ?"<div class=\"lb\">"+esc(nvT("Tancada des de l'oficina")+(later(e).by?" · "+later(e).by:"")+" · "+nvDM(later(e).ts))+"</div><div class=\"so\">"+esc(later(e).text)+"</div>"
+            :"<div class=\"lb\">"+esc(nvT("Tancada per una visita posterior"))+"</div>"):"")
         +(dur?"<div class=\"lb\">"+esc(nvT("Temps"))+"</div><div class=\"du\">"+esc(dur)+"</div>":"")
       +"</div>"+(im?"<div class=\"ph\"><img src=\""+im.data+"\" alt=\"\" loading=\"lazy\"></div>":"")+"</div>"
       +(!ok&&isOpen?"<button type=\"button\" class=\"nv-soft\" data-fix=\""+esc(e.id)+"\">✔ "+esc(nvT("Com ha quedat"))+"</button>":"")
@@ -22870,6 +22928,129 @@ $$("nFrom").addEventListener("change",function(){
     "Copia el client, el contacte, la ubicació i l'equip. El projecte, el tècnic i les dates queden en blanc.":"Copia el cliente, el contacto, la ubicación y el equipo. El proyecto, el técnico y las fechas quedan en blanco."};
   var en={"Parteix d'una visita anterior":"Start from an earlier visit","— Cap: visita en blanc —":"— None: a blank visit —",
     "Copia el client, el contacte, la ubicació i l'equip. El projecte, el tècnic i les dates queden en blanc.":"Copies the client, the contact, the location and the equipment. The project, the technician and the dates stay blank."};
+  Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
+  Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
+})();
+// ── CLOSED FROM THE OFFICE (2026-11-23 · 6) ─────────────────────────────────
+// The user: "the administrator sees them all and can also close points and
+// sign a new revision. If you see a better system we talk about it." Two ways
+// were put to him — a new, signed revision of the technician's report, or a
+// note kept beside it — and he took the note: "la nota d'oficina em sembla el
+// millor camí".
+//
+// A point (a problem or a warning of some visit) is closed from the office
+// with WHO, WHEN and HOW IT ENDED, and nothing of the visit is touched: the
+// report that was delivered — and signed, saying "pending" — stays what it
+// was, no revision is asked for, and it works the same for an open visit, a
+// closed one and one that is only an archive record. It is what the app
+// already does when a later visit closes an earlier problem (entry.closes):
+// the old report is not rewritten, the closing is recorded where it happened.
+//
+// WHERE: in the machines' history file, `hist.office`, keyed
+// "<visit id>|<entry id>" → {s, e, at, by, text, mod[, del]}. That file is the
+// one place that outlives a visit's archiving and that every device of the
+// company already reads and merges; `mod` decides between two devices, and
+// `del` is the note taken back (it has to travel too).
+// HOW IT SHOWS: closedRefs() hands the note over as if it were the closing
+// entry of a later visit, so "what is left open" (home, the machine's card,
+// the history, the visit's Incidències) all agree without knowing. The
+// history says "closed on … · from the office (who) · how"; the words "from
+// the office" come from OFF_W and NOT from the report tables, which must not
+// grow a key (their cached translations would be dropped: see TS_WK).
+// WHO: whoever is not a technician. Order, not a lock, like the roles.
+// NOT DONE: no report prints these notes — not the visit's own (on purpose)
+// nor the next visit's.
+var OFF_W={ca:"des de l'oficina",es:"desde la oficina",en:"from the office"};
+function offWord(lang){return OFF_W[lang]||OFF_W.en}
+function offMap(){return (typeof hist==="object"&&hist&&hist.office)||{}}
+function offGet(sid,eid){var o=offMap()[sid+"|"+eid];return o&&!o.del?o:null}
+function offEntry(o){return{id:"off|"+o.s+"|"+o.e,ts:o.at,severity:"ok",text:o.text||"",office:true,by:o.by||"",closes:{s:o.s,e:o.e}}}
+function offSet(sid,eid,rec){
+  var m=Object.assign({},offMap());
+  m[sid+"|"+eid]=Object.assign({s:sid,e:eid},rec,{mod:now()});
+  hist.office=m;
+  histSaveLocal();histSchedule();
+}
+var offFor=null,offOpenL=[],offDoneL=[];
+function offOpen(s,e){
+  if(isTec()||!s||!e)return;
+  offFor={s:s.id,e:e.id};
+  $$("offWhat").textContent=String(e.text||e.tag||"—")+"\n"+[s.client,s.machine,s.project,s.tech,nvDM(e.ts)].filter(Boolean).join(" · ");
+  $$("offTxt").value="";$$("offDate").value=todayISO();$$("offBy").value=meName();
+  uiApply($$("offBack"));
+  $$("offBack").style.display="flex";setTimeout(function(){focusField($$("offTxt"))},80);
+}
+function offShut(){$$("offBack").style.display="none";offFor=null}
+// The lists that say what is open are redrawn; the machine's history too, if
+// it is the window the note was written from.
+function offRefresh(){
+  try{renderAll()}catch(e){}
+  try{if($$("mhBack").style.display!=="none")openMachineHistory(mhFor||undefined)}catch(e){}
+}
+$$("offCancel").addEventListener("click",offShut);
+$$("offBack").addEventListener("click",function(e){if(e.target===$$("offBack"))offShut()});
+$$("offSave").addEventListener("click",function(){
+  if(!offFor)return;
+  var t=$$("offTxt").value.trim(),d=$$("offDate").value;
+  if(!t){alert(uiT("Escriu com ha quedat: és el que dirà l'historial de la màquina."));return}
+  offSet(offFor.s,offFor.e,{at:d?new Date(d+"T12:00:00").toISOString():now(),by:$$("offBy").value.trim(),text:t});
+  offShut();offRefresh();
+});
+// On top of a machine's history, for whoever may close: what is open on it,
+// each with its button, and what the office has closed, each with its way back.
+function offBlock(cur){
+  if(isTec())return "";
+  var all=machineSessions(cur);
+  if(!all.length)all=[cur];
+  var closed=closedRefs(all),open=[],done=[];
+  all.forEach(function(x){
+    openEntries(x,closed).forEach(function(e){open.push({s:x,e:e})});
+    (x.entries||[]).forEach(function(e){var o=e&&offGet(x.id,e.id);if(o)done.push({s:x,e:e,o:o})});
+  });
+  offOpenL=open;offDoneL=done;
+  if(!open.length&&!done.length)return "";
+  function line(q){
+    return esc(String(q.e.text||q.e.tag||"—").split("\n")[0])
+      +"<span>"+esc([nvDM(q.e.ts),q.s.project,q.s.tech].filter(Boolean).join(" · "))+"</span>";
+  }
+  return "<div class=\"mh-off\"><div class=\"hd\">"+esc(uiT("Des de l'oficina"))+"</div>"
+    +open.map(function(q,i){
+      return "<div class=\"rw\"><div class=\"tx\">"+line(q)+"</div>"
+        +"<button type=\"button\" class=\"btn-sm\" data-off=\""+i+"\">✔ "+esc(uiT("Tanca'l"))+"</button></div>";
+    }).join("")
+    +done.map(function(q,i){
+      return "<div class=\"rw\"><div class=\"tx\">"+line(q)
+        +"<span>"+esc(uiT("Tancat el {d}").replace("{d}",nvDM(q.o.at))+(q.o.by?" · "+q.o.by:"")+" · "+q.o.text)+"</span></div>"
+        +"<button type=\"button\" class=\"btn-sm\" data-offu=\""+i+"\">"+esc(uiT("Desfés"))+"</button></div>";
+    }).join("")+"</div>";
+}
+$$("mhBody").addEventListener("click",function(e){
+  var b=e.target.closest?e.target.closest("[data-off],[data-offu]"):null;if(!b||isTec())return;
+  if(b.dataset.off!=null&&b.hasAttribute("data-off")){var q=offOpenL[+b.dataset.off];if(q)offOpen(q.s,q.e);return}
+  var d=offDoneL[+b.dataset.offu];if(!d)return;
+  if(!confirm(uiT("Vols desfer el tancament d'aquest punt?")+"\n\n"+uiT("Tornarà a sortir com a obert a tots els aparells.")))return;
+  offSet(d.s.id,d.e.id,{del:true,at:"",by:meName(),text:""});
+  offRefresh();
+});
+(function(){
+  var es={"Tanca el punt des de l'oficina":"Cierra el punto desde la oficina","Com ha quedat *":"Cómo ha quedado *",
+    "Què s'ha fet i qui ho ha confirmat…":"Qué se ha hecho y quién lo ha confirmado…","Qui el tanca":"Quién lo cierra",
+    "L'informe que es va lliurar no es toca. La nota queda a l'historial de la màquina, i el punt deixa de sortir com a obert.":"El informe que se entregó no se toca. La nota queda en el historial de la máquina, y el punto deja de salir como abierto.",
+    "✔ Tanca el punt":"✔ Cierra el punto","Tanca'l":"Ciérralo","Des de l'oficina":"Desde la oficina","Tancat el {d}":"Cerrado el {d}","Desfés":"Deshaz",
+    "Tanca aquest punt des de l'oficina, amb una nota":"Cierra este punto desde la oficina, con una nota",
+    "Tancada des de l'oficina":"Cerrada desde la oficina",
+    "Escriu com ha quedat: és el que dirà l'historial de la màquina.":"Escribe cómo ha quedado: es lo que dirá el historial de la máquina.",
+    "Vols desfer el tancament d'aquest punt?":"¿Quieres deshacer el cierre de este punto?",
+    "Tornarà a sortir com a obert a tots els aparells.":"Volverá a salir como abierto en todos los aparatos."};
+  var en={"Tanca el punt des de l'oficina":"Close the point from the office","Com ha quedat *":"How it ended *",
+    "Què s'ha fet i qui ho ha confirmat…":"What was done and who confirmed it…","Qui el tanca":"Closed by",
+    "L'informe que es va lliurar no es toca. La nota queda a l'historial de la màquina, i el punt deixa de sortir com a obert.":"The report that was delivered is not touched. The note stays in the machine's history, and the point stops showing as open.",
+    "✔ Tanca el punt":"✔ Close the point","Tanca'l":"Close it","Des de l'oficina":"From the office","Tancat el {d}":"Closed on {d}","Desfés":"Undo",
+    "Tanca aquest punt des de l'oficina, amb una nota":"Close this point from the office, with a note",
+    "Tancada des de l'oficina":"Closed from the office",
+    "Escriu com ha quedat: és el que dirà l'historial de la màquina.":"Write how it ended: it is what the machine's history will say.",
+    "Vols desfer el tancament d'aquest punt?":"Undo the closing of this point?",
+    "Tornarà a sortir com a obert a tots els aparells.":"It will show as open again on every device."};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();

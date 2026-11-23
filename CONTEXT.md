@@ -3707,7 +3707,27 @@ What is true now:
   shared cache, unregisters and reloads its pages. A device with nou/
   installed lands on the root app in a browser frame: uninstall it and install
   the root one.
-- The manual (`manual.html`) still describes the old app.
+- **The manual (`manual.html`) was rewritten for the new app on 2026-11-23**
+  (asked for right after the switch). Same 19 sections plus a new 18,
+  "Treballar en equip" (roles, company settings, the technicians' licence,
+  users, assignments, prepared visits, two people in one visit, moving to
+  another Google account); every "barra lateral ☰ / ↓ Informe / capçalera de
+  la visita" became the place the thing has now (Menú, the ⬇ and ⋮ of the
+  visit, the card's tabs); section 10 says the hours live in the visit and no
+  longer mentions the Calendari laboral, which is the user's private bridge
+  and not part of the product; section 12 has the company's own sheet and "it
+  does not replace the tickets". The labels were read off the running app
+  screen by screen, not from memory.
+  `tools/captures.py` drives the new app: eleven shots (inici, menu,
+  visita-nova, visita, menu-visita, registre, entrada-nova, entrada-editar,
+  menu-informe, full-hores, usuaris), light and dark, with an example licence
+  that carries `exp` and `ts` but NOT `cal`, so the calendar button never
+  shows in a manual. Each shot's height is set by hand to the content.
+  The old `barra-lateral-*` pictures and three stray `*-MSItxals13.webp`
+  copies (sync conflicts carrying the computer's name) were removed.
+  Not re-verified against the app, kept as the old manual had them: the text
+  of sections whose windows did not change (parts and drawings, the folder
+  window, the report's layout, production tests, the expense form, archive).
 Checked in the preview: a visit made with the old app at `classic/` (client,
 contact, one entry) opens whole in the app at the root; an entry added there
 shows back in `classic/`; a device with nou/ settings gets the licence, the
@@ -3719,6 +3739,55 @@ the real data. The new code has never read the real Drive file nor a real
 device's database; nothing was tried signed in, on a phone, or with the
 installed apps updating themselves. GitHub Pages serves pages for 10 minutes
 from cache, so a device without the worker may show the old app that long.
+
+**"Què queda obert" by role, and a point closed from the office (versions
+`2026-11-23 · 5` and `· 6`).** The user first: "in the 'Què queda obert'
+section, as a technician only their projects. The administrator sees them all
+and can also close points and sign a new revision. If you see a better system
+we talk about it." Then, the same day: "On the first point I was wrong: I do
+want a colleague's to show when they are the same machine's, when the
+administrator attaches the file and assigns it. The office note seems the
+best way to me."
+- **Who sees what** is therefore the rule from before `· 5`, kept for good:
+  a technician's list (and the "Problemes oberts" count) is what is open in
+  their own visits AND on the machines they have a visit on, a colleague's
+  and archived visits included — a visit sent to them on a machine brings
+  that machine's open points with it. A row that is not theirs says whose it
+  is. The administrator sees everything, each row with its technician. Left
+  from `· 5`: the history record carries `tech`.
+- **Closed from the office** (`offOpen`, `#offBack`): whoever is not a
+  technician closes a point with who, when and how it ended, from the "✔
+  Tanca'l" beside each row of "Què queda obert" or from the block "Des de
+  l'oficina" on top of a machine's history (`offBlock`: every open point of
+  the machine, and what the office closed, each with "Desfés"). Nothing of
+  the visit is touched — no revision, no signature, the delivered report
+  stays what it was — and it works for an open visit, a closed one and an
+  archive record alike.
+  It lives in the history file: `hist.office["<visit>|<entry>"] = {s, e, at,
+  by, text, mod[, del]}`; `histMerge` keeps the later `mod`, `histSig` counts
+  it, `histLoad` no longer drops it. `closedRefs()` hands a note over as if
+  it were the closing entry of a later visit (`offEntry`, `office:true`), so
+  every "is this still open?" agrees. The history writes "closed on … · from
+  the office (who) · how"; those three words come from `OFF_W` (ca/es/en,
+  English elsewhere), NOT from the report tables, which must not grow a key.
+  The visit's Incidències tab says "Tancada des de l'oficina".
+  **No report prints these notes** — not the visit's own, on purpose, nor the
+  next visit's: when it was put to him I had listed "the next visit's report"
+  among the places it would show, and that part is not built (it means
+  touching the report builders); told him.
+  A device still on an older version rewrites the history file without
+  `office`; the notes come back when a device that has them syncs again.
+The other way stays what it was: reopen the visit, "Afegeix com ha quedat",
+new revision, signed in "Revisa i signa".
+Checked in the preview: technician Joan sees his point, Marta's on the same
+machine (with her name), the archived one on that machine and the one with no
+technician, not Marta's on other machines, and no button; the administrator
+closes Marta's point in her CLOSED visit and an archived one — the visit is
+byte for byte the same, both leave the list and the count, the history says
+who and how; "Desfés" brings it back; two copies of the file merge to the
+later note, a deletion included. **Not checked:** real Google, two devices.
+The translation checker's baseline is 68 since this change (the three
+`OFF_W` phrases are a table, not interface text).
 
 **The day of the switch (as it was planned):** set `SEPARAT` to false, move `nou/index.html` and
 `nou/sw.js` to the root — **and the manifest and the three icons with them**,

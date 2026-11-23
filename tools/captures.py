@@ -42,21 +42,26 @@ CHROME = next((p for p in [
 
 # ─────────────────────────── el que es captura ───────────────────────────
 # nom del fitxer, guio (veure DRIVER), i qui es retalla (buit = la pantalla).
-# Captures que acaben amb un pam de fons buit (la barra lateral d'un telefon
-# amb una visita i prou): es talla, que al manual nomes hi fa nosa.
-TRIM = {"barra-lateral"}
+# Captures que acaben amb un pam de fons buit: es talla, que al manual nomes
+# hi fa nosa.
+TRIM = set()
 
 # nom del fitxer, guio (veure DRIVER), que es retalla (buit = la pantalla
 # sencera) i, si cal, una pantalla mes alta que la d'un telefon: n'hi ha que no
 # hi caben i el que importa no es que surtin tallades sino que es vegin senceres.
+# Des del dia del canvi (2026-11-23) son les pantalles del disseny nou.
 SHOTS = [
-    ("barra-lateral",  "sidebar",    "#sidebar",         0),
-    ("visita-nova",    "visitanova", "#newBack .modal",  1500),
-    ("registre",       "registre",   "",                 0),
-    ("entrada-nova",   "registre",   ".input-bar",       0),
-    ("entrada-editar", "editar",     "#editBack .modal", 1400),
-    ("menu-informe",   "informe",    "#expMenu",         1400),
+    ("inici",          "inici",      "",                    990),
+    ("menu",           "menu",       "",                    1360),
+    ("visita-nova",    "visitanova", "#newBack .modal",     1450),
+    ("visita",         "fitxa",      "",                    0),
+    ("menu-visita",    "mes",        "#m2MoreBack .modal",  1500),
+    ("registre",       "registre",   "",                    0),
+    ("entrada-nova",   "compose",    ".input-bar",          0),
+    ("entrada-editar", "editar",     "#editBack .modal",    900),
+    ("menu-informe",   "informe",    "#expMenu",            780),
     ("full-hores",     "hores",      "#tsBack .modal|#tsRows", 1700),
+    ("usuaris",        "usuaris",    "#usrBack .modal",     640),
 ]
 
 
@@ -66,11 +71,12 @@ window.__SHOT=(function(){
   var q={};(location.hash||"").replace(/^#/,"").split("&").forEach(function(p){
     var i=p.indexOf("=");if(i<0){q[p]=1}else{q[p.slice(0,i)]=decodeURIComponent(p.slice(i+1))}});
   if(!q.shot)return null;
-  if(q.light)document.documentElement.classList.add("light");
+  /* El tema clar es una classe a <html>; el fosc, que no hi sigui. */
+  document.documentElement.classList.toggle("light",!!q.light);
 
-  /* Sense aixo la barra lateral surt a mitja entrada: s'obre amb una transicio
-     de 0,25 s i la captura la enxampava pel cami. I la barra d'instal.lar
-     l'app no te res a dir en un manual. */
+  /* Sense aixo una finestra surt a mitja entrada: s'obren amb una transicio i
+     la captura les enxampava pel cami. I la barra d'instal.lar l'app no te res
+     a dir en un manual. */
   var st=document.createElement("style");
   st.textContent="*,*::before,*::after{transition:none!important;animation:none!important}"
     +"#instBar{display:none!important}";
@@ -79,7 +85,7 @@ window.__SHOT=(function(){
   function iso(d,h,m){return new Date(2026,2,d,h,m,0).toISOString()}
   function demo(){
     return [{
-      id:"demo1",client:"Ind\u00fastries Vall\u00e8s, S.A.",project:"P-2614",
+      id:"demo1",client:"Indústries Vallès, S.A.",project:"P-2614",
       machine:"Envasadora LE-400",machineNo:"LE400-1182",year:"2019",
       location:"Sabadell",tech:"Marc Soler",type:"maintenance",
       contact:"Jordi Pla",contactRole:"Cap de manteniment",
@@ -87,60 +93,81 @@ window.__SHOT=(function(){
       status:"open",createdAt:iso(10,7,40),startAt:"",notes:"",
       entries:[
         {id:"e1",ts:iso(10,8,15),severity:"info",tag:"Arribada",
-         text:"Arribada a planta. Revisi\u00f3 de l'estat de la l\u00ednia amb el cap de manteniment. La m\u00e0quina est\u00e0 aturada des de divendres.",images:[]},
+         text:"Arribada a planta. Revisió de l'estat de la línia amb el cap de manteniment. La màquina està aturada des de divendres.",images:[]},
         {id:"e2",ts:iso(10,9,30),severity:"issue",tag:"Cinta d'entrada",
-         text:"La cinta d'entrada patina en arrencar en fred. El rodet tensor t\u00e9 joc axial i el coixinet fa soroll.",images:[]},
+         text:"La cinta d'entrada patina en arrencar en fred. El rodet tensor té joc axial i el coixinet fa soroll.",images:[]},
         {id:"e3",ts:iso(10,11,5),severity:"ok",tag:"Cinta d'entrada",
          text:"Canviat el coixinet del rodet tensor i tornada a tensar la cinta. Tres arrencades en fred sense patinar.",images:[]},
         {id:"e4",ts:iso(10,12,20),severity:"warning",tag:"Grup de segellat",
-         text:"La resist\u00e8ncia del grup de segellat arriba a temperatura 40 s m\u00e9s tard del que toca. Encara segella b\u00e9, per\u00f2 caldr\u00e0 canviar-la a la propera revisi\u00f3.",images:[]},
+         text:"La resistència del grup de segellat arriba a temperatura 40 s més tard del que toca. Encara segella bé, però caldrà canviar-la a la propera revisió.",images:[]},
         /* Una d'interna: al manual hi surt dues vegades, al registre (que es on
            s'explica que no van a l'informe) i al menu de l'informe, que nomes
            ofereix l'informe intern si la visita en te cap. */
         {id:"e5",ts:iso(10,12,45),severity:"info",tag:"Recanvis",
-         text:"Portar dos coixinets de recanvi la propera vegada: aqui no en tenen i el magatzem queda lluny.",images:[],intern:true}
+         text:"Portar dos coixinets de recanvi la propera vegada: aqui no en tenen i el magatzem queda lluny.",images:[],intern:true},
+        /* Un segon dia, perque el full d'hores tingui mes d'una fila proposada. */
+        {id:"e6",ts:iso(11,8,5),severity:"info",tag:"Proves",
+         text:"Proves amb producte després del canvi del coixinet.",images:[]},
+        {id:"e7",ts:iso(11,13,10),severity:"ok",tag:"Proves",
+         text:"Dues hores de producció sense aturades. La línia queda en marxa.",images:[]}
       ]
+    },{
+      /* Una de preparada i una d'un altre tecnic: la llista d'Inici i la
+         d'usuaris ensenyen aixi el que te de nou la vista d'administrador. */
+      id:"demo2",client:"Conserves del Nord, S.L.",project:"P-2630",
+      machine:"Tancadora TC-12",machineNo:"TC12-0457",year:"2021",
+      location:"Girona",tech:"Laia Puig",type:"commissioning",
+      contact:"Anna Roca",contactRole:"Producció",contactPhone:"",contactEmail:"",
+      status:"open",createdAt:iso(12,9,0),startAt:"",notes:"",entries:[],
+      order:{by:"Marc Soler",dev:"dshot",at:iso(12,9,0),from:"2026-03-23",to:"2026-03-26",
+             note:"Posada en marxa de la tancadora nova."}
     }];
   }
 
-  function base(id){
-    isLoggedIn=true;driveEmail="marc.soler@example.com";
-    sessions=demo();aid=id||null;
+  /* Una llicencia d'exemple amb els dos moduls que es venen i el rol
+     d'administrador: sense ella no hi hauria ni full d'hores ni llista
+     d'usuaris per ensenyar. No porta el modul privat del calendari, que no es
+     part del producte i no ha de sortir en un manual. */
+  function base(){
+    isLoggedIn=true;driveEmail="empresa@example.com";
+    lic={n:"Indústries d'Exemple, S.L.",x:"2027-12-31",s:5,i:"2026-01-01",f:["exp","ts"],r:"adm"};licReady=true;
+    try{localStorage.setItem(LSP+"me","Marc Soler");localStorage.setItem(LSP+"devid","dshot");
+      localStorage.setItem(LSP+"exon","1");
+      localStorage.setItem(LSP+"usr",JSON.stringify({v:1,dev:{
+        dshot:{name:"Marc Soler",role:"adm",at:new Date().toISOString(),ver:APP_VERSION,plat:"Windows"},
+        d2:{name:"Laia Puig",role:"tec",at:new Date().toISOString(),ver:APP_VERSION,plat:"Android"},
+        d3:{name:"Pau Ferrer",role:"tec",at:new Date(Date.now()-2*86400000).toISOString(),ver:APP_VERSION,plat:"Android"}
+      },man:{},gone:{}}))}catch(e){}
+    sessions=demo();aid=null;
+    try{licApply()}catch(e){}
     renderAll();updateAuthUI();
+    try{setSyncSt("ok","Drive connectat")}catch(e){}
     var ib=$$("instBar");if(ib)ib.style.display="none";
-    /* El registre s'obre per baix, a l'ultima entrada; per al manual interessa
-       veure'l pel principi, que es per on es llegeix. */
-    var la=$$("logArea");if(la&&la.parentNode)la.parentNode.scrollTop=0;
   }
+  function top(){var la=$$("logArea");if(la)la.scrollTop=0;if(la&&la.parentNode)la.parentNode.scrollTop=0}
 
   var S={
-    llista:function(){base(null)},
-    registre:function(){base("demo1")},
-    visitanova:function(){base(null);openNewModal()},
-    sidebar:function(){base("demo1");openSide()},
-    informe:function(){base("demo1");var b=$$("btnExp"),m=$$("expMenu");if(!b||!m)throw new Error("no hi ha el boto de l'informe");openExpMenu(b,m)},
-    /* El full d'hores llegeix els dies fitxats del Calendari laboral, que a
-       l'app arriben de Drive i es guarden en una copia local. Sense copia
-       nomes es veuria l'avis de "no s'ha pogut llegir el fitxer", que no es
-       el que ha d'ensenyar un manual: hi deixem tres dies d'exemple, el de
-       l'anada, el de la feina i el de la tornada. */
-    hores:function(){
-      var dies={};
-      dies["2026-03-09"]={vi:"06:00",i:"10:00",f:"17:00",vf:"",p:0.5,d:"Sabadell"};
-      dies["2026-03-10"]={vi:"",i:"08:00",f:"18:00",vf:"",p:0.5,d:"Sabadell"};
-      dies["2026-03-11"]={vi:"",i:"08:00",f:"13:00",vf:"17:30",p:0.5,d:"Sabadell"};
-      saveCalCache({years:{2026:{days:dies}}},"Drive");
-      calCache.at=new Date(2026,2,11,19,40).toISOString();  // que la copia no dugui la data d'avui
-      base("demo1");openTimesheet();
-    },
-    editar:function(){base("demo1");openEdit("e2")}
+    inici:function(){base();nvGo("home")},
+    menu:function(){base();nvGo("menu")},
+    visitanova:function(){base();nvGo("home");openNewModal()},
+    fitxa:function(){base();nvOpen("demo1","fitxa")},
+    /* El registre s'obre per baix, a l'ultima entrada; per al manual interessa
+       veure'l pel principi, que es per on es llegeix. */
+    registre:function(){base();nvOpen("demo1","log");top()},
+    compose:function(){base();nvOpen("demo1","log");top();m2Show("compose")},
+    editar:function(){base();nvOpen("demo1","log");openEdit("e2")},
+    mes:function(){base();nvOpen("demo1","fitxa");openM2More()},
+    informe:function(){base();nvOpen("demo1","fitxa");var b=$$("nvRep");if(!b)throw new Error("no hi ha el boto de l'informe");b.click()},
+    hores:function(){base();nvOpen("demo1","fitxa");openTimesheet()},
+    usuaris:function(){base();nvGo("menu");usrOpen()}
   };
 
   /* El boot de debo s'ha tret d'aquest fitxer (veure build()): llegeix les
      sessions de l'IndexedDB i aqui no hi ha res a llegir. Ho pintem tot de cop
-     i avisem amb data-shot, que es el que espera el guio de fora. */
+     i avisem amb data-shot, que es el que espera el guio de fora — un moment
+     mes tard, que hi ha finestres que acaben d'omplir-se soles. */
   try{S[q.shot]()}catch(e){document.documentElement.setAttribute("data-shot-error",e.message)}
-  document.documentElement.setAttribute("data-shot","1");
+  setTimeout(function(){document.documentElement.setAttribute("data-shot","1")},700);
   return S;
 })();
 """
@@ -150,7 +177,7 @@ def build():
     """L'index.html amb el guio a dins i sense res que no acabi mai."""
     s = io.open(SRC, encoding="utf-8", newline="").read()
     # El service worker no pinta res en una captura i es queda viu entre proves.
-    s = s.replace('if("serviceWorker" in navigator){', 'if(false){', 1)
+    s = s.replace('if("serviceWorker" in navigator){', 'if(false){')
     # Fora el boot asincron sencer (IndexedDB, Drive, la cua de pujades).
     a = s.index('$$("content").innerHTML="<div class=\\"empty\\"><span class=\\"spinner\\"></span>')
     b = s.index("\n})();", s.index("(async function(){", a))
@@ -241,7 +268,7 @@ class Chrome(object):
         prof = os.path.join(os.environ.get("TEMP", "/tmp"), "fsl-captures-profile")
         self.proc = subprocess.Popen(
             [exe, "--headless", "--disable-gpu", "--hide-scrollbars", "--no-first-run",
-             "--no-default-browser-check", "--disable-extensions",
+             "--no-default-browser-check", "--disable-extensions", "--lang=ca",
              "--remote-debugging-port=%d" % port, "--user-data-dir=" + prof, "about:blank"],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.ws, self._id, err = None, 0, None

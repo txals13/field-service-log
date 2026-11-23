@@ -5773,6 +5773,22 @@ the visit created carries the copied data and its own project; no box when
 editing or when there is nothing to copy. **Not checked:** real Google, a
 real archived visit.
 
+**"Exportant…" for ever in the delete window (fixed in `nou · 2026-11-23 ·
+3`).** The user, deleting a visit: the middle button stayed on "Exportant…";
+on cancelling, "Aquesta sessió ha canviat" was underneath. `#delBack` is the
+last `.modal-back` in the page and all share one layer, so anything opened
+FROM it — "Primer exporta el ZIP" goes through `ensureRevision`, and can also
+ask for the labels or the archive folder — came up below it, and the export
+waited for an answer nobody could give. Not a matter of roles: any visit
+changed since its last revision did it. `#delBack` now sits one layer down
+(z-index 99); nothing opens the delete window over another one. And when the
+delete window is cancelled while the export is still asking, the handler no
+longer sets `pendingDel` again behind the closed window. Checked in the
+preview with a signed Rev. 02 changed since: the question is on top; cancelled,
+the button is back; cancelled together with the delete window, nothing is
+left pending. The root `index.html` has the same structure and was NOT
+touched.
+
 **Two people, one visit (version `nou · 2026-11-21 · 3`).** A company on one
 account puts two technicians in the same visit, and every merge kept "the
 later copy of the WHOLE visit": what the other one wrote in between was

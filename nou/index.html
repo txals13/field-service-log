@@ -232,6 +232,13 @@ textarea{resize:none;line-height:1.4}
 /* modals */
 .modal-back{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;justify-content:center;z-index:100}
 #devBack{z-index:120}
+/* The delete window is the last one in the page, so with the same layer as the
+   rest it sat ON TOP of anything opened from it — and "Primer exporta el ZIP"
+   opens the revision question (or the labels, or the archive folder). The
+   export waited for an answer to a window nobody could see, and the button
+   stayed on "Exportant…" (2026-11-23). One layer down: whatever its export
+   asks comes up over it. Nothing opens the delete window over another one. */
+#delBack{z-index:99}
 .thumb-date{position:absolute;left:4px;bottom:4px;background:rgba(245,158,11,.92);color:#000;font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;pointer-events:none}
 .thumb-warn{flex-basis:100%;width:100%;font-size:11px;color:#92400e;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:5px 8px;margin-top:4px;line-height:1.4}
 .fchip{font-size:11px;padding:3px 8px;border-radius:12px;border:1px solid var(--bd,#4b5563);background:transparent;color:var(--tx3);cursor:pointer}
@@ -8679,9 +8686,12 @@ function openDelModal(s){
 // technician cancel, export and start over.
 $$("delZipNow").addEventListener("click",async function(){
   var s=pendingDel;if(!s)return;
-  var btn=this,lbl=btn.innerHTML;btn.disabled=true;btn.textContent="Exportant…";
+  var btn=this,lbl=btn.innerHTML;btn.disabled=true;btn.textContent=uiT("Exportant")+"…";
   try{await exportSessionZip(s,"project")}catch(e){}
   btn.disabled=false;btn.innerHTML=lbl;
+  // the window may have been cancelled while the export was asking something:
+  // then there is nothing to redraw, and no deletion left pending behind it
+  if(!pendingDel||pendingDel.id!==s.id)return;
   pendingDel=sessions.find(function(x){return x.id===s.id})||s; // pick up the new zipAt
   renderDelModal();
 });
@@ -8980,7 +8990,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-23 · 2";
+var APP_VERSION="nou · 2026-11-23 · 3";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();

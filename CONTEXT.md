@@ -5752,6 +5752,27 @@ on t1; prepared without a technician, "Envia" asks for one first and no
 technician sees it; an old visit sent from its card arrives as new.
 **Not checked:** real Google, two real devices.
 
+**A new visit from an old one (version `nou · 2026-11-23 · 2`).** Asked what
+"loading old visits" meant, the user said yes to: a new visit that copies an
+old one's data. The new-visit window (not the edit) has "Parteix d'una visita
+anterior" (`#nFromBox`, `nFromFill`): one line per client + machine + machine
+number, the LATEST visit of each, live or only in the history file, in the
+client's alphabetical order. Picking one fills client, contact (name, role,
+phone, e-mail), location, machine, number and year; the project number, the
+technician, the dates and the type are left alone. Nothing links the two
+visits — the machine's history joins them by name as always. The box is
+hidden while there is no visit to start from.
+`histRecord` now also keeps the four contact fields, so that a visit that is
+only a history record (archived) can be the start too. Records of visits
+archived BEFORE this version have no contact; and since `histSig` looks at
+`at` only, a live visit's record reaches the Drive file with its contact at
+the next write of that file, not at once.
+Checked in the preview: two visits of one machine (the later one's contact is
+the one copied), another machine, and a history-only record with a contact;
+the visit created carries the copied data and its own project; no box when
+editing or when there is nothing to copy. **Not checked:** real Google, a
+real archived visit.
+
 **Two people, one visit (version `nou · 2026-11-21 · 3`).** A company on one
 account puts two technicians in the same visit, and every merge kept "the
 later copy of the WHOLE visit": what the other one wrote in between was

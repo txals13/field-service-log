@@ -1655,6 +1655,10 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
   <div class="modal-back" id="newBack" style="display:none">
     <div class="modal">
       <div class="modal-title" id="newModalTitle">&#9658; Nova visita de servei</div>
+      <div class="field" id="nFromBox" style="display:none"><label>Parteix d'una visita anterior</label>
+        <select id="nFrom" data-noui></select>
+        <div style="font-size:11px;color:var(--tx3);margin-top:3px">Copia el client, el contacte, la ubicació i l'equip. El projecte, el tècnic i les dates queden en blanc.</div>
+      </div>
       <div class="nv-sec" style="margin-top:0">Client</div>
       <div class="field"><label>Client / Empresa *</label><input type="text" id="nClient" placeholder="Nom del client"></div>
       <div class="field"><label>Persona de contacte</label>
@@ -8976,7 +8980,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="nou · 2026-11-23 · 1";
+var APP_VERSION="nou · 2026-11-23 · 2";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -9798,6 +9802,8 @@ function openNewModal(editSess){
   // What the field shows is the start in force: the typed one, or the earlier
   // entry that has overtaken it (2026-11-10). Blank stays blank.
   $$("nStart").value=(editSess&&editSess.startAt)?tsToInput(sessionStartTs(editSess)):"";
+  // a new visit can start from one made before; an edit is what it is
+  $$("nFromBox").style.display=(!editSess&&nFromFill())?"":"none";
   // the assignment: whoever is not a technician can send the visit to one
   var ordOn=!isTec(),eo=(editSess&&editSess.order)||{};
   $$("nOrdBox").style.display=ordOn?"":"none";
@@ -14853,6 +14859,9 @@ function histRecord(s,arch){
     type:s.type||"",status:s.status||"",createdAt:s.createdAt||"",closedAt:s.closedAt||"",writeLang:s.writeLang||"",
     serial:(s.manualRef&&s.manualRef.serial)||"",rev:r?{n:r.n,date:r.date}:null,range:tsRange(s),
     counts:severityCounts(es),n:es.length,entries:keep,counters:s.counters||null,
+    // who to ask for at the client's (2026-11-23): a new visit can be started
+    // from an old one, and an archived one is only this record
+    contact:s.contact||"",contactRole:s.contactRole||"",contactPhone:s.contactPhone||"",contactEmail:s.contactEmail||"",
     arch:arch||(s.zipAt?{at:s.zipAt,name:s.zipName||"",to:s.zipTo||""}:null)};
 }
 // A record dressed as a visit, for the code that reads visits.
@@ -22754,6 +22763,57 @@ function ordSaid(tech){
     "Visita encarregada a {x}.":"Visit assigned to {x}.","La rebrà al seu aparell quan sincronitzi.":"They will get it on their device when it syncs.",
     "S'enviarà quan aquest aparell entri amb Google.":"It will be sent when this device signs in with Google.",
     "Cap aparell de la llista d'usuaris porta aquest nom: ha de coincidir amb el «Tècnic d'aquest aparell» del seu.":"No device on the list of users carries this name: it has to match “This device's technician” on theirs."};
+  Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
+  Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
+})();
+// A NEW VISIT FROM AN OLD ONE (2026-11-23 · 2). The user, asked what "loading
+// old visits" meant: yes, a new visit that copies an old one's data. The
+// new-visit window gets a list, "Parteix d'una visita anterior": one line per
+// client + machine + machine number — the latest visit of each, live or only
+// in the history file (archived) — in the client's alphabetical order.
+// Picking one fills the client, the contact, the location and the equipment;
+// the project number, the technician, the dates and the type are this
+// visit's own and stay as they were. Nothing links the two visits: it is a
+// way of not typing, and the machine's history joins them anyway by name.
+// The history record carries the contact from this version on (histRecord);
+// visits archived before it have none to copy.
+var nFromList=[];
+function nFromFill(){
+  var by={},ids={},sel=$$("nFrom");
+  function add(x,d){
+    if(!x||!keyNorm(x.client))return;
+    var k=machineKey(x)+"|"+keyNorm(x.machineNo);
+    d=String(d||"");
+    if(!by[k]||d>by[k].d)by[k]={d:d,x:x};
+  }
+  sessions.forEach(function(x){ids[x.id]=1;add(x,sessionEndDate(x))});
+  try{Object.keys(hist.visits).forEach(function(id){
+    var r=hist.visits[id];
+    if(ids[id]||!r||r.del)return;
+    add(r,sessionEndDate(histSession(r)));
+  })}catch(e){}
+  nFromList=Object.keys(by).map(function(k){return by[k]}).sort(function(a,b){
+    return String(a.x.client||"").localeCompare(String(b.x.client||""))||String(a.x.machine||"").localeCompare(String(b.x.machine||""));
+  });
+  sel.innerHTML="<option value=\"\">"+esc(uiT("— Cap: visita en blanc —"))+"</option>"
+    +nFromList.map(function(o,i){
+      var x=o.x;
+      return "<option value=\""+i+"\">"+esc([x.client,[x.machine,x.machineNo?"Nº "+x.machineNo:""].filter(Boolean).join(" "),dmy(o.d)].filter(Boolean).join(" · "))+"</option>";
+    }).join("");
+  sel.value="";
+  return nFromList.length;
+}
+$$("nFrom").addEventListener("change",function(){
+  var o=nFromList[parseInt(this.value,10)];if(!o)return;
+  var x=o.x;
+  [["nClient","client"],["nContact","contact"],["nContactRole","contactRole"],["nContactPhone","contactPhone"],["nContactEmail","contactEmail"],
+   ["nLoc","location"],["nMachine","machine"],["nMachineNo","machineNo"],["nYear","year"]].forEach(function(f){$$(f[0]).value=x[f[1]]||""});
+});
+(function(){
+  var es={"Parteix d'una visita anterior":"Parte de una visita anterior","— Cap: visita en blanc —":"— Ninguna: visita en blanco —",
+    "Copia el client, el contacte, la ubicació i l'equip. El projecte, el tècnic i les dates queden en blanc.":"Copia el cliente, el contacto, la ubicación y el equipo. El proyecto, el técnico y las fechas quedan en blanco."};
+  var en={"Parteix d'una visita anterior":"Start from an earlier visit","— Cap: visita en blanc —":"— None: a blank visit —",
+    "Copia el client, el contacte, la ubicació i l'equip. El projecte, el tècnic i les dates queden en blanc.":"Copies the client, the contact, the location and the equipment. The project, the technician and the dates stay blank."};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();

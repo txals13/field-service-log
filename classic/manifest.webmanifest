@@ -1,11 +1,11 @@
 {
-  "name": "Field Service Log · nou",
-  "short_name": "FSL nou",
+  "name": "Field Service Log · clàssic",
+  "short_name": "FSL clàssic",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#0F2B5B",
-  "theme_color": "#0F2B5B",
+  "background_color": "#111827",
+  "theme_color": "#f59e0b",
   "orientation": "any",
   "icons": [
     {

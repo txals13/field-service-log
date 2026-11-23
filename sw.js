@@ -1,4 +1,9 @@
 /* Service worker del Field Service Log.
+   Fins al 2026-11-23 era el de la còpia nova (carpeta nou/); des del dia del
+   canvi és el de l'app, a l'arrel. L'app vella té el seu a classic/, igual que
+   aquest tret de la tipografia: si un dia es canvien els noms de les memòries
+   cau d'aquí, s'han de canviar també allà, perquè van per domini i no per
+   carpeta, i cada worker esborra, en activar-se, les que no porten el seu nom.
    Ha de ser un fitxer servit per http(s): registrar-lo des d'una URL blob: el
    navegador ho rebutja («The URL protocol of the script is not supported»).
 
@@ -31,7 +36,9 @@ const LIBS = [
   ["https://cdn.jsdelivr.net/npm/@expo-google-fonts/noto-sans/NotoSans_700Bold.ttf", "tipografies del PDF"],
   ["https://cdn.jsdelivr.net/npm/@expo-google-fonts/amiri/Amiri_400Regular.ttf", "tipografies del PDF"]
 ];
-const CDN = /^https:\/\/(unpkg\.com|cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com)\//;
+/* Aquí, a més, la tipografia del disseny nou (Inter, de Google Fonts): es guarda
+   com una llibreria més, perquè sense cobertura l'app no canviï de lletra. */
+const CDN = /^https:\/\/(unpkg\.com|cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)\//;
 
 self.addEventListener("install", e => {
   e.waitUntil(

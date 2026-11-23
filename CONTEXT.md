@@ -3673,7 +3673,54 @@ carried into `nou/index.html` by hand (the two files diverge from here).
 Manuals uploaded to the real Drive folder are not seen by the copy: it has its
 own folder.
 
-**The day of the switch:** set `SEPARAT` to false, move `nou/index.html` and
+**THE SWITCH WAS MADE ON 2026-11-23 (version `2026-11-23 · 4`).** The user:
+"I have decided we go on working in the new one only; I want the whole
+switch." Everything above this line about two apps side by side is history.
+What is true now:
+- **The app is the root `index.html`** (+ `sw.js`, `manifest.webmanifest`, the
+  three navy icons): the file that used to be `nou/index.html`. ALL work goes
+  there. `APP_VERSION` no longer carries "nou · ". `tools/i18n_check.py` is
+  run on `index.html`.
+- `SEPARAT = false`: it reads and writes the real data — localStorage
+  `fsl_v6_`, IndexedDB `fsl`, Drive folder "Field Service Log" with
+  `field_service_log_data.json`, `…_history.json`, `…_empresa.json`,
+  `…_usuaris.json`. The company's settings and the people list that were
+  published while testing lived in the "(nou)" folder: the administrator
+  publishes the settings again, and each device puts itself on the list.
+- **The visits made in `nou/` were tests (his answer) and stay behind**,
+  untouched and unread: the `fsln_v6_` keys, the `fsl-nou` database, the Drive
+  folder "Field Service Log (nou)". Only a device's SETTINGS come over, once
+  (`NOU_KEEP`, flag `fsl_v6_fromnou`): licence, technicians' licence, device
+  name, Gemini key, language, theme, the expenses and camera switches, the
+  timesheet columns… and the company's empty expense sheet from IndexedDB
+  (`nouTplCarry`, flag `fsl_v6_fromnou_tpl`; the old database is opened
+  without being created). NOT the sign-in (`tok`, `root`), the archive folder,
+  `cfg`, the people list or any queue: they point at nou/'s own Drive data.
+- **`classic/` holds the old app** (index, worker, manifest "· clàssic", amber
+  icons), as the way back. It works on the SAME data as the app — same keys,
+  same database, same Drive file — and knows nothing of roles, entry-by-entry
+  merges, assignments or prepared visits: opened beside the new one it can
+  overwrite a colleague's entries. An emergency exit, not a second app. Its
+  worker shares the cache names with the root one: rename both or neither.
+- **`nou/` is a redirect** to the root (it keeps `?perfil=…`), and `nou/sw.js`
+  is a worker that only removes itself: it deletes the `/nou/` entries of the
+  shared cache, unregisters and reloads its pages. A device with nou/
+  installed lands on the root app in a browser frame: uninstall it and install
+  the root one.
+- The manual (`manual.html`) still describes the old app.
+Checked in the preview: a visit made with the old app at `classic/` (client,
+contact, one entry) opens whole in the app at the root; an entry added there
+shows back in `classic/`; a device with nou/ settings gets the licence, the
+name, the theme and the expense sheet, not the sign-in nor nou/'s test visit;
+a device that never used nou/ is not left with an empty `fsl-nou` database;
+`nou/?perfil=t9` lands on `/?perfil=t9`; the removing worker takes out only
+its own cache entries. **Not checked — and this is the part that matters:**
+the real data. The new code has never read the real Drive file nor a real
+device's database; nothing was tried signed in, on a phone, or with the
+installed apps updating themselves. GitHub Pages serves pages for 10 minutes
+from cache, so a device without the worker may show the old app that long.
+
+**The day of the switch (as it was planned):** set `SEPARAT` to false, move `nou/index.html` and
 `nou/sw.js` to the root — **and the manifest and the three icons with them**,
 over the root's own (drop "· nou" from the manifest's names; the app's icon
 turns navy that day) — keep the old pair a while under

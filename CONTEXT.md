@@ -3832,6 +3832,28 @@ Màquines and the window closes; one with a live and an archived visit keeps
 the live one; one with only live visits has no button; a technician has no
 button; an older copy of the file merges to the deletion.
 
+**A visit with no technician is unassigned, not everybody's (version
+`2026-11-24 · 3`).** The user: "I have a visit, as administrator, with no
+technician's name in 'Edita la visita de servei', and on the Android app with
+a technician licence and the name Carles López the visit is loaded." That was
+the rule (`sessMine`: no name = everybody's, so that a visit made without a
+name or from before roles was not hidden from all). Asked, he said yes to
+changing it: a technician sees a visit only if it carries their name, or if
+it was made on that very device (`mineGet`). It also stops the leak that came
+with it — the unnamed visit made its machine "theirs" (`tecMach`), and with
+the machine every open point on it. Unchanged: a technician's device with no
+name of its own still sees everything. For the administrator, an open visit
+with no name now carries "Sense tècnic" in the lists (`.sitem-none`), once
+the people list holds somebody else (`usrOthers`): nobody else will notice
+it. The line in the Usuaris window says "(cap tècnic les veu)".
+Consequences told to him: old visits with no name vanish from technicians'
+lists until a name is put on them; a technician who leaves the name blank
+keeps the visit on that device but not on a second one.
+Checked in the preview: technician "Carles López" sees his named visit and
+the unnamed one made on his device, not the other unnamed one nor a
+colleague's; with no device name he sees the four; the administrator sees
+the four, the two unnamed ones marked only when there is a team.
+
 **The day of the switch (as it was planned):** set `SEPARAT` to false, move `nou/index.html` and
 `nou/sw.js` to the root — **and the manifest and the three icons with them**,
 over the root's own (drop "· nou" from the manifest's names; the app's icon

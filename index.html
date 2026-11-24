@@ -769,6 +769,7 @@ body.m2 .sidebar .s-list{order:3;flex:none;overflow:visible;padding:0;background
 .sitem-sub b{color:var(--red);font-weight:700}
 .sitem-tec{display:flex;align-items:center;gap:5px;color:var(--tx2);font-weight:600;margin-top:2px}
 .sitem-tec span{overflow:hidden;text-overflow:ellipsis}
+.sitem-none{color:var(--orange)}
 .nv-pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;border-radius:20px;padding:3px 10px;white-space:nowrap;background:var(--p-info-bg);color:var(--p-info-tx)}
 .nv-pill.g{background:var(--greenbg);color:var(--green)}.nv-pill.r{background:var(--redbg);color:var(--red)}.nv-pill.o{background:var(--orangebg);color:var(--orange)}
 .sitem-del{position:static;transform:none;opacity:0;width:32px;height:32px;padding:0;margin-left:6px;font-size:14px;border:0;border-radius:8px;background:none;color:var(--tx3);display:flex;align-items:center;justify-content:center}
@@ -6817,6 +6818,9 @@ function buildSitem(s,applyFilter){
     // and only when the visits carried more than one name: cut off on a phone,
     // and missing altogether in a company whose visits were all one person's.
     +(s.tech&&!isTec()?"<div class=\"sitem-sub sitem-tec\">"+nvI("user",14)+"<span>"+highlightText(s.tech,sessFilterTxt)+"</span></div>":"")
+    // ... and an open one with no name at all, once the company has
+    // technicians: no technician sees it until somebody is put on it
+    +(!keyNorm(s.tech)&&isOpen&&!isTec()&&usrOthers()?"<div class=\"sitem-sub sitem-tec sitem-none\">"+nvI("user",14)+"<span>"+esc(nvT("Sense tècnic"))+"</span></div>":"")
     +"</div>"
     +"<div class=\"end\">"+(isOpen&&s.order&&s.order.hold&&!isTec()?"<span class=\"nv-pill o\">"+esc(nvT("Preparada"))+"</span>"
         :ordS?"<span class=\"nv-pill b\">"+esc(nvT(ordS==="new"?"Nova":"Canviada"))+"</span>"
@@ -9068,7 +9072,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-11-24 · 2";
+var APP_VERSION="2026-11-24 · 3";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -12997,11 +13001,22 @@ function meSet(n){n=String(n||"").trim();try{if(n)localStorage.setItem(LS_ME,n);
 var mineIds=null;
 function mineGet(){if(!mineIds){try{mineIds=JSON.parse(localStorage.getItem(LS_MINE)||"{}")||{}}catch(e){mineIds={}}}return mineIds}
 function mineAdd(id){var m=mineGet();if(m[id])return;m[id]=1;try{localStorage.setItem(LS_MINE,JSON.stringify(m))}catch(e){}}
+// Is this visit a technician's own, on this device?
+// A visit with NO technician's name used to be everybody's — so that one made
+// without a name, or from before roles, was not hidden from all. With visits
+// being assigned that stopped making sense, and the user ran into it
+// (2026-11-24): a visit he kept, as administrator, with the name blank was
+// on a technician's phone. Worse, it made its machine "theirs", and with the
+// machine came every open point on it. Asked, he said yes to: a visit with no
+// technician is an UNASSIGNED one — the administrator sees it and decides who
+// gets it; a technician sees it only on the device it was made on.
+// A device with no name of its own still sees everything: it cannot be told
+// apart from anybody, and an empty app would explain nothing.
 function sessMine(x){
   if(!x)return false;
   var me=keyNorm(meName()),t=keyNorm(x.tech);
-  if(!me||!t)return true;
-  if(t.indexOf(me)>=0||me.indexOf(t)>=0)return true;
+  if(!me)return true;
+  if(t&&(t.indexOf(me)>=0||me.indexOf(t)>=0))return true;
   return !!mineGet()[x.id];
 }
 // What the lists show. The visit that is open is always among them: it can be
@@ -22709,7 +22724,7 @@ function usrRender(){
       +"</div></div>";
   });
   var free=sessions.filter(function(s){return s.status==="open"&&!keyNorm(s.tech)&&!ordHeld(s)}).length;
-  if(free)h+="<div class=\"usr-d\">"+esc(uiT("Visites obertes sense tècnic (les veu tothom): {n}").replace("{n}",free))+"</div>";
+  if(free)h+="<div class=\"usr-d\">"+esc(uiT("Visites obertes sense tècnic (cap tècnic les veu): {n}").replace("{n}",free))+"</div>";
   $$("usrList").innerHTML=h;
 }
 function usrOpen(){
@@ -22859,7 +22874,7 @@ function ordSaid(tech){
     "Afegit a mà: encara no ha sincronitzat cap aparell amb aquest nom.":"Añadido a mano: aún no ha sincronizado ningún aparato con este nombre.",
     "Sense nom a «Tècnic d'aquest aparell»: no se li poden encarregar visites.":"Sin nombre en «Técnico de este aparato»: no se le pueden encargar visitas.",
     "Encarrega-li una visita":"Encárgale una visita","Treu de la llista":"Quita de la lista",
-    "Visites obertes sense tècnic (les veu tothom): {n}":"Visitas abiertas sin técnico (las ve todo el mundo): {n}",
+    "Visites obertes sense tècnic (cap tècnic les veu): {n}":"Visitas abiertas sin técnico (ningún técnico las ve): {n}","Sense tècnic":"Sin técnico",
     "Primer inicia la sessió amb Google: la llista d'usuaris es desa a Drive.":"Primero inicia sesión con Google: la lista de usuarios se guarda en Drive.",
     "No s'ha pogut desar la llista a Drive. Torna-ho a provar amb connexió.":"No se ha podido guardar la lista en Drive. Vuelve a probarlo con conexión.",
     "Nom del tècnic, tal com el posarà al seu aparell:":"Nombre del técnico, tal como lo pondrá en su aparato:",
@@ -22886,7 +22901,7 @@ function ordSaid(tech){
     "Afegit a mà: encara no ha sincronitzat cap aparell amb aquest nom.":"Added by hand: no device with this name has synced yet.",
     "Sense nom a «Tècnic d'aquest aparell»: no se li poden encarregar visites.":"No name under “This device's technician”: visits cannot be assigned to it.",
     "Encarrega-li una visita":"Assign a visit","Treu de la llista":"Take off the list",
-    "Visites obertes sense tècnic (les veu tothom): {n}":"Open visits with no technician (everybody sees them): {n}",
+    "Visites obertes sense tècnic (cap tècnic les veu): {n}":"Open visits with no technician (no technician sees them): {n}","Sense tècnic":"No technician",
     "Primer inicia la sessió amb Google: la llista d'usuaris es desa a Drive.":"Sign in with Google first: the list of users is kept on Drive.",
     "No s'ha pogut desar la llista a Drive. Torna-ho a provar amb connexió.":"The list could not be saved to Drive. Try again with a connection.",
     "Nom del tècnic, tal com el posarà al seu aparell:":"The technician's name, as they will write it on their device:",

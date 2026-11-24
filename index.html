@@ -1915,6 +1915,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
            and half ("Machine history", "Què queda obert"). -->
       <div id="mhPrintBox" class="print-only" data-noui></div>
       <div class="modal-actions no-print">
+        <button id="mhDrop" class="btn-danger" style="display:none;margin-right:auto" title="Treu de l'historial, a tots els aparells, les visites arxivades d'aquesta màquina">&#128465; Elimina de l'historial</button>
         <button id="mhPrint" title="Imprimeix-lo o desa'l com a PDF per enviar-lo">&#128424; Imprimeix</button>
         <button id="mhClose">Tanca</button>
       </div>
@@ -9067,7 +9068,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-11-24 · 1";
+var APP_VERSION="2026-11-24 · 2";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -14323,6 +14324,9 @@ function openMachineHistory(sess){
   // the count and the serial number are in the document's own header now
   $$("mhNote").textContent=uiT("S'agrupen per client i màquina tal com els escrius.");
   $$("mhBody").innerHTML=offBlock(cur)+v.body;
+  // the administrator's way of taking a machine out of the history: only
+  // there is something to take when the machine has archived visits
+  $$("mhDrop").style.display=(!isTec()&&machineSessions(cur).some(function(x){return x._hist}))?"":"none";
   var lang=reportLang(cur);
   $$("mhPrint").innerHTML=uiT("🖨 Imprimeix")+(lang!=="ca"?" · "+esc(langNative(lang)):"");
   $$("mhPrint").title=uiT("L'imprimeix o el desa com a PDF per enviar-lo, {l}, com l'informe d'aquesta sessió").replace("{l}",langIntoUI(lang));
@@ -23072,6 +23076,70 @@ $$("mhBody").addEventListener("click",function(e){
     "Escriu com ha quedat: és el que dirà l'historial de la màquina.":"Write how it ended: it is what the machine's history will say.",
     "Vols desfer el tancament d'aquest punt?":"Undo the closing of this point?",
     "Tornarà a sortir com a obert a tots els aparells.":"It will show as open again on every device."};
+  Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
+  Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
+})();
+// ── A MACHINE TAKEN OUT OF THE HISTORY (2026-11-24 · 2) ─────────────────────
+// The user: "delete from the memory all the data of the machines imported
+// through reports that were another company's" — asked where, he said the
+// app's history, "at administrator level". Those visits are history records
+// only (archived, or read out of the archive's ZIPs), and the app had no way
+// of removing one: a visit that was archived keeps its record on purpose, so
+// that the machine's history outlives the visit. Hence this, for whoever is
+// not a technician, in the machine's history window:
+//   · every ARCHIVED visit of the machine gets a deletion mark in the history
+//     file ({id, del, at}) — the same mark a never-archived visit leaves when
+//     it is deleted. It travels: every device drops the record at its next
+//     sync, and "Reconstrueix l'historial des de l'arxiu" skips a marked
+//     visit, so the ZIPs do not bring it back;
+//   · the office's notes on those visits are taken back with them;
+//   · visits of that machine that are still IN the app are not touched: they
+//     are deleted the usual way, with their folder and their ZIP question;
+//   · the ZIP files in the archive folder are not deleted: the app does not
+//     delete what may be the only copy of somebody's work. The confirmation
+//     says so.
+// Which machines are "another company's" the app cannot know: he opens each
+// one and presses the button.
+$$("mhDrop").addEventListener("click",function(){
+  if(isTec())return;
+  var cur=mhFor||sessions.find(function(x){return x.id===aid});if(!cur)return;
+  var all=machineSessions(cur),arch=all.filter(function(x){return x._hist}),live=all.length-arch.length;
+  if(!arch.length)return;
+  if(!confirm(uiT("Vols eliminar de l'historial les visites arxivades d'aquesta màquina?")
+    +"\n\n"+[cur.machine,cur.client].filter(Boolean).join(" · ")+"\n"+pl(arch.length,"visita arxivada","visites arxivades")
+    +"\n\n"+uiT("Desapareixeran de l'historial, de Màquines i de «Què queda obert» a tots els aparells. No es pot desfer amb un botó.")
+    +"\n"+uiT("Els ZIP que hi hagi a la carpeta d'arxiu no s'esborren: si no els vols, esborra'ls a Drive.")
+    +(live?"\n\n"+uiT("Les visites d'aquesta màquina que encara són a l'app ({n}) no es toquen: elimina-les des de Visites.").replace("{n}",live):"")))return;
+  var t=now(),om=Object.assign({},offMap()),ch=false;
+  arch.forEach(function(x){
+    hist.visits[x.id]={id:x.id,del:true,at:t};
+    Object.keys(om).forEach(function(k){
+      if(om[k]&&om[k].s===x.id&&!om[k].del){om[k]={s:om[k].s,e:om[k].e,del:true,at:"",by:meName(),text:"",mod:t};ch=true}
+    });
+  });
+  if(ch)hist.office=om;
+  histSaveLocal();histSchedule();
+  // nothing of the machine left to show: the window goes; otherwise it is
+  // drawn again with what stays
+  if(live){try{openMachineHistory(mhFor&&!mhFor._hist?mhFor:undefined)}catch(e){}}
+  else{try{$$("mhClose").click()}catch(e){}}
+  try{renderAll()}catch(e){}
+});
+(function(){
+  var es={"🗑 Elimina de l'historial":"🗑 Elimina del historial",
+    "Treu de l'historial, a tots els aparells, les visites arxivades d'aquesta màquina":"Quita del historial, en todos los aparatos, las visitas archivadas de esta máquina",
+    "Vols eliminar de l'historial les visites arxivades d'aquesta màquina?":"¿Quieres eliminar del historial las visitas archivadas de esta máquina?",
+    "visita arxivada":"visita archivada","visites arxivades":"visitas archivadas",
+    "Desapareixeran de l'historial, de Màquines i de «Què queda obert» a tots els aparells. No es pot desfer amb un botó.":"Desaparecerán del historial, de Máquinas y de «Qué queda abierto» en todos los aparatos. No se puede deshacer con un botón.",
+    "Els ZIP que hi hagi a la carpeta d'arxiu no s'esborren: si no els vols, esborra'ls a Drive.":"Los ZIP que haya en la carpeta de archivo no se borran: si no los quieres, bórralos en Drive.",
+    "Les visites d'aquesta màquina que encara són a l'app ({n}) no es toquen: elimina-les des de Visites.":"Las visitas de esta máquina que siguen en la app ({n}) no se tocan: elimínalas desde Visitas."};
+  var en={"🗑 Elimina de l'historial":"🗑 Delete from the history",
+    "Treu de l'historial, a tots els aparells, les visites arxivades d'aquesta màquina":"Takes this machine's archived visits out of the history, on every device",
+    "Vols eliminar de l'historial les visites arxivades d'aquesta màquina?":"Delete this machine's archived visits from the history?",
+    "visita arxivada":"archived visit","visites arxivades":"archived visits",
+    "Desapareixeran de l'historial, de Màquines i de «Què queda obert» a tots els aparells. No es pot desfer amb un botó.":"They will be gone from the history, from Machines and from “What is left open” on every device. There is no button to undo it.",
+    "Els ZIP que hi hagi a la carpeta d'arxiu no s'esborren: si no els vols, esborra'ls a Drive.":"The ZIPs in the archive folder are not deleted: if you do not want them, delete them on Drive.",
+    "Les visites d'aquesta màquina que encara són a l'app ({n}) no es toquen: elimina-les des de Visites.":"The visits of this machine that are still in the app ({n}) are not touched: delete them from Visits."};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();

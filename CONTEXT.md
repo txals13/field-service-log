@@ -3806,6 +3806,32 @@ later note, a deletion included. **Not checked:** real Google, two devices.
 The translation checker's baseline is 68 since this change (the three
 `OFF_W` phrases are a table, not interface text).
 
+**A machine taken out of the history (version `2026-11-24 · 2`).** The user:
+"delete from the memory all the data of the machines imported through reports
+that were another company's." My own memory files hold none of it (searched);
+asked where, he said the app's history, "at administrator level". Those
+visits are history records only, and the app had no way of removing one — an
+archived visit keeps its record on purpose. Now the machine's history window
+has "🗑 Elimina de l'historial" (`#mhDrop`; not for a technician, and only
+when the machine has archived visits): every archived visit of that machine
+becomes a deletion mark `{id, del, at}` in the history file, the same mark a
+never-archived visit leaves — it wins the merge on every device, and
+`histBackfill` skips a marked visit, so the archive's ZIPs do not bring it
+back. The office's notes on those visits are taken back too. Visits still in
+the app are not touched (deleted the usual way), and the ZIP files in the
+archive folder are NOT deleted: the confirmation says both. There is no undo
+button. Which machines are another company's the app cannot know: he opens
+each and presses it — and the data itself is in his browser and his Drive,
+which this session cannot reach, so nothing of his was deleted by me.
+Not answered by him, left as they are: the 10 files in the git-ignored
+`_visites/`, and the example names in the public manual and this file
+(`VLP-320-R`, "Celler de l'Albera") — if those are a real machine and client
+of another company they should be replaced by made-up ones.
+Checked in the preview: a machine with only archived visits disappears from
+Màquines and the window closes; one with a live and an archived visit keeps
+the live one; one with only live visits has no button; a technician has no
+button; an older copy of the file merges to the deletion.
+
 **The day of the switch (as it was planned):** set `SEPARAT` to false, move `nou/index.html` and
 `nou/sw.js` to the root — **and the manifest and the three icons with them**,
 over the root's own (drop "· nou" from the manifest's names; the app's icon

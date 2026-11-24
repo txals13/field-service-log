@@ -9067,7 +9067,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-11-23 · 6";
+var APP_VERSION="2026-11-24 · 1";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -20878,9 +20878,19 @@ function nvHomeRender(mc){
   // them or sent to them — what is open on that machine is theirs to know,
   // whoever wrote it, archived visits too. What is on no machine of theirs
   // stays out. The administrator sees all of it.
+  // 2026-11-24: "the technician still sees all the incidents; I want them to
+  // see only their machine's." They did: an ARCHIVED visit is a history record
+  // with no technician's name on it, and a visit with no name is everybody's
+  // (sessMine) — so every archived visit's open points reached every
+  // technician, whatever the machine. An archived visit now goes by its
+  // machine alone; only a visit that is still in the app can be "mine" by
+  // name.
   if(tec){
-    var myM={};S.forEach(function(s){if(s.machine&&keyNorm(s.machine))myM[machineKey(s)]=1});
-    probs=probs.filter(function(p){return sessMine(p.s)||myM[machineKey(p.s)]});
+    var myM=tecMach();
+    probs=probs.filter(function(p){
+      if(p.s._hist)return !!myM[machineKey(p.s)];
+      return sessMine(p.s)||!!myM[machineKey(p.s)];
+    });
   }
   var hi=nvT(h<6||h>=21?uiT("Bona nit"):h<14?uiT("Bon dia"):uiT("Bona tarda"))+(who?", "+who:"")+"!";
   var loc=uiLang()==="ca"?"ca-ES":uiLang(),day="";
@@ -20974,8 +20984,19 @@ function nvHomeRender(mc){
 }
 
 // ── the machines ──
+// The machines a technician has a visit on, by key: their own visits, the ones
+// sent to them, and the ones with no name. It is what "their machines" means
+// on the home page and in the list of machines.
+function tecMach(){
+  var m={};
+  sessShown().forEach(function(x){if(x.machine&&keyNorm(x.machine))m[machineKey(x)]=1});
+  return m;
+}
 function nvMachRender(mc){
-  var gs=nvMachines().sort(function(a,b){return String(sessionEndDate(b.all[0])).localeCompare(String(sessionEndDate(a.all[0])))});
+  // a technician's list is their machines' (2026-11-24): the company's other
+  // machines, with what is open on each, are the administrator's to see
+  var tm=isTec()?tecMach():null;
+  var gs=nvMachines().filter(function(g){return !tm||tm[machineKey(g.rep)]}).sort(function(a,b){return String(sessionEndDate(b.all[0])).localeCompare(String(sessionEndDate(a.all[0])))});
   var page=document.createElement("div");page.className="nv-page";
   page.innerHTML="<div class=\"nv-h1\">"+esc(nvT("Màquines"))+"</div><div class=\"nv-mach\"><div class=\"nv-card nv-sect\">"
     +(gs.length?gs.map(function(g,i){

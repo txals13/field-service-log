@@ -3779,6 +3779,23 @@ best way to me."
   `office`; the notes come back when a device that has them syncs again.
 The other way stays what it was: reopen the visit, "Afegeix com ha quedat",
 new revision, signed in "Revisa i signa".
+- **Fixed in `2026-11-24 · 1`** ("the technician still sees all the
+  incidents; I want them to see only their machine's"): an ARCHIVED visit is
+  a history record with no technician's name, a visit with no name is
+  everybody's (`sessMine`), so every archived visit's open points reached
+  every technician whatever the machine — and his real data is mostly
+  archived visits. My test of `· 6` had given its archived record a name and
+  missed it. Now a history-only visit goes by its machine alone
+  (`tecMach()`: the machines of the visits a technician's lists show); only
+  a visit still in the app can be "mine" by name. And the **Màquines page is
+  filtered the same way for a technician** — it used to list every machine
+  of the company with its open count, which is the same thing he was
+  objecting to; this undoes the earlier "the machines list is not filtered"
+  (a choice of mine, never his). A machine's own history is still whole.
+  Checked: a technician with a visit on M1 sees M1's three points (his, a
+  colleague's, an archived one) and one machine; given a visit on M2, M2's
+  archived point and M2 appear; the administrator sees all seven and five
+  machines.
 Checked in the preview: technician Joan sees his point, Marta's on the same
 machine (with her name), the archived one on that machine and the one with no
 technician, not Marta's on other machines, and no button; the administrator

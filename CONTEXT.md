@@ -3876,6 +3876,20 @@ not reviewed by a speaker of each language. The translation checker's
 baseline is 85 since this change (was 68): the words of `TYPE_X` are a table,
 not interface text.
 
+**The visit's card ran under the next row on a computer (fixed in
+`2026-11-25 · 2`).** The user, with a screenshot: "there is a design problem
+in Encàrrec" — the "Encàrrec" card's buttons were hidden behind "Proves i
+dades de producció". From 701 px a visit is a grid inside a box of fixed
+height that scrolls (`body.m2 .sv`); with no free space to distribute, a row
+is as tall as its items' MINIMUM heights, and `.nv-fitxa` carried
+`min-height:0` — so the row took the timeline's height (640 px, or less in a
+short window) and a taller card overflowed under the row below. It was
+already wrong in a short window; the "Encàrrec" card (and "Última
+intervenció") made it common. `.nv-fitxa{min-height:auto}` inside the 701 px
+rule; the phone keeps its 0, where the card scrolls by itself.
+Checked at 1200×640 with a prepared visit: no two cards of the page overlap
+any more, and both buttons of "Encàrrec" show; at 375 px nothing changed.
+
 **The day of the switch (as it was planned):** set `SEPARAT` to false, move `nou/index.html` and
 `nou/sw.js` to the root — **and the manifest and the three icons with them**,
 over the root's own (drop "· nou" from the manifest's names; the app's icon

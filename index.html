@@ -1343,7 +1343,14 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
 #nvDesk{display:none}
 @media(min-width:701px){
   body.m2 .sv{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(430px,1fr));gap:18px;align-content:start;align-items:start;padding:20px 24px 28px;overflow-y:auto!important;scroll-behavior:smooth}
-  .nv-fitxa{flex:none;padding:0;overflow:visible;min-height:0;scroll-margin-top:20px}
+  /* min-height:auto, not 0 (2026-11-25, "a Encàrrec hi ha un problema al
+     disseny"): the page scrolls inside a box of fixed height, so there is no
+     free space to hand out and a row is only as tall as its items' MINIMUM
+     heights. With 0 the card counted for nothing, the row took the
+     timeline's height, and a card taller than that — it is, once it carries
+     the "Encàrrec" or "Última intervenció" cards, or in a short window — ran
+     on underneath the next row's cards. */
+  .nv-fitxa{flex:none;padding:0;overflow:visible;min-height:auto;scroll-margin-top:20px}
   .nv-fx-more{display:none}
   body.nv-visit .nv-logcol{margin:0;height:640px;max-height:calc(100dvh - 120px);border:1px solid var(--br);border-radius:14px;overflow:hidden;scroll-margin-top:20px}
   .nv-tabs [data-t=inc],.nv-tabs [data-t=rec]{display:none}
@@ -9097,7 +9104,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-11-25 · 1";
+var APP_VERSION="2026-11-25 · 2";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();

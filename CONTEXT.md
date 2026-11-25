@@ -3854,6 +3854,28 @@ the unnamed one made on his device, not the other unnamed one nor a
 colleague's; with no device name he sees the four; the administrator sees
 the four, the two unnamed ones marked only when there is a team.
 
+**An eighth kind of visit: installation (version `2026-11-25 · 1`).** The
+user: "in 'Nova visita de servei', under TIPUS, I also want to add
+installation, with the most widespread technical vocabulary." Read as: the
+machine put in place at the client's, called by the word the trade uses
+everywhere — "Instal·lació / Instalación / Installation", **INS** — the step
+between the FAT and the commissioning. He was told that reading.
+`type:"installation"`: the last option of the selector, `TM.installation`
+(pink). **Its report name is NOT in `RPT[..].types`**: a key added to
+`RPT.en` makes every kept translation of the other languages fail
+`sameShape` and be thrown away (which is what adding `fat`, `assembly` and
+`setup` there did on 2026-11-16, unnoticed). It lives in `TYPE_X`, written by
+hand in the 29 report languages like `TS_WK`, and `typeLabel` looks there
+before falling back to English. Any further kind goes the same way.
+Checked in the preview: the selector has it; a visit saved with it shows
+"Instal·lació" on its card and in the lists; the report name comes out in
+ca/es/en and, with a made-up table for another language, in that language;
+the three built-in tables still pass the shape check. NOT checked: a PDF or
+Word actually generated with the new kind, and the 26 hand-written words were
+not reviewed by a speaker of each language. The translation checker's
+baseline is 85 since this change (was 68): the words of `TYPE_X` are a table,
+not interface text.
+
 **The day of the switch (as it was planned):** set `SEPARAT` to false, move `nou/index.html` and
 `nou/sw.js` to the root — **and the manifest and the three icons with them**,
 over the root's own (drop "· nou" from the manifest's names; the app's icon

@@ -1715,6 +1715,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
           <option value="assembly">Muntatge (MUN)</option>
           <option value="setup">Posada a punt i proves de format (PAP)</option>
           <option value="fat">Acceptació en fàbrica (FAT)</option>
+          <option value="installation">Instal·lació (INS)</option>
         </select>
       </div>
       <div id="nOrdBox" style="display:none">
@@ -2664,13 +2665,37 @@ var TM = {
   // the builder's has three stages and each is a kind of visit: the machine
   // is assembled, then set up and tried format by format, then accepted.
   assembly:     {label:"Muntatge",abbr:"MUN",bg:"rgba(71,85,105,.13)",tx:"#475569",bd:"rgba(71,85,105,.5)"},
-  setup:        {label:"Posada a punt i proves de format",abbr:"PAP",bg:"rgba(79,70,229,.12)",tx:"#4f46e5",bd:"rgba(79,70,229,.5)"}
+  setup:        {label:"Posada a punt i proves de format",abbr:"PAP",bg:"rgba(79,70,229,.12)",tx:"#4f46e5",bd:"rgba(79,70,229,.5)"},
+  // (2026-11-25 · 1) "A TIPUS vull afegir també instal·lació, amb el
+  // vocabulari tècnic més estès": the machine put in place at the client's
+  // — set down, levelled, connected — which comes after the FAT and before
+  // the commissioning. Called by the word the trade uses everywhere,
+  // "installation", and INS for short.
+  installation: {label:"Instal·lació",abbr:"INS",bg:"rgba(190,24,93,.11)",tx:"#be185d",bd:"rgba(190,24,93,.45)"}
+};
+// A kind of visit added AFTER the report tables were settled gets its name
+// here, in every language a report can go out in, and NOT in RPT[..].types:
+// the tables of the languages beyond ca/es/en are translated once and kept,
+// and a key added to RPT.en makes every kept one fail its shape check and be
+// thrown away — a report blocked at a plant with no signal until it is
+// translated again (the lesson of TS_WK). Written by hand, like TS_WK: one
+// word each, the one a machine's installation goes by in that language, and
+// never the word for assembling it, which is another kind (assembly).
+var TYPE_X={
+  installation:{ca:"Instal·lació",es:"Instalación",en:"Installation",fr:"Installation",de:"Installation",it:"Installazione",
+    pt:"Instalação",nl:"Installatie",gl:"Instalación",eu:"Instalazioa",pl:"Instalacja",cs:"Instalace",sk:"Inštalácia",
+    sl:"Namestitev",hr:"Instalacija",ro:"Instalare",hu:"Telepítés",tr:"Kurulum",el:"Εγκατάσταση",bg:"Инсталация",
+    ru:"Установка",uk:"Встановлення",da:"Installation",sv:"Installation",nb:"Installasjon",fi:"Asennus",et:"Paigaldus",
+    lv:"Uzstādīšana",lt:"Įrengimas"}
 };
 // The kind of visit in a report's language. A label table translated before a
 // kind existed (the languages beyond ca/es/en are translated once and kept)
 // does not have it: English then, never another kind's name.
 function typeLabel(R,type){
-  return (R&&R.types&&R.types[type])||RPT.en.types[type]||(R&&R.types&&R.types.commissioning)||"";
+  if(R&&R.types&&R.types[type])return R.types[type];
+  var x=TYPE_X[type];
+  if(x){var lg="";try{lg=Object.keys(RPT).filter(function(k){return RPT[k]===R})[0]||""}catch(e){}return x[lg]||x.en}
+  return RPT.en.types[type]||(R&&R.types&&R.types.commissioning)||"";
 }
 var SM = {
   info:   {label:"INFO",   dot:"○",dc:"#5A6576",bg:"transparent",tx:"#3D4756"},
@@ -9072,7 +9097,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-11-24 · 3";
+var APP_VERSION="2026-11-25 · 1";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -21702,7 +21727,7 @@ function nvSumClick(ev){
     "Suggerida: ara. La pots canviar.":"Sugerida: ahora. La puedes cambiar.",
     "La data i hora de la resolució no són vàlides.":"La fecha y hora de la resolución no son válidas.",
     "Acceptació en fàbrica":"Aceptación en fábrica","Acceptació en fàbrica (FAT)":"Aceptación en fábrica (FAT)",
-    "Muntatge":"Montaje","Muntatge (MUN)":"Montaje (MUN)",
+    "Muntatge":"Montaje","Muntatge (MUN)":"Montaje (MUN)","Instal·lació":"Instalación","Instal·lació (INS)":"Instalación (INS)",
     "Posada a punt i proves de format":"Puesta a punto y pruebas de formato","Posada a punt i proves de format (PAP)":"Puesta a punto y pruebas de formato (PAP)",
     "Hi ha un filtre actiu al registre: {q}.\n\nAccepta per fer el document només amb el que deixa el filtre (sortirà marcat com a parcial), o cancel·la per fer-lo sencer.":"Hay un filtro activo en el registro: {q}.\n\nAcepta para hacer el documento solo con lo que deja el filtro (saldrá marcado como parcial), o cancela para hacerlo entero."};
   var en={"Índex":"Index","Esquema elèctric":"Electrical schematic","Materials elèctrics":"Electrical materials","Llistes del manual":"The manual's lists",
@@ -21722,7 +21747,7 @@ function nvSumClick(ev){
     "Suggerida: ara. La pots canviar.":"Suggested: now. You can change it.",
     "La data i hora de la resolució no són vàlides.":"The date and time of the resolution are not valid.",
     "Acceptació en fàbrica":"Factory acceptance","Acceptació en fàbrica (FAT)":"Factory acceptance test (FAT)",
-    "Muntatge":"Assembly","Muntatge (MUN)":"Assembly (MUN)",
+    "Muntatge":"Assembly","Muntatge (MUN)":"Assembly (MUN)","Instal·lació":"Installation","Instal·lació (INS)":"Installation (INS)",
     "Posada a punt i proves de format":"Set-up and format trials","Posada a punt i proves de format (PAP)":"Set-up and format trials (PAP)",
     "Hi ha un filtre actiu al registre: {q}.\n\nAccepta per fer el document només amb el que deixa el filtre (sortirà marcat com a parcial), o cancel·la per fer-lo sencer.":"There is a filter active in the log: {q}.\n\nAccept to make the document with only what the filter leaves (it will be marked as partial), or cancel to make it whole."};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});

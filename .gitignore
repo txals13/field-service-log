@@ -16,6 +16,9 @@ fsl-clau-privada.json
 # el treu). No es publica: es una copia de index.html amb un guio a dins.
 _shot.html
 
+# El mateix per a les proves automatiques (tools/proves.py).
+_proves.html
+
 # Visites de debò, a punt per importar a l'app. Hi ha el nom del client, les
 # seves fotos i les referències de la màquina, i aquest repositori és públic:
 # el fitxer es queda al disc i no puja mai.

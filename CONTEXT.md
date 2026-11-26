@@ -4052,6 +4052,47 @@ Still proposed and not done from that review: tests of the merge logic, the
 libraries in the repository, a CSP, a version number in the data files, a
 recovery drill.
 
+**Automated tests of the merge between devices (2026-11-26; no change to the
+app, no new version).** Third item of the security-and-reliability review,
+done on his "yes". Until now every change was checked by hand in the preview,
+and the part that loses somebody's work when it breaks — two copies of a
+visit made one — cannot be checked by looking at a screen.
+- **Run them with `python -X utf8 tools/proves.py`** (exit code 0 = all
+  passed). It needs Chrome or Edge and nothing else: it serves the folder
+  itself on port 8421 and drives a headless Chrome through the `Chrome`
+  class of `tools/captures.py` (debug port 9334). No Node on this machine,
+  and this way the tests run against the very file that is published.
+- **How:** `build()` writes `_proves.html` (git-ignored, removed at the end):
+  `index.html` without the service worker and without the asynchronous boot
+  (as the captures do), with one line added before the script's last
+  `})();` — `window.__fsl=function(c){return eval(c)}`, a door into the
+  app's scope — and `tools/proves.js` loaded after it. The tests replace the
+  app's clock (`now`) so every stamp is a known minute, and put it back.
+- **What is tested (34 tests, `tools/proves.js`, made-up data only):** how a
+  change is noted down (`stampChanged`: `mAt`, `entGone`, `fAt`, and that
+  what arrives from Drive is not a change of ours); two copies of a visit
+  (`mergeSessionLists` > `visitMerge`: both people's entries kept, a deleted
+  entry stays deleted, an old entry does not come back, the later edit of an
+  entry or of a field wins even from the older copy, same result in either
+  order, a second merge returns the very same object); the report's
+  revision after a merge (`updatedAt` = now when content was taken, not for
+  a quiet field); the expenses (`exMergeVisit`, renumbering); the deletion
+  notes (`goneBlocks`); the history file (`histMerge`: records, tombstones,
+  `gone`, office notes, order and repetition); the users' list (`usrMerge`).
+- **The tests were themselves tested:** 21 copies of the app, each with ONE
+  rule of the merge taken out, and every one makes at least one test fail
+  (one of them only once both of the two checks that keep a deleted entry
+  out were removed: the code checks that twice).
+- **Rule from now on:** run them after any change to the sync, the save, the
+  history file, the users' list or the expenses' merge, and add a test for
+  every new rule of a merge. A test that fails is a finding to report, not
+  something to adjust until it passes.
+- NOT covered: anything that talks to Drive (the read-modify-write of
+  `saveToDrive`, the folders in Outputs, the trash), the screens, the
+  reports, the licence. Those are still checked by hand.
+Still proposed and not done from that review: the libraries in the
+repository, a CSP, a version number in the data files, a recovery drill.
+
 **The day of the switch (as it was planned):** set `SEPARAT` to false, move `nou/index.html` and
 `nou/sw.js` to the root — **and the manifest and the three icons with them**,
 over the root's own (drop "· nou" from the manifest's names; the app's icon

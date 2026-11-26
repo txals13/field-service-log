@@ -4573,21 +4573,23 @@ function sessManuals(s){
 //     (they read sessManuals, the visit's own list).
 //   · Adding, filing and taking a manual off the list is the administrator's:
 //     a technician has no Manuals page at all.
-//   · A technician works with a manual only when its machine number (the
-//     index's `serial`, the folder it is filed under) is the VISIT's machine
-//     number. So the link window offers a technician that machine's manuals
-//     and nothing else, with no way out to Drive; a manual linked to the visit
-//     under another number is not theirs to open; and a visit with no machine
-//     number has no manual for them. The administrator files a manual under a
-//     machine number — that is the assignment.
-// manFor(s) is what the SCREENS ask: the manuals of this visit that this
-// device may work with. sessManuals(s) stays the visit's whole list, for what
-// changes it and for what prints it.
+//   · A technician works with the manuals LINKED TO THE VISIT, whoever linked
+//     them and whatever number they carry: that is the administrator's
+//     decision, made by linking (· 2, the same day — the first reading, "only
+//     the manuals filed under the visit's machine number", was put back to him
+//     and he answered "segurament millor que quedi a decisió de
+//     l'administrador"). What a technician may link BY THEMSELVES is narrower:
+//     only a manual filed under the visit's machine number (the index's
+//     `serial`), with no way out to Drive — the machine's own manual does not
+//     have to wait for the office. And a technician cannot take off the visit
+//     a manual they could not have put on it, nor change which one is the
+//     main one.
+// manFor(s) is what the SCREENS ask: the manuals of this visit, when the
+// licence carries the module. sessManuals(s) stays the visit's list for what
+// changes it and for what prints it, module or not.
 function manKeyOk(s,r){var k=mfKey(s&&s.machineNo);return !!k&&mfKey(r&&r.serial)===k}
 function manFor(s){
-  if(!s||!modOn("man"))return [];
-  var l=sessManuals(s);
-  return isTec()?l.filter(function(r){return manKeyOk(s,r)}):l;
+  return (s&&modOn("man"))?sessManuals(s):[];
 }
 function manName(r){return (r&&(r.base||r.serial||r.pdfName))||"manual"}
 function manualById(s,id){
@@ -4739,9 +4741,9 @@ function renderLinkList(){
     row.innerHTML="<div class=\"mr-info\"><div class=\"mr-name\">"+esc(manName(r))
       +"<span style=\"color:var(--green)\"> · vinculat</span>"+(refs.length>1&&i===0?"<span style=\"color:var(--tx3)\"> · principal</span>":"")+"</div>"
       +"<div class=\"mr-meta\">"+metaOf(m)+"</div></div>"
-      +(i>0?"<button class=\"btn-xs\" style=\"flex-shrink:0\" data-lk=\"main\" title=\"Fes-lo el manual principal: és el que dona el número de sèrie a l'historial i el que s'obre primer\">&#9733; Principal</button>":"")
-      +"<button class=\"mr-del\" data-lk=\"off\" title=\"Desvincula'l d'aquesta visita (el manual no s'esborra)\">&#10005;</button>";
-    row.querySelector("[data-lk=off]").addEventListener("click",function(){unlinkSessionManual(r)});
+      +(i>0&&!tec?"<button class=\"btn-xs\" style=\"flex-shrink:0\" data-lk=\"main\" title=\"Fes-lo el manual principal: és el que dona el número de sèrie a l'historial i el que s'obre primer\">&#9733; Principal</button>":"")
+      +(!tec||manKeyOk(sess,r)?"<button class=\"mr-del\" data-lk=\"off\" title=\"Desvincula'l d'aquesta visita (el manual no s'esborra)\">&#10005;</button>":"");
+    var ob=row.querySelector("[data-lk=off]");if(ob)ob.addEventListener("click",function(){unlinkSessionManual(r)});
     var mb=row.querySelector("[data-lk=main]");if(mb)mb.addEventListener("click",function(){mainSessionManual(r)});
     box.appendChild(row);
   });
@@ -4753,8 +4755,8 @@ function renderLinkList(){
     if(!refs.length&&!rest.length){
       var te=document.createElement("div");te.className="manuals-empty";
       te.textContent=mfKey(sess.machineNo)
-        ?uiT("No hi ha cap manual per a la màquina núm. {x}. Els manuals els afegeix l'administrador.").replace("{x}",sess.machineNo)
-        :uiT("Aquesta visita no té número de màquina, i els manuals van lligats al número. Demana a l'administrador que l'hi posi.");
+        ?uiT("Aquesta visita no té cap manual vinculat, i no n'hi ha cap d'arxivat amb el número de màquina {x}. Els manuals els afegeix i els vincula l'administrador.").replace("{x}",sess.machineNo)
+        :uiT("Aquesta visita no té cap manual vinculat ni número de màquina. Demana a l'administrador que hi vinculi el manual o hi posi el número.");
       box.appendChild(te);return;
     }
   }
@@ -4798,6 +4800,7 @@ function linkSessionManual(m){
 }
 function unlinkSessionManual(r){
   var sess=sessions.find(function(s){return s.id===aid});if(!sess)return;
+  if(isTec()&&!manKeyOk(sess,r))return;
   var refs=sessManuals(sess),n=collectSessionParts(sess).filter(function(it){return partManual(sess,it.part)===r}).length;
   if(n&&!confirm(uiT("En aquesta visita s'han triat recanvis d'aquest manual ({n}). Es queden a l'informe, però ja no dirà de quin manual surten.").replace("{n}",n)+"\n\n"+uiT("Vols desvincular-lo igualment?")))return;
   if(viewerRef===r)viewerRef=null;
@@ -4806,6 +4809,7 @@ function unlinkSessionManual(r){
 }
 function mainSessionManual(r){
   var sess=sessions.find(function(s){return s.id===aid});if(!sess)return;
+  if(isTec())return;
   var refs=sessManuals(sess);
   // The parts that named no manual were the old main one's: they are told so
   // before it stops being the main one, or they would change manual with it.
@@ -9154,7 +9158,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-11-26 · 1";
+var APP_VERSION="2026-11-26 · 2";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -23164,8 +23168,8 @@ $$("mhBody").addEventListener("click",function(e){
     "Tancada des de l'oficina":"Cerrada desde la oficina",
     "Escriu com ha quedat: és el que dirà l'historial de la màquina.":"Escribe cómo ha quedado: es lo que dirá el historial de la máquina.",
     "Vols desfer el tancament d'aquest punt?":"¿Quieres deshacer el cierre de este punto?",
-    "No hi ha cap manual per a la màquina núm. {x}. Els manuals els afegeix l'administrador.":"No hay ningún manual para la máquina n.º {x}. Los manuales los añade el administrador.",
-    "Aquesta visita no té número de màquina, i els manuals van lligats al número. Demana a l'administrador que l'hi posi.":"Esta visita no tiene número de máquina, y los manuales van ligados al número. Pide al administrador que se lo ponga.",
+    "Aquesta visita no té cap manual vinculat, i no n'hi ha cap d'arxivat amb el número de màquina {x}. Els manuals els afegeix i els vincula l'administrador.":"Esta visita no tiene ningún manual vinculado, y no hay ninguno archivado con el número de máquina {x}. Los manuales los añade y los vincula el administrador.",
+    "Aquesta visita no té cap manual vinculat ni número de màquina. Demana a l'administrador que hi vinculi el manual o hi posi el número.":"Esta visita no tiene ningún manual vinculado ni número de máquina. Pide al administrador que vincule el manual o le ponga el número.",
     "Tornarà a sortir com a obert a tots els aparells.":"Volverá a salir como abierto en todos los aparatos."};
   var en={"Tanca el punt des de l'oficina":"Close the point from the office","Com ha quedat *":"How it ended *",
     "Què s'ha fet i qui ho ha confirmat…":"What was done and who confirmed it…","Qui el tanca":"Closed by",
@@ -23175,8 +23179,8 @@ $$("mhBody").addEventListener("click",function(e){
     "Tancada des de l'oficina":"Closed from the office",
     "Escriu com ha quedat: és el que dirà l'historial de la màquina.":"Write how it ended: it is what the machine's history will say.",
     "Vols desfer el tancament d'aquest punt?":"Undo the closing of this point?",
-    "No hi ha cap manual per a la màquina núm. {x}. Els manuals els afegeix l'administrador.":"There is no manual for machine no. {x}. Manuals are added by the administrator.",
-    "Aquesta visita no té número de màquina, i els manuals van lligats al número. Demana a l'administrador que l'hi posi.":"This visit has no machine number, and manuals go by the number. Ask the administrator to set it.",
+    "Aquesta visita no té cap manual vinculat, i no n'hi ha cap d'arxivat amb el número de màquina {x}. Els manuals els afegeix i els vincula l'administrador.":"This visit has no manual linked, and none is filed under machine number {x}. Manuals are added and linked by the administrator.",
+    "Aquesta visita no té cap manual vinculat ni número de màquina. Demana a l'administrador que hi vinculi el manual o hi posi el número.":"This visit has no manual linked and no machine number. Ask the administrator to link the manual or set the number.",
     "Tornarà a sortir com a obert a tots els aparells.":"It will show as open again on every device."};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};

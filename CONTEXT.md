@@ -3906,7 +3906,20 @@ use the manuals if it is linked to the machine number of the project."
   (`openManuals` refuses; the nav entry and `#btnManuals` are hidden), no
   "Busca a Drive…" in the link window, and `uploadManual`, `deleteManual`,
   `editManualFiling` and `linkPickFromDrive` return at once.
-- **A technician works with a manual only when its machine number is the
+- **Changed the same day, `2026-11-26 · 2`:** the reading below was put back
+  to him ("if what you wanted was for the technician to use any manual the
+  administrator has linked to the visit, whatever its number…") and he
+  answered "yes, probably better left to the administrator's decision". So
+  a technician now works with EVERY manual linked to the visit (`manFor` no
+  longer filters by role); what stays narrow is what a technician may do to
+  the list: link only a manual filed under the visit's machine number
+  (`manKeyOk`), unlink only such a one, never change the main one
+  (`unlinkSessionManual`, `mainSessionManual` refuse; the buttons are not
+  drawn). The two messages of the link window were reworded to match.
+  Checked: a technician sees and can open an annex linked under another
+  number, has no ✕ on it, can link and unlink the machine's own, cannot link
+  a third; the administrator has every button.
+- **(· 1, superseded as said above) A technician works with a manual only when its machine number is the
   visit's** (`manKeyOk`: the index entry's `serial` against
   `session.machineNo`, both through `mfKey`). The link window offers a
   technician that machine's manuals only; a manual linked to the visit under

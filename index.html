@@ -6926,10 +6926,10 @@ function renderSidebar(){
   if(!S.length){$$("sideCount").textContent=nvT("Visites")+" (0)";list.innerHTML="<div style=\"font-size:12px;color:var(--tx3);padding:20px 10px;text-align:center\">Encara no hi ha cap sessió.<br>Crea'n una de nova.</div>";return}
 
   var q=sessFilterTxt.trim().toLowerCase();
-  // Newest first, by the session's start date — the one the reports print as
-  // "Inici". Only the list is sorted: the array keeps its own order. An import
-  // used to land its sessions wherever the file had them.
-  var ordered=S.slice().sort(function(a,b){return String(b.createdAt||"").localeCompare(String(a.createdAt||""))});
+  // Oldest first, by the date the row shows (sessByWhen): the planned day
+  // until the visit begins, the report's "Inici" from then on. Only the list
+  // is sorted: the array keeps its own order.
+  var ordered=S.slice().sort(sessByWhen);
   if(!q){
     $$("sideCount").textContent=nvT("Visites")+" ("+S.length+")";
     ordered.forEach(function(s){list.appendChild(buildSitem(s))});
@@ -9158,7 +9158,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-11-26 · 2";
+var APP_VERSION="2026-11-26 · 3";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -9900,7 +9900,7 @@ function openBulkArchive(asPage){
 function bulkFill(){
   var was={};
   Array.prototype.forEach.call($$("bulkList").querySelectorAll("input[type=checkbox]:checked"),function(c){was[c.dataset.id]=1});
-  var list=sessions.slice().sort(function(a,b){return String(b.createdAt||"").localeCompare(String(a.createdAt||""))});
+  var list=sessions.slice().sort(sessByWhen);
   $$("bulkNote").innerHTML="Cada sessió marcada surt com el seu <strong>ZIP del projecte</strong>"
     +(arxDir&&fsaOK()?" a <code>"+esc(arxDir.name)+"</code>":" "+uiT("a Baixades"))
     +uiT(", en l'idioma del seu informe. Si una sessió ja tenia el ZIP d'aquesta mateixa revisió a la carpeta d'arxiu, se substitueix.");
@@ -13495,6 +13495,28 @@ function sessionEndDate(s){
   var es=(s&&s.entries)||[];
   for(var i=es.length-1;i>=0;i--){if(es[i]&&es[i].ts)return String(es[i].ts).slice(0,10)}
   return String((s&&s.createdAt)||now()).slice(0,10);
+}
+// THE ORDER OF EVERY LIST OF VISITS (2026-11-26 · 3). The user: "I want the
+// visits shown in ascending order. By planned dates, and once it starts by the
+// report's date." Until then every list was newest first by `createdAt`, the
+// day the record was written — which for a visit the office prepares weeks
+// ahead says nothing about when it happens.
+//   · not begun (no entry, no start typed in) and carrying planned days: the
+//     first planned day (`order.from`, or `order.to` when only that is set);
+//   · otherwise: the day the report prints as "Inici" (sessionStartTs).
+// It is the same test buildSitem makes to choose between "prevista 03/12" and
+// the visit's own dates, so a row is sorted by the date it shows. Oldest
+// first; the same day, by the hour of the start and then by when the record
+// was made, so the order does not jump between two paints.
+function sessWhen(s){
+  var o=s&&s.order;
+  if(o&&(o.from||o.to)&&!((s.entries||[]).length)&&!s.startAt)return String(o.from||o.to).slice(0,10);
+  return String(sessionStartTs(s)||"").slice(0,10);
+}
+function sessByWhen(a,b){
+  return sessWhen(a).localeCompare(sessWhen(b))
+    ||String(sessionStartTs(a)||"").localeCompare(String(sessionStartTs(b)||""))
+    ||String(a.createdAt||"").localeCompare(String(b.createdAt||""));
 }
 // FROZEN with Rev. 01: every revision of one report has to share a base name,
 // or the numbering can't tell that rev01 and rev02 are the same document. The
@@ -21002,8 +21024,8 @@ function nvHomeRender(mc){
   var loc=uiLang()==="ca"?"ca-ES":uiLang(),day="";
   try{day=new Date().toLocaleDateString(loc,{weekday:"long",day:"numeric",month:"long"})}catch(e){}
   function stat(k,n,one,many,cls){return "<button type=\"button\" class=\"nv-card nv-stat "+(n?cls:"")+"\" data-st=\""+k+"\"><b>"+n+"</b><span>"+esc(nvT(n===1?one:many))+"</span></button>"}
-  var news=S.filter(function(s){return ordState(s)});
-  var held=tec?[]:S.filter(function(s){return s.status==="open"&&s.order&&s.order.hold});
+  var news=S.filter(function(s){return ordState(s)}).sort(sessByWhen);
+  var held=tec?[]:S.filter(function(s){return s.status==="open"&&s.order&&s.order.hold}).sort(sessByWhen);
   var page=document.createElement("div");page.className="nv-page";
   page.innerHTML="<div class=\"nv-hero\">"+NV_ART+"<div class=\"ov\"><div class=\"top\"><button type=\"button\" class=\"nv-chip\"></button></div>"
       +"<div class=\"hi\">"+esc(hi)+"</div><div class=\"sub\">"+esc(nvT("Les teves activitats d'avui")+(day?" · "+day:""))+"</div></div></div>"
@@ -21057,10 +21079,13 @@ function nvHomeRender(mc){
   mc.innerHTML="";mc.appendChild(page);
   var list=$$("nvHomeList");
   if(list){
-    S.slice().sort(function(a,b){
-      var oa=a.status==="open"?0:1,ob=b.status==="open"?0:1;
-      return oa-ob||String(b.createdAt||"").localeCompare(String(a.createdAt||""));
-    }).slice(0,4).forEach(function(s){list.appendChild(buildSitem(s))});
+    // four rows: the open visits first, oldest first like every list; what is
+    // left of the four goes to the closed ones, and of those the LATEST — the
+    // oldest closed visits of the device are not what this page is for — in
+    // the same ascending order
+    var hOp=S.filter(function(x){return x.status==="open"}).sort(sessByWhen).slice(0,4);
+    var hCl=S.filter(function(x){return x.status!=="open"}).sort(sessByWhen);
+    hOp.concat(hOp.length<4?hCl.slice(hOp.length-4):[]).forEach(function(s){list.appendChild(buildSitem(s))});
   }
   function on(id,fn){var el=$$(id);if(el)el.addEventListener("click",fn)}
   on("nvAll",function(){nvGo("visits")});

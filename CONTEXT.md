@@ -3941,6 +3941,34 @@ gives the drawings; another manual cannot be linked; the two messages),
 owner (everything). The generator shows the tick. NOT checked: a real
 licence, real Drive, the viewer actually opening a PDF under these rules.
 
+**The lists of visits run oldest first (version `2026-11-26 · 3`).** The user:
+"I want the visits shown in ascending order. By planned dates, and once it
+starts by the report's date." Every list used to be newest first by
+`createdAt` (the day the record was written), which says nothing about when
+a visit prepared weeks ahead happens.
+- `sessWhen(s)` is the day a visit is sorted by: not begun (no entry, no
+  start typed in) and with planned days, `order.from` (or `order.to` if only
+  that is set); otherwise the day of `sessionStartTs` — the report's
+  "Inici". It is the same test `buildSitem` makes to print "prevista 03/12"
+  or the visit's own dates, so a row is sorted by the date it shows.
+  `sessByWhen(a,b)` compares it ascending, then the start's hour, then
+  `createdAt`.
+- Used by: the Visites page and its search (`renderSidebar`), the window
+  that archives (`bulkFill`), and on the home page the cards "Tens visites
+  encarregades" and "Preparades, per enviar" and the four-row list.
+- **The home list is my reading:** open visits first, oldest first; the rows
+  left of the four go to the LATEST closed ones, in the same ascending
+  order (plain ascending would have shown the device's oldest closed
+  visits there). Told him.
+- Left newest first on purpose, and told him: the machine's history
+  (timeline of visits, parts fitted) and the Machines page. The list
+  "Parteix d'una visita anterior" stays by client and machine.
+Checked in the preview with eight made-up visits: planned ones after the
+started ones and in calendar order, a visit planned for December but begun
+in November sorted by its November start, one with no planned days by the
+day it was made; search, archive window, the two cards and the home list
+with more and fewer than four open visits. NOT checked with his real data.
+
 **The day of the switch (as it was planned):** set `SEPARAT` to false, move `nou/index.html` and
 `nou/sw.js` to the root — **and the manifest and the three icons with them**,
 over the root's own (drop "· nou" from the manifest's names; the app's icon

@@ -3996,6 +3996,62 @@ check today), a Content-Security-Policy (none today), a local error log (198
 empty catches, no global error handler), automated tests of the merge logic,
 a version number in the data files, a recovery drill from Drive.
 
+**The error log and Menu > Diagnòstic (version `2026-11-26 · 5`).** Second
+item of the security-and-reliability review, done on his "yes". Until now
+the app had no global error handler and ~200 catches that swallow what they
+catch, so a failure on a technician's phone left nothing to look at.
+- **The recorder is a `<script>` of its own, placed BEFORE the app's**, and
+  depends on nothing of the app: `window.fslErr` = `{ver, booted, log(where,
+  err, extra), list(), clear(), onchange}`. It listens to `error` (only the
+  ones with a message — a picture or a library that failed to load is not
+  one) and `unhandledrejection`. Records live in `localStorage["fsl_errlog"]`
+  — **one list per device, not per profile**; each record carries `p` when it
+  came from a `?perfil=`. A record: `{t, v, w, m, s?, x?, p?, n?, t2?}`
+  (time, app version, where, message, stack cut to 7 lines / 700 chars,
+  file:line, profile, repeat count and time of the last repeat). Two records
+  in a row with the same `w`, `m` and `v` are counted, not repeated. 80
+  records at most; if storage is full, the last ten.
+- **Nothing is ever sent anywhere.** The window's text carries no e-mail
+  address and no key; the licence line is the one the menu shows.
+- The app adds by hand what it catches itself and is worth knowing
+  (`errLog`, `errOnline` = only when the browser says it is online): the
+  local save failing (`saveLocalLS`, `saveLocal`), reading Drive
+  (`loadFromDrive`, the read before a save) and writing it (`saveToDrive`,
+  with the HTTP status). **The other empty catches were left as they are** —
+  most are a browser refusing something optional. Being offline is not
+  recorded. The labels (`"desar a Drive"`…) are Catalan and are NOT
+  translated on purpose: the log is read by whoever supports the user.
+- **The app that did not start.** The app's script sets
+  `window.fslErr.booted=true` on its very LAST line (keep it last); on
+  `load` the recorder looks, and without it records "l'app no ha acabat
+  d'arrencar" and shows a red bar (`#fslBootBar`) with a reload button, in
+  ca/es/en from its own three-line table (the app's words are not available
+  then; language from the stored `uilang`, else the browser's). This is what
+  catches a page cut short by a bad connection: the browser does not run a
+  script whose end did not arrive, so no error is raised at all. The script
+  is one synchronous block, so "loaded and not booted" is never a slow phone.
+- **Menu > Diagnòstic** (`#btnDiag`, `#diagBack`; every role): the facts of
+  this device (`diagFacts`: version, licence words, platform, user agent,
+  language, installed or not, service worker in control, online, signed in,
+  number of visits, storage used) and the errors, newest first; Copia, Desa
+  en un fitxer, Buida el registre. The menu row says how many there are.
+- **The checker's baseline is now "unique keys missing 93"** (was 85): the
+  eight new ones are the log's labels and two non-UI strings, not
+  translations that are missing.
+- **Line endings:** after his commit of `· 4` the working files came back
+  with CRLF (git's autocrlf). Patch scripts must turn CRLF into LF before
+  matching multi-line text and put it back when writing.
+Checked in the preview: a clean start records nothing and shows no bar; a
+thrown error, a rejected promise, a hand-made record; five equal records in
+a row count as one ×5; 180 records leave 80; clear; copy text; the file name
+of the save; Spanish; a phone-width window; a copy whose script throws while
+starting (error + "arrencada" + bar); a copy cut in half (the bar, and the
+record with version "?"). NOT checked: a phone, an installed app, a real
+failure of Drive.
+Still proposed and not done from that review: tests of the merge logic, the
+libraries in the repository, a CSP, a version number in the data files, a
+recovery drill.
+
 **The day of the switch (as it was planned):** set `SEPARAT` to false, move `nou/index.html` and
 `nou/sw.js` to the root — **and the manifest and the three icons with them**,
 over the root's own (drop "· nou" from the manifest's names; the app's icon

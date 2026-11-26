@@ -859,6 +859,16 @@ body.m2 #sideTools{order:4;border:0;background:none;box-shadow:none;padding:0;di
 .mh-off{border:1px solid var(--br);border-radius:12px;padding:10px 12px;margin:0 0 14px;background:var(--bg1);color:var(--tx1)}
 .mh-off .hd{font-weight:700;margin-bottom:4px}
 .mh-off .rw{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--br)}
+.diag-info{font-size:12.5px;border:1px solid var(--br);border-radius:10px;padding:6px 10px}
+.diag-info div{display:flex;gap:10px;padding:3px 0}
+.diag-info span{color:var(--tx3);flex:0 0 40%}
+.diag-info b{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.diag-row{border-top:1px solid var(--br);padding:8px 0;font-size:12.5px}
+.diag-row .hd{color:var(--tx3)}
+.diag-row .ms{margin-top:2px;overflow-wrap:anywhere;font-weight:600}
+.diag-row summary{cursor:pointer;color:var(--tx3);font-size:11.5px;margin-top:3px}
+.diag-row pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;color:var(--tx3);margin:4px 0 0;font-family:ui-monospace,Consolas,monospace}
+.diag-none{font-size:12.5px;color:var(--tx3);padding:8px 0}
 .mh-off .tx{flex:1;min-width:0;font-size:13.5px}
 .mh-off .tx span{display:block;font-size:12px;color:var(--tx3)}
 .nv-big{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;border-radius:12px;font-size:15px}
@@ -1657,6 +1667,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
         <button id="btnGemKey" class="nm-row" title="La clau de Gemini que fa servir el corrector i la traducció dels informes; es desa només en aquest navegador"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/></svg></span><span class="nm-tx"><b>Clau de Gemini</b><small>Corrector i traducció dels informes</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
         <button id="btnViewAs" class="nm-row" style="display:none" title="Canvia entre propietari, administrador i tècnic per veure l'app com la veu cadascú"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="nm-tx"><b>Veure com a</b><small>Per provar què veu cada rol</small></span><span class="nm-go"><span id="nmViewVal"></span><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
         <button id="btnHelp" class="nm-row" title="Com fer servir l'aplicació"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 113.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg></span><span class="nm-tx"><b>Manual d'&uacute;s</b><small>Com fer servir l'aplicació</small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+        <button id="btnDiag" class="nm-row" title="L'estat de l'app en aquest aparell i els errors que hi ha hagut, per si cal demanar ajuda"><span class="nm-ic"><svg class="nv-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></span><span class="nm-tx"><b>Diagnòstic</b><small id="nmDiagVal" data-noui></small></span><span class="nm-go"><svg class="nv-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
         </div>
         <div class="nm-foot">
           <div id="appVer">&mdash;</div>
@@ -1772,6 +1783,23 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
       <div class="modal-actions">
         <button id="usrAdd">+ Afegeix un tècnic</button>
         <button class="btn-gold" id="usrClose">Tanca</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Diagnostics: the state of the app on this device and its error log -->
+  <div class="modal-back" id="diagBack" style="display:none">
+    <div class="modal" style="max-width:min(96vw,560px)">
+      <div class="modal-title">Diagnòstic</div>
+      <div style="font-size:12.5px;color:var(--tx3);margin-bottom:10px">Això es desa només en aquest aparell i no s'envia enlloc. Si alguna cosa falla, copia-ho i fes-ho arribar a qui et dona suport.</div>
+      <div id="diagInfo" class="diag-info" data-noui></div>
+      <div id="diagHd" style="font-size:12.5px;font-weight:700;margin:14px 0 2px" data-noui></div>
+      <div id="diagList" data-noui></div>
+      <div class="modal-actions">
+        <button id="diagClear">Buida el registre</button>
+        <button id="diagSave">Desa en un fitxer</button>
+        <button id="diagCopy">Copia</button>
+        <button class="btn-gold" id="diagClose">Tanca</button>
       </div>
     </div>
   </div>
@@ -2523,6 +2551,88 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accs)}
   </div>
 </div>
 
+<script>
+/* THE ERROR LOG (2026-11-26 · 5). The user asked how the app could gain in
+   reliability; one answer was that when something breaks on a technician's
+   phone nobody can tell what happened: the app had no global error handler
+   and close to two hundred catches that swallow what they catch. This keeps
+   the last errors ON THE DEVICE — nothing is sent anywhere — for the window
+   Menu > Diagnòstic to show, copy or save.
+   It is a script of its own and comes first on purpose: it depends on nothing
+   of the app, so it also catches the app's own script failing to start (a
+   page cut short by a bad connection, a line that throws while booting).
+   One list per device, not per profile (?perfil=): each record says which
+   profile it came from. Two records in a row with the same place and message
+   are counted (n), not repeated, so a loop cannot fill the list.
+   THE APP THAT DID NOT START. A script that throws while booting raises an
+   error and is recorded; a page that arrived cut short raises nothing at all
+   — the browser never runs a script whose end did not arrive — and what the
+   user gets is a screen that looks like the app and answers to nothing. So
+   the app's script sets `booted` on its very last line, and once the page has
+   loaded this looks: without it, the failure is recorded and a bar says so,
+   with a button to load the page again. The script is one synchronous block,
+   so "loaded and not booted" cannot be a slow phone: it is a script that did
+   not reach its end. The bar's words are here, in three languages, because
+   the app's own are not available when this is needed. */
+(function(){
+  var KEY="fsl_errlog",MAX=80;
+  function read(){try{var l=JSON.parse(localStorage.getItem(KEY)||"[]");return Array.isArray(l)?l:[]}catch(e){return []}}
+  function write(l){
+    try{localStorage.setItem(KEY,JSON.stringify(l))}
+    catch(e){try{localStorage.setItem(KEY,JSON.stringify(l.slice(-10)))}catch(e2){}}   // storage full: keep the last ten
+  }
+  function cut(x,k){x=String(x==null?"":x);return x.length>k?x.slice(0,k)+"\u2026":x}
+  function prof(){try{var m=/[?&]perfil=([A-Za-z0-9]{1,12})(?:&|$)/.exec(location.search||"");return m?m[1].toLowerCase():""}catch(e){return ""}}
+  function changed(){if(api.onchange){try{api.onchange()}catch(e){}}}
+  function log(where,err,extra){
+    try{
+      var msg=(err&&err.message!=null)?err.message:err;
+      var st=(err&&err.stack)?String(err.stack).split("\n").slice(0,7).join("\n"):"";
+      var rec={t:new Date().toISOString(),v:api.ver||"?",w:cut(where,60),m:cut(msg,300)};
+      if(st)rec.s=cut(st,700);
+      if(extra)rec.x=cut(extra,200);
+      var pf=prof();if(pf)rec.p=pf;
+      var l=read(),last=l[l.length-1];
+      if(last&&last.w===rec.w&&last.m===rec.m&&last.v===rec.v){last.n=(last.n||1)+1;last.t2=rec.t}
+      else l.push(rec);
+      if(l.length>MAX)l=l.slice(l.length-MAX);
+      write(l);changed();
+    }catch(e){}
+  }
+  var api=window.fslErr={ver:"",booted:false,onchange:null,log:log,list:read,
+    clear:function(){try{localStorage.removeItem(KEY)}catch(e){}changed()}};
+  window.addEventListener("error",function(ev){
+    // a picture or a library that did not load raises this too, with no message: not ours
+    if(!ev||(!ev.message&&!ev.error))return;
+    var at=ev.filename?String(ev.filename).split("/").pop().split("?")[0]+":"+(ev.lineno||0)+":"+(ev.colno||0):"";
+    log("error",ev.error||ev.message,at);
+  });
+  window.addEventListener("unhandledrejection",function(ev){
+    var r=ev?ev.reason:null;
+    log("promesa",r==null?"(sense motiu)":r);
+  });
+  window.addEventListener("load",function(){
+    if(api.booted)return;
+    log("arrencada","l'app no ha acabat d'arrencar");
+    try{
+      var W={ca:["L'aplicaci\u00f3 no ha pogut arrencar. Torna-la a carregar; si continua passant, avisa qui et dona suport.","Torna a carregar"],
+             es:["La aplicaci\u00f3n no ha podido arrancar. Vuelve a cargarla; si sigue pasando, avisa a quien te da soporte.","Volver a cargar"],
+             en:["The app could not start. Load it again; if it keeps happening, tell whoever supports you.","Load again"]};
+      var lg="";try{lg=localStorage.getItem("fsl_v6_"+(prof()?"p_"+prof()+"_":"")+"uilang")||""}catch(e){}
+      if(!W[lg])lg=String(navigator.language||"").slice(0,2).toLowerCase();
+      var w=W[lg]||W.en;
+      var bar=document.createElement("div");
+      bar.id="fslBootBar";bar.setAttribute("role","alert");
+      bar.style.cssText="position:fixed;left:0;right:0;top:0;z-index:2147483647;background:#B42318;color:#fff;font:600 14px/1.4 system-ui,sans-serif;padding:14px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap";
+      var tx=document.createElement("span");tx.style.cssText="flex:1 1 220px";tx.textContent=w[0];
+      var bt=document.createElement("button");bt.type="button";bt.textContent=w[1];
+      bt.style.cssText="background:#fff;color:#B42318;border:0;border-radius:8px;font:inherit;padding:8px 14px;cursor:pointer";
+      bt.addEventListener("click",function(){location.reload()});
+      bar.appendChild(tx);bar.appendChild(bt);document.body.appendChild(bar);
+    }catch(e){}
+  });
+})();
+</script>
 <script>
 (function(){
 "use strict";
@@ -3343,6 +3453,12 @@ async function loadSessions(){
   return loadLocal();
 }
 // localStorage persistence (fallback path), with the Phase-1 quota warning.
+// What the app catches itself and is worth knowing afterwards goes to the
+// error log by hand (see the script above the app's). Kept to the saves and
+// the reads of Drive: most of the other empty catches are a browser saying no
+// to something optional. Being offline is not an error and is not recorded.
+function errLog(where,e,extra){try{window.fslErr.log(where,e,extra)}catch(x){}}
+function errOnline(where,e){if(navigator.onLine!==false)errLog(where,e)}
 function saveLocalLS(){
   var str;try{str=JSON.stringify(sessions)}catch(e){str="[]"}
   try{
@@ -3350,7 +3466,7 @@ function saveLocalLS(){
     if(str.length>STORE_SOFT_LIMIT){showStoreWarning(false)}
     else{storeDismissed=false;hideStoreWarning()}
     return true;
-  }catch(e){showStoreWarning(true);return false}
+  }catch(e){errLog("desar a l'aparell",e);showStoreWarning(true);return false}
 }
 // Returns a Promise<bool>. Callers fire-and-forget; the in-memory sessions
 // stay authoritative, so not awaiting is fine. On failure it surfaces a
@@ -3431,7 +3547,7 @@ async function saveLocal(){
   stampChanged();
   if(idb){
     try{await idbSet(idb,"sessions",sessions);storeDismissed=false;hideStoreWarning();return true}
-    catch(e){showStoreWarning(true);return false}
+    catch(e){errLog("desar a l'aparell (IndexedDB)",e);showStoreWarning(true);return false}
   }
   return saveLocalLS();
 }
@@ -6639,7 +6755,7 @@ async function loadFromDrive(){
     setTimeout(renamePass,0);
     setTimeout(exMigrate,0);         // pictures another device still keeps inside the visit
     return true;
-  }catch(e){setSyncSt("error","Sense connexió (dades locals)");return false}
+  }catch(e){errOnline("llegir Drive",e);setSyncSt("error","Sense connexió (dades locals)");return false}
 }
 async function saveToDrive(){
   // Serialize: two concurrent saves both seeing driveFileId===null would each
@@ -6669,7 +6785,7 @@ async function saveToDrive(){
           var mergedNow=mergeSessionLists(latest,sessions).filter(function(x){return !goneBlocks(gone,x)});
           if(mergedNow.length!==sessions.length){sessions=orderSessions(mergedNow);markSeen();saveLocal();setTimeout(renderAll,0)}
           else{sessions=orderSessions(mergedNow);markSeen()}
-        }catch(e){}   // could not read it: write what we have, as before
+        }catch(e){errOnline("llegir Drive abans de desar",e)}   // could not read it: write what we have, as before
       }
       var body=JSON.stringify(sessions),r;
       if(driveFileId){
@@ -6693,8 +6809,8 @@ async function saveToDrive(){
       }
       if(r&&r.ok){isDirty=false;saveLocal();setSyncSt("ok",uiT("Desat ✓")+" "+fts(now()).slice(12));
         lastDriveCount=sessions.length;lastDriveAt=fts(now()).slice(-8,-3);refreshDriveInfo(null);histSchedule()}
-      else{saveLocal();setSyncSt("error","Error en desar")}
-    }catch(e){saveLocal();setSyncSt("error","Sense connexió (desat localment)")}
+      else{errLog("desar a Drive","HTTP "+(r?r.status:"sense resposta"));saveLocal();setSyncSt("error","Error en desar")}
+    }catch(e){errOnline("desar a Drive",e);saveLocal();setSyncSt("error","Sense connexió (desat localment)")}
   }finally{
     savingDrive=false;
     if(savePending){savePending=false;saveToDrive()}
@@ -9172,7 +9288,8 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-11-26 · 4";
+var APP_VERSION="2026-11-26 · 5";
+try{window.fslErr.ver=APP_VERSION}catch(e){}   // the error log stamps what it records with it
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -23288,6 +23405,129 @@ $$("mhDrop").addEventListener("click",function(){
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
 })();
+// ── DIAGNOSTICS (2026-11-26 · 5) ─────────────────────────────────────────────
+// Menu > Diagnòstic: what this device is running and the errors the recorder
+// has kept (the small script above the app's). It is for the moment somebody
+// says "it does not work on my phone": they open it, copy it, send it. Every
+// role has it — the phone it fails on is the technician's. Nothing here goes
+// out by itself, and the text carries no e-mail address and no key: the
+// licence line is the one the menu already shows.
+var diagStore="";
+function diagWhen(iso){var d=new Date(iso);return isNaN(d.getTime())?String(iso||""):nvP2(d.getDate())+"/"+nvP2(d.getMonth()+1)+"/"+d.getFullYear()+" "+nvP2(d.getHours())+":"+nvP2(d.getMinutes())+":"+nvP2(d.getSeconds())}
+function diagErrs(){try{return window.fslErr.list()}catch(e){return []}}
+function diagFacts(){
+  var sw=false,inst=false;
+  try{sw=!!(navigator.serviceWorker&&navigator.serviceWorker.controller)}catch(e){}
+  try{inst=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}catch(e){}
+  function yn(b){return uiT(b?"sí":"no")}
+  return [
+    ["Versió",APP_VERSION],
+    ["Llicència",licWords()||"\u2014"],
+    ["Aparell",usrPlat()||"\u2014"],
+    ["Navegador",navigator.userAgent||"\u2014"],
+    ["Idioma de l'app",uiLang()],
+    ["Instal·lada com a app",yn(inst)],
+    ["Preparada per treballar sense cobertura",yn(sw)],
+    ["Connexió ara",yn(navigator.onLine!==false)],
+    ["Sessió de Google",yn(isLoggedIn)],
+    ["Visites en aquest aparell",String(sessions.length)],
+    ["Espai ocupat en aquest aparell",diagStore||"\u2014"]
+  ];
+}
+// The same thing as text, for the clipboard and the file.
+function diagText(){
+  var L=["Field Service Log \u2014 "+uiT("Diagnòstic"),diagWhen(now()),""];
+  diagFacts().forEach(function(f){L.push(uiT(f[0])+": "+f[1])});
+  var es=diagErrs();
+  L.push("",uiT("Errors registrats")+": "+es.length);
+  es.slice().reverse().forEach(function(r){
+    L.push("","["+diagWhen(r.t)+"] "+r.w+" \u00b7 v "+r.v+(r.p?" \u00b7 perfil "+r.p:"")+(r.n>1?" \u00b7 \u00d7"+r.n+" ("+uiT("l'última")+" "+diagWhen(r.t2)+")":""));
+    L.push("  "+r.m);
+    if(r.x)L.push("  "+r.x);
+    if(r.s)String(r.s).split("\n").forEach(function(x){L.push("    "+x)});
+  });
+  return L.join("\n");
+}
+function diagMenuPaint(){
+  var v=$$("nmDiagVal");if(!v)return;
+  var es=diagErrs(),last=es[es.length-1];
+  v.textContent=es.length?nvPl(es.length,"error registrat","errors registrats")+" \u00b7 "+nvT("l'últim")+" "+diagWhen(last.t2||last.t).slice(0,16):nvT("Cap error registrat");
+}
+function diagPaint(){
+  $$("diagInfo").innerHTML=diagFacts().map(function(f){return "<div><span>"+esc(uiT(f[0]))+"</span><b>"+esc(f[1])+"</b></div>"}).join("");
+  var es=diagErrs();
+  $$("diagHd").textContent=uiT("Errors registrats")+" ("+es.length+")";
+  $$("diagList").innerHTML=es.length?es.slice().reverse().map(function(r){
+      var more=[r.x,r.s].filter(Boolean).join("\n");
+      return "<div class=\"diag-row\"><div class=\"hd\">"+esc(diagWhen(r.t))+" \u00b7 "+esc(r.w)+" \u00b7 v "+esc(r.v)
+        +(r.n>1?" \u00b7 <b>\u00d7"+r.n+"</b>":"")+"</div>"
+        +"<div class=\"ms\">"+esc(r.m)+"</div>"
+        +(more?"<details><summary>"+esc(uiT("Detall"))+"</summary><pre>"+esc(more)+"</pre></details>":"")+"</div>";
+    }).join("")
+    :"<div class=\"diag-none\">"+esc(uiT("Cap error registrat en aquest aparell."))+"</div>";
+  $$("diagClear").style.display=es.length?"":"none";
+}
+function diagOpen(){
+  uiApply($$("diagBack"));
+  diagPaint();
+  $$("diagBack").style.display="flex";
+  try{
+    if(navigator.storage&&navigator.storage.estimate)navigator.storage.estimate().then(function(q){
+      function mb(x){return (Math.round((x||0)/104857.6)/10).toLocaleString(uiLang())+" MB"}
+      diagStore=mb(q.usage)+(q.quota?" "+uiT("de")+" "+mb(q.quota):"");
+      if($$("diagBack").style.display!=="none")diagPaint();
+    }).catch(function(){});
+  }catch(e){}
+}
+function diagClose(){$$("diagBack").style.display="none"}
+$$("btnDiag").addEventListener("click",diagOpen);
+$$("diagClose").addEventListener("click",diagClose);
+$$("diagBack").addEventListener("click",function(e){if(e.target===$$("diagBack"))diagClose()});
+$$("diagCopy").addEventListener("click",function(){
+  var b=$$("diagCopy"),t=diagText();
+  function said(ok){b.textContent=uiT(ok?"Copiat \u2713":"No s'ha pogut copiar");setTimeout(function(){b.textContent=uiT("Copia")},1800)}
+  try{navigator.clipboard.writeText(t).then(function(){said(true)},function(){said(false)})}catch(e){said(false)}
+});
+$$("diagSave").addEventListener("click",function(){
+  try{dlBlob(new Blob([diagText()],{type:"text/plain;charset=utf-8"}),"field_service_log_diagnostic_"+fnameStamp()+".txt")}
+  catch(e){alert(uiT("No s'ha pogut desar el fitxer: ")+((e&&e.message)||e))}
+});
+$$("diagClear").addEventListener("click",function(){
+  if(!confirm(uiT("Vols buidar el registre d'errors d'aquest aparell?")))return;
+  try{window.fslErr.clear()}catch(e){}
+});
+try{window.fslErr.onchange=function(){diagMenuPaint();if($$("diagBack").style.display!=="none")diagPaint()}}catch(e){}
+(function(){
+  var es={"Diagnòstic":"Diagnóstico",
+    "L'estat de l'app en aquest aparell i els errors que hi ha hagut, per si cal demanar ajuda":"El estado de la app en este aparato y los errores que ha habido, por si hay que pedir ayuda",
+    "Això es desa només en aquest aparell i no s'envia enlloc. Si alguna cosa falla, copia-ho i fes-ho arribar a qui et dona suport.":"Esto se guarda solo en este aparato y no se envía a ningún sitio. Si algo falla, cópialo y házselo llegar a quien te da soporte.",
+    "Buida el registre":"Vacía el registro","Desa en un fitxer":"Guarda en un archivo","Copia":"Copia",
+    "Copiat \u2713":"Copiado \u2713","No s'ha pogut copiar":"No se ha podido copiar","No s'ha pogut desar el fitxer: ":"No se ha podido guardar el archivo: ",
+    "Vols buidar el registre d'errors d'aquest aparell?":"¿Quieres vaciar el registro de errores de este aparato?",
+    "Errors registrats":"Errores registrados","Cap error registrat en aquest aparell.":"Ningún error registrado en este aparato.",
+    "Cap error registrat":"Ningún error registrado","error registrat":"error registrado","errors registrats":"errores registrados",
+    "l'últim":"el último","l'última":"la última","Detall":"Detalle","sí":"sí","no":"no",
+    "Llicència":"Licencia","Aparell":"Aparato","Navegador":"Navegador",
+    "Instal·lada com a app":"Instalada como app","Preparada per treballar sense cobertura":"Preparada para trabajar sin cobertura",
+    "Connexió ara":"Conexión ahora","Sessió de Google":"Sesión de Google","Visites en aquest aparell":"Visitas en este aparato",
+    "Espai ocupat en aquest aparell":"Espacio ocupado en este aparato"};
+  var en={"Diagnòstic":"Diagnostics",
+    "L'estat de l'app en aquest aparell i els errors que hi ha hagut, per si cal demanar ajuda":"The state of the app on this device and the errors it has had, in case you need to ask for help",
+    "Això es desa només en aquest aparell i no s'envia enlloc. Si alguna cosa falla, copia-ho i fes-ho arribar a qui et dona suport.":"This is kept on this device only and is not sent anywhere. If something fails, copy it and pass it on to whoever supports you.",
+    "Buida el registre":"Clear the log","Desa en un fitxer":"Save to a file","Copia":"Copy",
+    "Copiat \u2713":"Copied \u2713","No s'ha pogut copiar":"Could not copy","No s'ha pogut desar el fitxer: ":"Could not save the file: ",
+    "Vols buidar el registre d'errors d'aquest aparell?":"Clear this device's error log?",
+    "Errors registrats":"Errors recorded","Cap error registrat en aquest aparell.":"No error recorded on this device.",
+    "Cap error registrat":"No error recorded","error registrat":"error recorded","errors registrats":"errors recorded",
+    "l'últim":"the last one","l'última":"the last one","Detall":"Detail","sí":"yes","no":"no",
+    "Llicència":"Licence","Aparell":"Device","Navegador":"Browser",
+    "Instal·lada com a app":"Installed as an app","Preparada per treballar sense cobertura":"Ready to work without coverage",
+    "Connexió ara":"Connected now","Sessió de Google":"Google session","Visites en aquest aparell":"Visits on this device",
+    "Espai ocupat en aquest aparell":"Space used on this device"};
+  Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
+  Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};
+})();
+diagMenuPaint();
 // ── CLOSE DROPDOWNS ───────────────────────────────────────────────────────────
 document.addEventListener("click",function(){var m=$$("expMenu");if(m)m.style.display="none"});
 
@@ -23338,6 +23578,9 @@ $$("content").innerHTML="<div class=\"empty\"><span class=\"spinner\"></span><di
   updateAuthUI();
 })();
 
+// The last line of the app's script: the recorder above it reads this once the
+// page has loaded. Keep it LAST — anything added after it is not covered.
+try{window.fslErr.booted=true}catch(e){}
 })();
 </script>
 </body>

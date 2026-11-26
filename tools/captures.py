@@ -52,7 +52,7 @@ TRIM = set()
 # Des del dia del canvi (2026-11-23) son les pantalles del disseny nou.
 SHOTS = [
     ("inici",          "inici",      "",                    990),
-    ("menu",           "menu",       "",                    1360),
+    ("menu",           "menu",       "",                    1420),
     ("visita-nova",    "visitanova", "#newBack .modal",     1450),
     ("visita",         "fitxa",      "",                    0),
     ("menu-visita",    "mes",        "#m2MoreBack .modal",  1500),

@@ -22,7 +22,8 @@
   guardes les claus del cotxe.
 
   Els mòduls (2026-11-18) van al camp `f` de les dades, signats amb la resta:
-    exp = Despeses · ts = Full d'hores · cal = Calendari laboral (privat) ·
+    exp = Despeses · ts = Full d'hores · man = Manuals de recanvis ·
+    cal = Calendari laboral (privat) ·
     * = tots, també els que vinguin.
   Sense cap mòdul, la llicència obre l'app base. Afegir-ne un a algú és
   emetre-li una llicència nova i que la torni a enganxar a cada aparell.
@@ -144,6 +145,7 @@
         <div class="mods">
           <label class="ck"><input type="checkbox" id="mExp"> Despeses</label>
           <label class="ck"><input type="checkbox" id="mTs"> Full d'hores</label>
+          <label class="ck"><input type="checkbox" id="mMan"> Manuals de recanvis</label>
           <label class="ck"><input type="checkbox" id="mCal"> Calendari laboral <span class="key">(privat)</span></label>
           <label class="ck"><input type="checkbox" id="mAll"> Tots, també els que vinguin <span class="key">(la teva)</span></label>
         </div></div>
@@ -239,7 +241,7 @@ $("keyFile").addEventListener("change",async function(){
 });
 
 /* ── 3 · emetre ────────────────────────────────────────────────────────────── */
-var MODS=[["exp","mExp","Despeses"],["ts","mTs","Full d'hores"],["cal","mCal","Calendari laboral"]];
+var MODS=[["exp","mExp","Despeses"],["ts","mTs","Full d'hores"],["man","mMan","Manuals de recanvis"],["cal","mCal","Calendari laboral"]];
 function modList(){
   if($("mAll").checked)return["*"];
   return MODS.filter(function(m){return $(m[1]).checked}).map(function(m){return m[0]});

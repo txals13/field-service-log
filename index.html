@@ -4316,6 +4316,7 @@ async function saveManualsIndex(token){
 // drawn inside the page (nvModalPage) — everything is got ready the same way,
 // only the pop-up is not raised. Says whether it went ahead.
 function openManuals(asPage){
+  if(!modOn("man")||isTec())return false;
   if(!isLoggedIn){alert(uiT("Inicia la sessió amb Google per gestionar els manuals a Drive."));return false}
   mfPdfFile=null;mfJsonFile=null;mfParsed=null;$$("mfClient").value="";$$("mfSerial").value="";
   $$("mfPdfName").innerHTML="&mdash; cap fitxer &mdash;";
@@ -4383,6 +4384,7 @@ function renderManualFolders(box,list,rowOf,again,hint){
 }
 // Files a manual under another client or machine number, in the app only.
 async function editManualFiling(m){
+  if(isTec())return;
   var cli=prompt(uiT("Client d'aquest manual:"),m.client||"");if(cli===null)return;
   var ser=prompt(uiT("Número de màquina d'aquest manual:"),m.serial||"");if(ser===null)return;
   m.client=cli.trim();m.serial=ser.trim();
@@ -4451,6 +4453,7 @@ function onJsonPick(file){
   r.readAsText(file);
 }
 async function uploadManual(){
+  if(isTec()||!modOn("man"))return;
   if(!mfPdfFile||!mfJsonFile||!mfParsed)return;
   var token=await ensureToken();if(!token){alert(uiT("No s'ha pogut autenticar amb Drive."));return}
   var btn=$$("mfUpload"),lbl=btn.innerHTML;btn.disabled=true;btn.textContent="Pujant…";
@@ -4510,6 +4513,7 @@ async function uploadManual(){
   finally{btn.innerHTML=lbl;btn.disabled=!(mfPdfFile&&mfJsonFile&&mfParsed)}
 }
 async function deleteManual(idx){
+  if(isTec())return;
   var m=manuals[idx];if(!m)return;
   if(!confirm(uiT("Vols treure \"{x}\" de la llista?\nEls fitxers es queden a la carpeta Manuals del teu Drive.").replace("{x}",m.base||uiT("aquest manual"))))return;
   manuals.splice(idx,1);renderManualsList();
@@ -4558,6 +4562,33 @@ function sessManuals(s){
   if(s.manualRefs&&s.manualRefs.length)return s.manualRefs;
   return s.manualRef?[s.manualRef]:[];
 }
+// MANUALS BY LICENCE AND BY ROLE (2026-11-26). The user: "I would also like
+// the Manuals option to be tied to the licence, and only the administrator to
+// be able to add manuals. The technician will only be able to use the manuals
+// if it is linked to the machine number of the project."
+//   · `man` is a module of the licence, like `exp` and `ts`: without it the
+//     Manuals page, the link window, the drawings, the device search and the
+//     "from the drawing" buttons are not there. Nothing is dropped: the parts
+//     already in a visit stay, and the reports go on naming their manual
+//     (they read sessManuals, the visit's own list).
+//   · Adding, filing and taking a manual off the list is the administrator's:
+//     a technician has no Manuals page at all.
+//   · A technician works with a manual only when its machine number (the
+//     index's `serial`, the folder it is filed under) is the VISIT's machine
+//     number. So the link window offers a technician that machine's manuals
+//     and nothing else, with no way out to Drive; a manual linked to the visit
+//     under another number is not theirs to open; and a visit with no machine
+//     number has no manual for them. The administrator files a manual under a
+//     machine number — that is the assignment.
+// manFor(s) is what the SCREENS ask: the manuals of this visit that this
+// device may work with. sessManuals(s) stays the visit's whole list, for what
+// changes it and for what prints it.
+function manKeyOk(s,r){var k=mfKey(s&&s.machineNo);return !!k&&mfKey(r&&r.serial)===k}
+function manFor(s){
+  if(!s||!modOn("man"))return [];
+  var l=sessManuals(s);
+  return isTec()?l.filter(function(r){return manKeyOk(s,r)}):l;
+}
 function manName(r){return (r&&(r.base||r.serial||r.pdfName))||"manual"}
 function manualById(s,id){
   if(!id)return null;
@@ -4574,7 +4605,8 @@ function sameManual(a,b){
   return !!a&&!!b&&((!!a.id&&a.id===b.id)||(!!a.pdfId&&a.pdfId===b.pdfId)||(!!a.folderId&&a.folderId===b.folderId&&!!a.base&&a.base===b.base));
 }
 function manualChipHTML(sess){
-  var refs=sessManuals(sess),ref=refs[0];
+  if(!modOn("man"))return "";
+  var refs=manFor(sess),ref=refs[0];
   if(ref)return "<span id=\"manualChip\" style=\"cursor:pointer\" title=\"Manual de recanvis vinculat — clica per canviar-lo\">📚 "+esc(manName(ref))+(refs.length>1?" +"+(refs.length-1):"")+"</span>";
   return "<span id=\"manualChip\" style=\"cursor:pointer;color:var(--tx3)\" title=\"Vincula un manual de recanvis\">📚 Vincula manual</span>";
 }
@@ -4590,7 +4622,11 @@ function manualMatchScore(sess,m){
   return score;
 }
 function openLinkModal(){
+  if(!modOn("man"))return;
   if(!isLoggedIn){alert(uiT("Inicia la sessió amb Google per fer servir els manuals de recanvis."));return}
+  // going out to Drive for a manual adds it to the company's list: not a
+  // technician's to do
+  $$("linkPick").style.display=isTec()?"none":"";
   renderLinkList();linkNote("");
   $$("linkBack").style.display="flex";
   loadManualsIndex().then(renderLinkList);
@@ -4620,6 +4656,7 @@ async function linkStartFolder(token){
   }catch(e){return null}
 }
 async function linkPickFromDrive(){
+  if(isTec()||!modOn("man"))return;
   if(!isLoggedIn){alert(uiT("Inicia la sessió amb Google per fer servir els manuals de recanvis."));return}
   var token=await ensureToken();if(!token)return;
   linkNote(uiT("Obrint el selector de Drive…"));
@@ -4687,7 +4724,7 @@ function renderLinkList(){
   var box=$$("linkList");if(!box)return;
   var sess=sessions.find(function(s){return s.id===aid});if(!sess){box.innerHTML="";return}
   box.innerHTML="";
-  var refs=sessManuals(sess);
+  var tec=isTec(),refs=manFor(sess);
   function metaOf(m){
     var meta=[];if(m.model)meta.push(esc(m.model));if(m.serial)meta.push("S/N "+esc(m.serial));
     if(m.parts!=null)meta.push((m.parts||0)+" "+uiT("recanvis"));
@@ -4708,7 +4745,19 @@ function renderLinkList(){
     var mb=row.querySelector("[data-lk=main]");if(mb)mb.addEventListener("click",function(){mainSessionManual(r)});
     box.appendChild(row);
   });
-  var rest=manuals.filter(function(m){return !refs.some(function(r){return sameManual(r,m)})});
+  var linked=sessManuals(sess);
+  var rest=manuals.filter(function(m){return !linked.some(function(r){return sameManual(r,m)})});
+  // a technician: the manuals filed under this visit's machine number, no others
+  if(tec){
+    rest=rest.filter(function(m){return manKeyOk(sess,m)});
+    if(!refs.length&&!rest.length){
+      var te=document.createElement("div");te.className="manuals-empty";
+      te.textContent=mfKey(sess.machineNo)
+        ?uiT("No hi ha cap manual per a la màquina núm. {x}. Els manuals els afegeix l'administrador.").replace("{x}",sess.machineNo)
+        :uiT("Aquesta visita no té número de màquina, i els manuals van lligats al número. Demana a l'administrador que l'hi posi.");
+      box.appendChild(te);return;
+    }
+  }
   if(!manuals.length&&!refs.length){var e=document.createElement("div");e.className="manuals-empty";e.textContent="Encara no s'ha pujat cap manual — afegeix-ne un a 📚 Manuals de recanvis.";box.appendChild(e);return}
   var best=null,bestScore=0;
   if(!refs.length)rest.forEach(function(m){var sc=manualMatchScore(sess,m);if(sc>bestScore){bestScore=sc;best=m}});
@@ -4737,6 +4786,7 @@ function setSessionManuals(list){
 // stays open, so the annexes can be linked one after another.
 function linkSessionManual(m){
   var sess=sessions.find(function(s){return s.id===aid});if(!sess||!m)return;
+  if(!modOn("man")||(isTec()&&!manKeyOk(sess,m)))return;
   var refs=sessManuals(sess).slice(),ref=refOfManual(m),first=!refs.length;
   var at=-1;refs.forEach(function(r,i){if(sameManual(r,ref))at=i});
   // already linked (uploaded again, or taken from Drive twice): the ref is
@@ -4781,7 +4831,7 @@ $$("linkBack").addEventListener("click",function(e){if(e.target===$$("linkBack")
 //    IndexedDB (key "pdf_<id>") for offline use; only the requested page is
 //    rendered at a time (mobile memory). --
 function drawingsChipHTML(sess){
-  if(!sess.manualRef)return"";
+  if(!manFor(sess).length)return"";
   return "<span id=\"drawingsChip\" style=\"cursor:pointer\" title=\"Obre els dibuixos del manual vinculat\">📐 Dibuixos</span>";
 }
 function loadPdfjs(){
@@ -4910,7 +4960,7 @@ function devNorm(v){return (v||"").toString().normalize("NFD").replace(/[\u0300-
 async function openDeviceSearch(target){
   devTarget=target||"edit";
   var sess=sessions.find(function(x){return x.id===aid});
-  var refs=sessManuals(sess);
+  var refs=manFor(sess);
   if(!sess||!refs.length){alert(uiT("Primer vincula un manual de recanvis a aquesta sessió."));return}
   devMulti=refs.length>1;
   $$("devManual").textContent=refs.map(manName).join(" + ");
@@ -4988,7 +5038,7 @@ function curManId(){return (viewerRef&&viewerRef.id)||""}
 function shotOfCurMan(img){
   if(img.drawMan)return img.drawMan===curManId();
   var s=sessions.find(function(x){return x.id===aid});
-  return !viewerRef||sessManuals(s)[0]===viewerRef;
+  return !viewerRef||manFor(s)[0]===viewerRef;
 }
 // The manual's PDF and, when parts are to be picked, its catalogue, into the
 // viewer. Throws what getManualPdfBytes / loadPdfjs throw (drawErr).
@@ -5248,7 +5298,7 @@ function drawIdxToggle(open){
 // The manual's name in the viewer's title: a selector when the visit has more
 // than one, the plain name when it has one.
 function drawManualUI(sess,ref){
-  var refs=sessManuals(sess),sel=$$("drawManSel"),lbl=$$("drawManual");
+  var refs=manFor(sess),sel=$$("drawManSel"),lbl=$$("drawManual");
   if(refs.length>1){
     sel.innerHTML=refs.map(function(r,i){return "<option value=\""+i+"\""+(r===ref?" selected":"")+">"+esc(manName(r))+"</option>"}).join("");
     sel.style.display="";lbl.style.display="none";
@@ -5256,7 +5306,7 @@ function drawManualUI(sess,ref){
 }
 async function switchViewerManual(i){
   var sess=sessions.find(function(s){return s.id===aid});
-  var ref=sessManuals(sess)[i],prev=viewerRef;
+  var ref=manFor(sess)[i],prev=viewerRef;
   if(!ref||ref===prev)return;
   viewerRef=ref;viewerManBy[sess.id]=ref.id;viewerPickItems=[];lastPickMark=null;
   var dc=$$("drawChoices");if(dc)dc.style.display="none";
@@ -5274,12 +5324,12 @@ async function switchViewerManual(i){
 async function openDrawings(targetPage,pickMode,purpose,manId){
   viewerPickPurpose=purpose||"part";
   var sess=sessions.find(function(s){return s.id===aid});
-  var refs=sessManuals(sess);
+  var refs=manFor(sess);
   if(!sess||!refs.length){alert(uiT("Primer vincula un manual de recanvis a aquesta sessió."));return}
   if(!isLoggedIn){alert(uiT("Inicia la sessió amb Google per obrir els dibuixos."));return}
   // the manual asked for (a device's sheet), else the one this visit was last
-  // read in, else the main one
-  var ref=manualById(sess,manId)||manualById(sess,viewerManBy[sess.id])||refs[0];
+  // read in, else the main one — always one this device may work with
+  var ref=[manualById(sess,manId),manualById(sess,viewerManBy[sess.id])].filter(function(r){return r&&refs.indexOf(r)>=0})[0]||refs[0];
   viewerRef=ref;viewerManBy[sess.id]=ref.id;
   drawManualUI(sess,ref);
   viewerPickMode=!!pickMode;viewerPickItems=[];lastPickMark=null;
@@ -5414,7 +5464,7 @@ function cleanConjuntName(s){
 async function populateTagOptions(){
   var sess=sessions.find(function(s){return s.id===aid});
   // the conjunts of every linked manual, the main one's first
-  var refs=sessManuals(sess).filter(function(r){return r.jsonId});
+  var refs=manFor(sess).filter(function(r){return r.jsonId});
   var key=refs.length?(sess.id+":"+refs.map(function(r){return r.jsonId}).join(",")):null;
   if(key===tagOptKey)return;
   tagOptKey=key;
@@ -7337,10 +7387,10 @@ function renderContent(){
     (function(){
       var b=$$("btnPickDraw");if(!b)return;
       var sv=sessions.find(function(x){return x.id===aid});
-      b.style.display=(sv&&sv.manualRef)?"inline-block":"none";
+      b.style.display=(sv&&manFor(sv).length)?"inline-block":"none";
       b.addEventListener("click",function(){drawTarget="pend";openDrawings(undefined,true)});
       var bd=$$("btnPickDev");
-      if(bd){bd.style.display=(sv&&sv.manualRef)?"inline-block":"none";bd.addEventListener("click",function(){openDeviceSearch("pend")})}
+      if(bd){bd.style.display=(sv&&manFor(sv).length)?"inline-block":"none";bd.addEventListener("click",function(){openDeviceSearch("pend")})}
     })();
     $$("btnAdd").addEventListener("click",addEntry);
     $$("entIn").addEventListener("keydown",function(e){if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){e.preventDefault();addEntry()}});
@@ -8626,7 +8676,7 @@ function openEdit(entryId){
   fillCloses(active,entry);
   rEThumbs();rFThumbs();rEParts();clearPartForm();renderFixUI();
   var sessR=sessions.find(function(s){return s.id===aid});
-  var hasManual=!!(sessR&&sessR.manualRef);
+  var hasManual=!!(sessR&&manFor(sessR).length);
   $$("ePickDraw").style.display=hasManual?"inline-block":"none";
   $$("ePickDev").style.display=hasManual?"inline-block":"none";
   $$("eTextPickDraw").style.display=hasManual?"inline-block":"none";
@@ -9104,7 +9154,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-11-25 · 2";
+var APP_VERSION="2026-11-26 · 1";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -12951,7 +13001,7 @@ function licState(){
 // dropped and still goes out in the ZIP.
 // Like the licence itself, this stops the honest case, not somebody editing a
 // copy of the file.
-var LIC_MODS={exp:"Despeses",ts:"Full d'hores",cal:"Calendari laboral"};
+var LIC_MODS={exp:"Despeses",ts:"Full d'hores",man:"Manuals de recanvis",cal:"Calendari laboral"};
 function licMods(){
   if(!LIC_ON)return["*"];
   if(!licReady||!lic||licDays(lic)<=-LIC_GRACE)return[];
@@ -13069,6 +13119,7 @@ function roleApply(){
   b=$$("btnGemKey");if(b)b.style.display=tec&&cfgHas("gem")?"none":"";
   b=$$("btnCfgMove");if(b)b.style.display=tec?"none":"";
   b=$$("btnUsers");if(b)b.style.display=tec?"none":"";
+  b=$$("btnManuals");if(b)b.style.display=(modOn("man")&&!tec)?"":"none";
   b=$$("nmUsrVal");if(b)b.textContent=usrWords();
 }
 $$("btnMe").addEventListener("click",function(){
@@ -20838,7 +20889,7 @@ function nvNavRender(){
     if(PERFIL)lw=(lw?lw+" \u00b7 ":"")+uiT("perfil")+" "+PERFIL;   // which of the tabs this is
     h="<div class=\"brand\">"+NV_LOGO+"<span>Field Service<br>Log</span></div>"
       +bt("home","home","Inici",nvView==="home")+bt("visits","doc","Visites",nvView==="visits")+bt("mach","hist","Màquines",nvView==="mach")
-      +bt("manuals","book","Manuals",nvView==="manuals","","dk")+(isTec()?"":bt("arx","box","Arxiu",nvView==="arx","","dk"))
+      +(modOn("man")&&!isTec()?bt("manuals","book","Manuals",nvView==="manuals","","dk"):"")+(isTec()?"":bt("arx","box","Arxiu",nvView==="arx","","dk"))
       +"<button type=\"button\" data-nv=\"menu\" class=\""+(nvView==="menu"?"on":"")+"\"><span class=\"ph\">"+nvI("menu",22)+"</span><span class=\"dki\">"+nvI("gear",22)+"</span>"
         +"<span class=\"ph\">"+esc(nvT("Menú"))+"</span><span class=\"dki\">"+esc(nvT("Configuració"))+"</span></button>"
       +"<div class=\"foot\">"+(q?"<div>"+esc(q)+"</div>":"")
@@ -21444,7 +21495,7 @@ function nvRecRender(a,box,isOpen,what){   // what: "parts", "pics" or nothing f
   var nP=ims.length-nV,MAX=6,shown=ims.slice(0,MAX),more=ims.length-MAX;
   var h=group("Recanvis utilitzats",used)+group("Recomanats al client",rec)+group("Només informatius",inf);
   if(!used.length&&!rec.length&&!inf.length)h="<div class=\"no-ent\" style=\"padding:20px 12px\">"+esc(nvT("Cap recanvi en aquesta visita."))+"</div>";
-  if(isOpen)h+="<button type=\"button\" class=\"nv-addp\" id=\"nvAddPart\">"+nvI("plus",20,2.4)+"<span>"+esc(nvT("Afegir recanvi des del dibuix"))+"</span></button>";
+  if(isOpen&&modOn("man"))h+="<button type=\"button\" class=\"nv-addp\" id=\"nvAddPart\">"+nvI("plus",20,2.4)+"<span>"+esc(nvT("Afegir recanvi des del dibuix"))+"</span></button>";
   if(what==="pics")h=(ims.length||nA)?"":"<div class=\"no-ent\">"+esc(nvT("Cap foto encara."))+"</div>";
   if((ims.length||nA)&&what!=="parts"){
     h+="<section class=\"nv-card nv-pics\"><div class=\"hd\"><b>"+esc(nvT("Fotos"))+" ("+nP+")</b>"
@@ -23113,6 +23164,8 @@ $$("mhBody").addEventListener("click",function(e){
     "Tancada des de l'oficina":"Cerrada desde la oficina",
     "Escriu com ha quedat: és el que dirà l'historial de la màquina.":"Escribe cómo ha quedado: es lo que dirá el historial de la máquina.",
     "Vols desfer el tancament d'aquest punt?":"¿Quieres deshacer el cierre de este punto?",
+    "No hi ha cap manual per a la màquina núm. {x}. Els manuals els afegeix l'administrador.":"No hay ningún manual para la máquina n.º {x}. Los manuales los añade el administrador.",
+    "Aquesta visita no té número de màquina, i els manuals van lligats al número. Demana a l'administrador que l'hi posi.":"Esta visita no tiene número de máquina, y los manuales van ligados al número. Pide al administrador que se lo ponga.",
     "Tornarà a sortir com a obert a tots els aparells.":"Volverá a salir como abierto en todos los aparatos."};
   var en={"Tanca el punt des de l'oficina":"Close the point from the office","Com ha quedat *":"How it ended *",
     "Què s'ha fet i qui ho ha confirmat…":"What was done and who confirmed it…","Qui el tanca":"Closed by",
@@ -23122,6 +23175,8 @@ $$("mhBody").addEventListener("click",function(e){
     "Tancada des de l'oficina":"Closed from the office",
     "Escriu com ha quedat: és el que dirà l'historial de la màquina.":"Write how it ended: it is what the machine's history will say.",
     "Vols desfer el tancament d'aquest punt?":"Undo the closing of this point?",
+    "No hi ha cap manual per a la màquina núm. {x}. Els manuals els afegeix l'administrador.":"There is no manual for machine no. {x}. Manuals are added by the administrator.",
+    "Aquesta visita no té número de màquina, i els manuals van lligats al número. Demana a l'administrador que l'hi posi.":"This visit has no machine number, and manuals go by the number. Ask the administrator to set it.",
     "Tornarà a sortir com a obert a tots els aparells.":"It will show as open again on every device."};
   Object.keys(es).forEach(function(k){NV_T.es[k]=es[k]});
   Object.keys(en).forEach(function(k){NV_T.en[k]=en[k]});UIC={};

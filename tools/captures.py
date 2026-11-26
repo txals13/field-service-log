@@ -124,13 +124,14 @@ window.__SHOT=(function(){
     }];
   }
 
-  /* Una llicencia d'exemple amb els dos moduls que es venen i el rol
+  /* Una llicencia d'exemple amb els tres moduls que es venen (despeses,
+     full d'hores i manuals de recanvis) i el rol
      d'administrador: sense ella no hi hauria ni full d'hores ni llista
      d'usuaris per ensenyar. No porta el modul privat del calendari, que no es
      part del producte i no ha de sortir en un manual. */
   function base(){
     isLoggedIn=true;driveEmail="empresa@example.com";
-    lic={n:"Indústries d'Exemple, S.L.",x:"2027-12-31",s:5,i:"2026-01-01",f:["exp","ts"],r:"adm"};licReady=true;
+    lic={n:"Indústries d'Exemple, S.L.",x:"2027-12-31",s:5,i:"2026-01-01",f:["exp","ts","man"],r:"adm"};licReady=true;
     try{localStorage.setItem(LSP+"me","Marc Soler");localStorage.setItem(LSP+"devid","dshot");
       localStorage.setItem(LSP+"exon","1");
       localStorage.setItem(LSP+"usr",JSON.stringify({v:1,dev:{

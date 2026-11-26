@@ -3890,6 +3890,44 @@ rule; the phone keeps its 0, where the card scrolls by itself.
 Checked at 1200×640 with a prepared visit: no two cards of the page overlap
 any more, and both buttons of "Encàrrec" show; at 375 px nothing changed.
 
+**Manuals by licence and by role (version `2026-11-26 · 1`).** The user: "I
+would also like the Manuals option to be tied to the licence, and only the
+administrator to be able to add manuals. The technician will only be able to
+use the manuals if it is linked to the machine number of the project."
+- **`man` is a module** (`LIC_MODS`, `modOn("man")`; a tick in
+  `tools/llicencies.html`). Without it: no Manuals page or Menú row, no link
+  window, no drawings, no device search, no "from the drawing" buttons.
+  Nothing is dropped — parts already in a visit stay, parts can still be typed
+  by hand, and the reports go on naming their manual. As with `exp` and `ts`,
+  a trial or a licence from before has no module: **a licence must be issued
+  again with "Manuals de recanvis" (or «Tots») or the manuals disappear** —
+  the technicians' licence too.
+- **Adding is the administrator's.** A technician has no Manuals page
+  (`openManuals` refuses; the nav entry and `#btnManuals` are hidden), no
+  "Busca a Drive…" in the link window, and `uploadManual`, `deleteManual`,
+  `editManualFiling` and `linkPickFromDrive` return at once.
+- **A technician works with a manual only when its machine number is the
+  visit's** (`manKeyOk`: the index entry's `serial` against
+  `session.machineNo`, both through `mfKey`). The link window offers a
+  technician that machine's manuals only; a manual linked to the visit under
+  another number is not theirs; a visit with no machine number has none, and
+  the window says which of the two it is. My reading of "linked to the machine
+  number of the project": the number a manual is FILED under — so filing a
+  manual under a number is what assigns it. Told him the consequence: an
+  annex has to be filed under the machine's number too.
+- **`manFor(s)`** is what the screens ask (the chips, the viewer, the device
+  search, the tag's conjunts, the composer's and the editor's buttons);
+  **`sessManuals(s)`** stays the visit's whole list for what changes it
+  (link, unlink, main) and what prints it (reports, Excel, ZIP, history).
+  A technician linking the machine's manual keeps whatever else was linked.
+Checked in the preview with made-up licences: administrator with `man` (all
+as before), administrator without it (nothing of manuals, the visit's list
+intact), technician with it (no page; a visit whose linked manual carries
+another number shows none, the window offers the machine's own, linking it
+gives the drawings; another manual cannot be linked; the two messages),
+owner (everything). The generator shows the tick. NOT checked: a real
+licence, real Drive, the viewer actually opening a PDF under these rules.
+
 **The day of the switch (as it was planned):** set `SEPARAT` to false, move `nou/index.html` and
 `nou/sw.js` to the root — **and the manifest and the three icons with them**,
 over the root's own (drop "· nou" from the manifest's names; the app's icon

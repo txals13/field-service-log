@@ -3067,6 +3067,20 @@ function loadPdfjs(){
   });
   return pdfjsReadyP;
 }
+// EVERY PDF IS OPENED THROUGH HERE (2026-11-26). pdf.js up to 4.2.67 — this
+// is 3.11.174 — builds a JavaScript function out of a font's own data to draw
+// its glyphs faster, and a PDF made for it can put its own code in there
+// (CVE-2024-4367): code that would run as the app, with the Google session,
+// the licence and the Gemini key within reach. `isEvalSupported:false` makes
+// pdf.js draw the glyphs without building code, which is the fix its authors
+// give for versions before 4.2.67. It is an option of getDocument only —
+// there is no global switch in 3.x — so never call lib.getDocument directly:
+// a call that forgets the option is open again. The manuals come from the
+// company's own Drive, but the tickets of the expenses are other people's
+// files.
+function pdfOpen(lib,bytes){
+  return lib.getDocument({data:bytes,isEvalSupported:false}).promise;
+}
 async function getManualPdfBytes(pdfId){
   var key="pdf_"+pdfId;
   if(idb){try{var cached=await idbGet(idb,key);if(cached)return cached}catch(e){}}
@@ -3232,7 +3246,7 @@ async function openDrawings(targetPage,pickMode,purpose){
     else {viewerRows=[];viewerSubgrups=[]}
     if(viewerDoc&&viewerPdfId===ref.pdfId){$$("drawStatus").textContent="";renderViewerPage(targetPage||viewerPage);return}
     var buf=await getManualPdfBytes(ref.pdfId);
-    var doc=await lib.getDocument({data:new Uint8Array(buf.slice(0))}).promise;
+    var doc=await pdfOpen(lib,new Uint8Array(buf.slice(0)));
     viewerDoc=doc;viewerNumPages=doc.numPages;viewerPdfId=ref.pdfId;
     $$("drawStatus").textContent="";
     renderViewerPage(targetPage||1);
@@ -6656,7 +6670,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-11-15 · 2";
+var APP_VERSION="2026-11-26 · 1";
 function verLine(){
   var v=$$("appVer");if(!v)return;
   var w=licWords();
@@ -9867,7 +9881,7 @@ function pvCommit(){
 async function pvRenderPdf(blob,box){
   try{
     var lib=await loadPdfjs();
-    var doc=await lib.getDocument({data:new Uint8Array(await blob.arrayBuffer())}).promise;
+    var doc=await pdfOpen(lib,new Uint8Array(await blob.arrayBuffer()));
     var dpr=Math.min(2,window.devicePixelRatio||1),w=Math.min(($$("pvDoc").clientWidth||800)-24,900);
     for(var i=1;i<=doc.numPages;i++){
       if(!box.isConnected)return;                  // closed meanwhile
@@ -15363,7 +15377,7 @@ function exPrepImage(file){
 async function exPdfPage(file){
   try{
     var lib=await loadPdfjs();
-    var doc=await lib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+    var doc=await pdfOpen(lib,new Uint8Array(await file.arrayBuffer()));
     var pg=await doc.getPage(1),v0=pg.getViewport({scale:1});
     var v=pg.getViewport({scale:Math.min(3,EX_MAXDIM/Math.max(v0.width,v0.height))});
     var c=document.createElement("canvas");c.width=Math.round(v.width);c.height=Math.round(v.height);

@@ -3960,6 +3960,10 @@ a visit prepared weeks ahead happens.
   left of the four go to the LATEST closed ones, in the same ascending
   order (plain ascending would have shown the device's oldest closed
   visits there). Told him.
+- **The machine's history and the Machines page stay newest first — his
+  decision.** They were turned round too the same day (a `· 4` that was never
+  committed: he had answered "yes" to my offer) and he then asked to undo it.
+  Do not offer it again.
 - Left newest first on purpose, and told him: the machine's history
   (timeline of visits, parts fitted) and the Machines page. The list
   "Parteix d'una visita anterior" stays by client and machine.
@@ -3968,6 +3972,29 @@ started ones and in calendar order, a visit planned for December but begun
 in November sorted by its November start, one with no planned days by the
 day it was made; search, archive window, the two cards and the home list
 with more and fewer than four open visits. NOT checked with his real data.
+
+**Every PDF is opened through `pdfOpen` (version `2026-11-26 · 4`; the old app
+too, `classic/` `2026-11-26 · 1`).** He asked how the app could gain in
+security and reliability; the first finding was closed at once on his "yes".
+pdf.js up to 4.2.67 (this is 3.11.174) builds a JavaScript function out of a
+font's own data to draw glyphs, and a crafted PDF can put its own code there
+(CVE-2024-4367) — code that would run as the app, with the Google session,
+the licence and the Gemini key in reach. `pdfOpen(lib,bytes)` calls
+`getDocument` with `isEvalSupported:false`, the fix pdf.js's authors give for
+older versions; the three places that open a PDF (the manuals' viewer, the
+report preview, the expenses' ticket) go through it. **Never call
+`lib.getDocument` directly** — there is no global switch in 3.x, so a call
+without the option is open again. Checked in the preview with a PDF made on
+the spot (embedded font, text added to the clipping path, which is what makes
+pdf.js build glyph paths): the old call built 16 functions from the font,
+`pdfOpen` built none, and both drew the same page pixel for pixel in count;
+the ticket preview still returns its picture. NOT checked: a real manual, a
+real ticket, a phone.
+The rest of that review, proposed and NOT done (he has not decided): the
+libraries copied into the repository instead of unpkg/jsdelivr (no integrity
+check today), a Content-Security-Policy (none today), a local error log (198
+empty catches, no global error handler), automated tests of the merge logic,
+a version number in the data files, a recovery drill from Drive.
 
 **The day of the switch (as it was planned):** set `SEPARAT` to false, move `nou/index.html` and
 `nou/sw.js` to the root — **and the manifest and the three icons with them**,

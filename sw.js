@@ -13,7 +13,15 @@
 const CACHE = "fsl-v2";
 const SHELL = ["./", "./index.html", "./manual.html"];
 
-/* Les llibreries que fan els informes (PDF, Word, Excel, ZIP), el visor de
+/* DES DEL 2026-11-26 les llibreries i les fonts del PDF son a la carpeta lib/
+   del mateix repositori (vegeu lib/README.md) i ja no es baixen de cap CDN: un
+   servidor de tercers no pot canviar el codi que corre dins de l'app. LIBS son
+   ara aquestes adreces locals, i es guarden igual que abans, per sempre: el
+   numero de versio va al nom de la carpeta, o sigui que una versio nova es una
+   adreca nova. Les adreces dels CDN segueixen als carregadors d'index.html com
+   a reserva, i si mai s'arriben a fer servir tambe es guarden (CDN, mes avall).
+   El que segueix explica el perque de la memoria a part, i val igual:
+   Les llibreries que fan els informes (PDF, Word, Excel, ZIP), el visor de
    dibuixos i les fonts del PDF es baixen d'un CDN quan cal. Abans aquest worker
    no les tocava, i només eren a la memòria cau HTTP del navegador: sense
    cobertura, l'informe podia no sortir. Ara es guarden en una memòria a part,
@@ -25,17 +33,20 @@ const SHELL = ["./", "./index.html", "./manual.html"];
    (2026-11-11: al telèfon, en mode avió, el Word no sortia i res no ho deia). */
 const LIBS_CACHE = "fsl-libs-1";
 const LIBS = [
-  ["https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js", "PDF"],
-  ["https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js", "PDF"],
-  ["https://unpkg.com/docx@8.5.0/build/index.umd.js", "Word"],
-  ["https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js", "Excel"],
-  ["https://unpkg.com/jszip@3.10.1/dist/jszip.min.js", "ZIP"],
-  ["https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js", "dibuixos"],
-  ["https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js", "dibuixos"],
-  ["https://cdn.jsdelivr.net/npm/@expo-google-fonts/noto-sans/NotoSans_400Regular.ttf", "tipografies del PDF"],
-  ["https://cdn.jsdelivr.net/npm/@expo-google-fonts/noto-sans/NotoSans_700Bold.ttf", "tipografies del PDF"],
-  ["https://cdn.jsdelivr.net/npm/@expo-google-fonts/amiri/Amiri_400Regular.ttf", "tipografies del PDF"]
+  ["./lib/jspdf-2.5.1/jspdf.umd.min.js", "PDF"],
+  ["./lib/jspdf-autotable-3.8.2/jspdf.plugin.autotable.min.js", "PDF"],
+  ["./lib/docx-8.5.0/index.umd.js", "Word"],
+  ["./lib/xlsx-0.18.5/xlsx.full.min.js", "Excel"],
+  ["./lib/jszip-3.10.1/jszip.min.js", "ZIP"],
+  ["./lib/pdfjs-3.11.174/pdf.min.js", "dibuixos"],
+  ["./lib/pdfjs-3.11.174/pdf.worker.min.js", "dibuixos"],
+  ["./lib/noto-sans-0.2.3/NotoSans_400Regular.ttf", "tipografies del PDF"],
+  ["./lib/noto-sans-0.2.3/NotoSans_700Bold.ttf", "tipografies del PDF"],
+  ["./lib/amiri-0.2.3/Amiri_400Regular.ttf", "tipografies del PDF"]
 ];
+/* La carpeta de les llibreries, tal com la veu aquest worker (l'app pot viure
+   en una subcarpeta del domini, com a GitHub Pages). */
+const LIB_DIR = new URL("./lib/", self.location.href).href;
 /* Aquí, a més, la tipografia del disseny nou (Inter, de Google Fonts): es guarda
    com una llibreria més, perquè sense cobertura l'app no canviï de lletra. */
 const CDN = /^https:\/\/(unpkg\.com|cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)\//;
@@ -150,6 +161,9 @@ self.addEventListener("fetch", e => {
   /* Les llibreries dels CDN: de la memòria pròpia, perquè l'informe surti
      sense cobertura. */
   if(CDN.test(req.url)){ e.respondWith(responLib(req)); return; }
+  /* Les de lib/, igual: primer la copia, que el fitxer d'una adreca no canvia.
+     Sense aixo passarien per `respon`, que va a la xarxa cada vegada. */
+  if(req.url.indexOf(LIB_DIR) === 0){ e.respondWith(responLib(req)); return; }
   /* Google (autenticació, Drive, Gemini) no es toca mai: ha d'anar sempre a la
      xarxa i les seves respostes no s'han de guardar. */
   if(new URL(req.url).origin !== self.location.origin) return;

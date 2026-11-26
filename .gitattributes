@@ -1,0 +1,3 @@
+# Les llibreries de lib/ es publiquen byte per byte tal com es van baixar:
+# git no n'ha de convertir els salts de linia (vegeu lib/README.md).
+lib/** -text

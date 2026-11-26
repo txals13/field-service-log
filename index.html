@@ -4967,7 +4967,7 @@ function loadPdfjs(){
       sc.onerror=function(){tryLoad(urls.slice(1))};
       document.head.appendChild(sc);
     }
-    tryLoad(["https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js","https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"]);
+    tryLoad(["lib/pdfjs-3.11.174/pdf.min.js","https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js","https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"]);
   });
   return pdfjsReadyP;
 }
@@ -9288,7 +9288,7 @@ function openM2More(){
 // Which version this device is running — shown in the sidebar, so a phone
 // still on an old copy from its cache can be told apart from one that has the
 // fix. Bump it with every change that goes out.
-var APP_VERSION="2026-11-26 · 5";
+var APP_VERSION="2026-11-26 · 6";
 try{window.fslErr.ver=APP_VERSION}catch(e){}   // the error log stamps what it records with it
 function verLine(){
   var v=$$("appVer");if(!v)return;
@@ -17391,9 +17391,9 @@ function loadPdfLibs(){
       sc.onerror=function(){load(urls.slice(1),cb)};
       document.head.appendChild(sc);
     }
-    load(["https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js","https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"],function(ok){
+    load(["lib/jspdf-2.5.1/jspdf.umd.min.js","https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js","https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"],function(ok){
       if(!ok){res(null);return}
-      load(["https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js","https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"],function(ok2){
+      load(["lib/jspdf-autotable-3.8.2/jspdf.plugin.autotable.min.js","https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js","https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"],function(ok2){
         res(ok2&&window.jspdf?window.jspdf:null);
       });
     });
@@ -17408,7 +17408,19 @@ function loadPdfLibs(){
 // jsPDF joins the letters into their contextual forms and lays the run out
 // right-to-left by itself; setR2L() must NOT be used, it reverses them again.
 // Verified by rendering the finished PDF with pdf.js and reading it.
-var AR_FONT_URL="https://cdn.jsdelivr.net/npm/@expo-google-fonts/amiri/Amiri_400Regular.ttf";
+// THE LIBRARIES AND THE FONTS COME FROM THE APP'S OWN lib/ (2026-11-26 · 6).
+// Until now every loader took its file from unpkg or jsdelivr with no check
+// of what arrived: whatever one of those servers answered ran inside the app,
+// with the Google session, the licence and the Gemini key in reach. They are
+// now copies in the repository (lib/README.md: where each came from, its
+// version and its SHA-256), served from the same origin as the app. Every
+// loader still lists the CDN address after the local one — a fallback for a
+// lib/ that did not arrive, not the normal path — and the service worker
+// keeps lib/ for good, as it kept the CDN copies.
+// The fonts are version 0.2.3 of their packages ON PURPOSE: the old addresses
+// carried no version and that is what jsdelivr answered with. Same bytes, so
+// the PDFs come out as they did. Do not "update" them without looking at a PDF.
+var AR_FONT_URL=["lib/amiri-0.2.3/Amiri_400Regular.ttf","https://cdn.jsdelivr.net/npm/@expo-google-fonts/amiri@0.2.3/Amiri_400Regular.ttf"];
 var AR_RE=/[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/;
 var arFontB64=null,arFontP=null;
 function hasArabic(t){return AR_RE.test(t==null?"":String(t))}
@@ -17426,8 +17438,8 @@ function hasArabic(t){return AR_RE.test(t==null?"":String(t))}
 // row of mojibake nobody notices until a client has it. The name is a key in
 // this document's font table and nothing else; jsPDF has no opinion about it.
 // Arabic still gets Amiri by name, since it is the one that shapes the letters.
-var UNI_FONT_URL={normal:"https://cdn.jsdelivr.net/npm/@expo-google-fonts/noto-sans/NotoSans_400Regular.ttf",
-                  bold:"https://cdn.jsdelivr.net/npm/@expo-google-fonts/noto-sans/NotoSans_700Bold.ttf"};
+var UNI_FONT_URL={normal:["lib/noto-sans-0.2.3/NotoSans_400Regular.ttf","https://cdn.jsdelivr.net/npm/@expo-google-fonts/noto-sans@0.2.3/NotoSans_400Regular.ttf"],
+                  bold:["lib/noto-sans-0.2.3/NotoSans_700Bold.ttf","https://cdn.jsdelivr.net/npm/@expo-google-fonts/noto-sans@0.2.3/NotoSans_700Bold.ttf"]};
 // WinAnsi's own additions above U+00FF — these are fine as they are.
 var WINANSI_HI="€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ";
 function needsUni(t){
@@ -17441,9 +17453,14 @@ function needsUni(t){
   return false;
 }
 var uniB64={},uniP={};
-function fontB64(url){
-  return fetch(url).then(function(r){
-    if(!r.ok)throw new Error("HTTP "+r.status);
+// The first address of the list that answers with the file.
+function fetchFirst(urls){
+  return [].concat(urls).reduce(function(p,u){
+    return p.catch(function(){return fetch(u).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r})});
+  },Promise.reject(new Error("no address")));
+}
+function fontB64(urls){
+  return fetchFirst(urls).then(function(r){
     return r.arrayBuffer();
   }).then(function(ab){
     var b=new Uint8Array(ab),s="";
@@ -17658,8 +17675,7 @@ function loadUniFont(style){
 function startsRtl(t){var m=/[A-Za-zÀ-ɏ؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]/.exec(t==null?"":String(t));return !!m&&hasArabic(m[0])}
 function loadArabicFont(){
   if(arFontB64)return Promise.resolve(arFontB64);
-  if(!arFontP)arFontP=fetch(AR_FONT_URL).then(function(r){
-    if(!r.ok)throw new Error("HTTP "+r.status);
+  if(!arFontP)arFontP=fetchFirst(AR_FONT_URL).then(function(r){
     return r.arrayBuffer();
   }).then(function(ab){
     var b=new Uint8Array(ab),s="";
@@ -18377,7 +18393,7 @@ function loadXlsxLib(){
       sc.onerror=function(){tryLoad(urls.slice(1))};
       document.head.appendChild(sc);
     }
-    tryLoad(["https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js","https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"]);
+    tryLoad(["lib/xlsx-0.18.5/xlsx.full.min.js","https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js","https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"]);
   });
 }
 // Every part picked across the session's entries, keeping which entry needed it.
@@ -18522,7 +18538,7 @@ function loadDocxLib(){
       sc.onerror=function(){tryLoad(urls.slice(1))};
       document.head.appendChild(sc);
     }
-    tryLoad(["https://unpkg.com/docx@8.5.0/build/index.umd.js","https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"]);
+    tryLoad(["lib/docx-8.5.0/index.umd.js","https://unpkg.com/docx@8.5.0/build/index.umd.js","https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"]);
   });
 }
 var DOCX_MIME="application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -18975,7 +18991,7 @@ function loadJSZip(){
       sc.onerror=function(){tryLoad(urls.slice(1))};
       document.head.appendChild(sc);
     }
-    tryLoad(["https://unpkg.com/jszip@3.10.1/dist/jszip.min.js","https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"]);
+    tryLoad(["lib/jszip-3.10.1/jszip.min.js","https://unpkg.com/jszip@3.10.1/dist/jszip.min.js","https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"]);
   });
 }
 async function driveListChildren(token,folderId){

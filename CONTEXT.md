@@ -4093,6 +4093,59 @@ visit made one — cannot be checked by looking at a screen.
 Still proposed and not done from that review: the libraries in the
 repository, a CSP, a version number in the data files, a recovery drill.
 
+**The libraries and the PDF fonts live in `lib/` (version `2026-11-26 · 6`).**
+Fourth item of the security-and-reliability review, done on his "yes" (and a
+second "yes" to the list of files, since it meant downloading them). Until
+now every loader took its file from unpkg or jsdelivr with no check of what
+arrived, so whatever one of those servers answered ran inside the app.
+- **`lib/`**: ten files in a folder per package and version
+  (`lib/jspdf-2.5.1/…`, `jspdf-autotable-3.8.2`, `docx-8.5.0`, `xlsx-0.18.5`,
+  `jszip-3.10.1`, `pdfjs-3.11.174` with its worker, `noto-sans-0.2.3`,
+  `amiri-0.2.3`), each with its package's licence text beside it, 5.2 MB in
+  all. `lib/README.md` has the table: package, version, licence, bytes,
+  SHA-256, and how to replace one.
+- **How they were taken:** each file from unpkg AND jsdelivr, accepted only
+  if both copies were byte-identical and their SHA-256 was the one
+  jsdelivr's catalogue gives for that package version. Not edited.
+- **The fonts are 0.2.3 on purpose.** The old addresses had no version, and
+  jsdelivr answered them with 0.2.3 (the last version with the files at the
+  package root); the newest is 0.4.x, with different bytes. The copies are
+  the very bytes the app was getting, so the PDFs do not change. (I had told
+  him 0.4.2 / 0.4.1 in the list he approved; found out while checking, and
+  told him.) Their OFL text comes from 0.4.x: 0.2.3 did not ship one.
+- **`.gitattributes`: `lib/** -text`** — with autocrlf, git would otherwise
+  be free to touch line endings and the published bytes would stop matching
+  the table.
+- **The app:** every loader lists the local path first and the CDN address
+  after it, as a fallback only (`loadPdfjs`, `loadPdfLibs`, `loadXlsxLib`,
+  `loadDocxLib`, `loadJSZip`); the fonts go through `fetchFirst(urls)`
+  (`AR_FONT_URL`, `UNI_FONT_URL` are now lists, the fallback pinned to
+  `@0.2.3`). pdf.js's worker is derived from the address that loaded, so it
+  is local too.
+- **`sw.js`:** `LIBS` are the local addresses; a request under `LIB_DIR`
+  goes to `responLib` (copy first, kept for good) instead of `respon`
+  (network first). The cache names did NOT change (`fsl-libs-1`), so
+  `classic/sw.js` did not have to follow; the CDN copies a device already
+  holds stay there, unused.
+- **Not done, on purpose:** `classic/` still loads from the CDNs. Google's
+  two scripts (sign-in, Drive) can only come from Google. The Inter font of
+  the screens still comes from Google Fonts (offered, not decided).
+- **The checker's baseline is now "unique keys missing 103"** (was 93): the
+  ten new ones are the `lib/` paths.
+Checked in the preview: all six scripts and the three fonts load from
+`lib/` and nothing is asked of a CDN; the fonts' SHA-256 are those of the
+old addresses; a made-up visit with Polish, Cyrillic and Arabic text gives a
+PDF that pdf.js (local worker) reads back with the Polish and the Cyrillic
+in it, a Word file, an Excel workbook and a ZIP; the service worker reports
+nothing missing, holds the ten files, and a second request is answered from
+its cache without reaching the server; with a local file renamed away the
+loader falls back to the CDN (one script, two fonts); the merge tests pass.
+NOT checked: GitHub Pages itself (first open after the update downloads
+5 MB from it), a phone in airplane mode.
+Still proposed and not done from that review: a CSP (now possible for
+scripts: only the app's origin and Google's), a version number in the data
+files, a recovery drill.
+
 **The day of the switch (as it was planned):** set `SEPARAT` to false, move `nou/index.html` and
 `nou/sw.js` to the root — **and the manifest and the three icons with them**,
 over the root's own (drop "· nou" from the manifest's names; the app's icon
